@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% from "_fish_item.html" import fish_item, fish_list %}
+
+{% block extra_css %}
+.section-title { font-size: 16px; font-weight: bold; color: #333; margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #4facfe; }
+.display-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.disp-slot { background: #f8f9fa; border-radius: 8px; padding: 4px; text-align: center; }
+.disp-fish-frame-container { position: relative; width: 80px; height: 80px; margin: 0 auto; overflow: visible; }
+.disp-fish-img { width: 68px; height: 68px; object-fit: contain; position: absolute; top: 6px; left: 6px; border-radius: 4px; }
+.disp-frame-img { width: 80px; height: 80px; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+.disp-frame-img-cat { width: 100px; height: 100px; object-fit: fill; position: absolute; top: -10px; left: -10px; z-index: 1; pointer-events: none; }
+.disp-frame-img-starry {
+    width: 100px;
+    height: 100px;
+    object-fit: fill;
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    z-index: 1;
+    pointer-events: none;
+    filter: hue-rotate(220deg) saturate(1.35) brightness(1.08);
+}
+.disp-fish-ph { font-size: 40px; }
+.disp-fish-starry { position: absolute; top: 6px; left: 6px; width: 68px; height: 68px; }
+.disp-fish-starry-silhouette { position: absolute; top: 0; left: 0; width: 68px; height: 68px; object-fit: contain; filter: brightness(0); border-radius: 4px; }
+.disp-fish-starry-sky { position: absolute; top: 0; left: 0; width: 68px; height: 68px; background-size: cover; mix-blend-mode: screen; border-radius: 4px; }
+.disp-fish-name { font-size: 12px; font-weight: bold; }
+.disp-fish-price { font-size: 10px; color: #f5af19; font-weight: bold; }
+.inv-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 5px; }
+.inv-item { background: #f0f7ff; border: 1px solid #d0e3f7; border-radius: 8px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; }
+.inv-name { font-size: 13px; color: #333; font-weight: bold; }
+.inv-count { font-size: 13px; color: #4facfe; font-weight: bold; }
+.meteor-card { background: #FFF0F5; border: 1px solid #FF69B4; border-radius: 8px; padding: 8px 10px; margin-bottom: 5px; }
+.meteor-head { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 6px; }
+.meteor-count { color: #FF1493; font-size: 12px; font-weight: bold; }
+.meteor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px 6px; }
+.meteor-number { color: #FF1493; font-size: 10px; font-weight: bold; line-height: 1.15; text-align: center; }
+.meteor-cell { text-align: center; padding: 3px 2px; border-radius: 4px; background: rgba(255,105,180,0.08); }
+.meteor-cell.exhibition { background: rgba(251,191,36,0.18); }
+.meteor-score { display: block; color: #9a3412; font-size: 9px; line-height: 1.1; margin-top: 1px; }
+.meteor-tag { display: block; color: #b45309; font-size: 8px; line-height: 1.1; }
+.bp-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.bp-grid .fish-item {
+    padding: 3px 4px;
+}
+.bp-grid .fish-img {
+    width: 96px;
+    height: 96px;
+    margin: 0;
+}
+.bp-grid .fish-img-placeholder {
+    width: 96px;
+    height: 96px;
+    font-size: 60px;
+    margin: 0;
+}
+.bp-grid .fish-img-starry {
+    width: 96px;
+    height: 96px;
+}
+.bp-grid .fish-img-starry-silhouette {
+    width: 96px;
+    height: 96px;
+}
+.bp-grid .fish-img-starry-sky {
+    width: 96px;
+    height: 96px;
+}
+.bp-grid .fish-name {
+    font-size: 14px;
+}
+.bp-grid .fish-item-id {
+    font-size: 14px;
+}
+.bp-grid .fish-item-count {
+    font-size: 13px;
+}
+.bp-grid .fish-item-price {
+    font-size: 12px;
+}
+.bp-grid .fish-item-lock {
+    font-size: 12px;
+}
+.total-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+}
+.total-value { font-size: 24px; font-weight: bold; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎒 我的背包</div>
+<div class="gold-box">
+    <div class="gold-value">💰 {{ gold }}</div>
+</div>
+{% if displays %}
+<div class="section-title">🏆 展示区 ({{ displays|length }}/{{ display_slots }})</div>
+<div class="display-row">
+    {% for d in displays %}
+    <div class="disp-slot" style="background: {{ d.color }}15; border: 1px solid {{ d.color }};">
+        <div class="disp-fish-frame-container">
+            {% if d.img_src %}
+            {% if d.is_utr and d.utr_starry_src %}
+            <div class="disp-fish-starry">
+                <img src="{{ d.img_src }}" class="disp-fish-starry-silhouette" />
+                <div class="disp-fish-starry-sky" style="background-image: url('{{ d.utr_starry_src }}');"></div>
+            </div>
+            {% else %}
+            <img src="{{ d.img_src }}" class="disp-fish-img" />
+            {% endif %}
+            {% else %}
+            <div class="disp-fish-ph">🐟</div>
+            {% endif %}
+            {% if d.frame_src %}
+            <img src="{{ d.frame_src }}" class="{% if d.frame_tier == 'starry' %}disp-frame-img-starry{% elif d.is_upgraded or d.frame_tier == 'cat' %}disp-frame-img-cat{% else %}disp-frame-img{% endif %}" />
+            {% endif %}
+        </div>
+        <div class="disp-fish-name" style="color: {{ d.color }};">{{ d.fish_name }}</div>
+        <div class="disp-fish-price">💰{{ d.price }} · 日💰{{ d.daily_income }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if bait_list %}
+<div class="section-title">🪱 鱼饵</div>
+<div class="inv-list">
+    {% for b in bait_list %}
+    <div class="inv-item"><span class="inv-name">🪱 {{ b.name }}</span><span class="inv-count">x{{ b.count }}</span></div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if corn_count > 0 or potion_list %}
+<div class="section-title">🎒 道具</div>
+<div class="inv-list">
+    {% if corn_count > 0 %}
+    <div class="inv-item"><span class="inv-name">🌽 香甜玉米</span><span class="inv-count">x{{ corn_count }}</span></div>
+    {% endif %}
+    {% for potion in potion_list %}
+    <div class="inv-item"><span class="inv-name">🧪 {{ potion.name }}</span><span class="inv-count">x{{ potion.count }}</span></div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if display_frames > 0 or cat_frames > 0 or star_frames > 0 or starry_frames > 0 or cat_park_materials %}
+<div class="section-title">⭐ 重要</div>
+<div class="inv-list">
+    {% if display_frames > 0 %}
+    <div class="inv-item"><span class="inv-name">🖼️ 展示木框</span><span class="inv-count">x{{ display_frames }}</span></div>
+    {% endif %}
+    {% if cat_frames > 0 %}
+    <div class="inv-item"><span class="inv-name">🐱 猫猫框</span><span class="inv-count">x{{ cat_frames }}</span></div>
+    {% endif %}
+    {% if star_frames > 0 %}
+    <div class="inv-item"><span class="inv-name">✨ 星辰木框</span><span class="inv-count">x{{ star_frames }}</span></div>
+    {% endif %}
+    {% if starry_frames > 0 %}
+    <div class="inv-item"><span class="inv-name">🌌 星空木框</span><span class="inv-count">x{{ starry_frames }}</span></div>
+    {% endif %}
+    {% for m in cat_park_materials %}
+    <div class="inv-item"><span class="inv-name">🏗️ {{ m.name }}</span><span class="inv-count">x{{ m.count }}</span></div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if meteor_items %}
+<div class="section-title" style="color: #FF1493; border-bottom-color: #FF1493;">🌠 流星鱼列表</div>
+<div class="meteor-card">
+    <div class="meteor-head">
+        <span class="meteor-count">x{{ meteor_items|length }}</span>
+    </div>
+    <div class="meteor-grid">
+        {% for m in meteor_items %}
+        <div class="meteor-cell{% if m.in_exhibition %} exhibition{% endif %}">
+            <span class="meteor-number">{{ m.number }}</span>
+            {% if m.display_score is not none %}
+            <span class="meteor-score">{{ m.display_score }}分</span>
+            {% endif %}
+            {% if m.in_exhibition %}
+            <span class="meteor-tag">展馆</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="section-title">🐟 鱼获</div>
+<div class="bp-grid">
+    {{ fish_list(fish_rows, "背包空空如也~") }}
+</div>
+<div class="total-box">
+    <div>未出售鱼总价值</div>
+    <div class="total-value">💰 {{ total_value }} 鱼币</div>
+</div>
+{% endblock %}

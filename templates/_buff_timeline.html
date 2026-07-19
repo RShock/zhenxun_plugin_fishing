@@ -1,0 +1,32 @@
+{% macro buff_timeline(timeline_data) %}
+<div class="buff-timeline">
+    <div class="timeline-rows">
+        {% for row in timeline_data.rows %}
+        <div class="timeline-row">
+            {% for seg in row.segments %}
+            <div class="timeline-segment" style="left:{{ seg.left_pct }}%;width:{{ seg.width_pct }}%;background:{{ row.color }};"></div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        {% if timeline_data.fishing_start_pct is not none and timeline_data.fishing_start_pct > 0 %}
+        <div class="timeline-start" style="left:{{ timeline_data.fishing_start_pct }}%;"></div>
+        <div class="timeline-start-tag" style="left:{{ timeline_data.fishing_start_pct }}%;">开钓</div>
+        {% endif %}
+        {% if timeline_data.current_time_pct is not none %}
+        <div class="timeline-current" style="left:{{ timeline_data.current_time_pct }}%;"></div>
+        <div class="timeline-current-tag" style="left:{{ timeline_data.current_time_pct }}%;">当前</div>
+        {% endif %}
+    </div>
+    <div class="timeline-axis">
+        <div class="timeline-axis-line"></div>
+        {% for marker in timeline_data.time_markers %}
+        <div class="time-marker" style="left:{{ marker.position_pct }}%;">{{ marker.label }}</div>
+        {% endfor %}
+    </div>
+    <div class="timeline-legend">
+        {% for item in timeline_data.legend %}
+        <div class="legend-item"><span class="legend-color" style="background:{{ item.color }};"></span>{{ item.label }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}

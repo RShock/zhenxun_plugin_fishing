@@ -1,0 +1,19 @@
+{
+    "canvas_size": [22, 61],
+    "draw_order": ["rod", "clothes", "hair"],
+    "combos": {
+        "default": {
+            "hair": "hair_default",
+            "hair_color": "#FFD700",
+            "clothes": "clothes_default",
+            "clothes_color": "#FF4444",
+            "rod": "rod_default"
+        },
+        "blue_look": {
+            "hair": "hair_default",
+            "hair_color": "#4488FF",
+            "clothes": "clothes_default",
+            "clothes_color": "#2244AA"
+        }
+    }
+}

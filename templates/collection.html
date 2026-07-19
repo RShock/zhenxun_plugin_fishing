@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.legend { display: flex; justify-content: center; gap: 12px; margin-bottom: 15px; padding: 8px; background: #f8f9fa; border-radius: 8px; }
+.legend-item { display: flex; align-items: center; font-size: 11px; color: #666; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; }
+.loc-row { display: flex; align-items: center; margin-bottom: 6px; padding: 6px 10px; background: white; border-radius: 6px; border-left: 4px solid #4facfe; }
+.loc-row.scene-complete { background: linear-gradient(135deg, #fffdf5, #fff3d6, #ffe8a3); border-left: 4px solid #FFD700; box-shadow: 0 0 8px rgba(255, 215, 0, 0.25); }
+.loc-row.scene-complete .loc-label { color: #b8860b; }
+.loc-label { font-size: 12px; font-weight: bold; color: #333; width: 90px; white-space: nowrap; flex-shrink: 0; }
+.loc-fish { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; max-width: 316px; }
+.fish-cell { background: #f8f9fa; border-radius: 4px; padding: 3px 3px; text-align: center; width: 60px; flex-shrink: 0; box-sizing: border-box; min-width: 0; overflow: hidden; }
+.fish-cell.fish-complete { background: linear-gradient(135deg, #FFE4B5, #FFD700); border: 1px solid #FFD700; }
+.fish-cell .fish-name { font-size: 10px; color: #333; font-weight: bold; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rarity-row { display: flex; gap: 1px; justify-content: center; overflow: hidden; }
+.rdot { width: 7px; height: 7px; border-radius: 50%; box-sizing: border-box; flex-shrink: 0; }
+.rdot-empty { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #ddd; box-sizing: border-box; flex-shrink: 0; }
+{% endblock %}
+
+{% block content %}
+<div class="title">📚 钓鱼图鉴</div>
+<div class="legend">
+    {% for r in legend_rarities %}
+    <div class="legend-item"><div class="legend-dot" style="background: {{ rarity_colors[r] }};"></div><span>{{ r }}</span></div>
+    {% endfor %}
+</div>
+{% for loc in locations %}
+<div class="loc-row{% if loc.scene_complete %} scene-complete{% endif %}">
+    <div class="loc-label">{{ loc.name }}</div>
+    <div class="loc-fish">
+        {% for fish in loc.fish %}
+        <div class="fish-cell{% if fish.fish_complete %} fish-complete{% endif %}">
+            <div class="fish-name">{{ fish.name }}</div>
+            <div class="rarity-row">
+                {% for r in legend_rarities %}
+                {% if fish.rarities[r].collected %}
+                <div class="rdot" style="background: {{ rarity_colors[r] }};" title="{{ r }}"></div>
+                {% else %}
+                <div class="rdot-empty" title="{{ r }}"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

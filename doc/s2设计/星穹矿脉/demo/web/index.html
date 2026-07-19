@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#f3f5f8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>星穹矿业 · 工位面板</title>
+  <link rel="stylesheet" href="style.css?v=3.1.0" />
+</head>
+<body>
+  <div class="hold-banner" id="holdBanner" hidden>
+    <div class="hold-banner-inner">
+      <span id="holdBannerText">待办：请处理手动/自动采购</span>
+      <button type="button" id="btnGoShop" class="hold-go">去采购</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand-row">
+        <div class="brand-badge">OA</div>
+        <div class="brand-text">
+          <div class="eyebrow">星穹矿业集团 · 内部系统</div>
+          <h1>矿工工位面板</h1>
+          <div class="sub">手动每天 3 次 · 每项单独买自动 · 仅开关 · 地心 1e306</div>
+        </div>
+      </div>
+      <div class="status-pills" id="statusPills">
+        <span class="pill" id="runPill">离岗</span>
+        <span class="pill" id="dayPill">D1</span>
+        <span class="pill" id="infPill">二阶 0</span>
+        <span class="pill" id="upPill">手动 0/3</span>
+        <span class="pill" id="autoPill">自动 0/16</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card card-main">
+        <div class="card-head">
+          <h2>今日 KPI</h2>
+          <span class="card-tag">实时看板</span>
+        </div>
+
+        <div class="hero-stats">
+          <div class="hero">
+            <div class="k">账面矿币</div>
+            <div class="v gold" id="coinsVal">0</div>
+          </div>
+          <div class="hero">
+            <div class="k">掘进深度 / 地心目标</div>
+            <div class="v" id="depthVal">0 / 1e306</div>
+          </div>
+        </div>
+
+        <div class="bar-wrap">
+          <div class="bar-label">
+            <span>项目进度 · 挖穿星球</span>
+            <span id="depthBarLabel">0 / 1e306</span>
+          </div>
+          <div class="bar"><i id="depthBar"></i></div>
+        </div>
+
+        <div class="bar-wrap day-bar-wrap">
+          <div class="bar-label">
+            <span id="dayBarLabel">工时进度 0%</span>
+            <span id="progressVal">0.0000%</span>
+          </div>
+          <div class="bar day-bar"><i id="dayBar"></i></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="k">作业间隔</div>
+            <div class="v" id="intervalVal">8.0s</div>
+          </div>
+          <div class="stat">
+            <div class="k">单次产量</div>
+            <div class="v pink" id="qtyVal">1</div>
+          </div>
+          <div class="stat">
+            <div class="k">单次进尺</div>
+            <div class="v" id="dptVal">1</div>
+          </div>
+          <div class="stat">
+            <div class="k">一阶∞ 审批</div>
+            <div class="v" id="inf1Val">未触发</div>
+          </div>
+          <div class="stat">
+            <div class="k">累计工单</div>
+            <div class="v" id="ticksVal">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">出勤状态</div>
+            <div class="v small" id="sessionLabel">未打卡</div>
+          </div>
+        </div>
+
+        <div class="meta-row">
+          <span class="pill" id="settleMode">—</span>
+          <span class="pill" id="speedLabel">1日≈24s · x1</span>
+        </div>
+      </div>
+
+      <div class="card card-shop">
+        <div class="card-head">
+          <h2>设备采购</h2>
+          <span class="card-tag">手动 3 次/日</span>
+        </div>
+        <div class="hint" style="margin-top:0;margin-bottom:10px;">
+          「升级」=手动（每天最多 3 次）。「买自动」=单独购买该项自动能力（也占手动 1 次）。买后只剩开关，每波每项最多自动升 1 级。
+        </div>
+        <div id="shop" class="shop"></div>
+      </div>
+
+      <div class="card card-ore">
+        <div class="card-head">
+          <h2>本段产出明细</h2>
+          <span class="card-tag">自动入账</span>
+        </div>
+        <div class="ore-grid" id="oreGrid"></div>
+        <div class="hint">大批量走期望结算 · 深度不截断</div>
+      </div>
+
+      <div class="card card-rarity">
+        <div class="card-head">
+          <h2>品级概率表</h2>
+          <span class="card-tag">质检口径</span>
+        </div>
+        <div id="rarityBars" class="rarity-bars"></div>
+      </div>
+
+      <div class="card card-log full">
+        <div class="card-head">
+          <h2>操作日志</h2>
+          <span class="card-tag">系统流水</span>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="dock" aria-label="出勤操作">
+    <div class="dock-cmds">
+      <button class="gold dock-main" id="btnStart" type="button">上班</button>
+      <button id="btnStatus" type="button">状态</button>
+      <button id="btnStop" type="button">下班</button>
+      <button id="btnDay" type="button">次日</button>
+    </div>
+    <div class="dock-speed" role="group" aria-label="模拟加速">
+      <button data-speed="1" type="button">×1</button>
+      <button data-speed="2" type="button">×2</button>
+      <button data-speed="5" type="button">×5</button>
+      <button data-speed="20" type="button">×20</button>
+      <button data-speed="100" type="button">×100</button>
+    </div>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="winModal">
+    <div class="modal-card">
+      <h3>项目结项 · 二阶无限达成</h3>
+      <p id="winText"></p>
+      <button id="btnReset" type="button">新开一颗星球项目</button>
+    </div>
+  </div>
+
+  <script src="game.js?v=3.0.0"></script>
+</body>
+</html>

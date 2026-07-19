@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.forecast-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.forecast-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+}
+.forecast-card.active {
+    border-color: #4facfe;
+    background: #f0f7ff;
+}
+.forecast-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    object-fit: cover;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+.forecast-no-img {
+    width: 60px;
+    height: 60px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #e8e8e8, #d0d0d0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+.forecast-info {
+    flex: 1;
+    min-width: 0;
+}
+.forecast-loc-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.forecast-weather-line {
+    font-size: 12px;
+    color: #555;
+    margin-top: 2px;
+}
+.forecast-effect {
+    font-size: 11px;
+    color: #4facfe;
+    margin-top: 1px;
+}
+.forecast-inactive {
+    font-size: 10px;
+    color: #999;
+    margin-top: 1px;
+}
+.forecast-extra {
+    font-size: 10px;
+    color: #888;
+    margin-top: 2px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="title">{{ title }}</div>
+<div class="forecast-grid">
+{% for loc in locations %}
+<div class="forecast-card{% if loc.is_active %} active{% endif %}">
+    {% if loc.image_src %}
+    <img src="{{ loc.image_src }}" class="forecast-img" alt="{{ loc.name }}" />
+    {% else %}
+    <div class="forecast-no-img">🎣</div>
+    {% endif %}
+    <div class="forecast-info">
+        <div class="forecast-loc-name">{{ loc.num }}. {{ loc.name }}</div>
+        <div class="forecast-weather-line">{{ loc.weather_emoji }} {{ loc.weather_name }}{% if loc.weather_time %} {{ loc.weather_time }}{% endif %}</div>
+        {% if loc.weather_effect %}
+        <div class="forecast-effect">{{ loc.weather_effect }}</div>
+        {% endif %}
+        {% if loc.weather_time and not loc.is_active %}
+        <div class="forecast-inactive">{% if loc.weather_status == 'ended' %}已结束{% else %}未开始{% endif %}</div>
+        {% endif %}
+        <div class="forecast-extra">👥{{ loc.fisher_count }}人{% if loc.nest_bonus > 0 or loc.frame_bonus > 0 %} ⚡{% if loc.nest_bonus > 0 %}打窝+{{ loc.nest_bonus }}%{% endif %}{% if loc.frame_bonus > 0 %}{% if loc.nest_bonus > 0 %} {% endif %}木框+{{ loc.frame_bonus }}%{% endif %}{% endif %}</div>
+    </div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

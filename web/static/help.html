@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>钓鱼帮助</title>
+<style>
+:root {
+  --bg: #edf4f7;
+  --panel: #ffffff;
+  --panel-soft: #f7fbfc;
+  --border: #d9e6ec;
+  --text: #1f3440;
+  --sub: #6f8490;
+  --primary: #1f9bb4;
+  --primary-dark: #0f7f9b;
+  --primary-light: #e5f4f7;
+  --success: #23a36f;
+  --success-light: #e6f6ef;
+  --warning: #d69120;
+  --warning-light: #fdf3e3;
+  --danger: #df5a55;
+  --danger-light: #fceceb;
+  --purple: #8b5cf6;
+  --purple-light: #f0ecfe;
+  --shadow: 0 4px 16px rgba(42, 86, 105, .08);
+  --shadow-lg: 0 10px 26px rgba(42, 86, 105, .12);
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 7px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, #eef8fa 0%, #edf4f7 100%);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--primary-dark); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Header ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, .92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 10px 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 24px; }
+.brand h1 { font-size: 17px; line-height: 1.2; font-weight: 800; }
+.brand p { margin-top: 1px; color: var(--sub); font-size: 11px; }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.btn:hover { border-color: var(--primary); color: var(--primary-dark); }
+.btn.primary { border-color: var(--primary); background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-dark); }
+
+/* ===== Page Tabs ===== */
+.page-tabs {
+  display: flex;
+  gap: 4px;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.page-tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--sub);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.tab-btn .tab-icon { font-size: 16px; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--primary-dark);
+  border-bottom-color: var(--primary);
+}
+
+/* ===== Layout ===== */
+.page-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.page { display: none; scroll-margin-top: 100px; }
+.page.active { display: block; }
+.page > * + * { margin-top: 14px; }
+
+/* ===== Cards ===== */
+.card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, .95);
+  box-shadow: var(--shadow);
+}
+.card-title {
+  margin-bottom: 10px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.card-desc { color: var(--sub); font-size: 13px; margin-bottom: 12px; }
+
+/* ===== Grid ===== */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+
+/* ===== Command Card ===== */
+.cmd-card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+}
+.cmd-card .cmd-name {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cmd-card .cmd-desc { margin-top: 7px; color: var(--sub); font-size: 13px; line-height: 1.55; }
+
+/* ===== Tags ===== */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+.tag.t-basic { background: var(--primary-light); color: var(--primary-dark); }
+.tag.t-utr { background: var(--danger-light); color: var(--danger); }
+.tag.t-cat { background: var(--warning-light); color: var(--warning); }
+.tag.t-star { background: var(--purple-light); color: var(--purple); }
+.tag.t-event { background: var(--success-light); color: var(--success); }
+.tag.t-lock { background: var(--warning-light); color: var(--warning); }
+.tag.t-gm { background: var(--danger); color: #fff; }
+
+/* ===== Tables ===== */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+table { width: 100%; min-width: 560px; border-collapse: collapse; background: #fff; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; font-size: 13px; }
+th { color: var(--sub); background: var(--panel-soft); font-weight: 800; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+
+/* ===== Lists ===== */
+ul.clean { list-style: none; padding: 0; }
+ul.clean > li + li { margin-top: 8px; }
+ul.clean > li { position: relative; padding-left: 18px; font-size: 14px; }
+ul.clean > li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 10px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+ul.clean > li.warn::before { background: var(--warning); }
+ul.clean > li.danger::before { background: var(--danger); }
+
+/* ===== Callout ===== */
+.callout {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.callout.info { background: var(--primary-light); border-left: 4px solid var(--primary); }
+.callout.warn { background: var(--warning-light); border-left: 4px solid var(--warning); }
+.callout.tip { background: var(--success-light); border-left: 4px solid var(--success); }
+.callout strong { font-weight: 800; }
+
+/* ===== Page Title ===== */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.page-subtitle { color: var(--sub); font-size: 14px; margin-bottom: 14px; }
+
+/* ===== Section heading ===== */
+.sec-h {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sec-h:first-child { margin-top: 0; }
+
+/* ===== Footer ===== */
+.footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+  color: var(--sub);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ===== Inline code ===== */
+code, .ic {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ===== Building card ===== */
+.bldg-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+}
+.bldg-card .bldg-name { font-weight: 800; font-size: 14px; margin-bottom: 4px; }
+.bldg-card .bldg-desc { color: var(--sub); font-size: 12px; line-height: 1.5; }
+.bldg-card .bldg-lv { display: inline-block; margin-top: 6px; padding: 1px 6px; border-radius: 5px; background: var(--primary-light); color: var(--primary-dark); font-size: 11px; font-weight: 700; }
+
+/* ===== Flow steps ===== */
+.steps { display: flex; flex-direction: column; gap: 8px; }
+.step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+.step-num {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-text { font-size: 13px; line-height: 1.55; }
+
+/* ===== Responsive — Tablet ===== */
+@media (max-width: 960px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ===== Responsive — Phone ===== */
+@media (max-width: 640px) {
+  /* Header */
+  .header-inner { padding: 8px 12px; gap: 8px; }
+  .brand-icon { font-size: 22px; }
+  .brand h1 { font-size: 16px; }
+  .brand p { display: none; }
+  .nav-actions .btn:not(.primary) { display: none; }
+
+  /* Tabs — larger touch targets */
+  .page-tabs { padding: 0 4px; }
+  .tab-btn { padding: 12px 14px; font-size: 15px; }
+  .tab-btn .tab-icon { font-size: 17px; }
+
+  /* Layout */
+  .page-wrap { padding: 10px; }
+
+  /* Cards */
+  .card { padding: 14px; }
+  .page-title { font-size: 19px; }
+  .page-subtitle { font-size: 14px; }
+  .sec-h { font-size: 16px; }
+  .card-desc { font-size: 14px; }
+
+  /* Command cards — enlarge text for readability */
+  .cmd-card { padding: 14px 16px; }
+  .cmd-card .cmd-name {
+    font-size: 15px;
+    padding: 4px 10px;
+  }
+  .cmd-card .cmd-desc { font-size: 15px; line-height: 1.65; }
+
+  /* Inline code — larger on mobile */
+  code, .ic {
+    font-size: 15px;
+    padding: 2px 7px;
+  }
+
+  /* Callouts */
+  .callout {
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 14px 16px;
+  }
+
+  /* Tables — allow wrapping, remove forced scroll */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: unset; width: 100%; }
+  th, td {
+    padding: 10px 12px;
+    font-size: 14px;
+    word-break: break-word;
+  }
+  th { white-space: normal; }
+
+  /* Lists */
+  ul.clean > li { font-size: 15px; }
+  ul.clean > li + li { margin-top: 10px; }
+
+  /* Tags */
+  .tag { font-size: 12px; padding: 3px 9px; }
+
+  /* Building cards */
+  .bldg-card { padding: 14px; }
+  .bldg-card .bldg-name { font-size: 15px; }
+  .bldg-card .bldg-desc { font-size: 14px; line-height: 1.6; }
+  .bldg-card .bldg-lv { font-size: 12px; padding: 2px 7px; }
+
+  /* Flow steps */
+  .step { padding: 12px 14px; }
+  .step-num { width: 26px; height: 26px; font-size: 14px; }
+  .step-text { font-size: 15px; line-height: 1.65; }
+
+  /* Grids */
+  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 10px; }
+
+  /* Buttons */
+  .btn { min-height: 36px; padding: 0 16px; font-size: 14px; }
+
+  /* Footer */
+  .footer { font-size: 13px; }
+}
+
+/* ===== Responsive — Small phone ===== */
+@media (max-width: 380px) {
+  .tab-btn { padding: 10px 12px; font-size: 14px; }
+  .tab-btn .tab-icon { display: none; }
+  .page-title { font-size: 17px; }
+  .cmd-card .cmd-name { font-size: 14px; }
+  .cmd-card .cmd-desc { font-size: 14px; }
+  code, .ic { font-size: 14px; }
+  ul.clean > li { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Header ========== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-icon">🎣</span>
+      <div>
+        <h1>钓鱼帮助</h1>
+        <p>玩法机制与指令说明</p>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <a class="btn" href="/index.html">网页版</a>
+      <a class="btn primary" href="javascript:void(0)" onclick="document.getElementById('page-basic').scrollIntoView({behavior:'smooth',block:'start'})">开始阅读</a>
+    </div>
+  </div>
+  <nav class="page-tabs" id="pageTabs">
+    <button class="tab-btn active" data-page="basic"><span class="tab-icon">🎣</span>基础玩法</button>
+    <button class="tab-btn" data-page="utr"><span class="tab-icon">⭐</span>UTR玩法</button>
+    <button class="tab-btn" data-page="market"><span class="tab-icon">🔄</span>黑商白商</button>
+    <button class="tab-btn" data-page="catpark"><span class="tab-icon">🐱</span>猫猫乐园</button>
+    <button class="tab-btn" data-page="starry"><span class="tab-icon">🚀</span>11-20关</button>
+    <button class="tab-btn" data-page="weather"><span class="tab-icon">🌦️</span>天气系统</button>
+    <button class="tab-btn" data-page="starryweather"><span class="tab-icon">🌫️</span>星空天气</button>
+    <button class="tab-btn" data-page="wish"><span class="tab-icon">✨</span>星空祈愿</button>
+  </nav>
+</header>
+
+<!-- ========== Page Content ========== -->
+<div class="page-wrap">
+
+<!-- ============================== -->
+<!-- Page 1: 基础玩法               -->
+<!-- ============================== -->
+<div class="page active" id="page-basic">
+  <div class="page-title">🎣 基础玩法</div>
+  <div class="page-subtitle">轻松休闲的挂机钓鱼，每天只需少量操作</div>
+
+  <!-- 快速开始 -->
+  <div class="card">
+    <div class="sec-h">快速开始</div>
+    <p class="card-desc">通过钓鱼和收杆获得鱼获，再用鱼店购买鱼饵、升级装备，逐步收集图鉴。</p>
+    <div class="callout info">
+      <strong>三种游玩方式：</strong>① 在群里直接发送消息；② 私聊群里的真寻机器人；③ 网页版（需先注册密钥）。<br>
+      群消息有个人和总体次数限制，超过后不回复。私聊和网页版没有限制。
+    </div>
+    <div class="grid-2" style="margin-top:12px">
+      <div class="cmd-card"><span class="cmd-name">注册网页端</span><p class="cmd-desc">私聊机器人获取网页端密钥，在首页输入密钥连接。</p></div>
+      <div class="cmd-card"><span class="cmd-name">钓鱼 1</span><p class="cmd-desc">进入指定地图开始钓鱼（支持 1-20 和 S1）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">收杆</span><p class="cmd-desc">结算当前鱼获、金币，自动锁鱼/卖鱼。不足一条鱼的时间按概率判定。</p></div>
+      <div class="cmd-card"><span class="cmd-name">钓鱼状态</span><p class="cmd-desc">查看进度、速度、天气和累计鱼获。查看时也会结算并重置计时器。</p></div>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>注意：</strong>钓鱼状态和收杆都会触发一次结算。频繁查看状态会导致计时器反复重置，可能很长时间不上鱼。
+    </div>
+  </div>
+
+  <!-- 玩家指令 -->
+  <div class="card">
+    <div class="sec-h">玩家指令一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。不填地图按当前流程选择；支持 1-20 和 S1。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
+          <tr><td><span class="tag t-basic">背包</span></td><td><code>背包</code></td><td>查看鱼、鱼饵、药水、展示框、素材等库存。</td></tr>
+          <tr><td><span class="tag t-basic">背包</span></td><td><code>卖鱼 [筛选]</code></td><td>卖出鱼。不带参数默认排除 UTR。支持稀有度、鱼 ID、全部等筛选。</td></tr>
+          <tr><td><span class="tag t-basic">背包</span></td><td><code>锁鱼 筛选</code> / <code>解锁 筛选</code></td><td>保护或解除保护鱼。支持鱼 ID、稀有度（SR/UTR）、位置通配符（<code>S1**</code>）、全部。</td></tr>
+          <tr><td><span class="tag t-basic">背包</span></td><td><code>赠送 鱼ID @用户</code></td><td>赠送鱼给其他用户（需平台真实 @）。</td></tr>
+          <tr><td><span class="tag t-basic">图鉴</span></td><td><code>图鉴</code> / <code>图鉴1</code> / <code>图鉴2</code></td><td>图鉴1 为普通地图和 S1，图鉴2 为星空地图。</td></tr>
+          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店</code></td><td>查看鱼饵、升级、展示栏等可购买项目。</td></tr>
+          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店购买 物品名 [数量]</code></td><td>购买鱼饵或商店物品（药水不在鱼店出售）。</td></tr>
+          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级鱼竿</code> / <code>升级鱼钩</code></td><td>提升地图进入能力或钓鱼速度。</td></tr>
+          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级展示栏</code></td><td>万能升级：未满 10 的木框/猫框/星空框一并校验；材料够的全部升级扣框，否则报告各自还差多少。星空木框消耗星辰木框（最贵鱼 4 倍收益）。</td></tr>
+          <tr><td><span class="tag t-basic">成长</span></td><td><code>钓鱼币兑换 [数量]</code></td><td>进行钓鱼币相关兑换。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>打窝 [层数]</code></td><td>消耗玉米给当前地点增加速度，每日 2 次。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 物品名 [数量]</code></td><td>使用药水、展示木框、猫猫框等道具。数量超出库存自动使用全部剩余。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫猫框给当前地点打窝加速。</td></tr>
+          <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>设定鱼饵 鱼饵名</code></td><td>设置优先使用的鱼饵。<code>取消/0/自动/清除</code> 恢复自动选择。</td></tr>
+          <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>卖出鱼饵 鱼饵名</code></td><td>卖出指定鱼饵，按购买价回收。</td></tr>
+          <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>白商</code></td><td>鱼获交换与逆交换，详见黑商白商专页。</td></tr>
+          <tr><td><span class="tag t-basic">设置</span></td><td><code>自动卖鱼 [开启/关闭/稀有度]</code></td><td>收杆后自动卖出指定稀有度及以下未锁定鱼。</td></tr>
+          <tr><td><span class="tag t-basic">设置</span></td><td><code>自动锁鱼 [开启/关闭/通配符]</code></td><td>收杆后自动锁定匹配的鱼，优先级高于自动卖鱼。</td></tr>
+          <tr><td><span class="tag t-basic">设置</span></td><td><code>钓鱼改名 名字</code> / <code>更换皮肤 ID</code></td><td>修改钓鱼昵称或切换已有皮肤。</td></tr>
+          <tr><td><span class="tag t-basic">天气</span></td><td><code>天气</code> / <code>天气2</code></td><td>查看普通/S1 或星空地图天气，每天 11 点刷新。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 物品与经济 -->
+  <div class="card">
+    <div class="sec-h">物品与经济</div>
+    <div class="grid-2">
+      <div class="cmd-card"><span class="cmd-name">香甜玉米 / 打窝</span><p class="cmd-desc">地点级速度加成，上限 10 层，每层 +5%，每日打窝 2 次。与星空艇加成共享 50% 上限（仅 1-10 图和 S1）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">展示木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。也可用于升级展示栏位。不可出售。</p></div>
+      <div class="cmd-card"><span class="cmd-name">猫猫框</span><p class="cmd-desc">用于强化展示栏位（3 倍签到收益），也可在 11-20 星空图打窝加速。不可出售。</p></div>
+      <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
+      <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水互斥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、展示木框、猫猫框也有效。与真多多药水互斥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼进度后重新结算。</p></div>
+      <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>药水获取途径：</strong>所有药水均不在鱼店出售。通过摩天轮签到、活动或 GM 命令获取，使用 <code>钓鱼使用 物品名</code>。
+    </div>
+  </div>
+
+  <!-- 速度加成 -->
+  <div class="card">
+    <div class="sec-h">速度加成体系</div>
+    <p class="card-desc">钓鱼速度由多个乘区组合而成，理解乘区关系有助于合理分配资源。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>加速方式</th><th>作用范围</th><th>上限</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td>鱼钩</td><td>所有地图</td><td>无</td><td>独立乘区</td></tr>
+          <tr><td>鱼饵</td><td>所有地图</td><td>+120%</td><td>与打窝/展示框/星空艇同乘区累加</td></tr>
+          <tr><td>玉米打窝</td><td>1-20 图 + S1</td><td>10 层 (50%)</td><td>1-10 图+S1 与星空艇共享 50% 上限</td></tr>
+          <tr><td>展示木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享</td></tr>
+          <tr><td>猫猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>与玉米打窝同乘区叠加，地点级 buff</td></tr>
+          <tr><td>星空艇</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>全服共享，与玉米打窝共享上限</td></tr>
+          <tr><td>天气</td><td>所有地图</td><td>—</td><td>独立乘区（雨天等）</td></tr>
+          <tr><td>猫猫乐园</td><td>仅 S1</td><td>—</td><td>独立乘区</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>11-20 图限制：</strong>星空图 11-20 中，展示木框和星空艇加成均不生效；可用鱼钩、鱼饵、玉米打窝，以及<strong>猫猫框打窝</strong>（<code>钓鱼使用 猫猫框</code>）。
+    </div>
+  </div>
+
+  <!-- 稀有度与差值 -->
+  <div class="card">
+    <div class="sec-h">稀有度与等级差值</div>
+    <p class="card-desc">
+      钓到的鱼稀有度取决于<strong>鱼竿等级</strong>与<strong>场景等级</strong>的<strong>差值</strong>（状态页中的「鱼力」）：
+      <code>差值 = 鱼竿等级 − 场景难度</code>。
+      其中 1 图难度为 0、2 图为 1，以此类推（S1 难度为 6）。差值越大，高稀有度概率越高。
+    </p>
+    <div class="callout info" style="margin-top:10px">
+      <strong>UR 截断：</strong>常规概率表超过 UR 的质量会全部并入 <strong>UR</strong>，不会通过概率表直接掉落 UTR。UTR 需走独立的迷途风 / 星空图解锁机制（见 UTR 玩法页）。
+    </div>
+    <p style="font-size:13px; color:var(--sub); margin:12px 0 8px;">前 10 级差值的稀有度分布（已做 UR 截断）：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>差值</th>
+            <th>N</th>
+            <th>R</th>
+            <th>SR</th>
+            <th>SSR</th>
+            <th>UR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>66.55%</td><td>33.45%</td><td>0%</td><td>0%</td><td>0%</td></tr>
+          <tr><td>1</td><td>49.64%</td><td>42.46%</td><td>7.90%</td><td>0%</td><td>0%</td></tr>
+          <tr><td>2</td><td>31.53%</td><td>50.39%</td><td>18.08%</td><td>0%</td><td>0%</td></tr>
+          <tr><td>3</td><td>16.38%</td><td>48.90%</td><td>34.72%</td><td>0%</td><td>0%</td></tr>
+          <tr><td>4</td><td>6.77%</td><td>37.74%</td><td>44.12%</td><td>11.37%</td><td>0%</td></tr>
+          <tr><td>5</td><td>0%</td><td>23.35%</td><td>51.01%</td><td>25.64%</td><td>0%</td></tr>
+          <tr><td>6</td><td>0%</td><td>2.91%</td><td>52.09%</td><td>40.00%</td><td>5.00%</td></tr>
+          <tr><td>7</td><td>0%</td><td>0%</td><td>19.37%</td><td>68.63%</td><td>12.00%</td></tr>
+          <tr><td>8</td><td>0%</td><td>0%</td><td>16.38%</td><td>48.90%</td><td>34.72%</td></tr>
+          <tr><td>9</td><td>0%</td><td>0%</td><td>6.77%</td><td>37.74%</td><td>55.49%</td></tr>
+          <tr><td>10</td><td>0%</td><td>0%</td><td>0%</td><td>23.35%</td><td>76.65%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>举例：</strong>鱼竿 7 级在 1 图（难度 0）差值为 7，UR 约 12%；同一鱼竿在 7 图（难度 6）差值仅为 1，以 N/R/SR 为主。想刷 UR 应尽量提高鱼竿相对当前场景的差值。
+    </div>
+  </div>
+
+  <!-- 常见细节 -->
+  <div class="card">
+    <div class="sec-h">常见细节</div>
+    <ul class="clean">
+      <li>鱼编号通常由地图、鱼序号、稀有度组成；S1 编号形如 <code>s101</code>。</li>
+      <li class="warn"><code>卖鱼</code> 不带参数时默认排除 UTR，需明确写 <code>卖鱼 UTR</code> 或 <code>卖鱼 全部</code> 才会处理 UTR。</li>
+      <li>收杆相关签到次数每天 12 点刷新；天气每天 11 点刷新。</li>
+      <li>锁定的鱼也可以赠送和交换，锁定仅防止误卖。</li>
+      <li class="warn">幸运药水与真多多药水互斥：同一时间只能生效一种，一种生效中使用另一种会被拒绝（不消耗道具）。</li>
+      <li>时光药水结算时不受多多和幸运药水影响，但其他 buff 依然有效。</li>
+    </ul>
+  </div>
+
+  <!-- GM指令 -->
+  <div class="card">
+    <div class="sec-h">GM 指令 <span class="tag t-gm">仅超管</span></div>
+    <p class="card-desc">以下指令仅 SUPERUSER 可用，用于测试、补偿和调试。支持「全服」模式：将 <code>@用户</code> 替换为 <code>全服</code> 即可对全服执行。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>指令</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>清空钓鱼数据 [QQ]</code></td><td>清空指定用户或自己的钓鱼数据</td></tr>
+          <tr><td><code>gm收杆</code></td><td>强制把自己的本轮钓鱼视为 10 小时后收杆</td></tr>
+          <tr><td><code>gm钱钱</code></td><td>给自己添加 100000 钓鱼币</td></tr>
+          <tr><td><code>gm发钱 金额 @用户</code></td><td>给用户增加或移除钓鱼币，负数表示扣除。支持全服</td></tr>
+          <tr><td><code>gm设定金钱 QQ 金额</code></td><td>直接设置用户钓鱼币数值</td></tr>
+          <tr><td><code>gm添加 物品名 [数量] @用户</code></td><td>添加鱼、鱼饵、药水、展示框等。负数扣除。支持全服</td></tr>
+          <tr><td><code>gm赠送 物品名 [数量] @用户</code></td><td>同 gm添加。支持全服</td></tr>
+          <tr><td><code>gm添加皮肤 皮肤ID @用户</code></td><td>给用户添加并切换皮肤。支持全服</td></tr>
+          <tr><td><code>gm发鱼 鱼ID1,鱼ID2 @用户</code></td><td>按鱼编号直接发鱼。支持全服</td></tr>
+          <tr><td><code>gm回退鱼竿 QQ</code> / <code>gm回退鱼钩 QQ</code></td><td>回退指定用户鱼竿或鱼钩等级</td></tr>
+          <tr><td><code>gm天气</code> / <code>gm天气重置</code></td><td>查看或重置天气数据</td></tr>
+          <tr><td><code>gm补成就 [@用户]</code></td><td>重新检查并补发用户成就</td></tr>
+          <tr><td><code>测试渲染 [名称]</code></td><td>测试渲染相关资源</td></tr>
+          <tr><td><code>测试场景渲染 ID</code></td><td>随机渲染角色到指定场景图，检查站位和遮挡</td></tr>
+          <tr><td><code>钓鱼调试 [开启/关闭/状态]</code></td><td>控制钓鱼调试模式</td></tr>
+          <tr><td><code>钓鱼公告 内容</code></td><td>向所有活跃群广播消息</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 2: UTR玩法                -->
+<!-- ============================== -->
+<div class="page" id="page-utr">
+  <div class="page-title">⭐ UTR 玩法</div>
+  <div class="page-subtitle">游戏中最高稀有度的鱼，需要特殊条件才能获取</div>
+
+  <!-- 什么是UTR -->
+  <div class="card">
+    <div class="sec-h">什么是 UTR</div>
+    <p style="font-size:14px; line-height:1.7;">
+      <strong>UTR</strong> 是游戏中最高稀有度的鱼。与普通鱼不同，UTR 鱼无法通过常规概率表自然掉落，需要先完成图鉴前置，再通过<strong>特殊判定 + 保底</strong>获取。1-10 图与 S1 必须<strong>同时满足</strong>：① 集齐该图全部 UR（解锁迷途风）② 在<strong>迷途风天气</strong>下钓鱼；缺一不可。11-20 星空图则在集齐该图全部 UR 后常驻启用（不生成迷途风）。每张地图都有对应的 UTR 鱼，集齐所有 UTR 是游戏的核心收集目标。
+    </p>
+  </div>
+
+  <!-- UTR获取流程 -->
+  <div class="card">
+    <div class="sec-h">UTR 获取流程（1-10 图与 S1）</div>
+    <div class="callout warn" style="margin-bottom:12px">
+      <strong>双重要求：</strong>只集齐 UR 不够，只等迷途风也不够——必须<strong>集齐该图全部 UR</strong>解锁迷途风可见性，并在<strong>迷途风天气</strong>下钓鱼，两者同时满足才能获得 UTR。
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">在当前地图集齐所有鱼的 N、R、SR、SSR、<strong>UR</strong> 五个稀有度</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">完成收集成就后，该图的<strong>迷途风天气</strong>对你解锁（未解锁时预报显示为晴天）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">等待该图刷出<strong>迷途风</strong>，并在迷途风天气下钓鱼，才有概率获得 UTR</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">未获得 UTR 时，保底计数器累计；达到 150 次必定获得</div></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>关键点：</strong>保底计数器仅在迷途风天气下递增。非迷途风天气下钓鱼不会推进保底、也不会出 UTR。出 UTR 后计数器归零。
+    </div>
+  </div>
+
+  <!-- 11-20图UTR -->
+  <div class="card">
+    <div class="sec-h">星空图（11-20）的 UTR 机制</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      11-20 图的 UTR <strong>不依赖迷途风</strong>，也<strong>不会生成迷途风天气</strong>。解锁后沿用与迷途风相同的递进概率与 150 次保底数值，但计数与出货都不再受天气限制。
+    </p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">在当前星空图集齐所有鱼的 N、R、SR、SSR、<strong>UR</strong></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">完成该图收集成就后，<strong>UTR 自动解锁</strong>（无需迷途风）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后：递进概率常驻 + <strong>150 次保底</strong>开始计数；未解锁时保底不计数</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">星空专属天气（太阳风/流星雨/恒纪元）只影响<strong>流星鱼</strong>，不影响 UTR 保底</div></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>与 1-10 / S1 的区别：</strong>前半部分仍需迷途风才会计 UTR 保底；星空图解锁 UTR 后任意天气都会推进保底。1-10 与 S1 逻辑不变。
+    </div>
+  </div>
+
+  <!-- UTR赠送 -->
+  <div class="card">
+    <div class="sec-h">UTR 赠送机制</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">赠送 鱼ID @用户</span>
+        <p class="cmd-desc">将指定 UTR 鱼赠送给其他玩家。需使用平台真实 @（手机长按头像，电脑输入 @ 后选择）。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">首次解锁赠送</span>
+        <p class="cmd-desc">若对方尚未解锁该 UTR 的图鉴，赠送会自动消耗 1 条帮助对方解锁，且<strong>不消耗发送者每日赠送次数</strong>。发送者获得 2 倍 UTR 基础价格的金币奖励。</p>
+      </div>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>赠送技巧：</strong>每日赠送次数仅 1 次，但帮助他人首次解锁 UTR 不消耗次数。可以提前与群友协商，互相赠送未解锁的 UTR 鱼来双赢。
+    </div>
+  </div>
+
+  <!-- UTR自选券 -->
+  <div class="card">
+    <div class="sec-h">UTR 自选券</div>
+      <span class="cmd-name">钓鱼使用 UTR自选券 鱼名</span>
+    <p style="font-size:14px; line-height:1.7;">
+      UTR 自选券是特殊道具，可直接兑换指定 UTR 鱼。
+    </p>
+    <ul class="clean">
+      <li>兑换条件：玩家已解锁该地图至少一条 UTR 鱼</li>
+      <li>兑换时通过交互对话选择目标鱼</li>
+      <li>获得的鱼走统一添加流程，会自动检查图鉴解锁</li>
+    </ul>
+  </div>
+
+  <!-- 黑商白商 -->
+  <div class="card">
+    <div class="sec-h">黑商与白商交换</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">黑商交换 来源鱼 目标鱼</span>
+        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。每天 1 次。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">白商 / 白商交换 来源鱼 目标鱼</span>
+        <p class="cmd-desc">查看并执行黑商记录的反向交换。用列表左边的鱼换右边的鱼，100% 成功。消耗赠送次数。</p>
+      </div>
+    </div>
+    <div class="sec-h" style="margin-top:14px">黑商规则细节</div>
+    <ul class="clean">
+      <li>来源鱼与目标鱼稀有度相同时，有 70% 概率交换失败，改为获得目标鱼所在场景中相同稀有度的其他鱼</li>
+      <li>锁定鱼也允许被交换消耗</li>
+      <li>S1 猫猫乐园视为 7 级图</li>
+      <li>交换失败后记录仍保留，白商列表中可看到反向交换选项</li>
+    </ul>
+    <div class="sec-h" style="margin-top:14px">白商规则细节</div>
+    <ul class="clean">
+      <li>白商列表分两类：<strong>现在可交换</strong>（背包已有来源鱼）和<strong>有可能做到</strong>（鱼力足够但暂无来源鱼）</li>
+      <li>未解锁地图、鱼力不足、或缺少 UTR 成就的记录不显示</li>
+      <li>相同来源鱼按场景合并显示，相同反向交换只显示排序靠前的第一条</li>
+      <li>白商交换成功后，对应黑商记录失效</li>
+    </ul>
+  </div>
+
+  <!-- 保底系统 -->
+  <div class="card">
+    <div class="sec-h">保底计数器一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>保底类型</th><th>阈值</th><th>计数条件</th><th>获取后</th></tr></thead>
+        <tbody>
+          <tr><td>UTR 保底</td><td>150 次</td><td>1-10/S1：仅迷途风天气 +1；11-20：UTR 解锁后任意天气 +1（未解锁不计）</td><td>计数器归零</td></tr>
+          <tr><td>展示木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零</td></tr>
+          <tr><td>猫猫框保底</td><td>15 次</td><td>每次被猫吃掉鱼但是未掉落框时 +1</td><td>计数器归零</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>幸运药水与保底：</strong>幸运药水的双次结算只计算一次保底计数。即使两次结算都命中，保底也只 +1。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page: 黑商白商                 -->
+<!-- ============================== -->
+<div class="page" id="page-market">
+  <div class="page-title">🔄 黑商与白商</div>
+  <div class="page-subtitle">鱼获交换、逆交换与补图鉴策略</div>
+
+  <div class="card">
+    <div class="sec-h">玩法总览</div>
+    <p style="font-size:14px; line-height:1.7;">
+      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。每天基础 1 次，可消耗额外券再换。
+      <strong>白商</strong>：查看全服仍有效的黑商记录，用「黑商当时拿到的鱼」100% 换回「黑商当时交出的鱼」。成功后该记录失效，并消耗赠送次数。
+    </p>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>核心用途：</strong>补图鉴缺口、处理重复高级鱼、通过逆交换捡漏别人黑商失败/成功后留下的路线。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">指令一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
+          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可逆交换列表（按可执行度分区）。</td></tr>
+          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商交换 来源鱼 目标鱼</code></td><td>按列表方向执行逆交换：用左侧鱼换右侧鱼。</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid-2" style="margin-top:12px">
+      <div class="cmd-card">
+        <span class="cmd-name">输入格式</span>
+        <p class="cmd-desc">示例：<code>黑商交换 锦鲤 UR 小虾 N</code> 或 <code>黑商交换 105 201</code>。若方向写反但背包只有目标鱼，系统会自动尝试对调。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">锁定鱼</span>
+        <p class="cmd-desc">锁定状态的鱼也可以被黑商/白商消耗，交换前请确认不会误换珍藏鱼。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">黑商规则</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">交换条件</span>
+        <p class="cmd-desc">来源鱼的<strong>场景等级</strong>与<strong>稀有度</strong>都必须 ≥ 目标鱼。S1 猫猫乐园按 7 级图计算。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">每日次数</span>
+        <p class="cmd-desc">每人每天基础 1 次。次数用尽后，若持有黑商额外券（<code>black_market_extra_ticket</code>）可再换一次并消耗 1 张券。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">同稀有度风险</span>
+        <p class="cmd-desc">来源与目标稀有度相同时，有 70% 概率被随机改写为「目标场景同稀有度的其他鱼」；跨稀有度交换不会触发该随机。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">失败保底</span>
+        <p class="cmd-desc">连续 4 次因同稀有度随机而「没拿到指定目标」后，下一次同稀有度交换必定拿到你指定的目标，保底计数清零。</p>
+      </div>
+    </div>
+    <ul class="clean" style="margin-top:12px">
+      <li>无论是否被随机改写，都会生成一条可被白商使用的交换记录（记录的是实际成交结果）。</li>
+      <li>黑商会扣减来源鱼并发放实际获得的目标鱼，走统一入库与图鉴流程。</li>
+      <li>背包没有来源鱼时无法交换；未找到鱼名/稀有度会提示用法。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">白商规则</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">逆交换本质</span>
+        <p class="cmd-desc">白商列表显示的是「现在付出 → 换回」。你需要持有黑商当时<strong>获得</strong>的那条鱼，才能 100% 换回黑商当时<strong>交出</strong>的那条鱼。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">次数消耗</span>
+        <p class="cmd-desc">白商交换成功会消耗 1 次当日赠送次数。赠送次数用尽时无法再白商交换。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">列表分区</span>
+        <p class="cmd-desc"><strong>现在可交换</strong>：背包已有来源鱼；<strong>有可能做到</strong>：鱼力/地图已满足但暂无来源鱼。未解锁地图、鱼力不足、缺 UTR 成就的记录不显示。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">去重与失效</span>
+        <p class="cmd-desc">相同逆交换方向只显示一条；你已收集过「可换回那条鱼」的记录会隐藏。交换成功后记录 <code>is_active=false</code>，他人不可再用。</p>
+      </div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>显示压缩：</strong>白商图会把左侧相同来源鱼合并，并按场景进一步折叠右侧目标，方便快速扫图。
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">策略建议</div>
+    <ul class="clean">
+      <li><strong>补图鉴：</strong>用重复的高场景/高稀有度鱼，换本图缺失的低稀有度或指定目标。</li>
+      <li><strong>规避 70% 风险：</strong>尽量用更高稀有度换低一档，避免同稀有度被随机改写。</li>
+      <li><strong>利用保底：</strong>若必须同稀有度硬换，可连续失败 4 次后用第 5 次保底锁定目标。</li>
+      <li><strong>白商捡漏：</strong>别人黑商成功/随机后留下的记录，可能是你缺的图鉴捷径；先 <code>白商</code> 看「现在可交换」。</li>
+      <li><strong>次数规划：</strong>黑商每天 1 次很宝贵；白商会占赠送次数，注意与送鱼共享额度。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">常见问题</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">提示「今天已经进行过黑商交换」</span>
+        <p class="cmd-desc">基础次数已用完，且没有额外券。等次日重置或获取额外券后再试。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">提示「今天已经不能再赠送」</span>
+        <p class="cmd-desc">白商依赖赠送次数。当日送鱼/白商次数已满时需等重置。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">白商列表没有想要的记录</span>
+        <p class="cmd-desc">可能已被逆交换、你已收集目标鱼、或鱼力/地图未解锁导致隐藏。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">拿到的不是指定目标</span>
+        <p class="cmd-desc">同稀有度 70% 随机改写。记录仍会写入白商，别人或你自己可按实际结果逆交换。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 3: 猫猫乐园               -->
+<!-- ============================== -->
+<div class="page" id="page-catpark">
+  <div class="page-title">🐱 猫猫乐园</div>
+  <div class="page-subtitle">专属活动地图 S1，建设乐园获取丰富收益</div>
+
+  <!-- 解锁条件 -->
+  <div class="card">
+    <div class="sec-h">解锁条件</div>
+    <div class="callout info">
+      <strong>两种解锁方式：</strong>
+      <br>① 集齐任意两张普通地图（1-10）的全部 UTR 图鉴
+      <br>② 白名单用户可强制解锁
+    </div>
+    <div class="cmd-card" style="margin-top:10px">
+      <span class="cmd-name">钓鱼S1</span>
+      <p class="cmd-desc">进入猫猫乐园地图开始钓鱼。</p>
+    </div>
+  </div>
+
+  <!-- 乐园玩法 -->
+  <div class="card">
+    <div class="sec-h">乐园玩法概述</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      猫猫乐园是一个特殊钓鱼地点。在这里钓鱼时，每竿有 30%~45% 概率获得<strong>建设材料</strong>（随建筑等级提升），其余概率获得活动鱼。建设材料用于升级乐园中的 9 栋建筑，建筑等级越高，提供的加成越强。
+    </p>
+    <div class="grid-3">
+      <div class="cmd-card"><span class="cmd-name">毛线团</span><p class="cmd-desc">建设材料之一，权重均等随机掉落</p></div>
+      <div class="cmd-card"><span class="cmd-name">特级小鱼干</span><p class="cmd-desc">建设材料之一，权重均等随机掉落</p></div>
+      <div class="cmd-card"><span class="cmd-name">彩虹逗猫棒</span><p class="cmd-desc">建设材料之一，权重均等随机掉落</p></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>材料率：</strong>基础 30%（猫爬架广场 Lv0），随建筑等级递增：Lv1 = 35% / Lv2 = 40% / Lv3 = 45%。概率展示页面会显示当前材料率。
+    </div>
+  </div>
+
+  <!-- 建筑系统 -->
+  <div class="card">
+    <div class="sec-h">九栋建筑与效果</div>
+    <p class="card-desc">所有百分比建筑统一为 Lv1 = 3% / Lv2 = 6% / Lv3 = 10%。建筑成本 Lv1 降 25%，Lv2 降 15%，Lv3 不变。</p>
+    <div class="grid-2">
+      <div class="bldg-card"><div class="bldg-name">1. 猫猫小木屋</div><div class="bldg-desc">鱼价加成，提高 S1 内所有鱼的卖价。</div><span class="bldg-lv">Lv1: 3% / Lv2: 6% / Lv3: 10%</span></div>
+      <div class="bldg-card"><div class="bldg-name">2. 喵喵鱼塘</div><div class="bldg-desc">钓鱼速度乘区，提高 S1 钓鱼速度。</div><span class="bldg-lv">Lv1: ×1.03 / Lv2: ×1.06 / Lv3: ×1.10</span></div>
+      <div class="bldg-card"><div class="bldg-name">3. 猫爬架广场</div><div class="bldg-desc">材料掉落率提升，决定每竿获得材料的概率。</div><span class="bldg-lv">Lv1: 35% / Lv2: 40% / Lv3: 45%</span></div>
+      <div class="bldg-card"><div class="bldg-name">4. 喵咖咖啡馆</div><div class="bldg-desc">鱼价加成（同猫猫小木屋），叠加生效。</div><span class="bldg-lv">Lv1: 3% / Lv2: 6% / Lv3: 10%</span></div>
+      <div class="bldg-card"><div class="bldg-name">5. 猫猫过山车</div><div class="bldg-desc">天气增幅，覆盖雨天速度、流星稀有度、暴雨省饵、迷途风 UTR 概率、猫天气吃鱼概率。</div><span class="bldg-lv">Lv1: 3% / Lv2: 6% / Lv3: 10%</span></div>
+      <div class="bldg-card"><div class="bldg-name">6. 旋转逗猫棒</div><div class="bldg-desc">双倍鱼获概率，与真多多药水在结算层面合并为浮点倍率。</div><span class="bldg-lv">Lv1: 3% / Lv2: 6% / Lv3: 10%</span></div>
+      <div class="bldg-card"><div class="bldg-name">7. 水晶猫城堡</div><div class="bldg-desc">钓鱼等级 +1 概率，每竿判定一次。幸运药水双次结算共享同一判定。</div><span class="bldg-lv">Lv1: 3% / Lv2: 6% / Lv3: 10%</span></div>
+      <div class="bldg-card"><div class="bldg-name">8. 猫咪摩天轮</div><div class="bldg-desc">每日签到抽奖次数：Lv0 = 0 抽，Lv1 = 1 抽，Lv2 = 2 抽，Lv3 = 3 抽。未登录天数累计合并。</div><span class="bldg-lv">抽奖奖池见下方</span></div>
+      <div class="bldg-card"><div class="bldg-name">9. 传奇猫雕像</div><div class="bldg-desc">前置条件：其他 8 栋建筑达到目标等级。最终奖励 <strong>鱼竿等级 +1</strong>（永久，全地图生效，不影响商店升级价格）。</div><span class="bldg-lv">需前置条件</span></div>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>建筑 buff 仅在 S1 生效。</strong>唯一例外：传奇猫雕像 Lv3 的鱼竿 +1 永久加成在所有地点生效。
+    </div>
+  </div>
+
+  <!-- 建设指令 -->
+  <div class="card">
+    <div class="sec-h">建设指令</div>
+    <div class="grid-2">
+      <div class="cmd-card"><span class="cmd-name">建设猫猫乐园</span><p class="cmd-desc">查看当前建设状态和材料库存。</p></div>
+      <div class="cmd-card"><span class="cmd-name">建设猫猫乐园 编号</span><p class="cmd-desc">升级指定编号建筑（1-9）。也可输入建筑名。</p></div>
+      <div class="cmd-card"><span class="cmd-name">建设猫猫乐园 4567</span><p class="cmd-desc">批量升级多个建筑，按顺序依次尝试建设。</p></div>
+      <div class="cmd-card"><span class="cmd-name">建设猫猫乐园 4 5 6 7</span><p class="cmd-desc">空格分隔也支持批量建设。</p></div>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      建设图中绿色表示该建筑同时满足前置条件和材料足够；灰色表示不可建造、材料不足、已满级或未满足条件。
+    </div>
+  </div>
+
+  <!-- 摩天轮签到 -->
+  <div class="card">
+    <div class="sec-h">摩天轮每日签到</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      猫咪摩天轮建筑等级决定每日签到抽数。当日首次收杆时自动抽奖（无需在 S1 地点）。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>摩天轮等级</th><th>每日抽数</th></tr></thead>
+        <tbody>
+          <tr><td>Lv0</td><td>0 抽</td></tr>
+          <tr><td>Lv1</td><td>1 抽</td></tr>
+          <tr><td>Lv2</td><td>2 抽</td></tr>
+          <tr><td>Lv3</td><td>3 抽</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sec-h" style="margin-top:12px">奖池内容</div>
+    <div class="grid-3">
+      <div class="cmd-card"><span class="cmd-name">香甜玉米</span><p class="cmd-desc">50% 概率获得</p></div>
+      <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
+      <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
+      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
+      <div class="cmd-card"><span class="cmd-name">猫猫框</span><p class="cmd-desc">12.5% 概率获得</p></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>累计式结算：</strong>未登录的天数会累计合并到下次签到。抽数 = 建筑等级 ×（错过天数 + 1）。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 4: 11-20关                -->
+<!-- ============================== -->
+<div class="page" id="page-starry">
+  <div class="page-title">🚀 11-20 关 · 星空钓鱼</div>
+  <div class="page-subtitle">第二部分，探索星空地图，挑战全新机制</div>
+
+  <!-- 星空艇 -->
+  <div class="card">
+    <div class="sec-h">建设星空艇</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      鱼竿达到 Lv.10 后，支付 <strong>600,000 鱼币</strong>建设星空艇，进入第二部分并解锁 11【牛奶河】。
+    </p>
+    <div class="callout info">
+      <strong>全服共享加成：</strong>任意玩家成功建设星空艇时，全服一阶段地图（1-10 + S1）获得永久 +5% 钓鱼速度加成。多玩家可叠加，最多 10 层（+50%）。
+    </div>
+    <div class="cmd-card" style="margin-top:10px">
+      <span class="cmd-name">建设星空艇</span>
+      <p class="cmd-desc">鱼竿 Lv.10 时可在鱼店购买或使用此指令建设。</p>
+    </div>
+  </div>
+
+  <!-- 星空地图 -->
+  <div class="card">
+    <div class="sec-h">星空地图一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>地图名</th><th>风格</th><th>鱼竿需求</th></tr></thead>
+        <tbody>
+          <tr><td>11</td><td>牛奶河</td><td>银白星河、奶色流光</td><td>Lv.10</td></tr>
+          <tr><td>12</td><td>月环港</td><td>月球环形山港湾</td><td>Lv.11</td></tr>
+          <tr><td>13</td><td>彗尾瀑</td><td>彗星尾焰坠成瀑布</td><td>Lv.12</td></tr>
+          <tr><td>14</td><td>星砂漠</td><td>漂浮星砂与镜面沙海</td><td>Lv.13</td></tr>
+          <tr><td>15</td><td>云鲸庭</td><td>云海中巨鲸遗迹</td><td>Lv.14</td></tr>
+          <tr><td>16</td><td>极光井</td><td>极光垂入无底星井</td><td>Lv.15</td></tr>
+          <tr><td>17</td><td>黑洞涡</td><td>低重力暗潮旋涡</td><td>Lv.16</td></tr>
+          <tr><td>18</td><td>水晶星冠</td><td>水晶冠冕状小行星带</td><td>Lv.17</td></tr>
+          <tr><td>19</td><td>时钟星湖</td><td>时间碎片组成的湖</td><td>Lv.18</td></tr>
+          <tr><td>20</td><td>奇迹彼岸</td><td>星海尽头的许愿彼岸</td><td>Lv.19</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      每张星空地图预期推进约 10 天。20 图在 Lv.19 即可进入，Lv.20 更适合作为最终强度等级。
+    </div>
+  </div>
+
+  <!-- 星空图UTR -->
+  <div class="card">
+    <div class="sec-h">星空图 UTR 获取</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">集齐当前星空图所有鱼的 N/R/SR/SSR/UR</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">UTR 自动解锁（不需要迷途风，星空图也不生成迷途风）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后启用递进概率，并开始累计 150 次 UTR 保底；未解锁不计数</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">太阳风/流星雨/恒纪元只影响流星鱼，不打断 UTR 保底</div></div>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      递进概率数值与原迷途风一致：基础 0.2%，鱼竿每领先地图 1 级 +0.1%。图 11（需 Lv.16+）时，Lv.16 约为 0.7%，Lv.20 约为 1.1%。
+    </div>
+  </div>
+
+  <!-- 速度限制 -->
+  <div class="card">
+    <div class="sec-h">星空图速度限制</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>加速方式</th><th>1-10 图 + S1</th><th>11-20 星空图</th></tr></thead>
+        <tbody>
+          <tr><td>鱼钩</td><td>✓</td><td>✓</td></tr>
+          <tr><td>鱼饵</td><td>✓</td><td>✓</td></tr>
+          <tr><td>玉米打窝</td><td>✓（与星空艇共享 50%）</td><td>✓（独立 50% 上限）</td></tr>
+          <tr><td>展示木框</td><td>✓（独立 50%）</td><td>✗ 不生效</td></tr>
+          <tr><td>猫猫框打窝</td><td>✗ 仅星空图</td><td>✓（与玉米打窝同乘区，50% 上限）</td></tr>
+          <tr><td>星空艇加成</td><td>✓（与打窝共享 50%）</td><td>✗ 不生效</td></tr>
+          <tr><td>猫猫乐园速度</td><td>仅 S1</td><td>✗</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 星空艇满层 -->
+  <div class="card">
+    <div class="sec-h">星空艇满层效果</div>
+    <ul class="clean">
+      <li>全服 10 名玩家建设星空艇后，加成达到上限 +50%</li>
+      <li class="warn">此时 1-10 图的晴天全部被迷途风替换，S1 也不再出现晴天</li>
+      <li>11-20 图不受星空艇满层影响（星空图本身不产生晴天）</li>
+      <li>玉米打窝达到上限后无法继续叠加，可卖出多余玉米回收钓鱼币</li>
+      <li>每次新玩家建设时全服广播，第 10 次建设额外公告迷途风替换机制</li>
+    </ul>
+  </div>
+
+  <!-- 展示栏变化 -->
+  <div class="card">
+    <div class="sec-h">展示栏与强化</div>
+    <ul class="clean">
+      <li>【升级展示栏】为万能升级：木框/猫框/星空框未满 10 的全部校验</li>
+      <li>材料足够则一并升级扣框；全部不足则报告各自还差多少</li>
+      <li>星空木框提供 4 倍展示收益，最多 10 个</li>
+      <li>星空木框消耗<strong>星辰木框</strong>（奇迹获得）升级</li>
+      <li>建设星空艇后才可升级星空木框</li>
+    </ul>
+  </div>
+
+  <!-- 图鉴分区 -->
+  <div class="card">
+    <div class="sec-h">图鉴与天气分页</div>
+    <ul class="clean">
+      <li><code>图鉴</code> / <code>图鉴1</code>：显示 1-10 图 + S1 猫猫乐园</li>
+      <li><code>图鉴2</code>：需已建设星空艇，显示 11-20 星空地图</li>
+      <li><code>天气</code>：显示 1-10 图 + S1 猫猫乐园天气（详见<a href="javascript:void(0)" onclick="document.querySelector('[data-page=weather]').click()">天气系统</a>页）</li>
+      <li><code>天气2</code>：显示 11-20 星空地图天气，含乱纪元（详见<a href="javascript:void(0)" onclick="document.querySelector('[data-page=starryweather]').click()">星空天气</a>页）</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 5: 天气系统（1-10 + S1）  -->
+<!-- ============================== -->
+<div class="page" id="page-weather">
+  <div class="page-title">🌦️ 天气系统 · 1-10 图与 S1</div>
+  <div class="page-subtitle">每天随机分配的天气会影响钓鱼速度、稀有度、鱼饵消耗等</div>
+
+  <!-- 天气概述 -->
+  <div class="card">
+    <div class="sec-h">天气概述</div>
+    <p style="font-size:14px; line-height:1.7;">
+      天气每天 <strong>11 点</strong>刷新。1-10 图共享一套天气分配系统，S1 猫猫乐园独立判定。输入 <code>天气</code> 可查看当天 1-10 图和 S1 的天气情况。
+    </p>
+    <div class="callout info" style="margin-top:10px">
+      <strong>迷途风可见性：</strong>迷途风需要先集齐当前地图所有鱼的 N～UR 图鉴后才能看到并生效。未解锁时，迷途风在天气预报中显示为晴天。解锁后仍须等待该图刷出迷途风，才能钓 UTR。
+    </div>
+  </div>
+
+  <!-- 天气类型 -->
+  <div class="card">
+    <div class="sec-h">天气类型一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>天气</th><th>Emoji</th><th>效果</th><th>持续时间</th></tr></thead>
+        <tbody>
+          <tr><td><strong>晴天</strong></td><td>☀️</td><td>无特殊效果</td><td>—</td></tr>
+          <tr><td><strong>雨天</strong></td><td>🌧️</td><td>钓鱼速度 +10%</td><td>6-18 小时随机</td></tr>
+          <tr><td><strong>流星</strong></td><td>🌠</td><td>最高稀有度概率 +2%</td><td>6-18 小时随机</td></tr>
+          <tr><td><strong>暴雨</strong></td><td>⛈️</td><td>鱼饵消耗减半（每次钓鱼 50% 概率不消耗鱼饵）</td><td>6-18 小时随机</td></tr>
+          <tr><td><strong>迷途风</strong></td><td>🌀</td><td>有概率获得 UTR 鱼（需先集齐该图全 UR 图鉴解锁）</td><td>全天</td></tr>
+          <tr><td><strong>猫！</strong></td><td>🐱</td><td>猫猫会随机吃掉鱼获，但同时赠送猫礼物</td><td>6-18 小时随机</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 1-10图天气分配 -->
+  <div class="card">
+    <div class="sec-h">1-10 图天气分配机制</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      每天 11 点刷新时，10 张普通地图按以下规则分配天气：
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>天气</th><th>地图数</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>普通天气（雨/流星/暴雨/猫）</td><td>5 张</td><td>从 4 种普通天气中随机选择，持续时间 6-18 小时随机</td></tr>
+          <tr><td>迷途风</td><td>3 张</td><td>全天有效</td></tr>
+          <tr><td>晴天</td><td>2 张</td><td>无天气效果</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>星空艇满层时：</strong>全服 10 名玩家建设星空艇后，迷途风替换为 5 张（原 3 张 + 2 张晴天全部变为迷途风），晴天不再出现。
+    </div>
+  </div>
+
+  <!-- S1独立天气 -->
+  <div class="card">
+    <div class="sec-h">S1 猫猫乐园独立天气</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      猫猫乐园不参与 1-10 图的全局天气分配，每天独立判定天气。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>天气</th><th>概率</th><th>效果</th></tr></thead>
+        <tbody>
+          <tr><td>迷途风</td><td>50%</td><td>UTR 递进概率与保底生效（需集齐全 UR 解锁）</td></tr>
+          <tr><td>雨天</td><td>10%</td><td>钓鱼速度 +10%</td></tr>
+          <tr><td>流星</td><td>10%</td><td>最高稀有度概率 +2%</td></tr>
+          <tr><td>暴雨</td><td>10%</td><td>鱼饵消耗减半</td></tr>
+          <tr><td>猫天气</td><td>10%</td><td>猫猫会吃掉部分鱼获，但也会赠送猫礼物</td></tr>
+          <tr><td>晴天</td><td>10%</td><td>无特殊效果</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>星空艇满层时：</strong>S1 的 10% 晴天被替换为迷途风，即 60% 迷途风 + 40% 普通天气，晴天不再出现。
+    </div>
+  </div>
+
+  <!-- 猫天气与猫礼物 -->
+  <div class="card">
+    <div class="sec-h">猫天气详解</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      猫天气是 1-10 图和 S1 共有的特殊天气。猫天气下钓鱼时，猫猫会参与钓鱼过程。
+    </p>
+    <ul class="clean">
+      <li>每条鱼有 <strong>15%</strong> 概率被猫猫吃掉</li>
+      <li>同时猫猫也会赠送<strong>猫礼物</strong>（即时发放，不等收杆）</li>
+      <li>猫天气吃掉的鱼会在结算页面显示，计入累计钓获</li>
+      <li>猫猫乐园材料不会被猫吃掉</li>
+      <li>猫猫过山车建筑等级提升天气增幅效果（Lv1: +3% / Lv2: +6% / Lv3: +10%），仅对猫猫乐园内生效</li>
+    </ul>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>猫礼物：</strong>猫礼物可能是鱼或猫猫框。猫猫框有独立保底（15 次必出）。猫礼物即时发放到背包，不需要收杆。
+    </div>
+  </div>
+
+  <!-- 猫猫框 -->
+  <div class="card">
+    <div class="sec-h">猫猫框</div>
+    <p style="font-size:14px; line-height:1.7;">
+      猫猫框主要通过<strong>猫天气的猫礼物</strong>获得（保底 15 次）。用于强化展示栏位（3 倍签到收益），也可在 11-20 星空图打窝加速。展示木框与猫猫框均<strong>不可出售</strong>。
+    </p>
+    <div class="grid-2" style="margin-top:10px">
+      <div class="cmd-card"><span class="cmd-name">用途一：展示栏强化</span><p class="cmd-desc">通过【升级展示栏】消耗猫猫框强化展示栏位，强化后的展示位每天 3 倍签到收益。</p></div>
+      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">打窝规则</span><p class="cmd-desc">与玉米打窝共享地点 buff 层数上限；群聊每日打窝合计 2 次；私聊不计入次数。</p></div>
+      <div class="cmd-card"><span class="cmd-name">自动回收</span><p class="cmd-desc">传奇猫雕像 Lv3 建成后，背包和新钓的猫猫乐园材料自动回收（每个 80 金币）。</p></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>星空木框升级：</strong>解锁星空艇后，消耗星辰木框（奇迹获得）升级星空木框（4 倍展示收益，最多 10 个）。【升级展示栏】会一并校验。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 6: 星空天气（11-20 图）   -->
+<!-- ============================== -->
+<div class="page" id="page-starryweather">
+  <div class="page-title">🌫️ 星空天气 · 11-20 图</div>
+  <div class="page-subtitle">星空地图独立天气：5 张额外天气 + 5 张乱纪元（不生成迷途风）</div>
+
+  <!-- 星空天气概述 -->
+  <div class="card">
+    <div class="sec-h">星空天气概述</div>
+    <p style="font-size:14px; line-height:1.7;">
+      11-20 星空地图不参与 1-10 图的全局天气分配，每天独立判定。天气每天 <strong>11 点</strong>刷新。
+      每天 <strong>5 张</strong>星空图有额外天气（太阳风 / 流星雨 / 恒纪元），另 <strong>5 张</strong>为<strong>乱纪元</strong>；额外天气用于增强流星鱼，<strong>不会生成迷途风</strong>。
+      UTR 在集齐该图全部 UR 后解锁，并开始累计 150 保底，与当天天气无关。
+    </p>
+    <div class="callout info" style="margin-top:10px">
+      <strong>与 1-10 图的关键区别：</strong>星空地图没有雨天、暴雨、猫天气，也<strong>不会生成迷途风</strong>。每天 5 张图随机额外天气、5 张乱纪元；UTR 在集齐全 UR 后常驻启用，与当天天气无关。
+    </div>
+  </div>
+
+  <!-- 天气类型 -->
+  <div class="card">
+    <div class="sec-h">天气类型一览</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>天气</th><th>Emoji</th><th>概率</th><th>效果</th></tr></thead>
+        <tbody>
+          <tr><td><strong>太阳风</strong></td><td>🌬️</td><td>5 张额外天气内三选一</td><td>流星鱼出现率恒定 +2.5%（绝对加值，不与鱼竿等级加成乘算）</td></tr>
+          <tr><td><strong>流星雨</strong></td><td>💫</td><td>5 张额外天气内三选一</td><td>星空鱼变得幸运</td></tr>
+          <tr><td><strong>恒纪元</strong></td><td>🏛️</td><td>5 张额外天气内三选一</td><td>流星鱼数字范围限定为 2-8（不出现 0、1、9）</td></tr>
+          <tr><td><strong>乱纪元</strong></td><td>🌫️</td><td>每天固定 5 张</td><td>无额外效果；星空图不生成迷途风</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>乱纪元的含义：</strong>乱纪元没有任何效果，只是表示「当前无特殊天气」。每天固定 5 张星空图为乱纪元；无有效天气记录时也会显示为乱纪元（而不是晴天）。
+    </div>
+  </div>
+
+  <!-- 乱纪元详解 -->
+  <div class="card">
+    <div class="sec-h">乱纪元详解</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      乱纪元是星空地图（11-20）独有的天气状态名称。它出现在以下情况：
+    </p>
+    <ul class="clean">
+      <li>每天生成时固定 5 张图为乱纪元</li>
+      <li>天气尚未生成或无天气记录 → 默认显示为乱纪元</li>
+      <li>乱纪元本身没有效果，等同于「当前无特殊星空天气」</li>
+    </ul>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>关于乱纪元：</strong>乱纪元没有额外效果。11-20 <strong>不会再出现迷途风</strong>；集齐该图全部 UR 后解锁的是 UTR 掉落与保底，而不是迷途风可见性。
+    </div>
+  </div>
+
+  <!-- 星空天气与 UTR -->
+  <div class="card">
+    <div class="sec-h">星空天气 vs UTR</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>项目</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>星空天气种类</td><td>太阳风 / 流星雨 / 恒纪元 / 乱纪元（全天生效）</td></tr>
+          <tr><td>迷途风</td><td><strong>11-20 不生成</strong>（迷途风只存在于 1-10 图与 S1）</td></tr>
+          <tr><td>普通鱼 UTR</td><td>集齐该图全部 UR 后解锁；解锁后递进概率 + 150 保底常驻</td></tr>
+          <tr><td>保底计数</td><td>仅在 UTR 解锁后计数；未解锁时不累计</td></tr>
+          <tr><td>流星鱼</td><td>受太阳风/流星雨/恒纪元影响；乱纪元无加成</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:10px">
+      <strong>关键策略：</strong>想推进 UTR 就先集齐该图 UR；有额外天气的图优先用来刷高质量流星鱼。
+    </div>
+  </div>
+
+  <!-- 天气生成机制 -->
+  <div class="card">
+    <div class="sec-h">天气生成机制</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      每天 11 点刷新时，10 张星空地图按「5 + 5」分配天气：
+    </p>
+    <ul class="clean">
+      <li>天气持续全天（当天 23:00 至次日 23:00）</li>
+      <li><strong>5 张</strong>图在<strong>太阳风 / 流星雨 / 恒纪元</strong>中随机其一</li>
+      <li>另 <strong>5 张</strong>图固定为<strong>乱纪元</strong></li>
+      <li><strong>不生成迷途风</strong>；UTR 也不再绑定天气</li>
+      <li>星空地图不出现雨天、暴雨、猫天气等 1-10 图天气类型</li>
+      <li>星空地图不受星空艇满层影响（星空艇满层只替换 1-10 图和 S1 的晴天为迷途风）</li>
+    </ul>
+  </div>
+
+  <!-- UTR获取与天气 -->
+  <div class="card">
+    <div class="sec-h">星空图 UTR 与天气的关系</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">集齐当前星空图所有鱼的 N/R/SR/SSR/UR</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">UTR 自动解锁（不需要迷途风）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后：递进概率 + 150 保底常驻计数</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">星空天气只改流星鱼，不改 UTR 规则</div></div>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      递进概率：基础 0.2%，鱼竿每领先地图 1 级 +0.1%。未解锁 UTR 前保底不计数。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Page 7: 星空祈愿               -->
+<!-- ============================== -->
+<div class="page" id="page-wish">
+  <div class="page-title">✨ 星空祈愿机制</div>
+  <div class="page-subtitle">流星鱼、番型评分、奇迹合成——第二部分的进阶收集系统</div>
+
+  <!-- 流星鱼 -->
+  <div class="card">
+    <div class="sec-h">流星鱼基础</div>
+    <ul class="clean">
+      <li>流星鱼在 11-20 图钓鱼时基础 <strong>5%</strong> 概率掉落</li>
+      <li>鱼竿等级超过 <strong>10</strong> 后，每高 1 级额外 <strong>+0.5%</strong> 掉落率（如 Lv.11 = 5.5%，Lv.20 = 10%）</li>
+      <li>每条流星鱼拥有一个 <strong>6 位数字 ID</strong>（000000 - 999999）</li>
+      <li>流星鱼按<strong>番型</strong>评分，分数对应不同奖池；有奖池时<strong>收杆立刻抽奖</strong></li>
+      <li>真多多药水生效时，掉落的流星鱼会复制为<strong>两条相同编号</strong>（不提高掉落率）</li>
+      <li>流星鱼<strong>无法赠送、卖出、锁定</strong></li>
+      <li>收杆时显示每条流星鱼的番型和分数</li>
+    </ul>
+  </div>
+
+  <!-- 评分与奖池 -->
+  <div class="card">
+    <div class="sec-h">番型评分与奖池</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>分数</th><th>奖池等级</th></tr></thead>
+        <tbody>
+          <tr><td>0 分</td><td>无奖励</td></tr>
+          <tr><td>1 - 2 分</td><td>低级奖池</td></tr>
+          <tr><td>3 - 5 分</td><td>中级奖池</td></tr>
+          <tr><td>6 - 10 分</td><td>高级奖池</td></tr>
+          <tr><td>11 分及以上</td><td>究极奖池</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>奖池</th><th>内容</th></tr></thead>
+        <tbody>
+          <tr><td>低级</td><td>玉米、黑商额外兑换券、中级抽奖碎片、0.5积分（等概率）</td></tr>
+          <tr><td>中级</td><td>多多药水、幸运药水、重置药水、猫框、高级抽奖碎片</td></tr>
+          <tr><td>高级</td><td>闪光药水、时光药水、UTR 自选券、究极抽奖碎片</td></tr>
+          <tr><td>究极</td><td>时光药水 ×10、UTR 自选券 ×10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>碎片规则：</strong>抽奖碎片永远比当前奖池高一级（低级池→中级碎片，中级池→高级碎片，高级池→究极碎片）。
+      凑满 5 个时在本杆立刻结算：5 中级碎片→中级奖池、5 高级碎片→高级奖池、5 究极碎片→究极奖池（可连锁）。
+      S2 入场券通过累积流星鱼分数获得。
+    </div>
+  </div>
+
+  <!-- 番型分组与分值 -->
+  <div class="card">
+    <div class="sec-h">流星鱼番型一览（共 32 种）</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      6 位编号按<strong>多个番型家族</strong>分别判定：<strong>不同家族可以叠加</strong>，分数相加后再四舍五入得到展示分。
+      同一家族内不会把「被更长结构包住」的短段重复计分；部分家族还有「纯正档替代普通档」「高档吸收低档」的规则。
+    </p>
+    <div class="callout tip" style="margin-bottom:12px">
+      <strong>怎么理解叠加：</strong>
+      <ul class="clean" style="margin-top:6px">
+        <li><strong>不同家族之间</strong>：可以同时命中并<strong>全部加分</strong>（例如同号 + 回文 + 对子 + 飞机）。</li>
+        <li><strong>同一家族内部</strong>：更长的连段会<strong>吸收</strong>被它完全包含的更短连段，不重复计；互不包含的多段仍可各计一次。</li>
+        <li><strong>滑梯家族</strong>：同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
+        <li><strong>贪吃蛇家族</strong>：同一窗口若是「纯正贪吃蛇」（每步必动 ±1 且有转向），只按<strong>纯正</strong>计，不再计普通贪吃蛇。</li>
+        <li><strong>对子家族</strong>：两对 / 三对只取更高的一档（有三对时不计两对）。</li>
+        <li><strong>葫芦 / 星空飞机 / 区间色系</strong>：满足条件时各计一次。</li>
+      </ul>
+    </div>
+    <div class="callout info" style="margin-bottom:12px">
+      <strong>分值含义：</strong>表中「基础分」≈ <code>-log10(出现概率)</code>，越稀有越高。
+      最终<strong>展示分</strong> = 所有命中番型基础分之和，再四舍五入到整数，并用来进奖池 / 展馆。
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>家族</th>
+            <th>番型</th>
+            <th>基础分</th>
+            <th>简介</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="4"><span class="tag t-star">同号连段</span><br><span style="font-size:11px;color:var(--sub)">组内：更长吸收更短</span></td>
+            <td>3 位同号</td><td>1.43</td><td>连续 3 个相同数字，如 <code>x111xx</code></td>
+          </tr>
+          <tr><td>4 位同号</td><td>2.55</td><td>连续 4 个相同数字</td></tr>
+          <tr><td>5 位同号</td><td>3.72</td><td>连续 5 个相同数字</td></tr>
+          <tr><td>6 位同号</td><td>5.00</td><td>六位全相同，如 <code>777777</code></td></tr>
+
+          <tr>
+            <td rowspan="4"><span class="tag t-star">步步高</span><br><span style="font-size:11px;color:var(--sub)">滑梯家族·纯正档</span></td>
+            <td>3 位步步高</td><td>1.23</td><td>严格连号升降，相邻差恒为 +1 或恒为 -1，如 <code>123</code> / <code>765</code></td>
+          </tr>
+          <tr><td>4 位步步高</td><td>2.40</td><td>四位严格连号，如 <code>4567</code></td></tr>
+          <tr><td>5 位步步高</td><td>3.64</td><td>五位严格连号</td></tr>
+          <tr><td>6 位步步高</td><td>5.00</td><td>六位严格连号，如 <code>123456</code></td></tr>
+
+          <tr>
+            <td rowspan="4"><span class="tag t-basic">普通滑梯</span><br><span style="font-size:11px;color:var(--sub)">与步步高互斥·取步步高</span></td>
+            <td>3 位滑梯</td><td>0.76</td><td>单调不降或不升，允许停顿（差为 0/±1），但不是严格步步高</td></tr>
+          <tr><td>4 位滑梯</td><td>1.52</td><td>四位单调滑梯，如 <code>1123</code>、<code>5544</code></td></tr>
+          <tr><td>5 位滑梯</td><td>2.37</td><td>五位单调滑梯</td></tr>
+          <tr><td>6 位滑梯</td><td>3.34</td><td>六位单调滑梯</td></tr>
+
+          <tr>
+            <td rowspan="4"><span class="tag t-star">纯正贪吃蛇</span><br><span style="font-size:11px;color:var(--sub)">蛇家族·纯正档</span></td>
+            <td>3 位纯正蛇</td><td>1.18</td><td>每步必 ±1，且中途转向，如 <code>121</code>、<code>232</code></td>
+          </tr>
+          <tr><td>4 位纯正蛇</td><td>1.87</td><td>四位纯正蛇，如 <code>1212</code>、<code>3432</code></td></tr>
+          <tr><td>5 位纯正蛇</td><td>2.70</td><td>五位纯正蛇</td></tr>
+          <tr><td>6 位纯正蛇</td><td>3.65</td><td>六位纯正蛇</td></tr>
+
+          <tr>
+            <td rowspan="4"><span class="tag t-basic">普通贪吃蛇</span><br><span style="font-size:11px;color:var(--sub)">与纯正互斥·取纯正</span></td>
+            <td>3 位贪吃蛇</td><td>1.18</td><td>相邻差在 -1~+1，有移动且有转向；可含停顿，非纯正时计此档</td>
+          </tr>
+          <tr><td>4 位贪吃蛇</td><td>1.57</td><td>四位普通蛇</td></tr>
+          <tr><td>5 位贪吃蛇</td><td>2.13</td><td>五位普通蛇</td></tr>
+          <tr><td>6 位贪吃蛇</td><td>2.84</td><td>六位普通蛇</td></tr>
+
+          <tr>
+            <td rowspan="4"><span class="tag t-event">镜像回文</span><br><span style="font-size:11px;color:var(--sub)">组内：更长吸收更短</span></td>
+            <td>3 位回文</td><td>0.51</td><td>形如 <code>aba</code>（非全同号），如 <code>121</code>、<code>909</code></td>
+          </tr>
+          <tr><td>4 位回文</td><td>1.57</td><td>形如 <code>abba</code></td></tr>
+          <tr><td>5 位回文</td><td>1.71</td><td>形如 <code>abcba</code></td></tr>
+          <tr><td>6 位回文</td><td>3.00</td><td>形如 <code>abccba</code>；全同号回文由同号家族计分</td></tr>
+
+          <tr>
+            <td rowspan="2"><span class="tag t-cat">区间色系</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
+            <td>6 位全小 (0-4)</td><td>1.81</td><td>六位数字全部落在 0–4</td>
+          </tr>
+          <tr><td>6 位全大 (5-9)</td><td>1.81</td><td>六位数字全部落在 5–9</td></tr>
+
+          <tr>
+            <td rowspan="2"><span class="tag t-utr">周期节奏</span><br><span style="font-size:11px;color:var(--sub)">可与其它家族叠加</span></td>
+            <td>ABAB</td><td>1.60</td><td>四位交替 <code>abab</code>（a≠b）；不同起点的窗口可各计一次</td>
+          </tr>
+          <tr><td>ABCABC</td><td>3.14</td><td>六位重复两遍三段，且 a、b、c 互不相同，如 <code>123123</code></td></tr>
+
+          <tr>
+            <td><span class="tag t-star">星空飞机</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
+            <td>星空飞机</td><td>1.90</td><td>第 2–5 位每一位都与左邻或右邻相同（被「夹」在连块里），如 <code>112233</code>、<code>111222</code></td>
+          </tr>
+
+          <tr>
+            <td rowspan="2"><span class="tag t-event">对子</span><br><span style="font-size:11px;color:var(--sub)">组内只取更高档</span></td>
+            <td>两对</td><td>1.36</td><td>恰好 2 段「长度为 2」的同号（3 连及以上不算对），如 <code>1122xx</code>、<code>11x22x</code></td>
+          </tr>
+          <tr><td>三对</td><td>3.09</td><td>至少 3 段长度为 2 的同号，如 <code>112233</code>、<code>113355</code>；有三对时<strong>不计两对</strong></td></tr>
+
+          <tr>
+            <td><span class="tag t-cat">葫芦</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
+            <td>葫芦</td><td>2.45</td><td>任意连续 5 位为 <code>AAABB</code> 或 <code>AABBB</code>，如 <code>11122x</code>、<code>x22333</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>读表提示：</strong>
+      「基础分」是单番贡献；一条鱼往往同时命中多个家族，展示分是它们的和。
+      例如 <code>113355</code> ≈ 三对 3.09 + 星空飞机 1.90 → 展示分约 5。
+      同家族内「只取更好」不等于整条鱼只能拿一个番型——不同家族照样全加。
+    </div>
+  </div>
+
+  <!-- 流星鱼展馆 -->
+  <div class="card">
+    <div class="sec-h">流星鱼展馆</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      分数 ≥ 4 分的流星鱼自动进入个人展馆（最多 10 条），进入后不在背包显示。展馆内详细介绍数字番型。
+    </p>
+    <div class="cmd-card">
+      <span class="cmd-name">流星鱼展馆</span>
+      <p class="cmd-desc">查看个人流星鱼展馆、累积分数与高分番型。也可用「星空祈愿展馆」。</p>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>S2 入场券：</strong>累积流星鱼分数达到 <strong>1200</strong> 分后可获得 S2 入场券。收杆页以进度条显示累计进度；努力型玩家一定能获得，不受运气方差影响。
+    </div>
+  </div>
+
+  <!-- 新天气 -->
+  <div class="card">
+    <div class="sec-h">流星鱼专属天气</div>
+    <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
+      11-20 图每天 5 张有额外天气（太阳风 / 流星雨 / 恒纪元），5 张为乱纪元；不生成迷途风。天气每天 11 点刷新。
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>天气</th><th>效果</th></tr></thead>
+        <tbody>
+          <tr><td>太阳风</td><td>流星鱼出现率恒定 +2.5%（绝对加值，不与鱼竿等级加成乘算）</td></tr>
+          <tr><td>流星雨</td><td>星空鱼变得幸运</td></tr>
+          <tr><td>恒纪元</td><td>流星鱼数字范围限定为 2-8（不出现 0、1、9）</td></tr>
+          <tr><td>乱纪元</td><td>无额外效果</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>幸运药水与流星雨：</strong>流星雨让星空鱼变得幸运；再叠加幸运药水时会更幸运。
+    </div>
+  </div>
+
+  <!-- 闪光药水 -->
+  <div class="card">
+    <div class="sec-h">闪光药水</div>
+    <div class="cmd-card">
+      <span class="cmd-name">钓鱼使用 闪光药水 [数量]</span>
+      <p class="cmd-desc">激活伽马射线暴 buff（持续 8 小时），同时触发太阳风 + 流星雨 + 恒纪元三种天气效果，无需在天气栏显示。</p>
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      闪光药水是流星鱼收集的核心道具，三重天气叠加大幅提升高质量流星鱼的获取概率。
+    </div>
+  </div>
+
+  <!-- 奇迹功能 -->
+  <div class="card">
+    <div class="sec-h">奇迹功能</div>
+    <div class="callout warn">
+      <strong>触发条件：</strong>背包内流星鱼 ID 之和的尾号为 <strong>7777777</strong> 时触发奇迹。
+    </div>
+    <div class="steps" style="margin-top:10px">
+      <div class="step"><div class="step-num">1</div><div class="step-text">收集足够数量的流星鱼，使背包内鱼 ID 之和满足尾号条件</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">触发后消耗对应的<strong>背包</strong>流星鱼子集（展馆鱼不参与、不消耗）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">获得 <strong>星辰木框</strong>；收杆页图示标出奇迹要因编号</div></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      计分只累计、不消耗流星鱼；仅奇迹会消耗背包中的对应子集。≥4 分进入展馆的鱼不在背包显示，也不参加奇迹运算。
+    </div>
+  </div>
+
+  <!-- 星辰木框与星空木框 -->
+  <div class="card">
+    <div class="sec-h">星辰木框与星空木框</div>
+    <div class="grid-2">
+      <div class="bldg-card">
+        <div class="bldg-name">星辰木框</div>
+        <div class="bldg-desc">通过奇迹功能获得，用于升级星空木框。升满 10 个星空木框共需 55 个。</div>
+      </div>
+      <div class="bldg-card">
+        <div class="bldg-name">星空木框</div>
+        <div class="bldg-desc">消耗星辰木框升级。提供 <strong>4 倍展示收益</strong>，最多 10 个。需已建设星空艇。</div>
+      </div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>升级规则：</strong>星空木框消耗星辰木框升级（奇迹获得），展示最贵的鱼，提供 4 倍展示收益。可用【升级展示栏】万能指令一并校验。
+    </div>
+  </div>
+
+  <!-- 新物品 -->
+  <div class="card">
+    <div class="sec-h">星空专属物品</div>
+    <div class="grid-2">
+      <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果。</p></div>
+      <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">星辰木框</span><p class="cmd-desc">奇迹奖励，用于升级星空木框；升满共需 55 个。</p></div>
+      <div class="cmd-card"><span class="cmd-name">星空木框</span><p class="cmd-desc">消耗星辰木框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>
+    </div>
+  </div>
+
+  <!-- 流星鱼 -->
+  <div class="card">
+    <div class="sec-h">流星鱼</div>
+    <ul class="clean">
+      <li>流星鱼是特殊道具，使用 9 位编号展示（旧数据不足 9 位时左侧补 0）</li>
+      <li>流星鱼不可卖出，不属于背包鱼</li>
+      <li>流星鱼显示稀有度为 UTR（同色边框）</li>
+      <li>收杆结果中展示流星鱼图片、编号和 UTR 色边框</li>
+      <li>背包中以列表汇总展示，显示总数和 9 位编号网格</li>
+    </ul>
+  </div>
+</div>
+
+</div>
+
+<!-- ========== Footer ========== -->
+<footer class="footer">本页面是静态帮助页，实际规则以当前插件配置和代码为准。</footer>
+
+<!-- ========== JavaScript ========== -->
+<script>
+(function(){
+  var tabs = document.querySelectorAll('.tab-btn');
+  var pages = document.querySelectorAll('.page');
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var target = tab.getAttribute('data-page');
+      tabs.forEach(function(t){ t.classList.remove('active'); });
+      pages.forEach(function(p){ p.classList.remove('active'); });
+      tab.classList.add('active');
+      var page = document.getElementById('page-' + target);
+      if(page) page.classList.add('active');
+      window.scrollTo(0, 0);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

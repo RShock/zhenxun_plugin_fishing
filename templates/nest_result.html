@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.location-box {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.location-name { font-size: 20px; font-weight: bold; color: white; }
+.effect-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+}
+.effect-value { font-size: 24px; font-weight: bold; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎣 打窝成功！</div>
+<div class="location-box">
+    <div class="location-name">📍 {{ location_name }}</div>
+</div>
+<div class="info-row">
+    <span class="info-label">消耗</span>
+    <span class="info-value">{{ cost_text }}</span>
+</div>
+<div class="info-row">
+    <span class="info-label">持续时间</span>
+    <span class="info-value">{{ duration_hours }} 小时</span>
+</div>
+<div class="info-row">
+    <span class="info-label">当前打窝次数</span>
+    <span class="info-value">{{ nest_count }} 次</span>
+</div>
+<div class="effect-box">
+    <div>难度降低</div>
+    <div class="effect-value">-{{ nest_count }} 级</div>
+</div>
+{% endblock %}

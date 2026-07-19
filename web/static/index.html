@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>钓鱼游戏</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+:root {
+  --bg: #edf4f7;
+  --bg-soft: #f7fbfc;
+  --panel-bg: rgba(255, 255, 255, .92);
+  --panel-solid: #fff;
+  --border: #d9e6ec;
+  --border-strong: #bfd2dc;
+  --text: #1f3440;
+  --sub: #6f8490;
+  --muted: #9aacb5;
+  --primary: #1f9bb4;
+  --primary-strong: #0f7f9b;
+  --primary-soft: #e1f5f8;
+  --success: #23a36f;
+  --warning: #e7a928;
+  --danger: #df5a55;
+  --shadow: 0 14px 34px rgba(42, 86, 105, .12);
+  --shadow-soft: 0 8px 22px rgba(42, 86, 105, .08);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  font-family: Inter, ui-sans-serif, system-ui, "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(64, 176, 194, .24), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(89, 139, 220, .14), transparent 30%),
+    linear-gradient(180deg, #eef8fa 0%, #eaf1f4 100%);
+  color: var(--text);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+button, input { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+#app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+
+.header {
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 22px;
+  color: var(--text);
+  background: rgba(255, 255, 255, .72);
+  border-bottom: 1px solid rgba(191, 210, 220, .72);
+  backdrop-filter: blur(16px);
+  flex-shrink: 0;
+  z-index: 20;
+}
+.brand { min-width: 0; }
+.title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: .2px;
+}
+.title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtitle { margin-top: 2px; color: var(--sub); font-size: 12px; }
+.header .right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.header button, .icon-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .76);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 36px;
+  padding: 0 14px;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.header button:hover, .icon-btn:hover { transform: translateY(-1px); border-color: var(--primary); box-shadow: var(--shadow-soft); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(154, 172, 181, .16); }
+.status-dot.on { background: var(--success); box-shadow: 0 0 0 4px rgba(35, 163, 111, .16); }
+.status-dot.off { background: var(--danger); box-shadow: 0 0 0 4px rgba(223, 90, 85, .14); }
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(238px, 280px) minmax(0, 1fr) minmax(238px, 280px);
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+}
+.panel, .panel-center {
+  min-height: 0;
+  background: var(--panel-bg);
+  border: 1px solid rgba(191, 210, 220, .82);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.panel { overflow-y: auto; scrollbar-width: thin; }
+.panel::-webkit-scrollbar, .locs::-webkit-scrollbar, .result-wrap::-webkit-scrollbar, .modal::-webkit-scrollbar { width: 6px; }
+.panel::-webkit-scrollbar-thumb, .locs::-webkit-scrollbar-thumb, .result-wrap::-webkit-scrollbar-thumb, .modal::-webkit-scrollbar-thumb { background: #bdd1da; border-radius: 999px; }
+.panel-left, .panel-right { display: flex; flex-direction: column; }
+.panel-center { display: flex; flex-direction: column; }
+
+.section { padding: 10px 12px 12px; }
+.section + .section-title { margin-top: 2px; }
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--sub);
+  text-transform: uppercase;
+  padding: 14px 14px 4px;
+  letter-spacing: .9px;
+}
+.section-title .hint { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; }
+
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.metric-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(247,251,252,.94));
+  padding: 10px;
+}
+.metric-card.wide { grid-column: 1 / -1; }
+.metric-label { color: var(--sub); font-size: 11px; font-weight: 700; }
+.metric-value { margin-top: 4px; font-size: 16px; font-weight: 900; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metric-value.primary { color: var(--primary-strong); }
+
+.stat-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed rgba(191, 210, 220, .7); }
+.stat-row:last-child { border-bottom: none; }
+.stat-row .label { color: var(--sub); }
+.stat-row .value { font-weight: 800; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.list { display: grid; gap: 7px; }
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .7);
+  font-size: 12px;
+}
+.list-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-count { flex-shrink: 0; color: var(--sub); font-weight: 800; }
+.empty-tip { color: var(--muted); font-size: 12px; padding: 8px 2px; }
+.rarity-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 20px;
+  padding: 0 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.locs {
+  padding: 10px 14px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  gap: 10px;
+  flex-shrink: 0;
+  max-height: clamp(150px, 28vh, 260px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.loc-card {
+  position: relative;
+  min-height: 82px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(239,250,252,.88));
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+  overflow: hidden;
+}
+.loc-card::after {
+  content: "";
+  position: absolute;
+  right: -18px;
+  bottom: -24px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(31, 155, 180, .1);
+}
+.loc-card:hover:not(.locked):not(.disabled) { transform: translateY(-2px); border-color: var(--primary); box-shadow: var(--shadow-soft); }
+.loc-card.locked, .loc-card.disabled { opacity: .58; cursor: not-allowed; }
+.loc-card .loc-name { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; font-weight: 900; font-size: 14px; }
+.loc-card .loc-info { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 9px; color: var(--sub); font-size: 12px; }
+.loc-badge, .lock-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 11px;
+  font-weight: 800;
+}
+.lock-badge { background: #fff0ef; color: var(--danger); }
+
+.result-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    linear-gradient(rgba(255,255,255,.76), rgba(255,255,255,.76)),
+    radial-gradient(circle at 20% 12%, rgba(31,155,180,.13), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(83,137,220,.1), transparent 25%);
+  position: relative;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.result-state {
+  align-self: center;
+  width: min(520px, 100%);
+  text-align: center;
+  color: var(--sub);
+  padding: 34px 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 22px;
+  background: rgba(255,255,255,.66);
+}
+.result-state strong { display: block; color: var(--text); font-size: 18px; margin-bottom: 6px; }
+.result-loading { align-self: center; text-align: center; color: var(--primary-strong); font-weight: 800; }
+.result-image { display: block; margin: 0 auto; cursor: zoom-in; border-radius: 18px; box-shadow: var(--shadow-soft); max-width: 100%; }
+.result-html-shell { width: 100%; display: flex; justify-content: center; }
+.result-html { border: none; display: block; margin: 0 auto; border-radius: 16px; background: transparent; max-width: 100%; }
+.result-text {
+  width: min(760px, 100%);
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.quick-actions {
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: rgba(255,255,255,.74);
+  border-top: 1px solid rgba(217, 230, 236, .74);
+  flex-shrink: 0;
+}
+.quick-btn {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.quick-btn:hover { transform: translateY(-1px); border-color: var(--primary); box-shadow: var(--shadow-soft); }
+.quick-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary-strong); }
+.quick-btn.danger { background: #fff4f3; color: var(--danger); border-color: #f1c8c5; }
+.quick-dropdown-wrap { position: relative; flex-shrink: 0; }
+.quick-dropdown-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  min-width: 132px;
+  z-index: 200;
+}
+.quick-dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 11px;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.quick-dropdown-menu button:hover { background: var(--bg-soft); }
+.quick-dropdown-menu button.primary { color: var(--primary-strong); font-weight: 900; }
+.quick-dropdown-menu button.danger { color: var(--danger); font-weight: 900; }
+
+.pity-badge { font-size: 11px; color: #667; background: var(--bg-soft); padding: 4px 8px; border-radius: 10px; white-space: nowrap; margin-right: 4px; }
+.locs.collapsed { max-height: 0; overflow: hidden; padding: 0; margin: 0; border: none; }
+.loc-toggle { cursor: pointer; user-select: none; font-size: 12px; color: var(--primary-strong); margin-left: auto; }
+.section-title-row { display: flex; align-items: center; gap: 8px; }
+
+.bottom-bar {
+  border-top: 1px solid rgba(217, 230, 236, .82);
+  background: rgba(255,255,255,.86);
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.bottom-bar input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.bottom-bar input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(31,155,180,.12); }
+.bottom-bar button {
+  min-height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.bottom-bar button:hover { background: var(--primary-strong); }
+.bottom-bar button:disabled { background: #b7c8d0; cursor: not-allowed; }
+
+.fish-bar { margin: 10px 0 6px; height: 9px; border-radius: 999px; background: #e7eef2; overflow: hidden; }
+.fish-bar .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), #4cc899); transition: width 1s linear; }
+.fish-time { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+.fishing-note { font-size: 12px; color: var(--sub); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 44, 55, .58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 18px;
+  backdrop-filter: blur(4px);
+}
+.modal {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  max-width: min(92vw, 760px);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 18px;
+  min-width: min(360px, 92vw);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.modal-header h3 { margin: 0; font-size: 18px; }
+.modal-header button { border: none; background: var(--bg-soft); width: 34px; height: 34px; border-radius: 50%; font-size: 22px; cursor: pointer; color: var(--sub); }
+.img-preview { max-width: 92vw; max-height: 86vh; border-radius: 18px; box-shadow: var(--shadow); }
+
+.col-loc, .ach-loc { margin-bottom: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-soft); }
+.col-loc-name, .ach-loc-name { font-weight: 900; margin-bottom: 8px; font-size: 14px; }
+.col-fish { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin: 6px 0; font-size: 12px; }
+.col-fish .fish-name { min-width: 86px; font-weight: 700; }
+.col-rarity { display: inline-flex; min-width: 39px; height: 22px; border-radius: 999px; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: 900; }
+.ach-item { padding: 4px 0 4px 4px; font-size: 13px; }
+.ach-item.done { color: var(--success); font-weight: 800; }
+.ach-item.pending { color: var(--muted); }
+.loading-tip { text-align: center; color: var(--sub); padding: 20px; }
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(58,181,199,.32), transparent 32%),
+    linear-gradient(145deg, #dff2f6 0%, #edf7f9 48%, #f8fbfc 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 18px;
+}
+.login-box {
+  width: min(380px, 100%);
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(191,210,220,.86);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  border-radius: 26px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+}
+.login-box h2 { margin-bottom: 6px; font-size: 24px; }
+.login-desc { color: var(--sub); font-size: 13px; margin-bottom: 18px; }
+.login-box input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 12px;
+  background: #fff;
+}
+.login-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(31,155,180,.12); }
+.login-box .error { color: var(--danger); font-size: 12px; margin-bottom: 10px; font-weight: 800; }
+.login-box button {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.login-help { margin-top: 14px; text-align: left; color: var(--sub); font-size: 12px; line-height: 1.7; }
+.login-help code { display: block; margin: 6px 0; padding: 7px 10px; border-radius: 10px; background: var(--bg-soft); color: var(--primary-strong); }
+
+.header .mobile-toggle { display: none; }
+.drawer-overlay { display: none; position: fixed; inset: 62px 0 0; background: rgba(20,44,55,.36); z-index: 50; backdrop-filter: blur(2px); }
+.drawer-overlay.show { display: block; }
+
+@media (max-width: 1120px) {
+  .main { grid-template-columns: 236px minmax(0, 1fr) 236px; gap: 10px; padding: 10px; }
+  .locs { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+@media (max-width: 768px) {
+  body { overflow: hidden; }
+  .header { height: auto; min-height: 58px; padding: 10px 12px; }
+  .subtitle { display: none; }
+  .title { font-size: 15px; }
+  .header .mobile-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .header .right { gap: 6px; }
+  .header button { min-height: 34px; padding: 0 10px; font-size: 12px; }
+  .main { display: block; padding: 8px; }
+  .panel-center { height: calc(100dvh - 74px); }
+  .panel-left, .panel-right {
+    position: fixed;
+    top: 58px;
+    bottom: 8px;
+    width: min(86vw, 320px);
+    z-index: 100;
+    transition: transform .25s ease;
+    box-shadow: var(--shadow);
+  }
+  .panel-left { left: 8px; transform: translateX(calc(-100% - 16px)); }
+  .panel-left.drawer-open { transform: translateX(0); }
+  .panel-right { right: 8px; transform: translateX(calc(100% + 16px)); }
+  .panel-right.drawer-open { transform: translateX(0); }
+  .drawer-overlay { inset: 58px 0 0; }
+  .locs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px; }
+  .loc-card { min-height: 76px; padding: 10px; }
+  .loc-card .loc-name { font-size: 13px; }
+  .quick-actions { padding: 8px; overflow-x: auto; flex-wrap: nowrap; }
+  .quick-actions.dropdown-mode { overflow: visible; flex-wrap: wrap; }
+  .bottom-bar { padding: 9px; }
+  .bottom-bar input { min-height: 40px; }
+  .bottom-bar button { min-height: 40px; padding: 0 16px; }
+  .result-wrap { padding: 10px; }
+  .modal { max-width: 94vw; min-width: 0; padding: 15px; }
+}
+@media (max-width: 430px) {
+  .header .right .compact-hide { display: none; }
+  .locs { grid-template-columns: 1fr; }
+  .metric-grid { grid-template-columns: 1fr; }
+  .metric-card.wide { grid-column: auto; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="login-overlay" v-if="!connected">
+  <div class="login-box">
+    <h2>钓鱼游戏</h2>
+    <div class="login-desc">连接后可在网页端查看状态、背包并发送常用指令</div>
+    <input v-model="secretKey" type="text" placeholder="输入网页端密钥" @keyup.enter="connect" autocomplete="off">
+    <div class="error" v-if="loginError">{{ loginError }}</div>
+    <button @click="connect">连接面板</button>
+    <div class="login-help">
+      <div>获取密钥：在 QQ 私聊机器人发送</div>
+      <code>注册网页端</code>
+      <div>也可以自定义：<code>注册网页端 mykey</code></div>
+      <div><a href="/help.html" target="_blank" rel="noopener">查看钓鱼帮助</a></div>
+    </div>
+  </div>
+</div>
+
+<template v-if="connected">
+  <div class="header">
+    <div class="brand">
+      <div class="title">
+        <span :class="['status-dot', wsOpen ? 'on' : 'off']"></span>
+        <span class="title-text">{{ nickname || '玩家' }} 的钓鱼面板</span>
+      </div>
+      <div class="subtitle">{{ wsOpen ? '实时连接中' : '连接已断开' }} · 金币 {{ fmtNumber(player.gold) }} · 鱼数 {{ backpack.total_fish_count }} · 🖼️{{ player.frame_pity }}/150 · 🐱{{ player.cat_frame_pity }}/15 · 🌀{{ player.utr_pity }}/150</div>
+    </div>
+    <div class="right">
+      <span class="pity-badge compact-hide" title="展示木框保底 / 猫猫框保底 / 迷途风UTR保底">🖼️{{ player.frame_pity }}/150 · 🐱{{ player.cat_frame_pity }}/15 · 🌀{{ player.utr_pity }}/150</span>
+      <button class="mobile-toggle" @click="toggleLeftDrawer">背包</button>
+      <button class="mobile-toggle" @click="toggleRightDrawer">状态</button>
+      <button class="compact-hide" onclick="window.open('/help.html', '_blank', 'noopener')">帮助</button>
+      <button class="compact-hide" @click="fetchAchievements">成就</button>
+      <button class="compact-hide" @click="fetchCollection">图鉴</button>
+    </div>
+  </div>
+
+  <div class="drawer-overlay" :class="{show: drawerOpen}" @click="closeDrawer"></div>
+
+  <div class="main">
+    <div class="panel panel-left" :class="{'drawer-open': drawerOpen === 'left'}" @click.stop>
+      <div class="section-title">资产总览</div>
+      <div class="section metric-grid">
+        <div class="metric-card wide">
+          <div class="metric-label">金币</div>
+          <div class="metric-value primary">{{ fmtNumber(player.gold) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">鱼数</div>
+          <div class="metric-value">{{ backpack.total_fish_count }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">估值</div>
+          <div class="metric-value">{{ fmtNumber(backpack.total_value) }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">玉米</div>
+          <div class="metric-value">{{ player.corn }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">鱼饵</div>
+          <div class="metric-value">{{ backpack.baits.length }}</div>
+        </div>
+      </div>
+
+      <div class="section-title">展示 <span class="hint">前 5 个</span></div>
+      <div class="section list">
+        <div v-for="d in backpack.displays.slice(0, 5)" :key="'d'+d.slot+d.numeric_id" class="list-item">
+          <div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(d.rarity)}">{{ d.rarity }}</span>{{ d.fish_name }}</div>
+          <div class="list-count">#{{ d.slot }}</div>
+        </div>
+        <div v-if="!backpack.displays.length" class="empty-tip">暂无展示鱼</div>
+      </div>
+
+      <div class="section-title">背包 <span class="hint">前 20 条</span></div>
+      <div class="section list">
+        <div v-for="f in backpack.fish.slice(0, 20)" :key="f.numeric_id" class="list-item">
+          <div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(f.rarity)}">{{ f.rarity }}</span>{{ f.fish_name }}</div>
+          <div class="list-count">x{{ f.count }}</div>
+        </div>
+        <div v-if="backpack.fish.length === 0" class="empty-tip">空空如也</div>
+      </div>
+
+      <div class="section-title">道具</div>
+      <div class="section list">
+        <div v-for="it in nonBaitItems" :key="it.item_id" class="list-item">
+          <div class="list-main">{{ it.name || it.item_id }}</div>
+          <div class="list-count">x{{ it.count }}</div>
+        </div>
+        <div v-if="!nonBaitItems.length" class="empty-tip">暂无道具</div>
+      </div>
+    </div>
+
+    <div class="panel-center">
+      <div class="section-title-row">
+        <div class="section-title">场景 <span class="hint">点击已解锁场景开始钓鱼</span></div>
+        <span class="loc-toggle" @click="locsCollapsed = !locsCollapsed">{{ locsCollapsed ? '展开 ▾' : '收起 ▴' }}</span>
+      </div>
+      <div class="locs" :class="{ collapsed: locsCollapsed }">
+        <div v-for="loc in locations" :key="loc.id"
+             :class="['loc-card', loc.unlocked ? '' : 'locked', fishing.is_fishing ? 'disabled' : '']"
+             @click="loc.unlocked && !fishing.is_fishing && selectLocation(loc.id)">
+          <div class="loc-name">
+            {{ loc.name }}
+            <span v-if="!loc.unlocked" class="lock-badge">Lv{{ loc.difficulty }}</span>
+          </div>
+          <div class="loc-info">
+            <span class="loc-badge">{{ WEATHER_EMOJI[loc.weather.type] || '☀️' }} {{ weatherName(loc.weather.type) }}</span>
+            <span class="loc-badge">{{ loc.fisher_count }} 人</span>
+            <span v-if="loc.nest_bonus" class="loc-badge">窝 +{{ loc.nest_bonus }}%</span>
+            <span v-if="loc.frame_bonus" class="loc-badge">框 +{{ loc.frame_bonus }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-actions" :class="{'dropdown-mode': useDropdown}" ref="quickActionsRef">
+        <template v-if="!useDropdown">
+          <button v-for="btn in quickBtns" :key="btn.cmd"
+            :class="['quick-btn', btn.cls || '']"
+            @click="sendQuick(btn.cmd)">{{ btn.label }}</button>
+        </template>
+        <div class="quick-dropdown-wrap" v-if="useDropdown">
+          <button class="quick-btn" @click="quickMenuOpen = !quickMenuOpen">常用操作 ▾</button>
+          <div class="quick-dropdown-menu" v-show="quickMenuOpen" @click.stop>
+            <button v-for="btn in quickBtns" :key="btn.cmd"
+              :class="btn.cls || ''"
+              @click="sendQuick(btn.cmd); quickMenuOpen=false">{{ btn.label }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-wrap" id="resultWrap">
+        <div v-if="loading" class="result-loading">处理中...</div>
+        <div v-else-if="result.html" class="result-html-shell">
+          <iframe :srcdoc="resultFrameHtml" class="result-html" scrolling="no" @load="onResultFrameLoad"></iframe>
+        </div>
+        <img v-else-if="result.image" :src="result.image" class="result-image" @click="zoomImage(result.image)" @load="onResultImageLoad">
+        <div v-else-if="result.text" class="result-text">{{ result.text }}</div>
+        <div v-else class="result-state">
+          <strong>准备开始钓鱼</strong>
+          <div>选择上方场景，或使用下方指令栏发送“钓鱼 / 背包 / 鱼店”。</div>
+        </div>
+      </div>
+
+      <div class="bottom-bar">
+        <input v-model="textInput" placeholder="输入指令，如：钓鱼、背包、鱼店..." @keyup.enter="sendText" :disabled="loading">
+        <button @click="sendText" :disabled="loading">发送</button>
+      </div>
+    </div>
+
+    <div class="panel panel-right" :class="{'drawer-open': drawerOpen === 'right'}" @click.stop>
+      <div class="section-title">角色状态</div>
+      <div class="section">
+        <div class="stat-row"><span class="label">鱼竿</span><span class="value">Lv.{{ player.rod_level }}</span></div>
+        <div class="stat-row"><span class="label">鱼钩</span><span class="value">Lv.{{ player.hook_level }}</span></div>
+        <div class="stat-row"><span class="label">展位</span><span class="value">{{ player.display_slots }}</span></div>
+        <div class="stat-row"><span class="label">展框</span><span class="value">{{ player.display_frames }}</span></div>
+        <div class="stat-row"><span class="label">皮肤</span><span class="value">{{ player.current_skin || '默认' }}</span></div>
+        <div class="stat-row"><span class="label">鱼饵</span><span class="value">{{ player.bait_id || '无' }}</span></div>
+        <div class="stat-row"><span class="label">自动售出</span><span class="value">{{ player.auto_sell_enabled ? '开 '+(player.auto_sell_rarity||'') : '关' }}</span></div>
+        <div class="stat-row"><span class="label">自动锁鱼</span><span class="value">{{ player.auto_lock_enabled ? '开 '+(player.auto_lock_pattern||'') : '关' }}</span></div>
+      </div>
+
+      <div class="section-title">钓鱼进度</div>
+      <div class="section">
+        <template v-if="fishing.is_fishing">
+          <div class="fish-time">{{ fishing.location_name }} · {{ fmtDuration(fishing.elapsed_seconds) }}</div>
+          <div class="fish-bar"><div class="fill" :style="{width: fishingProgress + '%'}"></div></div>
+          <div class="fishing-note">正在钓鱼，收杆后会刷新背包和结果。</div>
+        </template>
+        <template v-else>
+          <div class="fish-time">当前未在钓鱼</div>
+          <div class="fish-bar"><div class="fill" style="width:0;"></div></div>
+          <div class="fishing-note">选择一个场景即可开始。</div>
+        </template>
+      </div>
+
+      <div class="section-title">鱼饵</div>
+      <div class="section list">
+        <div v-for="b in backpack.baits" :key="b.item_id" class="list-item">
+          <div class="list-main">{{ b.name || b.item_id }}</div>
+          <div class="list-count">x{{ b.count }}</div>
+        </div>
+        <div v-if="!backpack.baits.length" class="empty-tip">暂无鱼饵</div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div class="modal-overlay" v-if="zoomSrc" @click="zoomSrc = null">
+  <img class="img-preview" :src="zoomSrc" @click.stop>
+</div>
+
+<div class="modal-overlay" v-if="achModal" @click.self="achModal = null">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>成就列表</h3>
+      <button @click="achModal = null">&times;</button>
+    </div>
+    <div v-if="achLoading" class="loading-tip">加载中...</div>
+    <div v-else v-for="loc in achievements" :key="loc.location_id" class="ach-loc">
+      <div class="ach-loc-name">{{ loc.location_name }}</div>
+      <div v-for="a in loc.achievements" :key="a.key" :class="['ach-item', a.completed ? 'done' : 'pending']">
+        {{ a.completed ? '✓' : '○' }} {{ a.name }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" v-if="colModal" @click.self="colModal = null">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>图鉴</h3>
+      <button @click="colModal = null">&times;</button>
+    </div>
+    <div v-if="colLoading" class="loading-tip">加载中...</div>
+    <div v-else v-for="loc in collection" :key="loc.id" class="col-loc">
+      <div class="col-loc-name">{{ loc.name }} {{ loc.scene_complete ? '✓' : '' }}</div>
+      <div v-for="fish in loc.fish" :key="fish.name" class="col-fish">
+        <span class="fish-name">{{ fish.name }}</span>
+        <span v-for="(rdata, rarity) in fish.rarities" :key="rarity" class="col-rarity" :style="{ background: rdata.collected ? rarityColor(rarity) : '#d5dee4', opacity: rdata.collected ? 1 : .46 }">{{ rarity }}</span>
+        <span v-if="fish.fish_complete" style="color:var(--success);font-weight:900;margin-left:4px;">✓</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const { createApp, ref, reactive, computed, nextTick, onMounted, onUnmounted, watch } = Vue;
+
+const WEATHER_EMOJI = {
+  'sunny': '☀️', 'rain': '🌧️', 'meteor': '🌠',
+  'storm': '⛈️', 'lost_wind': '🌀', 'cat': '🐱',
+  'chaotic_era': '🌫️',
+};
+const WEATHER_NAME = {
+  sunny: '晴天', rain: '雨天', meteor: '流星', storm: '暴雨', lost_wind: '迷风', cat: '猫猫', chaotic_era: '乱纪元',
+};
+const RARITY_COLOR = {
+  N: '#8a9aa4', R: '#2e93d9', SR: '#9c5bd2',
+  SSR: '#ee9d2d', UR: '#e05a55', UTR: '#e051a2',
+};
+const STATE_INTERVAL = 10 * 60 * 1000;
+
+createApp({
+  setup() {
+    let ws = null;
+    let pollTimer = null;
+    let fishTimer = null;
+    let fishStartMs = 0;
+
+    const connected = ref(false);
+    const wsOpen = ref(false);
+    const secretKey = ref(localStorage.getItem('fish_key') || '');
+    const loginError = ref('');
+    const nickname = ref('');
+    const textInput = ref('');
+    const loading = ref(false);
+    const result = reactive({ html: '', image: '', text: '' });
+    const zoomSrc = ref(null);
+    const achModal = ref(false);
+    const achLoading = ref(false);
+    const achievements = ref([]);
+    const colModal = ref(false);
+    const colLoading = ref(false);
+    const collection = ref([]);
+
+    const DRAWER_LS_LEFT = 'fish_drawer_left';
+    const DRAWER_LS_RIGHT = 'fish_drawer_right';
+    const drawerOpen = ref(null);
+    const quickMenuOpen = ref(false);
+    const locsCollapsed = ref(false);
+
+    const quickBtns = [
+      { cmd: '钓鱼', label: '钓鱼', cls: 'primary' },
+      { cmd: '收杆', label: '收杆', cls: 'danger' },
+      { cmd: '钓鱼状态', label: '状态' },
+      { cmd: '鱼店', label: '鱼店' },
+      { cmd: '背包', label: '背包' },
+      { cmd: '天气', label: '天气' },
+    ];
+    const useDropdown = ref(false);
+    const quickActionsRef = ref(null);
+    let _ro = null;
+
+    const player = reactive({
+      user_id: '', nickname: '', gold: 0, rod_level: 1, hook_level: 1,
+      display_slots: 3, display_frames: 0, corn: 0, cat_frames: 0,
+      upgraded_display_count: 0, auto_sell_enabled: false,
+      auto_sell_rarity: '', auto_lock_enabled: false, auto_lock_pattern: '',
+      bait_id: '', current_skin: '1',
+      frame_pity: 0, utr_pity: 0, cat_frame_pity: 0,
+    });
+    const fishing = reactive({ is_fishing: false, location_id: '', location_name: '', start_time: '', elapsed_seconds: 0 });
+    const backpack = reactive({ fish: [], total_fish_count: 0, items: [], baits: [], displays: [], total_value: 0 });
+    const locations = reactive([]);
+
+    const nonBaitItems = computed(() => backpack.items.filter(x => x.item_type !== 'bait'));
+    const fishingProgress = computed(() => Math.min(100, Math.max(4, fishing.elapsed_seconds / 1800 * 100)));
+    const resultFrameHtml = computed(() => '<style>html{overflow:hidden}body{margin:0;padding:0;}img{max-width:100%;height:auto}</style>' + result.html);
+
+    function checkActionsWidth() {
+      if (!quickActionsRef.value) return;
+      const btnTotalW = quickBtns.length * 66 + (quickBtns.length - 1) * 8 + 28;
+      const containerW = quickActionsRef.value.parentElement.clientWidth;
+      useDropdown.value = containerW > 0 && containerW < btnTotalW;
+    }
+
+    (() => {
+      if (window.innerWidth > 768) return;
+      locsCollapsed.value = true;
+      const l = localStorage.getItem(DRAWER_LS_LEFT);
+      const r = localStorage.getItem(DRAWER_LS_RIGHT);
+      if (l === 'open') drawerOpen.value = 'left';
+      else if (r === 'open') drawerOpen.value = 'right';
+    })();
+
+    function toggleLeftDrawer() {
+      if (drawerOpen.value === 'left') {
+        drawerOpen.value = null;
+        localStorage.removeItem(DRAWER_LS_LEFT);
+      } else {
+        drawerOpen.value = 'left';
+        localStorage.setItem(DRAWER_LS_LEFT, 'open');
+        localStorage.removeItem(DRAWER_LS_RIGHT);
+      }
+    }
+
+    function toggleRightDrawer() {
+      if (drawerOpen.value === 'right') {
+        drawerOpen.value = null;
+        localStorage.removeItem(DRAWER_LS_RIGHT);
+      } else {
+        drawerOpen.value = 'right';
+        localStorage.setItem(DRAWER_LS_RIGHT, 'open');
+        localStorage.removeItem(DRAWER_LS_LEFT);
+      }
+    }
+
+    function closeDrawer() {
+      drawerOpen.value = null;
+      localStorage.removeItem(DRAWER_LS_LEFT);
+      localStorage.removeItem(DRAWER_LS_RIGHT);
+    }
+
+    function _onDocClick(e) {
+      if (!quickMenuOpen.value) return;
+      const wrap = document.querySelector('.quick-dropdown-wrap');
+      if (wrap && !wrap.contains(e.target)) quickMenuOpen.value = false;
+    }
+
+    function fmtNumber(n) {
+      const num = Number(n || 0);
+      return Number.isFinite(num) ? num.toLocaleString('zh-CN') : n;
+    }
+    function fmtDuration(s) {
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      return h > 0 ? `${h}时${m % 60}分` : `${m}分`;
+    }
+    function weatherName(type) { return WEATHER_NAME[type] || '晴天'; }
+    function rarityColor(r) { return RARITY_COLOR[r] || '#8a9aa4'; }
+    function zoomImage(src) { zoomSrc.value = src; }
+
+    function startFishTimer(startIso, locationName) {
+      stopFishTimer();
+      fishStartMs = new Date(startIso).getTime();
+      if (isNaN(fishStartMs)) return;
+      fishing.is_fishing = true;
+      fishing.location_name = locationName || fishing.location_name;
+      fishing.elapsed_seconds = Math.max(0, Math.floor((Date.now() - fishStartMs) / 1000));
+      fishTimer = setInterval(() => {
+        fishing.elapsed_seconds = Math.max(0, Math.floor((Date.now() - fishStartMs) / 1000));
+      }, 1000);
+    }
+    function stopFishTimer() {
+      if (fishTimer) { clearInterval(fishTimer); fishTimer = null; }
+      fishing.is_fishing = false;
+      fishing.elapsed_seconds = 0;
+      fishStartMs = 0;
+    }
+
+    function setResult(html, image, text) {
+      result.html = html || '';
+      result.image = image || '';
+      result.text = text || '';
+      nextTick(() => {
+        const rw = document.getElementById('resultWrap');
+        if (rw) rw.scrollTop = 0;
+      });
+    }
+
+    function isStrictRatioResult(doc) {
+      const html = doc.documentElement.outerHTML || '';
+      return html.includes('class="sw"') || html.includes("class='scene'") && html.includes('猫猫乐园建设');
+    }
+
+    function getResultContentWidth() {
+      const wrap = document.getElementById('resultWrap');
+      if (!wrap) return 800;
+      const style = window.getComputedStyle(wrap);
+      const padX = parseFloat(style.paddingLeft || 0) + parseFloat(style.paddingRight || 0);
+      return Math.max(240, Math.floor(wrap.clientWidth - padX - 8));
+    }
+
+    function stretchFrameContent(doc, width) {
+      const body = doc.body;
+      doc.documentElement.style.width = width + 'px';
+      doc.documentElement.style.overflowX = 'hidden';
+      body.style.transform = '';
+      body.style.transformOrigin = '';
+      body.style.width = width + 'px';
+      body.style.maxWidth = width + 'px';
+      body.style.boxSizing = 'border-box';
+      body.style.overflowX = 'hidden';
+      for (const el of body.children) {
+        el.style.maxWidth = '100%';
+        if (el.scrollWidth > width || el.getBoundingClientRect().width >= width - 2) {
+          el.style.width = '100%';
+          el.style.boxSizing = 'border-box';
+        }
+      }
+    }
+
+    function onResultFrameLoad(e) {
+      const iframe = e.target;
+      try {
+        const doc = iframe.contentWindow.document;
+        const body = doc.body;
+        const naturalW = body.scrollWidth || 330;
+        const naturalH = body.scrollHeight || 300;
+        const containerW = getResultContentWidth();
+        const strictRatio = isStrictRatioResult(doc);
+
+        iframe.style.width = containerW + 'px';
+        body.style.transformOrigin = 'top left';
+
+        if (strictRatio) {
+          const scale = containerW / naturalW;
+          body.style.transform = scale !== 1 ? `scale(${scale})` : '';
+          setTimeout(() => {
+            iframe.style.height = Math.round(Math.max(naturalH * scale, 200) + 10) + 'px';
+          }, 50);
+          return;
+        }
+
+        stretchFrameContent(doc, containerW);
+        setTimeout(() => {
+          iframe.style.height = Math.round(Math.max(body.scrollHeight, 200) + 10) + 'px';
+        }, 50);
+      } catch (err) {}
+    }
+
+    function onResultImageLoad(e) {
+      const img = e.target;
+      const naturalW = img.naturalWidth;
+      const naturalH = img.naturalHeight;
+      if (!naturalW || naturalW <= 0) return;
+      const wrap = document.getElementById('resultWrap');
+      const containerW = wrap ? wrap.clientWidth - 8 : 800;
+      const containerH = wrap ? wrap.clientHeight - 8 : 800;
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile) {
+        img.style.width = naturalW > containerW ? containerW + 'px' : '';
+      } else if (naturalW <= 520) {
+        img.style.width = containerW + 'px';
+      } else {
+        const scale = Math.min(containerW / naturalW, containerH / naturalH);
+        img.style.width = Math.round(naturalW * scale) + 'px';
+      }
+      img.style.height = 'auto';
+    }
+
+    const apiUrl = (path) => `${path}?secret=${encodeURIComponent(secretKey.value)}`;
+
+    async function fetchState() {
+      if (!connected.value) return;
+      try {
+        const r = await fetch(apiUrl(`/api/player/${player.user_id || '_'}/state`));
+        if (!r.ok) return;
+        const data = await r.json();
+        if (data.player) { Object.assign(player, data.player); player.user_id = data.player.user_id; }
+        if (data.fishing) {
+          if (data.fishing.is_fishing && data.fishing.start_time) {
+            startFishTimer(data.fishing.start_time, data.fishing.location_name);
+          } else {
+            stopFishTimer();
+          }
+        }
+        if (data.backpack) {
+          backpack.fish = data.backpack.fish || [];
+          backpack.total_fish_count = data.backpack.total_fish_count || 0;
+          backpack.items = data.backpack.items || [];
+          backpack.baits = data.backpack.baits || [];
+          backpack.displays = data.backpack.displays || [];
+          backpack.total_value = data.backpack.total_value || 0;
+        }
+        if (data.locations) locations.splice(0, locations.length, ...data.locations);
+      } catch (err) { /* ignore */ }
+    }
+
+    async function fetchAchievements() {
+      achModal.value = true; achLoading.value = true;
+      try {
+        const r = await fetch(apiUrl(`/api/player/${player.user_id || '_'}/achievements`));
+        if (r.ok) achievements.value = (await r.json()).achievements || [];
+      } catch (err) { /* ignore */ }
+      achLoading.value = false;
+    }
+
+    async function fetchCollection() {
+      colModal.value = true; colLoading.value = true;
+      try {
+        const r = await fetch(apiUrl(`/api/player/${player.user_id || '_'}/collection`));
+        if (r.ok) collection.value = (await r.json()).locations || [];
+      } catch (err) { /* ignore */ }
+      colLoading.value = false;
+    }
+
+    function connect() {
+      if (!secretKey.value.trim()) { loginError.value = '请输入密钥'; return; }
+      loginError.value = '';
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${proto}//${location.host}/ws`);
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', secret: secretKey.value }));
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === 'auth_ok') {
+          localStorage.setItem('fish_key', secretKey.value);
+          connected.value = true; wsOpen.value = true;
+          nickname.value = data.nickname || secretKey.value;
+          loginError.value = '';
+          fetchState();
+          pollTimer = setInterval(fetchState, STATE_INTERVAL);
+        } else if (data.type === 'auth_error') {
+          loginError.value = data.message || '密钥错误'; ws.close();
+        } else if (data.type === 'reply') {
+          loading.value = false;
+          let h = '', img = '', txt = '';
+          for (const m of data.messages || []) {
+            if (m.type === 'html') h = h || m.content;
+            else if (m.type === 'image_url') img = img || m.url;
+            else if (m.type === 'text') txt = txt ? txt + '\n' + m.content : m.content;
+          }
+          setResult(h, img, txt);
+          fetchState();
+        } else if (data.type === 'error') {
+          loading.value = false;
+          setResult('', '', '错误: ' + (data.content || '未知'));
+        }
+      };
+      ws.onclose = () => { wsOpen.value = false; ws = null; if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
+      ws.onerror = () => { loginError.value = '连接失败'; if (ws) ws.close(); };
+    }
+
+    function sendRaw(obj) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify(obj));
+    }
+
+    function sendText() {
+      const cmd = textInput.value.trim();
+      if (!cmd) return;
+      loading.value = true;
+      sendRaw({ type: 'command', command: cmd });
+      textInput.value = '';
+    }
+
+    function sendQuick(cmd) {
+      loading.value = true;
+      sendRaw({ type: 'command', command: cmd });
+    }
+
+    function selectLocation(locId) {
+      loading.value = true;
+      sendRaw({ type: 'command', command: `钓鱼${locId}` });
+    }
+
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'shop_cmd') {
+        if (loading.value) return;
+        loading.value = true;
+        sendRaw({ type: 'command', command: e.data.command });
+      }
+    });
+
+    onMounted(() => {
+      if (secretKey.value) connect();
+      document.addEventListener('click', _onDocClick);
+      window.addEventListener('resize', checkActionsWidth);
+    });
+    onUnmounted(() => {
+      stopFishTimer();
+      if (pollTimer) clearInterval(pollTimer);
+      if (ws) ws.close();
+      document.removeEventListener('click', _onDocClick);
+      if (_ro) { _ro.disconnect(); _ro = null; }
+      window.removeEventListener('resize', checkActionsWidth);
+    });
+
+    watch(connected, (val) => {
+      if (val) {
+        nextTick(() => {
+          if (_ro) { _ro.disconnect(); _ro = null; }
+          checkActionsWidth();
+          _ro = new ResizeObserver(() => checkActionsWidth());
+          if (quickActionsRef.value?.parentElement) {
+            _ro.observe(quickActionsRef.value.parentElement);
+          }
+        });
+      }
+    });
+
+    return {
+      connected, wsOpen, secretKey, loginError, nickname,
+      textInput, loading, result, zoomSrc,
+      achModal, achLoading, achievements,
+      colModal, colLoading, collection,
+      player, fishing, backpack, locations,
+      WEATHER_EMOJI, drawerOpen, quickMenuOpen,
+      quickBtns, useDropdown, quickActionsRef, locsCollapsed,
+      nonBaitItems, fishingProgress, resultFrameHtml,
+      connect, sendText, sendQuick, selectLocation,
+      zoomImage, onResultFrameLoad, onResultImageLoad,
+      fetchAchievements, fetchCollection, fetchState,
+      fmtDuration, fmtNumber, weatherName, rarityColor,
+      toggleLeftDrawer, toggleRightDrawer, closeDrawer,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

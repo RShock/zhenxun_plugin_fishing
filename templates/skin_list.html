@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.hint { text-align: center; color: #666; margin-bottom: 15px; font-size: 13px; padding: 8px; background: #f0f0f0; border-radius: 8px; }
+.skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.skin-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px;
+    border-radius: 10px;
+    background: #f8f9fa;
+    border: 2px solid #eee;
+    transition: all 0.2s;
+}
+.skin-item.current { border-color: #4CAF50; background: #e8f5e9; }
+.skin-item.owned { border-color: #4facfe; }
+.skin-item.locked { opacity: 0.5; border-color: #ddd; }
+.skin-id { font-size: 11px; color: #999; font-family: monospace; margin-bottom: 6px; }
+.skin-img { image-rendering: pixelated; margin-bottom: 6px; }
+.skin-ph { font-size: 40px; margin-bottom: 6px; }
+.skin-status { font-size: 11px; font-weight: bold; color: #666; }
+.skin-item.current .skin-status { color: #4CAF50; }
+.skin-item.locked .skin-status { color: #999; }
+.current-info {
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 10px;
+    color: white;
+    font-weight: bold;
+}
+{% endblock %}
+
+{% block content %}
+<div class="title">🎨 我的皮肤</div>
+<div class="hint">💡 使用「更换皮肤 ID」来切换皮肤</div>
+<div class="skin-grid">
+    {% for skin in skins %}
+    <div class="skin-item {{ skin.status_cls }}">
+        <div class="skin-id">ID: {{ skin.id }}</div>
+        {% if skin.skin_uri %}
+        <img src="{{ skin.skin_uri }}" class="skin-img" style="width:{{ skin.disp_w }}px;height:{{ skin.disp_h }}px;">
+        {% else %}
+        <div class="skin-ph">❓</div>
+        {% endif %}
+        <div class="skin-status">{{ skin.status_text }}</div>
+    </div>
+    {% endfor %}
+</div>
+<div class="current-info">当前皮肤: {{ current_skin }}</div>
+{% endblock %}

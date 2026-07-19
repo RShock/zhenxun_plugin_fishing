@@ -1,0 +1,77 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+*.7z
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and local runtime
+*.log
+logs/
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+*.orig
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local output / generated assets
+avatar_system/output/
+*.psd
+
+# Database dumps / backups
+*.dump
+*.sql
+*.sqlite
+*.sqlite3
+*.db

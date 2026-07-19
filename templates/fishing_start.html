@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.location-box {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.location-name { font-size: 20px; font-weight: bold; color: white; }
+.location-desc { font-size: 14px; color: rgba(255, 255, 255, 0.9); margin-top: 5px; }
+.difficulty {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #ff6b6b;
+    color: white;
+    font-size: 12px;
+}
+.start-time { text-align: center; margin-top: 15px; color: #888; font-size: 14px; }
+.hints-box { margin-top: 15px; padding: 10px; background: #fff8e1; border-radius: 8px; }
+.hint-item { font-size: 13px; color: #e65100; padding: 3px 0; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎣 开始钓鱼！</div>
+<div class="location-box">
+    <div class="location-name">📍 {{ location.name }}</div>
+    <div class="location-desc">{{ location.description }}</div>
+</div>
+<div class="info-row">
+    <span class="info-label">难度等级</span>
+    <span class="difficulty">Lv.{{ location.difficulty }}</span>
+</div>
+<div class="info-row">
+    <span class="info-label">可钓鱼种</span>
+    <span class="info-value">{{ location.fish_pool | length }} 种</span>
+</div>
+<div class="start-time">
+    开始时间: {{ start_time }}
+</div>
+{% if hints %}
+<div class="hints-box">
+    {% for h in hints %}
+    <div class="hint-item">{{ h }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

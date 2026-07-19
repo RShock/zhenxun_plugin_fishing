@@ -1,0 +1,5 @@
+total=1000000
+mean_score=0.797450668
+stddev_score=1.289378008
+max_score=16.838223485
+top_id=011110

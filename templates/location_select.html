@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.hint { text-align: center; color: #666; margin-bottom: 10px; font-size: 12px; }
+.grid { display: grid; grid-template-columns: repeat(4, 140px); gap: 6px; justify-content: center; }
+.loc-card { position: relative; width: 140px; height: 78px; border-radius: 6px; overflow: hidden; background: #e0e0e0; }
+.loc-card .img-wrap { width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; }
+.loc-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; image-rendering: pixelated; }
+.loc-card .no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #999; background: linear-gradient(135deg, #e8e8e8, #d0d0d0); }
+.loc-num { position: absolute; top: 3px; left: 4px; font-size: 11px; font-weight: bold; color: #fff; background: #4facfe; border: 1.5px solid #4facfe; padding: 0 4px; border-radius: 4px; line-height: 16px; }
+.loc-diff { position: absolute; top: 3px; right: 4px; font-size: 9px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.45); padding: 1px 4px; border-radius: 6px; }
+.loc-fishers { position: absolute; bottom: 3px; left: 4px; font-size: 9px; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
+.loc-weather { position: absolute; bottom: 3px; right: 4px; font-size: 10px; }
+.loc-name-row { text-align: center; font-size: 10px; color: #444; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 140px; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎣 选择钓鱼地点</div>
+<div class="hint">{{ hint_text }}</div>
+<div class="grid">
+{% for loc in locations %}
+<div>
+    <div class="loc-card">
+        {% if loc.image_src %}
+        <div class="img-wrap"><img src="{{ loc.image_src }}" alt="{{ loc.name }}" /></div>
+        {% else %}
+        <div class="no-img">🎣</div>
+        {% endif %}
+        <div class="loc-num">{{ loc.num }}</div>
+        <div class="loc-diff">Lv.{{ loc.difficulty }}{% if loc.nest_bonus > 0 %}<br/>⚡{{ loc.nest_bonus }}%{% endif %}</div>
+        <div class="loc-fishers">{{ loc.fisher_count }}人</div>
+        <div class="loc-weather"><span style="color:#000;background:rgba(255,255,255,0.92);padding:1px 3px;border-radius:2px;">{{ loc.weather_emoji }}{% if loc.weather_time %}<span style="font-size:8px;">{{ loc.weather_time }}</span>{% endif %}</span></div>
+    </div>
+    <div class="loc-name-row">{{ loc.name }}</div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

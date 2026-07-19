@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% from "_fish_item.html" import fish_list, fish_item %}
+{% from "_buff_timeline.html" import buff_timeline %}
+
+{% block extra_css %}
+.stats-box {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.stat-item { text-align: center; }
+.stat-value { font-size: 20px; font-weight: bold; color: #333; }
+.stat-label { font-size: 11px; color: #666; }
+.total-gold {
+    text-align: center;
+    margin-top: 12px;
+    padding: 10px;
+    background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+    border-radius: 8px;
+    color: white;
+}
+.gold-value { font-size: 24px; font-weight: bold; }
+.achievement-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+}
+.achievement-title { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 6px; }
+.achievement-item { font-size: 13px; padding: 3px 0; text-align: center; }
+.sign-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    border-radius: 8px;
+    color: #333;
+}
+.sign-title { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }
+.sign-item { font-size: 13px; padding: 2px 0; text-align: center; }
+.hints-box {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fff8e1;
+    border-radius: 8px;
+    border-left: 3px solid #f5af19;
+}
+.hint-item {
+    font-size: 12px;
+    color: #5d4037;
+    padding: 2px 0;
+    line-height: 1.4;
+}
+.hint-item + .hint-item {
+    border-top: 1px solid rgba(245, 175, 25, 0.15);
+    margin-top: 2px;
+    padding-top: 4px;
+}
+.cat-gifts-box {
+    margin-top: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    border-radius: 8px;
+}
+.cat-gifts-title { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 6px; color: #e17055; }
+.cat-gift-item {
+    font-size: 13px;
+    padding: 3px 8px;
+    color: #333;
+}
+.material-section {
+    margin-top: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    border-radius: 8px;
+}
+.material-title {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #e17055;
+}
+.material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.starry-section {
+    margin-top: 10px;
+    padding: 10px;
+    background: linear-gradient(135deg, #172033 0%, #314f6f 100%);
+    border-radius: 8px;
+    color: #fff;
+}
+.starry-title {
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-align: center;
+}
+.starry-wish-panel {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+}
+.starry-score-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+.starry-score-row .label { color: #c9d7ea; }
+.starry-score-row .value { font-weight: bold; color: #fff; }
+.starry-score-row .value.gain { color: #86efac; }
+.starry-progress {
+    height: 10px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 2px 0 4px;
+}
+.starry-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 55%, #fde68a 100%);
+    min-width: 0;
+}
+.starry-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #dbe7f7;
+}
+.starry-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.starry-result-card {
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(246,216,138,0.65);
+    border-radius: 8px;
+    padding: 8px;
+    color: #27364d;
+}
+.starry-result-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    align-items: flex-start;
+}
+.starry-id {
+    display: flex;
+    gap: 2px;
+}
+.starry-digit {
+    width: 18px;
+    height: 23px;
+    line-height: 23px;
+    text-align: center;
+    border-radius: 4px;
+    background: #172033;
+    color: #f6d88a;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+}
+.starry-digit.matched {
+    background: #f59e0b;
+    color: #1f2937;
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.85);
+}
+.starry-score {
+    text-align: right;
+    font-size: 16px;
+    font-weight: bold;
+    color: #314f6f;
+}
+.starry-meta {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.starry-chip {
+    font-size: 10px;
+    padding: 3px 5px;
+    border-radius: 5px;
+    background: #eef6ff;
+    color: #24527a;
+}
+.starry-card-reward {
+    margin-top: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(251, 191, 36, 0.28);
+    color: #111827;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+.starry-card-reward.muted {
+    background: rgba(148, 163, 184, 0.22);
+    color: #334155;
+    font-weight: 500;
+}
+.miracle-box {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: radial-gradient(circle at 20% 0%, #3b1d6b 0%, #172033 45%, #0b1220 100%);
+    color: #fff;
+    border: 1px solid rgba(253, 224, 71, 0.45);
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.18);
+}
+.miracle-title {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: #fde68a;
+    margin-bottom: 6px;
+}
+.miracle-subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.82);
+    margin-bottom: 8px;
+    line-height: 1.45;
+}
+.miracle-summary {
+    text-align: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: #86efac;
+    line-height: 1.5;
+}
+.buff-timeline { margin-top: 4px; padding: 0 4px; }
+.timeline-rows { position: relative; }
+.timeline-row { height: 2px; position: relative; margin-bottom: 1px; background: #eee; border-radius: 0; overflow: hidden; }
+.timeline-segment { position: absolute; top: 0; height: 100%; border-radius: 0; min-width: 2px; }
+.timeline-axis { position: relative; height: 7px; margin-top: 0.5px; }
+.timeline-axis-line { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: #ccc; overflow: hidden; }
+.time-marker { position: absolute; font-size: 9px; color: #999; transform: translateX(-50%); top: 3px; white-space: nowrap; }
+.timeline-legend { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; }
+.legend-item { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #666; }
+.legend-color { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.timeline-start { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(0,0,0,0.3); z-index:5; pointer-events:none; }
+.timeline-start-tag { position:absolute; font-size:8px; color:#555; transform:translateX(2px); top:0; white-space:nowrap; z-index:5; line-height:1; }
+.timeline-current { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(0,0,0,0.3); z-index:6; pointer-events:none; }
+.timeline-current-tag { position:absolute; font-size:8px; color:#555; transform:translateX(2px); bottom:0; white-space:nowrap; z-index:6; line-height:1; }
+.buff-timeline-section { margin-bottom: 10px; padding: 8px 10px; background: #f0f7ff; border-radius: 6px; border-left: 3px solid #4facfe; }
+.buff-timeline-title { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 6px; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎣 收杆成功！</div>
+
+{% if timeline_data %}
+<div class="buff-timeline-section">
+    <div class="buff-timeline-title">📈 经过的Buff</div>
+    {{ buff_timeline(timeline_data) }}
+</div>
+{% endif %}
+<div class="stats-box">
+    <div class="stat-item">
+        <div class="stat-value">{{ location_name }}</div>
+        <div class="stat-label">钓鱼地点</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">{{ duration_text }}</div>
+        <div class="stat-label">钓鱼时长</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">{{ total_count }}条</div>
+        <div class="stat-label">钓到鱼数</div>
+    </div>
+</div>
+<div class="fish-list">{{ fish_list(fish_items) }}</div>
+{% if miracle %}
+<div class="miracle-box">
+    <div class="miracle-title">✨ 星空祈愿 · 奇迹达成{% if miracle.claim_count and miracle.claim_count > 1 %} ×{{ miracle.claim_count }}{% endif %}</div>
+    {% if miracle.subtitle or miracle.hint %}
+    <div class="miracle-subtitle">{{ miracle.subtitle or miracle.hint }}</div>
+    {% endif %}
+    <div class="miracle-summary">
+        获得星辰木框 +{{ miracle.frames_gained or miracle.claim_count or 1 }}
+        （当前 {{ miracle.star_frames }}/{{ miracle.star_frames_max }}）
+        · 消耗 {{ miracle.subset_count }} 条流星鱼
+    </div>
+</div>
+{% endif %}
+{% if starry_cards or starry_score %}
+<div class="starry-section">
+    <div class="starry-title">🌠 星空祈愿 · 本次获得</div>
+    {% if starry_score %}
+    <div class="starry-wish-panel">
+        {% if starry_score.session_score and starry_score.session_score > 0 %}
+        <div class="starry-score-row">
+            <span class="label">本次积分</span>
+            <span class="value gain">+{{ starry_score.session_score }}</span>
+        </div>
+        {% endif %}
+        <div class="starry-progress">
+            <div class="starry-progress-fill" style="width: {{ starry_score.progress_pct }}%;"></div>
+        </div>
+        <div class="starry-progress-meta">
+            <span>{{ starry_score.accumulated }} / {{ starry_score.target }}</span>
+            <span>{{ starry_score.progress_pct }}%</span>
+        </div>
+    </div>
+    {% endif %}
+    {% if starry_cards %}
+    <div class="starry-result-grid">
+        {% for card in starry_cards %}
+        <div class="starry-result-card">
+            <div class="starry-result-top">
+                <div class="starry-id">
+                    {% for digit in card.digits %}<span class="starry-digit{% if card.digit_matched and card.digit_matched[loop.index0] %} matched{% endif %}">{{ digit }}</span>{% endfor %}
+                </div>
+                <div class="starry-score">{{ card.display_score }}分</div>
+            </div>
+            <div class="starry-meta">
+                <span class="starry-chip">{{ card.band }}</span>
+                <span class="starry-chip">{{ card.reward_pool }}</span>
+                <span class="starry-chip">{{ card.feature_summary }}</span>
+            </div>
+            {% if card.reward_text %}
+            <div class="starry-card-reward">🎁 抽中 {{ card.reward_text }}</div>
+            {% elif card.reward_pool and card.reward_pool != '无奖励' %}
+            <div class="starry-card-reward muted">可抽奖 · {{ card.reward_pool }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% if material_items %}
+<div class="material-section">
+    <div class="material-title">🏗️ 猫猫乐园建设素材</div>
+    <div class="material-grid">
+        {% for m in material_items %}
+        {{ fish_item(m) }}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+<div class="total-gold">
+    <div>预计价值</div>
+    <div class="gold-value">💰 {{ total_gold }} 鱼币</div>
+</div>
+{% if cat_gifts_data and cat_gifts_data.has_gifts %}
+<div class="cat-gifts-box">
+    <div class="cat-gifts-title">🐱 猫猫的礼物</div>
+    {% if cat_gifts_data.gold > 0 %}
+    <div class="cat-gift-item">💰 {{ cat_gifts_data.gold }} 钓鱼币</div>
+    {% endif %}
+    {% if cat_gifts_data.corn > 0 %}
+    <div class="cat-gift-item">🌽 {{ cat_gifts_data.corn }} 个香甜玉米</div>
+    {% endif %}
+    {% if cat_gifts_data.bait_count > 0 %}
+    <div class="cat-gift-item">🪱 {{ cat_gifts_data.bait_count }} 个{{ cat_gifts_data.bait_name }}</div>
+    {% endif %}
+    {% if cat_gifts_data.cat_frames > 0 %}
+    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫猫框</div>
+    {% endif %}
+    {% for gift in cat_gifts_data.fish_gifts %}
+    <div class="cat-gift-item">🐟 {{ gift.fish_name }} ({{ gift.fish_rarity }})</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if sign_info %}
+<div class="sign-box">
+    <div class="sign-title">✅ 每日签到</div>
+    <div class="sign-item">🌽 获得香甜玉米，当前 {{ sign_info.corn_count }} 个</div>
+    {% if sign_info.display_income > 0 %}
+    <div class="sign-item">💰 展示收益: {{ sign_info.display_income }} 钓鱼币{% if sign_info.days_missed > 0 %} ×{{ sign_info.days_missed + 1 }}（累计{{ sign_info.days_missed }}天未收杆）{% endif %}</div>
+    {% endif %}
+</div>
+{% endif %}
+{% if achievement_messages %}
+<div class="achievement-box">
+    <div class="achievement-title">🏆 成就奖励</div>
+    {% for msg in achievement_messages %}
+    <div class="achievement-item">{{ msg }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if hints %}
+<div class="hints-box">
+    {% for hint in hints %}
+    <div class="hint-item">{{ hint }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,222 @@
+{% from "_buff_timeline.html" import buff_timeline %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        {% if hypixel_font_uri %}
+        @font-face {
+            font-family: "HYPixel";
+            src: url("{{ hypixel_font_uri }}") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        {% endif %}
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { margin:0; padding:0; }
+        .sw { width:{{ container_width }}px; font-family:'Microsoft YaHei','Segoe UI Emoji',sans-serif; }
+        .sb { position:relative; width:{{ container_width }}px; overflow:hidden; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; }
+        .sbg { width:100%; display:block; image-rendering:pixelated; }
+        .wo { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; z-index:5; image-rendering:pixelated; opacity:0.7; }
+        .nb { position:absolute; top:6px; right:8px; font-size:10px; color:#fff; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:8px; z-index:20; white-space:nowrap; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; display:flex; flex-direction:column; gap:2px; align-items:flex-end; }
+        .pl { position:absolute; left:0; right:0; top:0; bottom:0; }
+        .player { position:absolute; bottom:0; width:80px; transform:translateX(-50%); text-align:center; }
+        .psprite { image-rendering:pixelated; display:block; margin:0 auto; }
+        .pname { font-size:8px; color:#fff; -webkit-text-stroke:0.5px #000; paint-order:stroke fill; white-space:nowrap; margin-bottom:1px; line-height:1; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; position:relative; }
+        .player.current .pname { color:#FFD700; font-weight:bold; -webkit-text-stroke:0.5px #000; }
+        .ib { padding:8px 12px; background:linear-gradient(135deg,#1a5276 0%,#154360 100%); color:#fff; }
+        .it { font-size:14px; font-weight:bold; }
+        .is { font-size:11px; opacity:0.9; margin-top:2px; }
+        .hb { padding:6px 12px; background:#fff8e1; }
+        .hi { font-size:11px; color:#e65100; padding:2px 0; }
+        .prob { font-size:9px; margin-top:3px; opacity:0.9; }
+        .buff-timeline { margin-top:4px; padding:0 4px; }
+        .timeline-rows { position:relative; }
+        .timeline-row { height:2px; position:relative; margin-bottom:1px; background:rgba(255,255,255,0.3); border-radius:0; overflow:hidden; }
+        .timeline-segment { position:absolute; top:0; height:100%; border-radius:0; min-width:2px; }
+        .timeline-axis { position:relative; height:7px; margin-top:0.5px; }
+        .timeline-axis-line { position:absolute; top:0; left:0; right:0; height:1px; background:rgba(255,255,255,0.4); overflow:hidden; }
+        .time-marker { position:absolute; font-size:7px; color:rgba(255,255,255,0.7); transform:translateX(-50%); top:2px; white-space:nowrap; }
+        .timeline-legend { display:flex; flex-wrap:wrap; gap:2px 6px; margin-top:2px; }
+        .legend-item { display:flex; align-items:center; gap:2px; font-size:7px; color:rgba(255,255,255,0.8); }
+        .legend-color { width:6px; height:6px; border-radius:2px; display:inline-block; flex-shrink:0; }
+        .timeline-start { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(255,255,255,0.7); z-index:5; pointer-events:none; }
+        .timeline-start-tag { position:absolute; font-size:6px; color:rgba(255,255,255,0.9); transform:translateX(2px); top:0; white-space:nowrap; z-index:5; line-height:1; }
+        .timeline-current { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(255,255,255,0.7); z-index:6; pointer-events:none; }
+        .timeline-current-tag { position:absolute; font-size:6px; color:rgba(255,255,255,0.9); transform:translateX(2px); bottom:0; white-space:nowrap; z-index:6; line-height:1; }
+        .weather-inactive { color:#888 !important; }
+    </style>
+</head>
+<body>
+<div class="sw">
+  <div class="sb">
+    <img src="{{ scene_uri }}" class="sbg">
+    {% if weather_overlay_uri %}
+    <img src="{{ weather_overlay_uri }}" class="wo">
+    {% endif %}
+    {% if badges %}
+    <div class="nb">
+      {% for badge in badges %}
+      <span>{{ badge }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="pl">
+      {% for player in player_list %}
+      <div class="player{% if player.is_current %} current{% endif %}" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.y_offset }}px);">
+          <div class="pname">{{ player.nickname }}</div>
+          <img src="{{ player.uri }}" class="psprite" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;">
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="ib">
+    <div class="it">📍 {{ location_name }} · Lv.{{ location_difficulty }} <span style="margin-left:6px;"{% if not weather_active %} class="weather-inactive"{% endif %}>{{ weather_emoji }} {{ weather_name }}{% if weather_time %} <span style="font-size:7px;">{{ weather_time }}</span>{% endif %}{% if weather_effect %} <span style="font-size:7px;opacity:0.85;">{{ weather_effect }}</span>{% endif %}</span></div>
+    <div class="is">{{ fish_count }}种鱼{{ bait_info }}{{ power_info }}{{ hook_info }}</div>
+    {% if prob_items %}
+    <div class="prob">
+      {% for item in prob_items %}
+      <span style="color:{{ item.color }};font-weight:bold;">{{ item.rk }}</span> {{ item.pct }}{% if not item.is_multiplier %}%{% endif %}
+      {% endfor %}
+      {% if material_rate > 0 %}<span style="color:#888;font-weight:bold;">🏗️</span> {{ (material_rate * 100)|round(0)|int }}%{% endif %}
+    </div>
+    {% endif %}
+    {% if timeline_data %}
+    {{ buff_timeline(timeline_data) }}
+    {% endif %}
+  </div>
+  {% if hints %}
+  <div class="hb">
+    {% for hint in hints %}
+    <div class="hi">{{ hint }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<script>
+document.fonts.ready.then(function(){
+    var nameEls = document.querySelectorAll('.pname');
+    var nameData = [];
+
+    nameEls.forEach(function(el, idx) {
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        var textRect = range.getBoundingClientRect();
+        var parentRect = el.parentElement.getBoundingClientRect();
+        var textCenter = textRect.left + textRect.width / 2;
+        var parentCenter = parentRect.left + parentRect.width / 2;
+        var offsetX = parentCenter - textCenter;
+
+        nameData.push({
+            el: el,
+            offsetX: Math.abs(offsetX) > 0.5 ? offsetX : 0,
+            left: textRect.left,
+            right: textRect.right,
+            top: textRect.top,
+            height: textRect.height,
+            idx: idx
+        });
+    });
+
+    var sprites = [];
+    document.querySelectorAll('.player').forEach(function(player) {
+        var sprite = player.querySelector('.psprite');
+        if (sprite) {
+            var sRect = sprite.getBoundingClientRect();
+            sprites.push({
+                left: sRect.left,
+                right: sRect.right,
+                top: sRect.top,
+                bottom: sRect.bottom
+            });
+        }
+    });
+
+    function nameBox(item, yOff) {
+        return {
+            left: item.left + item.offsetX,
+            right: item.right + item.offsetX,
+            top: item.top + yOff,
+            bottom: item.top + yOff + item.height
+        };
+    }
+
+    function overlapsSprite(box, excludeIdx) {
+        for (var s = 0; s < sprites.length; s++) {
+            if (s === excludeIdx) continue;
+            var spr = sprites[s];
+            if (box.left < spr.right && box.right > spr.left &&
+                box.bottom > spr.top && box.top < spr.bottom) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function laneHasOverlap(lane, box, skipIdx) {
+        for (var j = 0; j < lane.length; j++) {
+            if (lane[j].idx === skipIdx) continue;
+            if (box.left < lane[j].right && box.right > lane[j].left) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    var sorted = nameData.slice().sort(function(a, b) { return a.left - b.left; });
+    var stepH = (nameData[0] ? nameData[0].height : 8) + 2;
+    var MAX_LANES = 20;
+    var lanes = {};
+
+    sorted.forEach(function(item) {
+        for (var lvl = 0; lvl < MAX_LANES; lvl++) {
+            var yOff = -(lvl * stepH);
+            var box = nameBox(item, yOff);
+            var lane = lanes[yOff] || [];
+            if (!laneHasOverlap(lane, box, item.idx) && !overlapsSprite(box, item.idx)) {
+                lane.push({left: box.left, right: box.right, idx: item.idx});
+                lanes[yOff] = lane;
+                item.yOff = yOff;
+                break;
+            }
+        }
+        if (item.yOff === undefined) item.yOff = -(MAX_LANES * stepH);
+    });
+
+    var byHighest = sorted.slice().sort(function(a, b) { return a.yOff - b.yOff; });
+    byHighest.forEach(function(item) {
+        var oldYOff = item.yOff;
+        for (var lvl = 0; lvl < MAX_LANES; lvl++) {
+            var tryYOff = -(lvl * stepH);
+            if (tryYOff <= oldYOff) continue;
+            var box = nameBox(item, tryYOff);
+            var lane = lanes[tryYOff] || [];
+            if (!laneHasOverlap(lane, box, item.idx) && !overlapsSprite(box, item.idx)) {
+                var oldLane = lanes[oldYOff];
+                if (oldLane) {
+                    lanes[oldYOff] = oldLane.filter(function(e) { return e.idx !== item.idx; });
+                }
+                lane.push({left: box.left, right: box.right, idx: item.idx});
+                lanes[tryYOff] = lane;
+                item.yOff = tryYOff;
+                break;
+            }
+        }
+    });
+
+    var yOffsets = {};
+    sorted.forEach(function(item) {
+        if (item.yOff !== 0) yOffsets[item.idx] = item.yOff;
+    });
+
+    nameData.forEach(function(item) {
+        var parts = [];
+        if (item.offsetX) parts.push('translateX(' + item.offsetX.toFixed(1) + 'px)');
+        if (yOffsets[item.idx] !== undefined) parts.push('translateY(' + yOffsets[item.idx].toFixed(1) + 'px)');
+        if (parts.length) item.el.style.transform = parts.join(' ');
+    });
+});
+</script>
+</body>
+</html>

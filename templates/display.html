@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.display-item { display: flex; align-items: center; padding: 4px; margin-bottom: 6px; background: #f8f9fa; border-radius: 10px; }
+.fish-frame-container { position: relative; width: 80px; height: 80px; margin-right: 10px; flex-shrink: 0; overflow: visible; }
+.fish-img { width: 68px; height: 68px; object-fit: contain; position: absolute; top: 6px; left: 6px; border-radius: 4px; }
+.fish-img-starry-disp { position: absolute; top: 6px; left: 6px; width: 68px; height: 68px; }
+.fish-img-starry-disp-silhouette { position: absolute; top: 0; left: 0; width: 68px; height: 68px; object-fit: contain; filter: brightness(0); border-radius: 4px; }
+.fish-img-starry-disp-sky { position: absolute; top: 0; left: 0; width: 68px; height: 68px; background-size: cover; mix-blend-mode: screen; border-radius: 4px; }
+.frame-img { width: 80px; height: 80px; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+.fish-rarity { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; margin-right: 10px; }
+.fish-name { flex: 1; font-weight: bold; color: #333; }
+.empty { text-align: center; color: #999; padding: 40px; }
+.income-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border-radius: 10px;
+    color: white;
+    text-align: center;
+}
+.income-value { font-size: 24px; font-weight: bold; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🏆 我的展示</div>
+{% if displays %}
+{% for d in displays %}
+<div class="display-item">
+    <div class="fish-frame-container">
+                {% if d.img_src %}
+                {% if d.is_utr and d.utr_starry_src %}
+                <div class="fish-img-starry-disp">
+                    <img src="{{ d.img_src }}" class="fish-img-starry-disp-silhouette" />
+                    <div class="fish-img-starry-disp-sky" style="background-image: url('{{ d.utr_starry_src }}');"></div>
+                </div>
+                {% else %}
+                <img src="{{ d.img_src }}" class="fish-img" />
+                {% endif %}
+                {% endif %}
+                {% if d.frame_src %}
+                <img src="{{ d.frame_src }}" class="frame-img" />
+                {% endif %}
+            </div>
+    <div class="fish-rarity" style="background: {{ d.color }};">{{ d.rarity_name }}</div>
+    <div class="fish-name">{{ d.fish_name }}</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty">暂无展示的鱼</div>
+{% endif %}
+<div class="income-box">
+    <div>每日展示收益</div>
+    <div class="income-value">💰 {{ daily_income }} 鱼币</div>
+</div>
+{% endblock %}

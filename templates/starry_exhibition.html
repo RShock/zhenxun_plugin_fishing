@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.container {
+    background: rgba(250, 252, 255, 0.96);
+}
+.starry-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 14px;
+}
+.starry-title-block {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #172033 0%, #2c4668 100%);
+    color: #fff;
+}
+.starry-title {
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1.2;
+}
+.starry-subtitle {
+    font-size: 12px;
+    color: rgba(255,255,255,0.78);
+    margin-top: 4px;
+}
+.starry-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    min-width: 250px;
+}
+.starry-stat {
+    border: 1px solid #dbe4f0;
+    background: #f6f8fc;
+    border-radius: 8px;
+    padding: 9px 8px;
+    text-align: center;
+}
+.starry-stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #27364d;
+}
+.starry-stat-label {
+    font-size: 11px;
+    color: #667085;
+    margin-top: 2px;
+}
+.starry-empty {
+    padding: 26px 18px;
+    border: 1px dashed #b6c4d8;
+    border-radius: 8px;
+    text-align: center;
+    color: #56657a;
+    background: #f7faff;
+}
+.starry-empty-main {
+    font-size: 17px;
+    font-weight: bold;
+    color: #31415a;
+    margin-bottom: 6px;
+}
+.starry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.starry-card {
+    border: 1px solid #cbd6e5;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f7fb 100%);
+    padding: 10px;
+    min-height: 128px;
+}
+.starry-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.starry-id {
+    display: flex;
+    gap: 3px;
+}
+.starry-digit {
+    width: 24px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    border-radius: 5px;
+    background: #182033;
+    color: #f6d88a;
+    font-size: 18px;
+    font-weight: bold;
+    font-family: Consolas, monospace;
+}
+.starry-digit.matched {
+    background: #f59e0b;
+    color: #1f2937;
+    box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.85);
+}
+.starry-score {
+    min-width: 66px;
+    text-align: right;
+}
+.starry-score-main {
+    font-size: 20px;
+    font-weight: bold;
+    color: #314f6f;
+}
+.starry-score-sub {
+    font-size: 10px;
+    color: #667085;
+}
+.starry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+.starry-chip {
+    font-size: 11px;
+    line-height: 1.2;
+    padding: 4px 7px;
+    border-radius: 999px;
+    background: #e8eef7;
+    color: #344054;
+}
+.starry-chip.pool {
+    background: #fff4d6;
+    color: #7a4b00;
+}
+.starry-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.starry-feature {
+    font-size: 11px;
+    padding: 4px 6px;
+    border-radius: 5px;
+    background: #eef6ff;
+    color: #24527a;
+}
+{% endblock %}
+
+{% block content %}
+<div class="starry-head">
+    <div class="starry-title-block">
+        <div class="starry-title">流星鱼展馆 · 星空祈愿</div>
+        <div class="starry-subtitle">分数达到 4 分的流星鱼会自动进入展馆，最多展示 10 条。</div>
+    </div>
+    <div class="starry-stats">
+        <div class="starry-stat">
+            <div class="starry-stat-value">{{ total_score }}</div>
+            <div class="starry-stat-label">累计分数</div>
+        </div>
+        <div class="starry-stat">
+            <div class="starry-stat-value">{{ total_count }}</div>
+            <div class="starry-stat-label">流星鱼总数</div>
+        </div>
+        <div class="starry-stat">
+            <div class="starry-stat-value">{{ exhibition_count }}/10</div>
+            <div class="starry-stat-label">展馆藏品</div>
+        </div>
+    </div>
+</div>
+
+{% if cards %}
+<div class="starry-grid">
+    {% for card in cards %}
+    <div class="starry-card">
+        <div class="starry-card-top">
+            <div class="starry-id">
+                {% for digit in card.digits %}<span class="starry-digit{% if card.digit_matched and card.digit_matched[loop.index0] %} matched{% endif %}">{{ digit }}</span>{% endfor %}
+            </div>
+            <div class="starry-score">
+                <div class="starry-score-main">{{ card.display_score }}分</div>
+                <div class="starry-score-sub">{{ card.score }}</div>
+            </div>
+        </div>
+        <div class="starry-meta">
+            <span class="starry-chip">{{ card.band }}</span>
+            <span class="starry-chip pool">{{ card.reward_pool }}</span>
+            {% if card.location_id %}<span class="starry-chip">{{ card.location_id }}</span>{% endif %}
+        </div>
+        <div class="starry-features">
+            {% for feature in card.features %}<span class="starry-feature">{{ feature }}</span>{% endfor %}
+            {% if not card.features %}<span class="starry-feature">无显著番型</span>{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="starry-empty">
+    <div class="starry-empty-main">展馆暂时没有藏品</div>
+    <div>钓到 4 分及以上的流星鱼后，会自动陈列在这里。</div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        {% if hypixel_font_uri %}
+        @font-face {
+            font-family: "HYPixel";
+            src: url("{{ hypixel_font_uri }}") format("truetype");
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        {% endif %}
+        body {
+            font-family: 'Microsoft YaHei','Segoe UI Emoji',sans-serif;
+            background: {{ body_bg }};
+            padding: 20px;
+            margin: 0;
+            min-width: {{ width }}px;
+        }
+        .container {
+            font-family: 'Microsoft YaHei','Segoe UI Emoji',sans-serif;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-label { color: #666; }
+        .info-value { color: #333; font-weight: bold; }
+        .section-title {
+            font-size: 16px; font-weight: bold; color: #333;
+            margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #4facfe;
+        }
+        .inv-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 5px; }
+        .inv-item {
+            background: #f0f7ff; border: 1px solid #d0e3f7; border-radius: 8px;
+            padding: 6px 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .inv-name { font-size: 13px; color: #333; font-weight: bold; }
+        .inv-count { font-size: 13px; color: #4facfe; font-weight: bold; }
+        .total-box {
+            margin-top: 20px; padding: 15px; border-radius: 10px;
+            color: white; text-align: center;
+        }
+        .gold-box { text-align: center; margin-bottom: 15px; }
+        .gold-value { font-size: 22px; font-weight: bold; color: #f5af19; }
+        .btn {
+            display: inline-block; padding: 8px 16px; border-radius: 8px;
+            color: white; font-weight: bold; text-align: center; cursor: pointer;
+        }
+        .btn-primary { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .btn-danger { background: linear-gradient(135deg, #f5af19 0%, #f12711 100%); }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 11px; font-weight: bold; color: white;
+        }
+        .fish-list {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .fish-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-radius: 10px;
+            padding: 4px 6px;
+            position: relative;
+        }
+        .fish-item-id {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 14px;
+            color: #333;
+            font-family: monospace;
+        }
+        .fish-item-count {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 11px;
+            color: #333;
+            font-weight: bold;
+        }
+        .fish-item-lock {
+            position: absolute;
+            bottom: 2px;
+            left: 4px;
+            font-size: 10px;
+        }
+        .fish-item-price {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 10px;
+            color: #f5af19;
+            font-weight: bold;
+        }
+        .fish-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 0;
+        }
+        .fish-img-placeholder {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            margin: 0;
+        }
+        .fish-img-starry {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+        .fish-img-starry-silhouette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            filter: brightness(0);
+        }
+        .fish-img-starry-sky {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 80px;
+            background-size: cover;
+            mix-blend-mode: screen;
+        }
+        .fish-name {
+            font-size: 13px;
+            font-weight: bold;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .empty {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            grid-column: 1 / -1;
+        }
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

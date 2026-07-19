@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.test-section {
+    margin-bottom: 16px;
+}
+.test-section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #ddd;
+}
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat({{ cols }}, 1fr);
+    gap: 8px;
+}
+.emoji-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+.emoji-display {
+    font-size: 36px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+.emoji-label {
+    font-size: 10px;
+    color: #888;
+    word-break: break-all;
+}
+.emoji-code {
+    font-size: 9px;
+    color: #aaa;
+    font-family: monospace;
+}
+.font-test-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border: 1px solid #e0e0e0;
+}
+.font-test-label {
+    font-size: 11px;
+    color: #666;
+    min-width: 160px;
+    font-family: monospace;
+}
+.font-test-emoji {
+    font-size: 40px;
+    line-height: 1.2;
+}
+.custom-text {
+    font-size: 24px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 8px;
+}
+.utr-scheme {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+}
+.utr-scheme-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 6px;
+}
+.utr-scheme-desc {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 8px;
+}
+.utr-scheme-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.utr-preview-box {
+    width: 96px;
+    height: 96px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #e0f0ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.utr-preview-box img {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+}
+.utr-ref-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+.utr-ref-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.utr-ref-box img {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #f0f0f0;
+}
+.utr-ref-label {
+    font-size: 10px;
+    color: #888;
+}
+{% endblock %}
+
+{% block content %}
+<div class="title">🧪 渲染测试</div>
+
+{% if custom_text %}
+<div class="test-section">
+    <div class="test-section-title">📝 自定义渲染</div>
+    <div class="custom-text">{{ custom_text }}</div>
+</div>
+{% endif %}
+
+<div class="test-section">
+    <div class="test-section-title">🌌 UTR星空剪影效果测试</div>
+    <div style="font-size: 11px; color: #888; margin-bottom: 8px;">测试鱼: {{ fish_name }} | 目标: 星空背景只在鱼轮廓内显示</div>
+
+    <div class="utr-ref-row">
+        <div class="utr-ref-box">
+            <img src="{{ fish_uri }}" />
+            <div class="utr-ref-label">原始鱼图</div>
+        </div>
+        <div class="utr-ref-box">
+            <img src="{{ starry_uri }}" />
+            <div class="utr-ref-label">星空背景</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案A: CSS mask-image + file:// URL (当前方案)</div>
+        <div class="utr-scheme-desc">background-image: 星空(file://) | mask-image: 鱼图(file://)</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box">
+                <div style="width:96px;height:96px;background-image:url('{{ starry_uri }}');background-size:cover;-webkit-mask-image:url('{{ fish_uri }}');mask-image:url('{{ fish_uri }}');-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;"></div>
+            </div>
+            <div style="font-size:11px;color:#666;">如果显示空白 → file:// URL不被mask-image支持</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案B: CSS mask-image + base64 Data URI</div>
+        <div class="utr-scheme-desc">background-image: 星空(base64) | mask-image: 鱼图(base64)</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box">
+                <div style="width:96px;height:96px;background-image:url('{{ starry_b64 }}');background-size:cover;-webkit-mask-image:url('{{ fish_b64 }}');mask-image:url('{{ fish_b64 }}');-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;"></div>
+            </div>
+            <div style="font-size:11px;color:#666;">如果显示正常 → 问题出在file:// URL; 仍空白 → mask-image本身不支持</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案C: Canvas合成 (globalCompositeOperation)</div>
+        <div class="utr-scheme-desc">JS Canvas: 先绘制鱼图 → 设置source-in → 绘制星空 → toDataURL输出</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box">
+                <img id="utr-canvas-result" style="width:96px;height:96px;object-fit:contain;" />
+            </div>
+            <div style="font-size:11px;color:#666;">纯JS Canvas合成，兼容性最佳</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案D: CSS mix-blend-mode ✅ 已采用</div>
+        <div class="utr-scheme-desc">底层: 鱼图(filter:brightness(0)变黑剪影) | 上层: 星空(mix-blend-mode:screen) | 全部使用file:// URL，无需base64</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box" style="position:relative;">
+                <img src="{{ fish_uri }}" style="position:absolute;width:96px;height:96px;object-fit:contain;filter:brightness(0);" />
+                <div style="position:absolute;width:96px;height:96px;background-image:url('{{ starry_uri }}');background-size:cover;mix-blend-mode:screen;"></div>
+            </div>
+            <div style="font-size:11px;color:#666;">screen模式: 黑色区域显示星空，浅色区域星空几乎不可见</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案E: SVG &lt;mask&gt; 元素</div>
+        <div class="utr-scheme-desc">SVG mask: 用鱼图作为mask白色区域 → 星空rect填充被mask裁剪</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box">
+                <svg width="96" height="96" viewBox="0 0 96 96">
+                    <defs>
+                        <mask id="fish-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="96" height="96">
+                            <image href="{{ fish_b64 }}" width="96" height="96" preserveAspectRatio="xMidYMid meet" />
+                        </mask>
+                    </defs>
+                    <image href="{{ starry_b64 }}" width="96" height="96" mask="url(#fish-mask)" preserveAspectRatio="xMidYMid slice" />
+                </svg>
+            </div>
+            <div style="font-size:11px;color:#666;">SVG原生mask，用鱼图的亮度作为遮罩</div>
+        </div>
+    </div>
+
+    <div class="utr-scheme">
+        <div class="utr-scheme-title">方案F: CSS mask-image + base64 (80px背包尺寸)</div>
+        <div class="utr-scheme-desc">与方案B相同，但使用背包页面的80px尺寸，验证尺寸是否影响</div>
+        <div class="utr-scheme-result">
+            <div class="utr-preview-box" style="width:80px;height:80px;">
+                <div style="width:80px;height:80px;background-image:url('{{ starry_b64 }}');background-size:cover;-webkit-mask-image:url('{{ fish_b64 }}');mask-image:url('{{ fish_b64 }}');-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;"></div>
+            </div>
+            <div style="font-size:11px;color:#666;">80px尺寸对照</div>
+        </div>
+    </div>
+</div>
+
+<div class="test-section">
+    <div class="test-section-title">🔍 鱼钩🪝字体对比 (U+1FA9D, Unicode 13.0)</div>
+    {% for test in hook_tests %}
+    <div class="font-test-row">
+        <div class="font-test-label">{{ test.label }}</div>
+        <div class="font-test-emoji" style="font-family: {{ test.font_family }};">🪝</div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="test-section">
+    <div class="test-section-title">📊 Unicode 版本覆盖测试</div>
+    {% for section in emoji_sections %}
+    <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">{{ section.title }}</div>
+        <div class="emoji-grid">
+            {% for emoji in section.emojis %}
+            <div class="emoji-card">
+                <div class="emoji-display">{{ emoji.char }}</div>
+                <div class="emoji-label">{{ emoji.name }}</div>
+                <div class="emoji-code">{{ emoji.code }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="test-section">
+    <div class="test-section-title">🎨 Color Emoji 特性测试</div>
+    {% for section in color_sections %}
+    <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">{{ section.title }}</div>
+        <div class="emoji-grid">
+            {% for emoji in section.emojis %}
+            <div class="emoji-card">
+                <div class="emoji-display">{{ emoji.char }}</div>
+                <div class="emoji-label">{{ emoji.name }}</div>
+                <div class="emoji-code">{{ emoji.code }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+(function() {
+    var fishSrc = "{{ fish_b64 }}";
+    var starrySrc = "{{ starry_b64 }}";
+    if (!fishSrc || !starrySrc) return;
+
+    var canvas = document.createElement("canvas");
+    canvas.width = 96;
+    canvas.height = 96;
+    var ctx = canvas.getContext("2d");
+
+    var fishImg = new Image();
+    fishImg.onload = function() {
+        ctx.drawImage(fishImg, 0, 0, 96, 96);
+        ctx.globalCompositeOperation = "source-in";
+        var starryImg = new Image();
+        starryImg.onload = function() {
+            ctx.drawImage(starryImg, 0, 0, 96, 96);
+            var result = document.getElementById("utr-canvas-result");
+            if (result) result.src = canvas.toDataURL("image/png");
+        };
+        starryImg.src = starrySrc;
+    };
+    fishImg.src = fishSrc;
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.gold-box {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.gold-value { font-size: 32px; font-weight: bold; color: white; }
+.status-box { display: flex; align-items: center; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+.status-box.fishing { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.status-box.idle { background: #f8f9fa; }
+.status-icon { font-size: 24px; margin-right: 15px; }
+.status-text { color: white; font-weight: bold; }
+.status-box.idle .status-text { color: #666; }
+{% endblock %}
+
+{% block content %}
+<div class="title">🎣 钓鱼状态</div>
+<div class="gold-box">
+    <div class="gold-value">💰 {{ gold }}</div>
+</div>
+{% if is_fishing and fishing_location %}
+<div class="status-box fishing">
+    <div class="status-icon">🎣</div>
+    <div class="status-text">正在 {{ fishing_location }} 钓鱼中...</div>
+</div>
+{% else %}
+<div class="status-box idle">
+    <div class="status-icon">💤</div>
+    <div class="status-text">空闲中，快去钓鱼吧！</div>
+</div>
+{% endif %}
+<div class="info-row">
+    <span class="info-label">钓竿等级</span>
+    <span class="info-value">{{ rod_name }} (Lv.{{ rod_level }})</span>
+</div>
+<div class="info-row">
+    <span class="info-label">鱼钩等级</span>
+    <span class="info-value">Lv.{{ hook_level }} (速度+{{ hook_speed_percent }}%)</span>
+</div>
+<div class="info-row">
+    <span class="info-label">当前鱼饵</span>
+    <span class="info-value">{{ bait_display }}</span>
+</div>
+{% if is_fishing %}
+<div class="info-row">
+    <span class="info-label">钓鱼间隔</span>
+    <span class="info-value">{{ fishing_interval | round(1) }} 分钟/条</span>
+</div>
+{% endif %}
+<div class="info-row">
+    <span class="info-label">香甜玉米</span>
+    <span class="info-value">🌽 {{ corn }}</span>
+</div>
+{% endblock %}

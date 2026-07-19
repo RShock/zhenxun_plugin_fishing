@@ -1,0 +1,39 @@
+{% macro fish_item(fish) %}
+<div class="fish-item" style="background: {{ fish.color }}20; border: 2px solid {{ fish.color }};">
+    {% if fish.numeric_id is not none %}
+    <div class="fish-item-id">#{{ fish.numeric_id }}</div>
+    {% endif %}
+    {% if fish.count_text %}
+    <div class="fish-item-count">{{ fish.count_text }}</div>
+    {% endif %}
+    {% if fish.is_cat_eaten %}
+    <div class="fish-img-placeholder">🐱</div>
+    {% elif fish.utr_starry_src %}
+    <div class="fish-img-starry">
+        <img src="{{ fish.img_src }}" class="fish-img-starry-silhouette" />
+        <div class="fish-img-starry-sky" style="background-image: url('{{ fish.utr_starry_src }}');"></div>
+    </div>
+    {% elif fish.img_src %}
+    <img src="{{ fish.img_src }}" class="fish-img" />
+    {% else %}
+    <div class="fish-img-placeholder">🐟</div>
+    {% endif %}
+    <div class="fish-name" style="color: {{ fish.color }};">{{ fish.name }}</div>
+    {% if fish.locked %}
+    <div class="fish-item-lock">🔒</div>
+    {% endif %}
+    {% if fish.price is not none %}
+    <div class="fish-item-price">💰{{ fish.price }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro fish_list(fishes, empty_text="桶里空空如也~") %}
+{% if fishes %}
+{% for fish in fishes %}
+{{ fish_item(fish) }}
+{% endfor %}
+{% else %}
+<div class="empty">{{ empty_text }}</div>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.level-box { display: flex; align-items: center; justify-content: center; margin: 20px 0; }
+.level { font-size: 48px; font-weight: bold; color: #4facfe; }
+.arrow { font-size: 30px; color: #666; margin: 0 20px; }
+.desc { font-size: 18px; color: #666; margin-bottom: 15px; text-align: center; }
+.price { font-size: 14px; color: #888; text-align: center; }
+.remaining { font-size: 14px; color: #4facfe; text-align: center; font-weight: bold; }
+.next-price { font-size: 12px; color: #999; text-align: center; margin-top: 8px; }
+{% endblock %}
+
+{% block content %}
+<div class="title">{{ title }}</div>
+<div class="level-box">
+    <div class="level">{{ old_level }}</div>
+    <div class="arrow">→</div>
+    <div class="level">{{ new_level }}</div>
+</div>
+<div class="desc">{{ desc }}</div>
+<div class="price">花费: 💰 {{ price }}</div>
+<div class="remaining">剩余: 💰 {{ remaining_gold }}</div>
+{% if next_price > 0 %}
+<div class="next-price">下一级花费: 💰 {{ next_price }}</div>
+{% endif %}
+{% endblock %}

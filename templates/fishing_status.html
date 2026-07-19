@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "_fish_item.html" import fish_list %}
+{% from "_buff_timeline.html" import buff_timeline %}
+
+{% block extra_css %}
+.container { position: relative; }
+.lucky-badge { position: absolute; top: 8px; left: 10px; font-size: 22px; z-index: 10; line-height: 1; }
+.section { margin-bottom: 12px; }
+.section-title { font-size: 14px; font-weight: bold; color: #333; padding: 6px 10px; background: #f0f7ff; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #4facfe; }
+.fish-list { padding: 0 4px; }
+.prob-row { display: flex; align-items: center; margin: 3px 0; gap: 8px; }
+.prob-label { width: 36px; font-size: 13px; font-weight: bold; text-align: right; }
+.prob-pct { font-size: 13px; color: #555; }
+.messages { padding: 8px 10px; background: #fff8e1; border-radius: 6px; margin-top: 8px; border-left: 3px solid #f5af19; }
+.msg-item { font-size: 12px; color: #555; padding: 3px 0; }
+.info-line { font-size: 12px; color: #555; padding: 2px 0; }
+.empty { text-align: center; color: #999; padding: 10px; font-size: 13px; }
+.total-value-line { font-size: 13px; color: #f5af19; font-weight: bold; padding: 4px 10px; text-align: right; }
+.buff-timeline { margin-top: 8px; padding: 0 4px; }
+.timeline-rows { position: relative; }
+.timeline-row { height: 2px; position: relative; margin-bottom: 1px; background: #eee; border-radius: 0; overflow: hidden; }
+.timeline-segment { position: absolute; top: 0; height: 100%; border-radius: 0; min-width: 2px; }
+.timeline-axis { position: relative; height: 7px; margin-top: 0.5px; }
+.timeline-axis-line { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: #ccc; overflow: hidden; }
+.time-marker { position: absolute; font-size: 9px; color: #999; transform: translateX(-50%); top: 3px; white-space: nowrap; }
+.timeline-legend { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; }
+.legend-item { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #666; }
+.legend-color { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.timeline-start { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(0,0,0,0.3); z-index:5; pointer-events:none; }
+.timeline-start-tag { position:absolute; font-size:8px; color:#555; transform:translateX(2px); top:0; white-space:nowrap; z-index:5; line-height:1; }
+.timeline-current { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(0,0,0,0.3); z-index:6; pointer-events:none; }
+.timeline-current-tag { position:absolute; font-size:8px; color:#555; transform:translateX(2px); bottom:0; white-space:nowrap; z-index:6; line-height:1; }
+.cat-gifts-box { margin-top: 10px; padding: 10px; background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%); border-radius: 8px; }
+.cat-gifts-title { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 6px; color: #e17055; }
+.cat-gift-item { font-size: 13px; padding: 3px 8px; color: #333; }
+.weather-inactive { color: #888 !important; }
+{% endblock %}
+
+{% block content %}
+{% if lucky_active %}<div class="lucky-badge">⭐</div>{% endif %}
+<div class="title">🎣 钓鱼状态</div>
+<div class="info-line">📍 {{ location_name }} (Lv.{{ location_difficulty }}) · ⚔️ 渔力：{{ fishing_power }}（鱼竿等级：{{ rod_level }}，钓鱼难度：{{ location_difficulty }}）</div>
+<div class="info-line{% if not weather_active %} weather-inactive{% endif %}">{{ weather_emoji }} {{ weather_name }}{% if weather_desc %}（{{ weather_desc }}）{% endif %} · ⏳ 已钓鱼 {{ duration_text }} · 🐟 累计 {{ total_count }} 条{% if new_count > 0 %}（+{{ new_count }}）{% endif %} · ⏱️ 间隔 {{ fishing_interval | round(1) }} 分钟/条{% if speed_bonus_detail %}（{{ speed_bonus_detail }}）{% endif %}</div>
+{% if bait_info %}
+<div class="info-line">{{ bait_info }}</div>
+{% endif %}
+<div class="info-line">🖼️ 展示木框保底：{{ frame_pity }}/{{ frame_pity_threshold }} · 🐱 猫猫框保底：{{ cat_frame_pity }}/{{ cat_frame_pity_threshold }} · 🌀 迷途风UTR保底：{{ utr_pity }}/{{ utr_pity_threshold }}</div>
+
+{% if timeline_data %}
+<div class="section">
+    <div class="section-title">📈 Buff时间轴</div>
+    {{ buff_timeline(timeline_data) }}
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="section-title">🐟 累计钓获</div>
+    <div class="fish-list">{{ fish_list(fish_items, "还没有钓到鱼~") }}</div>
+    <div class="total-value-line">💰 总价值：{{ total_value }} 鱼币</div>
+</div>
+{% if cat_count > 0 %}
+<div class="info-line" style="color: #d84315; text-align: center; margin-top: 4px;">🐱 猫吃掉了 {{ cat_count }} 条鱼</div>
+{% endif %}
+{% if cat_gifts_data and cat_gifts_data.has_gifts %}
+<div class="cat-gifts-box">
+    <div class="cat-gifts-title">🐱 猫猫的礼物</div>
+    {% if cat_gifts_data.gold > 0 %}
+    <div class="cat-gift-item">💰 {{ cat_gifts_data.gold }} 钓鱼币</div>
+    {% endif %}
+    {% if cat_gifts_data.corn > 0 %}
+    <div class="cat-gift-item">🌽 {{ cat_gifts_data.corn }} 个香甜玉米</div>
+    {% endif %}
+    {% if cat_gifts_data.bait_count > 0 %}
+    <div class="cat-gift-item">🪱 {{ cat_gifts_data.bait_count }} 个{{ cat_gifts_data.bait_name }}</div>
+    {% endif %}
+    {% if cat_gifts_data.cat_frames > 0 %}
+    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫猫框</div>
+    {% endif %}
+    {% for gift in cat_gifts_data.fish_gifts %}
+    <div class="cat-gift-item">🐟 {{ gift.fish_name }} ({{ gift.fish_rarity }})</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="section-title">📊 当前概率{% if material_rate > 0 %}<span style="font-size:11px;color:#888;margin-left:6px;">🏗️材料率 {{ (material_rate * 100)|round(0)|int }}%</span>{% endif %}</div>
+    {% for row in prob_rows %}
+    <div class="prob-row">
+        <span class="prob-label" style="color:{{ row.color }}">{{ row.rarity_key }}</span>
+        <span class="prob-pct">{{ row.rarity_name }} {{ row.pct }}{% if not row.is_multiplier %}%{% endif %}</span>
+    </div>
+    {% endfor %}
+</div>
+
+{% if buff_messages %}
+<div class="messages">
+    {% for msg in buff_messages %}
+    <div class="msg-item">{{ msg }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="info-line" style="text-align:center; margin-top:8px; color:#999;">输入【收杆】结算并收入背包</div>
+{% endblock %}

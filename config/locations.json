@@ -1,0 +1,172 @@
+{
+  "locations": [
+    {
+      "id": "1",
+      "name": "乡间浅溪",
+      "difficulty": 0,
+      "description": "山间小溪、农村溪流，最基础入门渔场",
+      "fish_pool": ["小鲫鱼", "麦穗鱼", "白条鱼", "鳑鲏鱼", "泥鳅"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "2",
+      "name": "田园池塘",
+      "difficulty": 1,
+      "description": "农家养殖塘、村边水塘",
+      "fish_pool": ["草鱼", "鲤鱼", "鲢鱼", "鳙鱼", "黄鳝"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "3",
+      "name": "平缓内河",
+      "difficulty": 2,
+      "description": "城市周边内陆河道",
+      "fish_pool": ["翘嘴鲌", "鲶鱼", "土凤鱼", "黑鱼", "黄颡鱼"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "4",
+      "name": "宽阔大湖",
+      "difficulty": 3,
+      "description": "大型天然淡水湖泊",
+      "fish_pool": ["青鱼", "鳊鱼", "赤眼鳟", "银鱼", "花鲢"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "5",
+      "name": "山泉深潭",
+      "difficulty": 4,
+      "description": "深山阴凉深水潭",
+      "fish_pool": ["马口鱼", "石斑鱼", "光唇鱼", "宽鳍鱲", "小银鲫"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "6",
+      "name": "芦苇浅荡",
+      "difficulty": 5,
+      "description": "沼泽湿地、芦苇浅滩水域",
+      "fish_pool": ["革胡子鲶", "麦鲮鱼", "泰鲮鱼", "罗非鱼", "食蚊鱼"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "7",
+      "name": "长江中游",
+      "difficulty": 6,
+      "description": "宽广大江中段水域",
+      "fish_pool": ["江团鱼", "刀鲚", "黄尾鲴", "细鳞鱼", "重唇鱼"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "8",
+      "name": "河口交汇",
+      "difficulty": 7,
+      "description": "江河入海口，淡咸水混合区域",
+      "fish_pool": ["海鲈", "鲻鱼", "梭鱼", "弹涂鱼", "小海鳗"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "9",
+      "name": "高山冷湖",
+      "difficulty": 8,
+      "description": "高海拔冷水湖泊",
+      "fish_pool": ["虹鳟鱼", "金鳟鱼", "柳根鱼", "高原鳅", "细鳞鲑"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "10",
+      "name": "原生古河",
+      "difficulty": 9,
+      "description": "原始无人古老河道，终极后期渔场",
+      "fish_pool": ["胭脂鱼", "斑鳜", "大眼鳜", "长吻鮠", "乌苏里拟鲿"],
+      "max_rarity": "UR"
+    },
+    {
+      "id": "11",
+      "name": "牛奶河",
+      "difficulty": 10,
+      "description": "银白星河与奶色流光交织的星空第一钓场。",
+      "fish_pool": ["月乳鲫", "银匙鳐", "星沫鳗", "奶冠鲤", "银河灯鱼"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "12",
+      "name": "月环港",
+      "difficulty": 11,
+      "description": "月球环形山中的静谧港湾。",
+      "fish_pool": ["月壳蟹鱼", "潮汐银鲈", "环月飞鱼", "玉兔灯鲷", "灰晶鳕"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "13",
+      "name": "彗尾瀑",
+      "difficulty": 12,
+      "description": "彗星尾焰坠成的银蓝瀑布。",
+      "fish_pool": ["彗尾鲑", "焰尘鳟", "长尾星鳅", "白火鲢", "碎冰虹鱼"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "14",
+      "name": "星砂漠",
+      "difficulty": 13,
+      "description": "漂浮星砂与镜面沙海构成的幻境。",
+      "fish_pool": ["沙星魟", "琉璃沙鳗", "星蝎鲶", "金尘鲷", "海市蜃鱼"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "15",
+      "name": "云鲸庭",
+      "difficulty": 14,
+      "description": "云海中巨鲸遗迹环绕的庭院。",
+      "fish_pool": ["云须鲸鱼", "鲸歌鲤", "浮庭鲫", "天羽鳐", "雾铃鳕"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "16",
+      "name": "极光井",
+      "difficulty": 15,
+      "description": "极光垂入无底星井的深处。",
+      "fish_pool": ["极光鳗", "虹幕鲑", "井心灯鱼", "绿辉鲈", "磁光鳟"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "17",
+      "name": "黑洞涡",
+      "difficulty": 16,
+      "description": "低重力暗潮旋转成黑洞涡流。",
+      "fish_pool": ["引力鲶", "暗环魟", "奇点鳕", "坠星鳗", "潮汐黑鲤"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "18",
+      "name": "水晶星冠",
+      "difficulty": 17,
+      "description": "水晶冠冕状小行星带中的钓场。",
+      "fish_pool": ["晶冠鲷", "棱镜鲫", "星核金鱼", "蓝晶鳟", "冠冕灯鲈"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "19",
+      "name": "时钟星湖",
+      "difficulty": 18,
+      "description": "时间碎片组成的静止星湖。",
+      "fish_pool": ["秒针鲑", "回环鳗", "逆刻鲤", "钟摆鲈", "永昼银鱼"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "20",
+      "name": "奇迹彼岸",
+      "difficulty": 19,
+      "description": "星海尽头回应愿望的彼岸。",
+      "fish_pool": ["奇迹锦鲤", "终星鳐", "愿核灯鱼", "彼岸银鲑", "九曜梦鱼"],
+      "max_rarity": "UTR"
+    },
+    {
+      "id": "S1",
+      "name": "猫猫乐园",
+      "difficulty": 6,
+      "description": "常驻活动地图，建设属于自己的猫猫乐园。",
+      "fish_pool": ["橘座鲫鱼", "暹罗鳊鱼", "布偶白条", "奶牛麦穗", "三花泥鳅", "金渐层锦鲤", "英短青鱼", "无毛鲶鱼", "折耳翘嘴", "卷耳黄颡"],
+      "max_rarity": "UR"
+    }
+  ]
+}
