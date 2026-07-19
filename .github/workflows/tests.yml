@@ -21,10 +21,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -45,15 +45,7 @@ jobs:
           test -f ci/runtime/zhenxun/plugins/__init__.py
           test -e ci/runtime/zhenxun/plugins/zhenxun_plugin_fishing/__init__.py
 
-      - name: Collect tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}/ci/runtime:${{ github.workspace }}/ci:${{ github.workspace }}
-          ZX_LIGHTWEIGHT_NONEBOT: "1"
-          ZX_LIGHTWEIGHT_NONEBOT_STUBS: "1"
-        run: |
-          python -m pytest tests --collect-only --confcutdir=. -p support.pytest_plugin
-
-      - name: Run all tests
+      - name: Run all plugin tests
         env:
           PYTHONPATH: ${{ github.workspace }}/ci/runtime:${{ github.workspace }}/ci:${{ github.workspace }}
           ZX_LIGHTWEIGHT_NONEBOT: "1"

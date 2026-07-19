@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pytest
+
 from zhenxun.plugins.zhenxun_plugin_fishing.config import (
     ConfigManager,
     calculate_fish_price,
@@ -501,8 +503,10 @@ class TestDisplayProbabilities:
             probabilities, "SSR"
         )
 
-        assert merged == [0.10, 0.20, 0.15, 0.55, 0.0, 0.0, 0.0, 0.0]
-        assert sum(merged) == sum(probabilities)
+        assert merged == pytest.approx(
+            [0.10, 0.20, 0.15, 0.55, 0.0, 0.0, 0.0, 0.0]
+        )
+        assert sum(merged) == pytest.approx(sum(probabilities))
 
     def test_random_roll_caps_out_of_range_extended_slot_to_ur(self, monkeypatch):
         """抽样器意外返回扩展槽索引时，星空概率表应封顶为 UR。"""
