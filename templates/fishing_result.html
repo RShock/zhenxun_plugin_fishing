@@ -291,8 +291,9 @@
     {% endif %}
     <div class="miracle-summary">
         获得星辰木框 +{{ miracle.frames_gained or miracle.claim_count or 1 }}
-        （当前 {{ miracle.star_frames }}/{{ miracle.star_frames_max }}）
+        （当前持有 {{ miracle.star_frames }}）
         · 消耗 {{ miracle.subset_count }} 条流星鱼
+        {% if miracle.can_upgrade_starry_frame %}· 已可用于升级星空木框{% endif %}
     </div>
 </div>
 {% endif %}

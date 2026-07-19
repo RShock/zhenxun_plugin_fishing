@@ -50,8 +50,8 @@ async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool
     else:
         fish_data = ConfigManager.get_fish(fish["fish_name"])
         if fish_data:
-            # UTR 解锁型赠送奖励：发送者获得 1 倍 UTR 基础价格金币
-            reward_coins = calculate_fish_price(fish_data, "UTR", 0)
+            # UTR 解锁型赠送奖励：发送者获得 2 倍 UTR 基础价格金币
+            reward_coins = 2 * calculate_fish_price(fish_data, "UTR", 0)
             await FishingUser.add_gold(user_id, reward_coins)
         else:
             logger.warning(

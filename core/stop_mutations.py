@@ -257,7 +257,7 @@ def apply_check_all_achievements_on_user(user, dirty: set[str]) -> dict:
         except Exception:
             is_starry = False
         extra_msg = (
-            f"✨ {location.name}的UTR稀有度已对你解锁！\n解锁后递进概率与 150 次 UTR 保底常驻生效（星空图不生成迷途风）。"
+            f"✨ {location.name}的UTR稀有度已对你解锁！\n该图处于乱纪元时，将在保持乱纪元显示的同时启用迷途风效果、递进概率与 150 次 UTR 保底。"
             if is_starry
             else f"🌀 {location.name}的迷途风天气已对你解锁！"
         )

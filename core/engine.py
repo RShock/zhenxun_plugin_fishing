@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum, auto
 import random
+from typing import Any
 
 from zhenxun.services.log import logger
 
@@ -193,9 +194,7 @@ def _single_random_roll(
             False,
         )
 
-    # UTR 递进概率拦截：
-    # - 1-10 / S1：仅迷途风天气
-    # - 11-20：集齐全 UR（max_rarity 允许 UTR）后常驻，不依赖迷途风
+    # UTR 递进概率拦截：由真实迷途风或已觉醒的乱纪元效果标签启用。
     if location and utr_special_active:
         utr_probability = get_lost_wind_utr_probability(rod_level, difficulty)
         utr_probability *= weather_lost_wind_multiplier
@@ -382,12 +381,9 @@ def _catch_fish_with_buffs(
     from ..starry import is_starry_location
 
     is_starry = bool(location and is_starry_location(location.id))
-    # 11-20：集齐全 UR 后 max_rarity 保持 UTR，UTR 递进/保底常驻，不依赖迷途风
-    # 1-10/S1：仍仅在迷途风天气下启用
-    utr_special_active = (
-        (is_starry and max_rarity == "UTR")
-        or ((not is_starry) and weather_lost_wind)
-    )
+    # UTR 递进概率和 150 次保底统一由迷途风效果标签启用：
+    # 普通图来自真实迷途风；星空图来自已觉醒的乱纪元。
+    utr_special_active = weather_lost_wind
 
     def _next_frame_pity(*, delta: int = 0, reset: bool = False) -> int:
         """11-20 星空图不掉展示木框，保底计数完全冻结。"""
@@ -408,7 +404,7 @@ def _catch_fish_with_buffs(
         # 展示木框是非鱼类道具，不受多多药水/猫乐园双倍影响
         return frame_fish, "UTR", 1, new_frame_pity, new_utr_pity
 
-    # UTR 保底（1-10/S1 迷途风；11-20 解锁后常驻）
+    # UTR 保底（真实迷途风或已觉醒的乱纪元）
     if utr_special_active and location and (utr_pity + 1) >= UTR_PITY_THRESHOLD:
         fish_id = random.choice(location.fish_pool)
         fish = ConfigManager.get_fish(fish_id)
@@ -1104,6 +1100,8 @@ async def simulate_fishing_loop(
     initial_utr_pity: int | None = None,
     freeze_buff_time: datetime | None = None,
     time_credit_minutes: float | None = None,
+    initial_available_baits: dict[str, dict[str, Any]] | None = None,
+    initial_no_bait_mode: bool | None = None,
 ) -> SimulationResult:
     """主钓鱼模拟循环：按时序推进，处理鱼饵消耗、鱼获、猫系统。
 
@@ -1119,6 +1117,12 @@ async def simulate_fishing_loop(
     state = await _initialize_simulation_state(
         ctx, initial_frame_pity, initial_cat_frame_pity, initial_utr_pity
     )
+    if initial_available_baits is not None:
+        state.available_baits = {
+            bait_id: dict(info) for bait_id, info in initial_available_baits.items()
+        }
+    if initial_no_bait_mode is not None:
+        state.no_bait_mode = initial_no_bait_mode
 
     while True:
         await _switch_depleted_bait(ctx, state)
@@ -1220,4 +1224,6 @@ async def simulate_fishing_loop(
         cat_gifts=state.cat_gifts,
         utr_pity=state.utr_pity,
         meteor_fish_numbers=state.meteor_fish_numbers,
+        available_baits=state.available_baits,
+        no_bait_mode=state.no_bait_mode,
     )

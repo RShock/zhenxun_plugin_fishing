@@ -403,7 +403,7 @@ class TestGiftFish:
         gift_count = await db.user_get_gift_count(USER_ID)
         assert gift_count == 0
         user_after = await db.user_get(USER_ID)
-        assert user_after.gold - gold_before == self._utr_price(fish_name)
+        assert user_after.gold - gold_before == 2 * self._utr_price(fish_name)
         target_fish = await db.backpack_get_fish_by_numeric_id(TARGET_ID, numeric_id)
         assert target_fish is None
         collected = await db.collection_get_user_collected(TARGET_ID)

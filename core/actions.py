@@ -132,6 +132,28 @@ async def _prepare_fishing_context(
         user_id, location.id, settle_start, now
     )
 
+    # 星空图的乱纪元只是一层显示名称：完成该图收集后，结算效果等同迷途风；
+    # 未完成时不附加任何天气增益，等同晴天。
+    from ..starry import is_starry_location
+    from ..weather_service import is_chaotic_era_active
+
+    if (
+        is_starry_location(location.id)
+        and await FishingUser.has_unlocked_lost_wind(user_id, location.id)
+        and await is_chaotic_era_active(location.id, settle_start)
+    ):
+        buffs.append(
+            FishingBuff(
+                buff_type=BuffEffect.BUFF_TYPE_WEATHER_LOST_WIND,
+                start_time=settle_start,
+                end_time=now,
+                value=1,
+                description="乱纪元：迷途风效果已觉醒",
+                target_type=BuffEffect.TARGET_TYPE_USER,
+                target_id=user_id,
+            )
+        )
+
     buff_messages = build_buff_messages(buffs, settle_start, now)
 
     return FishingContext(
@@ -649,15 +671,16 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
     claim_count = len(claims)
     consumed = sum(int(claim.get("subset_count") or 0) for claim in claims)
     if claim_count == 1:
-        subtitle = last.get("hint") or "流星鱼编号相加后，末七位为 7777777"
+        subtitle = f"消耗 {consumed} 条流星鱼达成奇迹"
     else:
         subtitle = f"连续达成 {claim_count} 次奇迹，共消耗 {consumed} 条流星鱼"
+    subtitle += "；星辰木框可用于升级星空木框"
     plan.miracle_info = {
         "claim_count": claim_count,
         "frames_gained": claim_count,
         "subset_count": consumed,
         "star_frames": int(last.get("star_frames") or 0),
-        "star_frames_max": int(last.get("star_frames_max") or 0),
+        "can_upgrade_starry_frame": True,
         "hint": subtitle,
         "subtitle": subtitle,
     }

@@ -381,9 +381,11 @@ class TestSimulationResultIntegration:
         from zhenxun.plugins.zhenxun_plugin_fishing.core import potion
 
         captured = []
+        call_kwargs = []
         real_simulate = simulate_fishing_loop
 
         async def capture_simulation(*args, **kwargs):
+            call_kwargs.append(kwargs)
             result = await real_simulate(*args, **kwargs)
             captured.append(result)
             return result
@@ -405,3 +407,6 @@ class TestSimulationResultIntegration:
         assert updated["last_settle_time"] != previous_settle_time
         assert updated["frame_pity"] == captured[-1].frame_pity
         assert updated["utr_pity"] == captured[-1].utr_pity
+        # 第二阶段必须以第一阶段的整套鱼饵状态初始化，不能重新读取未扣库存。
+        assert call_kwargs[1]["initial_available_baits"] == captured[0].available_baits
+        assert call_kwargs[1]["initial_no_bait_mode"] is captured[0].no_bait_mode

@@ -661,7 +661,7 @@ class TestStarryFramePityFreeze:
 
 
 class TestStarryUtrPityAndWeather:
-    """11-20 UTR：解锁后常驻递进/保底；不生成迷途风；未解锁不计保底。"""
+    """11-20 UTR：乱纪元觉醒后启用递进/保底，其他天气不启用。"""
 
     def _starry_loc(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
@@ -681,7 +681,7 @@ class TestStarryUtrPityAndWeather:
                 return item
         raise AssertionError("需要普通地图")
 
-    def test_starry_unlocked_increments_utr_pity_without_lost_wind(self):
+    def test_starry_unlocked_still_requires_chaotic_lost_wind_effect(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.core.engine import (
             _catch_fish_with_buffs,
         )
@@ -698,7 +698,19 @@ class TestStarryUtrPityAndWeather:
             location=loc,
         )
         assert new_frame == 40  # 木框保底仍冻结
-        if rarity == "UTR" and fish is not None and getattr(fish, "id", None) != "展示木框":
+        assert new_utr == 20
+
+        fish, rarity, qty, new_frame, new_utr = _catch_fish_with_buffs(
+            loc.fish_pool,
+            rod_level=max(1, loc.difficulty + 1),
+            difficulty=loc.difficulty,
+            max_rarity="UTR",
+            frame_pity=40,
+            utr_pity=20,
+            weather_lost_wind=True,
+            location=loc,
+        )
+        if rarity == "UTR" and fish is not None:
             assert new_utr == 0
         else:
             assert new_utr == 21
@@ -849,8 +861,8 @@ class TestStarryUtrPityAndWeather:
         message = "\n".join(result["messages"])
 
         assert "UTR稀有度已对你解锁" in message
-        assert "星空图不生成迷途风" in message
-        assert "非流星日将出现迷途风" not in message
+        assert "保持乱纪元显示" in message
+        assert "迷途风效果" in message
 
     @pytest.mark.asyncio
     async def test_generate_starry_weather_never_lost_wind(self, monkeypatch):

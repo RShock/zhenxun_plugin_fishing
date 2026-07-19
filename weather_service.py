@@ -155,9 +155,10 @@ async def generate_s1_weather() -> bool:
 
 
 async def generate_starry_weather() -> bool:
-    """星空地图独立天气：5 张额外天气 + 5 张乱纪元，不生成迷途风。
+    """星空地图独立天气：5 张额外天气 + 5 张乱纪元。
 
-    11-20 UTR 不依赖迷途风：集齐该图全部 UR 后解锁递进概率 + 150 保底。
+    乱纪元的显示始终不变；其实际效果由玩家在该图的 UR 收集状态决定：
+    未完成时按晴天处理，完成后在结算层按迷途风处理。
     """
     from .starry import STARRY_LOCATION_IDS
 
@@ -370,6 +371,27 @@ async def generate_daily_weather() -> bool:
         generated = True
 
     return generated
+
+
+async def is_chaotic_era_active(
+    location_id: str, at_time: datetime | None = None
+) -> bool:
+    """判断指定星空图当前是否处于乱纪元（仅判断显示天气，不含玩家解锁）。"""
+    if not is_starry_location(location_id):
+        return False
+    weather = await FishingWeather.filter(
+        location_id=location_id,
+        date=_weather_date(),
+        weather_type="chaotic_era",
+    ).first()
+    if not weather:
+        return False
+    check_time = _make_naive(at_time or _now_local())
+    start = _make_naive(weather.start_time) if weather.start_time else None
+    end = _make_naive(weather.end_time) if weather.end_time else None
+    return (start is None or check_time >= start) and (
+        end is None or check_time < end
+    )
 
 
 async def get_location_weather(

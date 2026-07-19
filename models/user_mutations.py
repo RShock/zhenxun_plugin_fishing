@@ -506,16 +506,9 @@ def apply_add_starry_fish(
 
 
 def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
-    from ..core.starry_system import (
-        MIRACLE_TARGET,
-        STAR_FRAMES_MAX,
-        find_miracle_subset,
-    )
+    from ..core.starry_system import MIRACLE_TARGET, find_miracle_subset
 
     current_frames = int(user.star_frames or 0)
-    if current_frames >= STAR_FRAMES_MAX:
-        return None
-
     backpack = list(_ensure_list(user.starry_fish))
     if not backpack:
         return None
@@ -538,7 +531,6 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
         "target": MIRACLE_TARGET,
         "subset_count": subset_count,
         "star_frames": user.star_frames,
-        "star_frames_max": STAR_FRAMES_MAX,
         "hint": "流星鱼编号相加后，末七位为 7777777",
     }
 
@@ -546,10 +538,10 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 def apply_try_claim_miracles(
     user, *, max_claims: int | None = None, dirty: set[str] | None = None
 ) -> list[dict]:
-    from ..core.starry_system import STAR_FRAMES_MAX
-
     claims: list[dict] = []
-    limit = max_claims if max_claims is not None else STAR_FRAMES_MAX
+    # 每次领取至少消耗一条流星鱼；默认上限由当前背包大小自然约束，
+    # 仅用于防止异常数据造成无界循环，不限制星辰木框库存。
+    limit = max_claims if max_claims is not None else len(_ensure_list(user.starry_fish))
     for _ in range(max(0, int(limit))):
         info = apply_try_claim_miracle(user, dirty)
         if not info:

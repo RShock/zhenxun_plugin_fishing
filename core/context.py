@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from ..config import FishData, LocationData
 from ..models import FishingUser
@@ -39,6 +40,9 @@ class SimulationResult:
     cat_gifts: dict
     utr_pity: int
     meteor_fish_numbers: list[int]
+    # 供时光药水的多阶段模拟完整继承鱼饵状态，避免第二阶段从数据库恢复库存。
+    available_baits: dict[str, dict[str, Any]] = field(default_factory=dict)
+    no_bait_mode: bool = False
 
 
 @dataclass

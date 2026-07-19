@@ -138,8 +138,9 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
         return False, "准备钓鱼上下文失败"
 
     ctx2.settle_start = now
-    # 阶段一的鱼饵剩余继承到阶段二
+    # 阶段一的鱼饵状态继承到阶段二
     if pending_minutes > 0:
+        ctx2.bait = simulation1.bait
         ctx2.bait_remaining = simulation1.bait_remaining
 
     # 过滤多多/幸运 buff（仅阶段二）
@@ -155,6 +156,12 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
         initial_utr_pity=current_utr_pity,
         freeze_buff_time=now,
         time_credit_minutes=hours * 60,
+        initial_available_baits=(
+            simulation1.available_baits if pending_minutes > 0 else None
+        ),
+        initial_no_bait_mode=(
+            simulation1.no_bait_mode if pending_minutes > 0 else None
+        ),
     )
 
     all_fish.extend(simulation2.fish_caught)

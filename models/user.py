@@ -900,7 +900,7 @@ class FishingUser(Model):
         规则：
         - 仅 `starry_fish` 背包参与；`starry_exhibition` 展馆鱼不参与、不消耗
         - 搜索：对编号最大的至多 26 条做 MITM 精确子集和
-        - 已达星辰木框上限则返回 None
+        - 星辰木框库存不设持有上限
         """
         user = await cls.get_user(user_id)
         dirty: set[str] = set()
@@ -912,7 +912,7 @@ class FishingUser(Model):
     async def try_claim_miracles(
         cls, user_id: str, *, max_claims: int | None = None
     ) -> list[dict]:
-        """连续尝试奇迹结算，直到无法再凑子集或达到上限。
+        """连续尝试奇迹结算，直到无法再凑出符合条件的子集。
 
         每次成功消耗一组 `starry_fish` 并 +1 星辰木框。
         """
