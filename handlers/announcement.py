@@ -2,11 +2,12 @@
 公告指令 handler — 钓鱼公告广播。
 
 SUPERUSER 专用，向所有活跃群（最近2天内有人收杆的群）广播消息。
+使用 on_command 前缀匹配 + CommandArg，支持公告内容中的回车/多行。
 """
 
-from nonebot.adapters import Event
+from nonebot.adapters import Event, Message
 from nonebot.matcher import Matcher
-from nonebot.params import RegexGroup
+from nonebot.params import CommandArg
 
 from ..matchers import fishing_announcement_matcher
 from ..services import broadcast_to_active_groups
@@ -14,8 +15,9 @@ from ..utils import _send_text
 
 
 @fishing_announcement_matcher.handle()
-async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
-    content = group[0].strip() if group and group[0] else ""
+async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
+    # extract_plain_text 保留内部换行；strip 只去掉首尾空白
+    content = arg.extract_plain_text().strip() if arg else ""
 
     if not content:
         await _send_text(

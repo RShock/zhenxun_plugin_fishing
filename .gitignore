@@ -68,6 +68,9 @@ temp/
 # Local output / generated assets
 avatar_system/output/
 *.psd
+resources/temp.png
+resources/temp_processed.png
+resources/temp*.png
 
 # Database dumps / backups
 *.dump

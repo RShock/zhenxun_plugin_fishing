@@ -113,8 +113,10 @@ use_item_matcher = on_fishing_command("使用物品")
 weather_forecast_matcher = on_fishing_command("天气")
 cat_park_build_matcher = on_fishing_command("建设猫猫乐园")
 build_starry_ship_matcher = on_fishing_command("建设星空艇")
-fishing_announcement_matcher = on_regex(
-    r"^\s*钓鱼公告(?:\s+(.+))?\s*$", permission=SUPERUSER, priority=5, block=True
+# 公告内容可能含回车/多行，不能用 on_regex + `.`（默认不匹配换行）；
+# 与 GM 指令一致，走 on_command 前缀匹配，参数由 CommandArg 完整取出。
+fishing_announcement_matcher = on_command(
+    "钓鱼公告", permission=SUPERUSER, priority=5, block=True
 )
 set_bait_matcher = on_regex(
     r"^\s*设定鱼饵\s*(\S+)?\s*$",
