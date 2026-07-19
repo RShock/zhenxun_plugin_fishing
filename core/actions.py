@@ -449,6 +449,7 @@ async def check_fishing_status(
         new_bait_consumed=step.new_bait_consumed,
         probabilities=probabilities,
         bait=step.bait,
+        bait_remaining=step.bait_remaining,
         buff_messages=step.buff_messages,
         fishing_power=user.rod_level - location.difficulty,
         rod_level=user.rod_level,
@@ -838,6 +839,8 @@ def _build_stop_render_data(
         "starry_score": plan.starry_score_info,
         "miracle": plan.miracle_info,
         "starry_rewards": plan.starry_rewards,
+        "bait": plan.step.bait,
+        "bait_remaining": plan.step.bait_remaining,
     }
 
 

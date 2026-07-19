@@ -529,8 +529,14 @@ class TestBlackMarketExchange:
 
         assert ok is True
         assert should_reply is True
+        assert "（已自动锁定）" in msg
         remaining = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
         assert remaining["count"] == 1
+        received = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
+        assert received is not None
+        assert received["locked"] is True
+        displays = await db.display_get_user_displays(USER_ID)
+        assert not any(item["numeric_id"] == target.numeric_id for item in displays)
         second_ok, second_msg, second_should_reply = await black_market_exchange(
             USER_ID,
             f"{source.name} {source.rarity} {target.name} {target.rarity}",

@@ -520,12 +520,18 @@ async def black_market_exchange(
         user.black_market_pity_counter = new_pity
         await user.save(update_fields=["black_market_pity_counter"])
 
+    inherited_lock = bool(fish.get("locked", False))
     await FishingUser.remove_fish_by_numeric_id(user_id, source.numeric_id, 1)
     await FishingUser.increment_black_market_count(user_id)
     result = await add_fish_to_user(
         user_id,
         [(actual_target.name, actual_target.rarity, actual_target.numeric_id, 1)],
+        auto_display=not inherited_lock,
     )
+    if inherited_lock:
+        await FishingUser.toggle_lock_by_numeric_id(
+            user_id, actual_target.numeric_id, True
+        )
     await FishingExchangeRecord.create_black_record(user_id, source, actual_target)
 
     messages = list(result["messages"])
@@ -533,9 +539,10 @@ async def black_market_exchange(
         messages.append("票券：已消耗 1 张黑商额外兑换券")
     messages.extend(result["achievement_messages"])
 
+    lock_hint = "（已自动锁定）" if inherited_lock else ""
     msg = (
         f"黑商交换成功：消耗 {source.name}({source.rarity}) "
-        f"→ 获得 {actual_target.name}({actual_target.rarity})"
+        f"→ 获得 {actual_target.name}({actual_target.rarity}){lock_hint}"
     )
     if randomized:
         msg += f"\n黑商动了手脚，目标从 {target.name} 变成了 {actual_target.name}。"

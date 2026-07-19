@@ -54,6 +54,8 @@
     padding: 2px 0;
     line-height: 1.4;
 }
+.bait-usage { font-size: 12px; color: #666; padding: 3px 12px; }
+.bait-empty { color: #d92d20; font-weight: 900; }
 .hint-item + .hint-item {
     border-top: 1px solid rgba(245, 175, 25, 0.15);
     margin-top: 2px;
@@ -282,6 +284,9 @@
         <div class="stat-label">钓到鱼数</div>
     </div>
 </div>
+{% if bait and bait_remaining is not none %}
+<div class="bait-usage">🪱 {{ bait.name }}：<span class="{% if bait_remaining == 0 %}bait-empty{% endif %}">剩余 {{ bait_remaining }} 个</span></div>
+{% endif %}
 <div class="fish-list">{{ fish_list(fish_items) }}</div>
 {% if miracle %}
 <div class="miracle-box">

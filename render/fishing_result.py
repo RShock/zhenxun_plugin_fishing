@@ -122,6 +122,8 @@ async def render_fishing_result(
     starry_score: dict | None = None,
     miracle: dict | None = None,
     starry_rewards: list | None = None,
+    bait=None,
+    bait_remaining: int | None = None,
 ) -> bytes:
     t0 = time.perf_counter()
     fish_items = build_fish_list_data(
@@ -211,6 +213,8 @@ async def render_fishing_result(
         starry_score=starry_score,
         miracle=miracle,
         starry_rewards=starry_rewards or [],
+        bait=bait,
+        bait_remaining=bait_remaining,
     )
     result = await render_html(html, 450)
     t1 = time.perf_counter()

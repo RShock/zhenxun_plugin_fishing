@@ -8,9 +8,19 @@
 .section { margin-bottom: 12px; }
 .section-title { font-size: 14px; font-weight: bold; color: #333; padding: 6px 10px; background: #f0f7ff; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #4facfe; }
 .fish-list { padding: 0 4px; }
-.prob-row { display: flex; align-items: center; margin: 3px 0; gap: 8px; }
-.prob-label { width: 36px; font-size: 13px; font-weight: bold; text-align: right; }
-.prob-pct { font-size: 13px; color: #555; }
+.prob-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.prob-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+  white-space: nowrap;
+}
+.prob-label { font-size: 13px; font-weight: 900; }
+.prob-pct { font-size: 13px; font-weight: 800; color: #4d6787; }
+.bait-empty { color: #d92d20; font-weight: 900; }
 .messages { padding: 8px 10px; background: #fff8e1; border-radius: 6px; margin-top: 8px; border-left: 3px solid #f5af19; }
 .msg-item { font-size: 12px; color: #555; padding: 3px 0; }
 .info-line { font-size: 12px; color: #555; padding: 2px 0; }
@@ -42,7 +52,7 @@
 <div class="info-line">📍 {{ location_name }} (Lv.{{ location_difficulty }}) · ⚔️ 渔力：{{ fishing_power }}（鱼竿等级：{{ rod_level }}，钓鱼难度：{{ location_difficulty }}）</div>
 <div class="info-line{% if not weather_active %} weather-inactive{% endif %}">{{ weather_emoji }} {{ weather_name }}{% if weather_desc %}（{{ weather_desc }}）{% endif %} · ⏳ 已钓鱼 {{ duration_text }} · 🐟 累计 {{ total_count }} 条{% if new_count > 0 %}（+{{ new_count }}）{% endif %} · ⏱️ 间隔 {{ fishing_interval | round(1) }} 分钟/条{% if speed_bonus_detail %}（{{ speed_bonus_detail }}）{% endif %}</div>
 {% if bait_info %}
-<div class="info-line">{{ bait_info }}</div>
+<div class="info-line">{{ bait_info }}{% if bait_remaining is not none %} · <span class="{% if bait_remaining == 0 %}bait-empty{% endif %}">剩余 {{ bait_remaining }} 个</span>{% endif %}</div>
 {% endif %}
 <div class="info-line">🖼️ 展示木框保底：{{ frame_pity }}/{{ frame_pity_threshold }} · 🐱 猫猫框保底：{{ cat_frame_pity }}/{{ cat_frame_pity_threshold }} · 🌀 迷途风UTR保底：{{ utr_pity }}/{{ utr_pity_threshold }}</div>
 
@@ -83,13 +93,15 @@
 {% endif %}
 
 <div class="section">
-    <div class="section-title">📊 当前概率{% if material_rate > 0 %}<span style="font-size:11px;color:#888;margin-left:6px;">🏗️材料率 {{ (material_rate * 100)|round(0)|int }}%</span>{% endif %}</div>
+    <div class="section-title">📊 当前概率</div>
+    <div class="prob-list">
     {% for row in prob_rows %}
-    <div class="prob-row">
-        <span class="prob-label" style="color:{{ row.color }}">{{ row.rarity_key }}</span>
-        <span class="prob-pct">{{ row.rarity_name }} {{ row.pct }}{% if not row.is_multiplier %}%{% endif %}</span>
-    </div>
+        <div class="prob-row">
+            <span class="prob-label" style="color:{{ row.color }}">{{ row.rarity_key }}</span>
+            <span class="prob-pct">{{ row.value }}</span>
+        </div>
     {% endfor %}
+    </div>
 </div>
 
 {% if buff_messages %}

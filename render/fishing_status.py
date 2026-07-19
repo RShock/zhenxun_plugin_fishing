@@ -268,8 +268,8 @@ def _probability_rows(probabilities: dict[str, float]) -> list[dict]:
         {
             "rarity_key": key,
             "rarity_name": name,
+            "value": f"{probabilities.get(key, 0) * 100:.2f}%",
             "color": color,
-            "pct": f"{probabilities.get(key, 0) * 100:.2f}",
         }
         for key, name, color in RARITY_DISPLAY
         if probabilities.get(key, 0) != 0
@@ -279,10 +279,27 @@ def _probability_rows(probabilities: dict[str, float]) -> list[dict]:
         rows.append(
             {
                 "rarity_key": "数量",
-                "rarity_name": "多多",
-                "color": "#8e44ad",
-                "pct": f"×{multiplier}",
-                "is_multiplier": True,
+                "rarity_name": "多多增益",
+                "value": f"×{multiplier}",
+                "color": "#9c27b0",
+            }
+        )
+    mechanic_labels = {
+        "material_rate": ("材料", "材料率"),
+        "frame_rate": ("木框", "展示木框率"),
+        "meteor_fish_rate": ("流星鱼", "流星鱼率"),
+        "lost_wind_utr_rate": ("UTR", "递进UTR率"),
+    }
+    for key, value in getattr(probabilities, "independent_mechanics", {}).items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        short_name, display_name = mechanic_labels.get(key, (key, key))
+        rows.append(
+            {
+                "rarity_key": short_name,
+                "rarity_name": display_name,
+                "value": f"{value * 100:.2f}%",
+                "color": "#607d8b",
             }
         )
     return rows
@@ -332,6 +349,7 @@ async def render_fishing_status(
     utr_pity_threshold: int = 150,
     cat_frame_pity_threshold: int = 15,
     meteor_fish_numbers: list[int] | None = None,
+    bait_remaining: int | None = None,
 ) -> bytes:
     t0 = time.perf_counter()
 
@@ -389,6 +407,7 @@ async def render_fishing_status(
         fish_items=fish_items,
         prob_rows=prob_rows,
         bait_info=bait_info,
+        bait_remaining=bait_remaining,
         fishing_power=fishing_power,
         rod_level=rod_level,
         buff_messages=buff_messages or [],
