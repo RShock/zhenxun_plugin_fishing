@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: Pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install CI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Prepare import paths
+        run: |
+          python ci/setup_path.py
+          # Ensure package layout exists for zhenxun.plugins.zhenxun_plugin_fishing
+          mkdir -p ci/runtime/zhenxun/plugins
+          ln -sfn "$GITHUB_WORKSPACE" ci/runtime/zhenxun/plugins/zhenxun_plugin_fishing
+          test -f ci/runtime/zhenxun/__init__.py
+          test -f ci/runtime/zhenxun/plugins/__init__.py
+          test -e ci/runtime/zhenxun/plugins/zhenxun_plugin_fishing/__init__.py
+
+      - name: Collect tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/ci/runtime:${{ github.workspace }}/ci:${{ github.workspace }}
+          ZX_LIGHTWEIGHT_NONEBOT: "1"
+          ZX_LIGHTWEIGHT_NONEBOT_STUBS: "1"
+        run: |
+          python -m pytest tests --collect-only --confcutdir=. -p support.pytest_plugin
+
+      - name: Run all tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/ci/runtime:${{ github.workspace }}/ci:${{ github.workspace }}
+          ZX_LIGHTWEIGHT_NONEBOT: "1"
+          ZX_LIGHTWEIGHT_NONEBOT_STUBS: "1"
+        run: |
+          python -m pytest tests --tb=short --confcutdir=. -p support.pytest_plugin

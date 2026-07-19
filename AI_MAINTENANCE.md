@@ -6,6 +6,103 @@
 
 ---
 
+## 文档维护规范（强制）
+
+### 单一事实源（SSOT）
+- **本文件（`AI_MAINTENANCE.md`）是 AI 维护的唯一权威入口**。
+- 其他文档（`DESIGN.md` / `PLAY_GUIDE.md` / `doc/` 等）可以存在，但**不得与本文件冲突**。
+- 若发现冲突：以代码与本文件为准，并立刻修正过时文档。
+
+### 何时必须更新文档
+完成任何代码改动后，如果触及以下任一项，**必须同步更新文档**（同一次提交内完成）：
+1. 命令入口 / 匹配规则变化
+2. 数值、概率、掉落、价格、限制变化
+3. 结算链路或状态机变化
+4. 数据模型字段变化
+5. 已知坑点 / 回归点变化
+6. 目录结构或关键文件职责变化
+
+### 文档更新最小清单
+每次改动至少检查并更新：
+1. `AI_MAINTENANCE.md`（本文件）对应章节
+2. 如影响玩家可见行为：`PLAY_GUIDE.md`
+3. 如影响设计口径：`DESIGN.md` 或 `doc/` 中对应设计文档
+4. 如修复历史坑点：把“坑点 + 正确做法”写回本文件
+
+## Git 仓库同步（强制）
+
+> **每次修改完成后，必须将改动提交并 push 到 GitHub 仓库。**  
+> 仓库：`https://github.com/RShock/zhenxun_plugin_fishing`  
+> 本地仓库根目录即本插件目录：`zhenxun/plugins/zhenxun_plugin_fishing/`
+
+### 适用范围
+- 代码、配置、资源、测试、文档、CI 配置等**任何会落盘的改动**
+- 包括“只改文档”“只改测试”“只删文件”等看似很小的变更
+- **禁止**只改本地、不上传；**禁止**攒一批改动很久才 push
+
+### 标准流程（每次任务结束前执行）
+1. 确认改动范围：`git status`
+2. 只 stage 本插件相关文件：`git add ...`（遵守 `.gitignore`）
+3. 写清楚的 commit message（说明“改了什么 / 为什么”）
+4. `git commit`
+5. `git push origin main`（或当前工作分支）
+6. 若存在 GitHub Actions：关注 CI 是否通过；失败则修复后再次 push
+
+### 提交信息建议
+- 功能：`feat: ...`
+- 修复：`fix: ...`
+- 文档：`docs: ...`
+- 测试/CI：`test:` / `ci:`
+- 重构：`refactor: ...`
+
+### 失败兜底
+- 若 `git push` 因网络/协议失败：优先重试；仍失败时可用 GitHub API 同步（保持远程与本地一致）
+- 若 CI 失败：视为本次改动未完成，需修复到绿或明确记录阻塞原因
+
+### AI 执行约定
+- 用户未特别声明“先别推”时，**默认改完即 commit + push**
+- push 完成后，在回复中给出：提交摘要、远程仓库链接、CI 状态（如已配置）
+
+## CI / GitHub Actions（免费）
+
+> 本仓库已配置**免费** GitHub Actions，用于在每次 push / PR 时自动跑插件内全部 pytest。
+
+### 能力与边界
+- **能跑**：`tests/` 下插件单元测试 / 回归测试（轻量 NoneBot 桩，不启动真实 bot）
+- **不跑**：完整 bot 仓 `tests/integration`（需要真实 NoneBot + Playwright + 全量依赖；仍在 bot 仓本地/另配 CI 验证）
+- **费用**：公开仓库的 GitHub Actions 分钟数免费；私有仓有免费额度，超出才计费
+
+### 关键文件
+| 路径 | 作用 |
+|------|------|
+| `.github/workflows/tests.yml` | CI 工作流：checkout → Python 3.11 → 装依赖 → 准备导入路径 → collect → 跑全量测试 |
+| `requirements-ci.txt` | CI 最小依赖（pytest / pydantic / Jinja2 / Pillow / aiohttp / tortoise-orm） |
+| `pytest.ini` | `pythonpath` + `confcutdir=.`，防止污染完整 bot 仓 conftest |
+| `conftest.py`（仓库根） | 导入前安装 `ci/support/nonebot_stub.py` |
+| `ci/setup_path.py` | 构造 `zhenxun.plugins.zhenxun_plugin_fishing` 导入布局 |
+| `ci/support/nonebot_stub.py` | 独立仓用轻量 NoneBot / Zhenxun 桩 |
+
+### 触发条件
+- `push` 到 `main` / `master`
+- 任意 `pull_request`
+- 手动 `workflow_dispatch`
+
+### 本地复现 CI
+```powershell
+cd <本插件根目录>
+python -m venv .ci_venv
+.\.ci_venv\Scripts\python.exe -m pip install -r requirements-ci.txt
+.\.ci_venv\Scripts\python.exe ci\setup_path.py
+$env:PYTHONPATH = "$PWD\ci\runtime;$PWD\ci;$PWD"
+$env:ZX_LIGHTWEIGHT_NONEBOT_STUBS = "1"
+.\.ci_venv\Scripts\python.exe -m pytest tests --confcutdir=.
+```
+
+### CI 失败处理
+1. 在 GitHub → Actions 查看失败日志
+2. 本地按「本地复现 CI」复现
+3. 修到绿后再次 commit + push（遵循上文「Git 仓库同步」）
+
 ## 一、测试文件位置清单
 
 修改代码前，AI 必须先查出所有相关测试并运行验证。以下为全部测试文件位置：
@@ -28,12 +125,25 @@ r:\zhenxun_bot\zhenxun\plugins\fishing\tests\
 └── cat_park_sim/simulation.py     # 猫公园模拟测试
 ```
 
-**运行方式**：
+**运行方式（完整 bot 仓库）**：
 ```powershell
 cd C:\Users\Administrator\Desktop\zhenxun_bot-420
 .venv\Scripts\python.exe -m pytest zhenxun\plugins\zhenxun_plugin_fishing\tests -q
 ```
-> 注意：插件内单元测试默认使用轻量 NoneBot 桩，不启动真实 NoneBot。项目根目录 `conftest.py` 会在 pytest 参数包含 `zhenxun_plugin_fishing/tests` 时自动安装 `tests/support/nonebot_stub.py`。自定义测试路径需要强制启用时，设置 `ZX_LIGHTWEIGHT_NONEBOT=1`。真实 NoneBot 行为仍放在 `tests/integration` 验证。
+
+**运行方式（独立插件仓库 / 与 GitHub CI 一致）**：
+```powershell
+cd C:\Users\Administrator\Desktop\zhenxun_bot-420\zhenxun\plugins\zhenxun_plugin_fishing
+python ci\setup_path.py
+$env:PYTHONPATH = "$PWD\ci\runtime;$PWD\ci;$PWD"
+$env:ZX_LIGHTWEIGHT_NONEBOT_STUBS = "1"
+python -m pytest tests -q
+```
+
+> 注意：插件内单元测试默认使用轻量 NoneBot 桩，不启动真实 NoneBot。  
+> - 完整 bot 仓：根 `tests/support/nonebot_stub.py`  
+> - 独立插件仓 / CI：本仓 `ci/support/nonebot_stub.py`（`tests/conftest.py` 会自动回退）  
+> 真实 NoneBot 行为仍放在 bot 仓 `tests/integration` 验证，不在本插件仓 CI 内。
 
 ### 1.2 集成测试（真实环境，fishing 文件夹外）
 

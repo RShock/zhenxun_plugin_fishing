@@ -1,7 +1,20 @@
 # ── 模块级导入前 mock：必须在导入任何插件模块前生效 ────────────────────────────
+from pathlib import Path
+import sys
 from unittest.mock import MagicMock
 
-from tests.support.nonebot_stub import install_lightweight_nonebot_stubs
+# 独立插件仓：优先使用本仓库 ci/support 桩（避免命中完整 bot 仓的 tests.support 路径歧义）
+_PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+_CI_DIR = _PLUGIN_ROOT / "ci"
+if _CI_DIR.is_dir() and str(_CI_DIR) not in sys.path:
+    sys.path.insert(0, str(_CI_DIR))
+
+_standalone = (_CI_DIR / "support" / "nonebot_stub.py").is_file()
+if _standalone:
+    from support.nonebot_stub import install_lightweight_nonebot_stubs
+else:
+    # 完整 bot 仓库：根目录 tests/support
+    from tests.support.nonebot_stub import install_lightweight_nonebot_stubs
 
 # 根 conftest 会在插件包导入前安装一次；这里再调用一遍保证直接导入本文件时也安全。
 install_lightweight_nonebot_stubs()

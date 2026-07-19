@@ -513,7 +513,7 @@ body {{ margin:0; padding:14px; width:720px; box-sizing:border-box; font-family:
 {f"<div class='msg'>{message}</div>" if message else ""}
 <div class='materials'>{material_html}</div>
 {"".join(f"<div class='row {r['status_cls']}'><div class='idx'>{r['idx']}</div><div class='name'>{r['name']}</div><div class='level'>Lv{r['level']}</div><div><div class='next'>{r['next']}</div><div class='effect'>下级效果：{r['effect']}</div></div></div>" for r in rows)}
-<div class='hint'>发送「建设猫猫乐园 编号/建筑名」升级建筑<br>支持多个编号连续或空格分隔，如「建设猫猫乐园 4567」或「建设猫猫乐园 4 5 6 7」<br>建筑效果仅在猫猫乐园内有效</div>
+<div class='hint'>发送「建设猫猫乐园 编号/建筑名」升级建筑<br>编号可紧贴指令，也支持空格分隔，如「建设猫猫乐园4567」「建设猫猫乐园 4 5 6 7」<br>建筑效果仅在猫猫乐园内有效</div>
 </div></body></html>
 """
     return await render_html(html, 720)

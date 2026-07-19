@@ -98,7 +98,7 @@ test_render_matcher = on_regex(
     r"^\s*测试渲染(?:\s+(.+))?\s*$", permission=SUPERUSER, priority=5, block=True
 )
 test_scene_render_matcher = on_regex(
-    r"^\s*测试场景渲染\s+((?:\d+)|[sS]1)\s*$",
+    r"^\s*测试场景渲染\s*((?:\d+)|[sS]1)\s*$",
     permission=SUPERUSER,
     priority=5,
     block=True,

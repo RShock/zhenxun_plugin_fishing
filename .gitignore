@@ -78,3 +78,6 @@ resources/temp*.png
 *.sqlite
 *.sqlite3
 *.db
+
+# CI local runtime (generated import layout)
+ci/runtime/
