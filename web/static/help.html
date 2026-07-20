@@ -129,6 +129,7 @@ a:hover { text-decoration: underline; }
 .page { display: none; scroll-margin-top: 100px; }
 .page.active { display: block; }
 .page > * + * { margin-top: 14px; }
+#web-backup { scroll-margin-top: 100px; }
 
 /* ===== Cards ===== */
 .card {
@@ -144,6 +145,30 @@ a:hover { text-decoration: underline; }
   font-weight: 800;
 }
 .card-desc { color: var(--sub); font-size: 13px; margin-bottom: 12px; }
+.starry-scorer-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.starry-scorer-input {
+  flex: 1 1 220px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: #fff;
+  font: 700 18px/1 Consolas, monospace;
+  letter-spacing: .18em;
+}
+.starry-scorer-input:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+.starry-scorer-status { margin-top: 10px; color: var(--sub); font-size: 13px; }
+.starry-scorer-status.error { color: var(--danger); font-weight: 700; }
+.starry-scorer-result { display: none; margin-top: 14px; }
+.starry-scorer-result.visible { display: block; }
+.starry-score-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.starry-score-stat { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--panel-soft); }
+.starry-score-stat small { display: block; color: var(--sub); font-size: 11px; }
+.starry-score-stat strong { display: block; margin-top: 2px; font-size: 18px; }
+.starry-feature-list { margin-top: 10px; }
+.starry-feature { padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-xs); background: #fff; font-size: 13px; }
+.starry-feature + .starry-feature { margin-top: 6px; }
 
 /* ===== Grid ===== */
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
@@ -301,6 +326,114 @@ code, .ic {
 }
 .step-text { font-size: 13px; line-height: 1.55; }
 
+/* ===== Quick-start circular flow ===== */
+.flow-diagram {
+  position: relative;
+  width: min(100%, 720px);
+  aspect-ratio: 16 / 10;
+  margin: 18px auto 6px;
+  overflow: hidden;
+  border: 1px solid rgba(31, 155, 180, .2);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(31, 155, 180, .11) 0 18%, transparent 18.5%),
+    radial-gradient(circle at 50% 50%, transparent 0 39%, rgba(31, 155, 180, .06) 39.5% 51%, transparent 51.5%),
+    linear-gradient(145deg, #fbfeff 0%, #eef8fa 52%, #f7fbfc 100%);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 24px rgba(42, 86, 105, .09);
+}
+.flow-diagram::before,
+.flow-diagram::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1px dashed rgba(31, 155, 180, .14);
+  pointer-events: none;
+}
+.flow-diagram::before { inset: 8%; }
+.flow-diagram::after { inset: 22%; }
+.flow-ring {
+  position: absolute;
+  inset: 8% 13%;
+  width: 74%;
+  height: 84%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(15, 127, 155, .13));
+}
+.flow-path {
+  fill: none;
+  stroke: url(#flowGradient);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.flow-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 132px;
+  height: 132px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 155, 180, .26);
+  border-radius: 50%;
+  color: var(--primary-dark);
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 10px 28px rgba(31, 155, 180, .15), inset 0 0 0 7px rgba(229, 244, 247, .75);
+  z-index: 2;
+}
+.flow-center-icon { font-size: 30px; line-height: 1; }
+.flow-center strong { margin-top: 7px; font-size: 16px; }
+.flow-center span:last-child { color: var(--sub); font-size: 11px; }
+.flow-node {
+  position: absolute;
+  width: 178px;
+  min-height: 94px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(31, 155, 180, .23);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 8px 20px rgba(42, 86, 105, .11), inset 0 1px 0 #fff;
+  z-index: 3;
+}
+.flow-node.n-fish { left: 50%; top: 3.5%; transform: translateX(-50%); }
+.flow-node.n-reel { right: 3.5%; top: 50%; transform: translateY(-50%); }
+.flow-node.n-book { left: 50%; bottom: 3.5%; transform: translateX(-50%); }
+.flow-node.n-gear { left: 3.5%; top: 50%; transform: translateY(-50%); }
+.flow-icon {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 22px;
+  background: var(--primary-light);
+}
+.n-reel .flow-icon { background: var(--success-light); }
+.n-book .flow-icon { background: var(--purple-light); }
+.n-gear .flow-icon { background: var(--warning-light); }
+.flow-node-body { min-width: 0; }
+.flow-label { font-size: 14px; font-weight: 800; line-height: 1.25; }
+.flow-sub { margin-top: 2px; color: var(--sub); font-size: 10px; line-height: 1.35; }
+.flow-cmds { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+.flow-cmds code { padding: 1px 5px; font-size: 10px; white-space: nowrap; }
+.flow-order {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 79px);
+  transform: translateX(-50%);
+  color: var(--sub);
+  font-size: 10px;
+  font-weight: 700;
+  z-index: 2;
+}
+
 /* ===== Responsive — Tablet ===== */
 @media (max-width: 960px) {
   .grid-2 { grid-template-columns: 1fr; }
@@ -380,6 +513,36 @@ code, .ic {
   .step-num { width: 26px; height: 26px; font-size: 14px; }
   .step-text { font-size: 15px; line-height: 1.65; }
 
+  /* 环形图在小屏上保持环形，仅按比例缩放 */
+  .flow-diagram {
+    width: 100%;
+    min-height: 330px;
+    aspect-ratio: 1 / 1;
+    border-radius: 18px;
+  }
+  .flow-ring { inset: 10%; width: 80%; height: 80%; }
+  .flow-center { width: 88px; height: 88px; }
+  .flow-center-icon { font-size: 22px; }
+  .flow-center strong { margin-top: 4px; font-size: 12px; }
+  .flow-center span:last-child { display: none; }
+  .flow-order { top: calc(50% + 51px); font-size: 8px; }
+  .flow-node {
+    width: 126px;
+    min-height: 78px;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 13px;
+  }
+  .flow-node.n-fish { top: 2%; }
+  .flow-node.n-reel { right: 1.5%; }
+  .flow-node.n-book { bottom: 2%; }
+  .flow-node.n-gear { left: 1.5%; }
+  .flow-icon { width: 30px; height: 30px; border-radius: 9px; font-size: 16px; }
+  .flow-label { font-size: 12px; }
+  .flow-sub { display: none; }
+  .flow-cmds { gap: 2px; margin-top: 4px; }
+  .flow-cmds code { padding: 1px 4px; font-size: 9px; }
+
   /* Grids */
   .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 10px; }
 
@@ -444,19 +607,72 @@ code, .ic {
   <!-- 快速开始 -->
   <div class="card">
     <div class="sec-h">快速开始</div>
-    <p class="card-desc">通过钓鱼和收杆获得鱼获，再用鱼店购买鱼饵、升级装备，逐步收集图鉴。</p>
+    <p class="card-desc">在群里输入 <code>钓鱼 1</code>，开始游戏。之后钓鱼收杆拿鱼获，收集图鉴，再到鱼店解锁更好的装备。</p>
     <div class="callout info">
-      <strong>三种游玩方式：</strong>① 在群里直接发送消息；② 私聊群里的真寻机器人；③ 网页版（需先注册密钥）。<br>
-      群消息有个人和总体次数限制，超过后不回复。私聊和网页版没有限制。
+      <strong>推荐入门方式：</strong>① 在群里直接发送消息；② 私聊群里的真寻机器人。<br>
+      群消息有个人和总体次数限制，超过后不回复；私聊没有限制。网页端仅为备用渠道，详见本页后文 <a href="#web-backup">网页端（备用）</a>。
     </div>
-    <div class="grid-2" style="margin-top:12px">
-      <div class="cmd-card"><span class="cmd-name">注册网页端</span><p class="cmd-desc">私聊机器人获取网页端密钥，在首页输入密钥连接。</p></div>
-      <div class="cmd-card"><span class="cmd-name">钓鱼 1</span><p class="cmd-desc">进入指定地图开始钓鱼（支持 1-20 和 S1）。</p></div>
-      <div class="cmd-card"><span class="cmd-name">收杆</span><p class="cmd-desc">结算当前鱼获、金币，自动锁鱼/卖鱼。不足一条鱼的时间按概率判定。</p></div>
-      <div class="cmd-card"><span class="cmd-name">钓鱼状态</span><p class="cmd-desc">查看进度、速度、天气和累计鱼获。查看时也会结算并重置计时器。</p></div>
+
+    <div class="flow-diagram" aria-label="钓鱼、收杆、获得图鉴、解锁装备组成的环形流程图">
+      <svg class="flow-ring" viewBox="0 0 520 360" aria-hidden="true">
+        <defs>
+          <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1f9bb4"/>
+            <stop offset="100%" stop-color="#23a36f"/>
+          </linearGradient>
+          <marker id="flowArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#178fa9"/>
+          </marker>
+        </defs>
+        <path class="flow-path" d="M 292 35 C 390 42, 457 82, 476 150" marker-end="url(#flowArrow)"/>
+        <path class="flow-path" d="M 476 210 C 456 280, 389 321, 292 326" marker-end="url(#flowArrow)"/>
+        <path class="flow-path" d="M 228 326 C 131 321, 64 280, 44 210" marker-end="url(#flowArrow)"/>
+        <path class="flow-path" d="M 44 150 C 63 82, 130 42, 228 35" marker-end="url(#flowArrow)"/>
+      </svg>
+
+      <div class="flow-center">
+        <span class="flow-center-icon">🎣</span>
+        <strong>钓鱼循环</strong>
+        <span>收集 · 成长 · 再出发</span>
+      </div>
+      <div class="flow-order">顺时针循环</div>
+
+      <div class="flow-node n-fish">
+        <div class="flow-icon">🎣</div>
+        <div class="flow-node-body">
+          <div class="flow-label">钓鱼</div>
+          <div class="flow-sub">进入地图挂机上鱼</div>
+          <div class="flow-cmds"><code>钓鱼</code><code>钓鱼状态</code></div>
+        </div>
+      </div>
+      <div class="flow-node n-reel">
+        <div class="flow-icon">🪝</div>
+        <div class="flow-node-body">
+          <div class="flow-label">收杆</div>
+          <div class="flow-sub">结算鱼获与金币</div>
+          <div class="flow-cmds"><code>收杆</code></div>
+        </div>
+      </div>
+      <div class="flow-node n-book">
+        <div class="flow-icon">📖</div>
+        <div class="flow-node-body">
+          <div class="flow-label">获得图鉴</div>
+          <div class="flow-sub">新鱼自动记入图鉴</div>
+          <div class="flow-cmds"><code>图鉴</code></div>
+        </div>
+      </div>
+      <div class="flow-node n-gear">
+        <div class="flow-icon">🧰</div>
+        <div class="flow-node-body">
+          <div class="flow-label">解锁装备</div>
+          <div class="flow-sub">购买鱼饵并升级装备</div>
+          <div class="flow-cmds"><code>鱼店</code></div>
+        </div>
+      </div>
     </div>
-    <div class="callout warn" style="margin-top:10px">
-      <strong>注意：</strong>钓鱼状态和收杆都会触发一次结算。频繁查看状态会导致计时器反复重置，可能很长时间不上鱼。
+
+    <div class="callout warn" style="margin-top:12px">
+      <strong>注意：</strong><code>钓鱼状态</code> 和 <code>收杆</code> 都会触发一次结算。频繁查看状态会重置计时器，可能很长时间不上鱼。
     </div>
   </div>
 
@@ -592,6 +808,43 @@ code, .ic {
       <li class="warn">幸运药水与真多多药水互斥：同一时间只能生效一种，一种生效中使用另一种会被拒绝（不消耗道具）。</li>
       <li>时光药水结算时不受多多和幸运药水影响，但其他 buff 依然有效。</li>
     </ul>
+  </div>
+
+  <!-- 网页端（备用） -->
+  <div class="card" id="web-backup">
+    <div class="sec-h">网页端（备用）</div>
+    <p class="card-desc">网页端是可选的操作面板，不是入门必经步骤。新手请优先在群聊或私聊里发送指令；只有群消息不便、需要长时间挂机查看，或希望在浏览器里点选操作时，再考虑网页端。</p>
+    <div class="callout warn">
+      <strong>不推荐入门时使用：</strong>网页端需要先注册密钥、再在浏览器连接，步骤比直接发指令更绕。入门阶段先熟悉 <code>钓鱼</code>、<code>收杆</code>、<code>鱼店</code> 等指令即可。
+    </div>
+    <div class="callout tip" style="margin-top:10px">
+      <strong>适合场景：</strong>私聊/群聊不便时的备用渠道；需要在电脑浏览器里查看状态、点选指令；与机器人会话不限频的辅助入口（网页端本身无群消息次数限制）。
+    </div>
+
+    <div class="sec-h">如何注册网页端</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>私聊</strong>机器人发送 <code>注册网页端</code>（可自动生成密钥），或 <code>注册网页端 你的密钥</code>（自定义 3–32 位，限字母数字与 <code>_-.</code>）。</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">机器人返回密钥后，打开帮助页顶部的「网页版」，或访问网页端首页。</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">在首页输入密钥连接，即可在浏览器中发送与聊天相同的钓鱼指令。</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:12px">
+      <div class="cmd-card"><span class="cmd-name">注册网页端</span><p class="cmd-desc">私聊使用。不带参数时自动生成 8 位数字密钥；也可自定义密钥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">查看密钥</span><p class="cmd-desc">私聊查看当前已注册的网页端密钥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">删除密钥</span><p class="cmd-desc">私聊删除当前密钥；之后可重新注册。</p></div>
+      <div class="cmd-card"><span class="cmd-name">网页版入口</span><p class="cmd-desc">本页顶部「网页版」按钮，或机器人部署的 <code>/index.html</code> 页面。</p></div>
+    </div>
+    <div class="callout info" style="margin-top:10px">
+      <strong>注意：</strong>注册 / 查看 / 删除密钥都必须在<strong>私聊</strong>中完成。密钥请自行保管，不要发到群里。
+    </div>
   </div>
 
   <!-- GM指令 -->
@@ -1330,6 +1583,26 @@ code, .ic {
   <div class="page-title">✨ 星空祈愿机制</div>
   <div class="page-subtitle">流星鱼、番型评分、奇迹合成——第二部分的进阶收集系统</div>
 
+  <!-- 号码评分器 -->
+  <div class="card">
+    <div class="sec-h">6 位号码评分器</div>
+    <p class="card-desc">输入包含前导零在内的恰好 6 位数字，查看当前规则下的分数、奖池与命中番型。</p>
+    <form class="starry-scorer-form" id="starryScorerForm" novalidate>
+      <input class="starry-scorer-input" id="starryNumber" name="number" type="text" inputmode="numeric" autocomplete="off" maxlength="6" pattern="[0-9]{6}" placeholder="例如 113355" aria-label="6 位流星鱼号码">
+      <button class="btn primary" id="starryScoreButton" type="submit">开始评分</button>
+    </form>
+    <div class="starry-scorer-status" id="starryScorerStatus" role="status" aria-live="polite">请输入 6 位数字。</div>
+    <div class="starry-scorer-result" id="starryScorerResult">
+      <div class="starry-score-summary">
+        <div class="starry-score-stat"><small>号码</small><strong id="starryResultNumber">-</strong></div>
+        <div class="starry-score-stat"><small>展示分</small><strong id="starryResultScore">-</strong></div>
+        <div class="starry-score-stat"><small>原始分</small><strong id="starryResultRawScore">-</strong></div>
+        <div class="starry-score-stat"><small>奖池</small><strong id="starryResultPool">-</strong></div>
+      </div>
+      <div class="starry-feature-list" id="starryFeatureList"></div>
+    </div>
+  </div>
+
   <!-- 流星鱼 -->
   <div class="card">
     <div class="sec-h">流星鱼基础</div>
@@ -1387,9 +1660,9 @@ code, .ic {
     <div class="callout tip" style="margin-bottom:12px">
       <strong>怎么理解叠加：</strong>
       <ul class="clean" style="margin-top:6px">
-        <li><strong>不同家族之间</strong>：可以同时命中并<strong>全部加分</strong>（例如同号 + 回文 + 对子 + 飞机）。</li>
+        <li><strong>不同家族之间</strong>：彼此独立判定、独立计分，命中后<strong>全部加分</strong>（例如同号 + 滑梯 + 回文 + 飞机）。</li>
         <li><strong>同一家族内部</strong>：更长的连段会<strong>吸收</strong>被它完全包含的更短连段，不重复计；互不包含的多段仍可各计一次。</li>
-        <li><strong>滑梯家族</strong>：同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
+        <li><strong>滑梯家族</strong>：普通滑梯允许停顿，包含全程停顿的全同号窗口；同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
         <li><strong>贪吃蛇家族</strong>：同一窗口若是「纯正贪吃蛇」（每步必动 ±1 且有转向），只按<strong>纯正</strong>计，不再计普通贪吃蛇。</li>
         <li><strong>对子家族</strong>：两对 / 三对只取更高的一档（有三对时不计两对）。</li>
         <li><strong>葫芦 / 星空飞机 / 区间色系</strong>：满足条件时各计一次。</li>
@@ -1428,11 +1701,11 @@ code, .ic {
           <tr><td>6 位步步高</td><td>5.00</td><td>六位严格连号，如 <code>123456</code></td></tr>
 
           <tr>
-            <td rowspan="4"><span class="tag t-basic">普通滑梯</span><br><span style="font-size:11px;color:var(--sub)">与步步高互斥·取步步高</span></td>
-            <td>3 位滑梯</td><td>0.76</td><td>单调不降或不升，允许停顿（差为 0/±1），但不是严格步步高</td></tr>
-          <tr><td>4 位滑梯</td><td>1.52</td><td>四位单调滑梯，如 <code>1123</code>、<code>5544</code></td></tr>
-          <tr><td>5 位滑梯</td><td>2.37</td><td>五位单调滑梯</td></tr>
-          <tr><td>6 位滑梯</td><td>3.34</td><td>六位单调滑梯</td></tr>
+            <td rowspan="4"><span class="tag t-basic">普通滑梯</span><br><span style="font-size:11px;color:var(--sub)">组内更长吸收更短；步步高替代同窗普通档</span></td>
+            <td>3 位滑梯</td><td>0.76</td><td>单调不降或不升，允许停顿（差为 0/±1），全同号窗口也属于普通滑梯</td></tr>
+          <tr><td>4 位滑梯</td><td>1.52</td><td>四位单调滑梯，如 <code>1123</code>、<code>5544</code>、<code>7777</code></td></tr>
+          <tr><td>5 位滑梯</td><td>2.37</td><td>五位单调滑梯，允许全程停顿</td></tr>
+          <tr><td>6 位滑梯</td><td>3.34</td><td>六位单调滑梯，如 <code>777777</code></td></tr>
 
           <tr>
             <td rowspan="4"><span class="tag t-star">纯正贪吃蛇</span><br><span style="font-size:11px;color:var(--sub)">蛇家族·纯正档</span></td>
@@ -1452,11 +1725,11 @@ code, .ic {
 
           <tr>
             <td rowspan="4"><span class="tag t-event">镜像回文</span><br><span style="font-size:11px;color:var(--sub)">组内：更长吸收更短</span></td>
-            <td>3 位回文</td><td>0.51</td><td>形如 <code>aba</code>（非全同号），如 <code>121</code>、<code>909</code></td>
+            <td>3 位回文</td><td>0.51</td><td>形如 <code>aba</code>，包括全同号 <code>aaa</code>，如 <code>121</code>、<code>777</code></td>
           </tr>
-          <tr><td>4 位回文</td><td>1.57</td><td>形如 <code>abba</code></td></tr>
-          <tr><td>5 位回文</td><td>1.71</td><td>形如 <code>abcba</code></td></tr>
-          <tr><td>6 位回文</td><td>3.00</td><td>形如 <code>abccba</code>；全同号回文由同号家族计分</td></tr>
+          <tr><td>4 位回文</td><td>1.57</td><td>形如 <code>abba</code>，全同号也命中</td></tr>
+          <tr><td>5 位回文</td><td>1.71</td><td>形如 <code>abcba</code>，全同号也命中</td></tr>
+          <tr><td>6 位回文</td><td>3.00</td><td>形如 <code>abccba</code>；例如 <code>777777</code> 同时命中同号、滑梯和回文并分别计分</td></tr>
 
           <tr>
             <td rowspan="2"><span class="tag t-cat">区间色系</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
@@ -1625,6 +1898,290 @@ code, .ic {
       window.scrollTo(0, 0);
     });
   });
+
+  var scorerForm = document.getElementById('starryScorerForm');
+  var scorerInput = document.getElementById('starryNumber');
+  var scorerButton = document.getElementById('starryScoreButton');
+  var scorerStatus = document.getElementById('starryScorerStatus');
+  var scorerResult = document.getElementById('starryScorerResult');
+  var featureList = document.getElementById('starryFeatureList');
+
+  var STARRY_FEATURES = [
+    ['same_run', 3, '3_same_run', 1.432856],
+    ['same_run', 4, '4_same_run', 2.552842],
+    ['same_run', 5, '5_same_run', 3.721246],
+    ['same_run', 6, '6_same_run', 5.000000],
+    ['step_high', 3, '3_step_high', 1.227224],
+    ['step_high', 4, '4_step_high', 2.402305],
+    ['step_high', 5, '5_step_high', 3.638272],
+    ['step_high', 6, '6_step_high', 5.000000],
+    ['slide', 3, '3_slide', 0.757901],
+    ['slide', 4, '4_slide', 1.517984],
+    ['slide', 5, '5_slide', 2.368759],
+    ['slide', 6, '6_slide', 3.337242],
+    ['pure_snake', 3, '3_pure_snake', 1.180417],
+    ['pure_snake', 4, '4_pure_snake', 1.874649],
+    ['pure_snake', 5, '5_pure_snake', 2.698536],
+    ['pure_snake', 6, '6_pure_snake', 3.653647],
+    ['snake', 3, '3_snake', 1.180417],
+    ['snake', 4, '4_snake', 1.567993],
+    ['snake', 5, '5_snake', 2.133004],
+    ['snake', 6, '6_snake', 2.838033],
+    ['palindrome', 3, '3_palindrome', 0.505804],
+    ['palindrome', 4, '4_palindrome', 1.570086],
+    ['palindrome', 5, '5_palindrome', 1.705313],
+    ['palindrome', 6, '6_palindrome', 3.004365],
+    ['range', 6, '6_all_small_0_4', 1.806180],
+    ['range', 6, '6_all_big_5_9', 1.806180],
+    ['rhythm', 4, 'ABAB', 1.598599],
+    ['rhythm', 6, 'ABCABC', 3.142668],
+    ['star_airplane', 6, 'star_airplane', 1.899285],
+    ['pairs', 2, 'two_pair', 1.359121],
+    ['pairs', 3, 'three_pair', 3.091515],
+    ['full_house', 5, 'full_house', 2.454693]
+  ];
+  var STARRY_FEATURE_SCORES = {};
+  STARRY_FEATURES.forEach(function(item){ STARRY_FEATURE_SCORES[item[2]] = item[3]; });
+  var STARRY_POOL_NAMES = {
+    none: '无奖励', low: '低级奖池', middle: '中级奖池',
+    high: '高级奖池', ultimate: '究极奖池'
+  };
+
+  function starrySign(value){ return (value > 0 ? 1 : 0) - (value < 0 ? 1 : 0); }
+  function starryWindowSame(digits, start, length){
+    for(var i = 0; i < length; i++) if(digits[start + i] !== digits[start]) return false;
+    return true;
+  }
+  function starryWindowStep(digits, start, length){
+    var diff = digits[start + 1] - digits[start];
+    if(diff !== 1 && diff !== -1) return false;
+    for(var i = 2; i < length; i++){
+      if(digits[start + i] - digits[start + i - 1] !== diff) return false;
+    }
+    return true;
+  }
+  function starryWindowSlide(digits, start, length){
+    var ascending = true;
+    var descending = true;
+    for(var i = 1; i < length; i++){
+      var diff = digits[start + i] - digits[start + i - 1];
+      if(diff !== 0 && diff !== 1) ascending = false;
+      if(diff !== 0 && diff !== -1) descending = false;
+    }
+    return ascending || descending;
+  }
+  function starryWindowSnake(digits, start, length, pure){
+    var previous = 0;
+    var moved = false;
+    var turned = false;
+    for(var i = 1; i < length; i++){
+      var diff = digits[start + i] - digits[start + i - 1];
+      if(pure ? (diff !== 1 && diff !== -1) : (diff < -1 || diff > 1)) return false;
+      var direction = starrySign(diff);
+      if(direction){
+        moved = true;
+        if(previous && direction !== previous) turned = true;
+        previous = direction;
+      }
+    }
+    return moved && turned;
+  }
+  function starryWindowPalindrome(digits, start, length){
+    for(var i = 0; i < Math.floor(length / 2); i++){
+      if(digits[start + i] !== digits[start + length - 1 - i]) return false;
+    }
+    return true;
+  }
+  function starryBuildMatches(digits){
+    var matches = {same_run: {}, step_high: {}, slide: {}, pure_snake: {}, snake: {}, palindrome: {}};
+    for(var length = 3; length <= 6; length++){
+      for(var start = 0; start <= 6 - length; start++){
+        var key = start + ':' + length;
+        matches.same_run[key] = starryWindowSame(digits, start, length);
+        matches.step_high[key] = starryWindowStep(digits, start, length);
+        matches.slide[key] = starryWindowSlide(digits, start, length);
+        matches.pure_snake[key] = starryWindowSnake(digits, start, length, true);
+        matches.snake[key] = starryWindowSnake(digits, start, length, false);
+        matches.palindrome[key] = starryWindowPalindrome(digits, start, length);
+      }
+    }
+    return matches;
+  }
+  function starryContainedInLarger(matches, start, length){
+    for(var bigger = length + 1; bigger <= 6; bigger++){
+      for(var biggerStart = 0; biggerStart <= 6 - bigger; biggerStart++){
+        if(biggerStart <= start && start + length <= biggerStart + bigger &&
+            matches[biggerStart + ':' + bigger]) return true;
+      }
+    }
+    return false;
+  }
+  function starryLabelCn(label){
+    var direct = {
+      '6_all_small_0_4': '6位全小(0-4)', '6_all_big_5_9': '6位全大(5-9)',
+      ABAB: 'ABAB', ABCABC: 'ABCABC', star_airplane: '星空飞机',
+      two_pair: '两对', three_pair: '三对', full_house: '葫芦'
+    };
+    if(direct[label]) return direct[label];
+    var separator = label.indexOf('_');
+    var length = label.slice(0, separator);
+    var family = label.slice(separator + 1);
+    var suffix = {
+      same_run: '同号连段', step_high: '步步高', slide: '滑梯',
+      pure_snake: '纯正贪吃蛇', snake: '贪吃蛇', palindrome: '回文'
+    };
+    return length + '位' + suffix[family];
+  }
+  function starryFeature(label, family, span, note){
+    return {label: label, name: starryLabelCn(label), family: family, span: span,
+      score: STARRY_FEATURE_SCORES[label], note: note || ''};
+  }
+  function starryRewardPool(score){
+    if(score <= 0) return 'none';
+    if(score <= 2) return 'low';
+    if(score <= 5) return 'middle';
+    if(score <= 10) return 'high';
+    return 'ultimate';
+  }
+  function scoreStarryFish(number){
+    if(!/^[0-9]{6}$/.test(number)) throw new Error('号码必须是恰好 6 位数字。');
+    var digits = number.split('').map(Number);
+    var matches = starryBuildMatches(digits);
+    var features = [];
+    if(digits.every(function(digit){ return digit >= 0 && digit <= 4; }))
+      features.push(starryFeature('6_all_small_0_4', 'range', '1-6'));
+    if(digits.every(function(digit){ return digit >= 5 && digit <= 9; }))
+      features.push(starryFeature('6_all_big_5_9', 'range', '1-6'));
+    var airplane = true;
+    for(var i = 1; i < 5; i++){
+      if(digits[i] !== digits[i - 1] && digits[i] !== digits[i + 1]) airplane = false;
+    }
+    if(airplane) features.push(starryFeature('star_airplane', 'star_airplane', '1-6', '第2-5位均属于至少2连块'));
+
+    for(var length = 3; length <= 6; length++){
+      for(var start = 0; start <= 6 - length; start++){
+        var key = start + ':' + length;
+        var span = (start + 1) + '-' + (start + length);
+        if(matches.same_run[key] && !starryContainedInLarger(matches.same_run, start, length))
+          features.push(starryFeature(length + '_same_run', 'same_run', span));
+        if(matches.slide[key] && !starryContainedInLarger(matches.slide, start, length)){
+          if(matches.step_high[key]) features.push(starryFeature(length + '_step_high', 'step_high', span, '纯正替代普通滑梯计分'));
+          else features.push(starryFeature(length + '_slide', 'slide', span));
+        }
+        if(matches.snake[key] && !starryContainedInLarger(matches.snake, start, length)){
+          if(matches.pure_snake[key]) features.push(starryFeature(length + '_pure_snake', 'pure_snake', span, '纯正替代普通贪吃蛇计分'));
+          else features.push(starryFeature(length + '_snake', 'snake', span));
+        }
+        if(matches.palindrome[key] && !starryContainedInLarger(matches.palindrome, start, length))
+          features.push(starryFeature(length + '_palindrome', 'palindrome', span));
+      }
+    }
+    for(var start = 0; start <= 2; start++){
+      if(digits[start] === digits[start + 2] && digits[start + 1] === digits[start + 3] && digits[start] !== digits[start + 1])
+        features.push(starryFeature('ABAB', 'rhythm', (start + 1) + '-' + (start + 4)));
+    }
+    if(digits[0] === digits[3] && digits[1] === digits[4] && digits[2] === digits[5] &&
+        new Set(digits.slice(0, 3)).size === 3)
+      features.push(starryFeature('ABCABC', 'rhythm', '1-6'));
+
+    var pairRuns = [];
+    for(var index = 0; index < digits.length; ){
+      var end = index + 1;
+      while(end < digits.length && digits[end] === digits[index]) end++;
+      if(end - index === 2) pairRuns.push([index, end]);
+      index = end;
+    }
+    if(pairRuns.length >= 2){
+      var pairSpan = (pairRuns[0][0] + 1) + '-' + pairRuns[pairRuns.length - 1][1];
+      features.push(pairRuns.length >= 3
+        ? starryFeature('three_pair', 'pairs', pairSpan, '三段恰好长度为2的同号连段')
+        : starryFeature('two_pair', 'pairs', pairSpan, '两段恰好长度为2的同号连段'));
+    }
+    var fullHouseSpans = [];
+    for(var start = 0; start <= 1; start++){
+      var runLengths = [];
+      for(var index = start; index < start + 5; ){
+        var end = index + 1;
+        while(end < start + 5 && digits[end] === digits[index]) end++;
+        runLengths.push(end - index);
+        index = end;
+      }
+      if((runLengths.length === 2 && runLengths[0] === 3 && runLengths[1] === 2) ||
+          (runLengths.length === 2 && runLengths[0] === 2 && runLengths[1] === 3))
+        fullHouseSpans.push([start, start + 5]);
+    }
+    if(fullHouseSpans.length){
+      var fullSpan = (fullHouseSpans[0][0] + 1) + '-' + fullHouseSpans[fullHouseSpans.length - 1][1];
+      features.push(starryFeature('full_house', 'full_house', fullSpan, '5位窗口为AAABB或AABBB'));
+    }
+    features.sort(function(left, right){
+      if(left.score !== right.score) return right.score - left.score;
+      if(left.span !== right.span) return left.span < right.span ? -1 : 1;
+      if(left.label !== right.label) return left.label < right.label ? -1 : 1;
+      return 0;
+    });
+    var rawScore = features.reduce(function(total, feature){ return total + feature.score; }, 0);
+    var displayScore = Math.floor(rawScore + 0.5);
+    var pool = starryRewardPool(displayScore);
+    return {number: number, score: displayScore, raw_score: rawScore, reward_pool: pool,
+      reward_pool_name: STARRY_POOL_NAMES[pool], features: features};
+  }
+  globalThis.scoreStarryFish = scoreStarryFish;
+
+  function setScorerError(message){
+    scorerStatus.textContent = message;
+    scorerStatus.classList.add('error');
+    scorerResult.classList.remove('visible');
+  }
+
+  if(scorerForm){
+    scorerForm.addEventListener('submit', function(event){
+      event.preventDefault();
+      var number = scorerInput.value.trim();
+      if(!/^[0-9]{6}$/.test(number)){
+        setScorerError('号码必须是恰好 6 位数字。');
+        return;
+      }
+
+      scorerButton.disabled = true;
+      scorerStatus.textContent = '评分中…';
+      scorerStatus.classList.remove('error');
+      scorerResult.classList.remove('visible');
+      try {
+        var data = scoreStarryFish(number);
+        document.getElementById('starryResultNumber').textContent = data.number;
+        document.getElementById('starryResultScore').textContent = String(data.score);
+        document.getElementById('starryResultRawScore').textContent = Number(data.raw_score).toFixed(6);
+        document.getElementById('starryResultPool').textContent = data.reward_pool_name;
+        featureList.replaceChildren();
+        if(data.features.length === 0){
+          var empty = document.createElement('div');
+          empty.className = 'callout info';
+          empty.textContent = '未命中显著番型。';
+          featureList.appendChild(empty);
+        } else {
+          data.features.forEach(function(feature){
+            var item = document.createElement('div');
+            item.className = 'starry-feature';
+            var title = document.createElement('strong');
+            title.textContent = feature.name + '（' + feature.score.toFixed(6) + ' 分）';
+            var details = document.createElement('div');
+            details.style.color = 'var(--sub)';
+            details.textContent = '位置 ' + feature.span + (feature.note ? ' · ' + feature.note : '');
+            item.appendChild(title);
+            item.appendChild(details);
+            featureList.appendChild(item);
+          });
+        }
+        scorerStatus.textContent = '评分完成，共命中 ' + data.features.length + ' 个番型。';
+        scorerResult.classList.add('visible');
+      } catch(error) {
+        setScorerError(error && error.message ? error.message : '评分失败，请稍后重试。');
+      } finally {
+        scorerButton.disabled = false;
+      }
+    });
+  }
 })();
 </script>
 

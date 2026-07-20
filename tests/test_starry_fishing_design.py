@@ -384,6 +384,26 @@ class TestStarWishNumbers:
         assert scored.reward_pool == "ultimate"
         assert scored.raw_score == pytest.approx(16.838223, abs=0.00001)
 
+    def test_777777_scores_each_family_independently(self):
+        """全同号也属于普通滑梯和镜像回文，各家族独立计分。"""
+        scored = score_starry_fish("777777")
+        labels = {feature.label for feature in scored.features}
+
+        assert labels == {
+            "6_same_run",
+            "6_slide",
+            "6_palindrome",
+            "6_all_big_5_9",
+            "star_airplane",
+        }
+        assert scored.raw_score == pytest.approx(15.047072, abs=0.000001)
+        assert scored.display_score == 15
+        assert scored.reward_pool == "ultimate"
+        assert not any(
+            feature.label.startswith(("3_", "4_", "5_"))
+            for feature in scored.features
+        )  # 每个窗口家族内仍由 6 位长段吸收短段
+
     def test_pair_features_two_and_three_pair(self):
         """两对/三对：恰好长度 2 的同号连段；三对吸收两对。"""
         two = score_starry_fish("001011")

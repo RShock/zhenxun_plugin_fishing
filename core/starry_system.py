@@ -207,9 +207,8 @@ def _window_step(digits: Sequence[int], start: int, length: int) -> bool:
 
 def _window_slide(digits: Sequence[int], start: int, length: int) -> bool:
     diffs = [digits[start + i] - digits[start + i - 1] for i in range(1, length)]
-    return any(diff != 0 for diff in diffs) and (
-        all(diff in (0, 1) for diff in diffs)
-        or all(diff in (0, -1) for diff in diffs)
+    return all(diff in (0, 1) for diff in diffs) or all(
+        diff in (0, -1) for diff in diffs
     )
 
 
@@ -234,8 +233,6 @@ def _window_snake(digits: Sequence[int], start: int, length: int, pure: bool) ->
 
 
 def _window_palindrome(digits: Sequence[int], start: int, length: int) -> bool:
-    if _window_same(digits, start, length):
-        return False
     return all(
         digits[start + i] == digits[start + length - 1 - i]
         for i in range(length // 2)
@@ -281,7 +278,9 @@ def _exact_pair_runs(digits: Sequence[int]) -> list[tuple[int, int]]:
 
 
 def _window_full_house(digits: Sequence[int], start: int) -> bool:
-    """5-digit window is AAABB or AABBB: exactly two same-digit runs of lengths 3+2 or 2+3."""
+    """5-digit window is AAABB or AABBB: exactly two same-digit runs of
+    lengths 3+2 or 2+3.
+    """
     window = digits[start : start + 5]
     if len(window) < 5:
         return False
@@ -411,12 +410,7 @@ def score_starry_fish(value: int | str) -> StarryFish:
                 ok["palindrome"], start, length
             ):
                 features.append(
-                    _feature(
-                        f"{length}_palindrome",
-                        "palindrome",
-                        span,
-                        "同号回文已被同号吸收",
-                    )
+                    _feature(f"{length}_palindrome", "palindrome", span)
                 )
 
     for start in range(DIGITS - 4 + 1):
