@@ -888,7 +888,7 @@ code, .ic {
   <div class="card">
     <div class="sec-h">什么是 UTR</div>
     <p style="font-size:14px; line-height:1.7;">
-      <strong>UTR</strong> 是游戏中最高稀有度的鱼。与普通鱼不同，UTR 鱼无法通过常规概率表自然掉落，需要先完成图鉴前置，再通过<strong>特殊判定 + 保底</strong>获取。1-10 图与 S1 必须<strong>同时满足</strong>：① 集齐该图全部 UR（解锁迷途风）② 在<strong>迷途风天气</strong>下钓鱼；缺一不可。11-20 星空图则在集齐该图全部 UR 后常驻启用（不生成迷途风）。每张地图都有对应的 UTR 鱼，集齐所有 UTR 是游戏的核心收集目标。
+      <strong>UTR</strong> 是游戏中最高稀有度的鱼。与普通鱼不同，UTR 鱼无法通过常规概率表自然掉落，需要先完成图鉴前置，再通过<strong>特殊判定 + 保底</strong>获取。1-10 图与 S1 必须<strong>同时满足</strong>：① 集齐该图全部 UR（解锁迷途风）② 在<strong>迷途风天气</strong>下钓鱼；缺一不可。11-20 星空图需要先集齐该图全部 UR，再等待该图进入<strong>乱纪元</strong>；觉醒后的乱纪元会按迷途风效果结算。每张地图都有对应的 UTR 鱼，集齐所有 UTR 是游戏的核心收集目标。
     </p>
   </div>
 
@@ -913,16 +913,16 @@ code, .ic {
   <div class="card">
     <div class="sec-h">星空图（11-20）的 UTR 机制</div>
     <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
-      11-20 图的 UTR <strong>不依赖迷途风</strong>，也<strong>不会生成迷途风天气</strong>。解锁后沿用与迷途风相同的递进概率与 150 次保底数值，但计数与出货都不再受天气限制。
+      11-20 图<strong>不会生成名为迷途风的天气</strong>，但 UTR 仍受天气门控：集齐该图全部 UR 后，乱纪元会对该玩家觉醒，并在保持「乱纪元」显示的同时按迷途风效果结算，启用相同的递进概率与 150 次保底。
     </p>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><div class="step-text">在当前星空图集齐所有鱼的 N、R、SR、SSR、<strong>UR</strong></div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">完成该图收集成就后，<strong>UTR 自动解锁</strong>（无需迷途风）</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后：递进概率常驻 + <strong>150 次保底</strong>开始计数；未解锁时保底不计数</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">星空专属天气（太阳风/流星雨/恒纪元）只影响<strong>流星鱼</strong>，不影响 UTR 保底</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">完成该图收集成就后，<strong>乱纪元觉醒</strong>；未完成时乱纪元按晴天处理</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">仅在觉醒后的乱纪元中启用递进概率，并推进 <strong>150 次 UTR 保底</strong></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">太阳风/流星雨/恒纪元期间不启用 UTR 特殊判定，也不推进保底</div></div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>与 1-10 / S1 的区别：</strong>前半部分仍需迷途风才会计 UTR 保底；星空图解锁 UTR 后任意天气都会推进保底。1-10 与 S1 逻辑不变。
+      <strong>与 1-10 / S1 的区别：</strong>星空图天气仍显示为乱纪元，不会显示迷途风；完成全 UR 收集后，乱纪元才会在结算时获得迷途风效果。
     </div>
   </div>
 
@@ -994,7 +994,7 @@ code, .ic {
       <table>
         <thead><tr><th>保底类型</th><th>阈值</th><th>计数条件</th><th>获取后</th></tr></thead>
         <tbody>
-          <tr><td>UTR 保底</td><td>150 次</td><td>1-10/S1：仅迷途风天气 +1；11-20：UTR 解锁后任意天气 +1（未解锁不计）</td><td>计数器归零</td></tr>
+          <tr><td>UTR 保底</td><td>150 次</td><td>1-10/S1：仅已解锁的迷途风天气 +1；11-20：仅集齐该图全部 UR 后的乱纪元 +1</td><td>计数器归零</td></tr>
           <tr><td>展示木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零</td></tr>
           <tr><td>猫猫框保底</td><td>15 次</td><td>每次被猫吃掉鱼但是未掉落框时 +1</td><td>计数器归零</td></tr>
         </tbody>
@@ -1289,9 +1289,9 @@ code, .ic {
     <div class="sec-h">星空图 UTR 获取</div>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><div class="step-text">集齐当前星空图所有鱼的 N/R/SR/SSR/UR</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">UTR 自动解锁（不需要迷途风，星空图也不生成迷途风）</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后启用递进概率，并开始累计 150 次 UTR 保底；未解锁不计数</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">太阳风/流星雨/恒纪元只影响流星鱼，不打断 UTR 保底</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">该图的乱纪元对你觉醒；显示仍为乱纪元，结算时按迷途风效果处理</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">仅在觉醒乱纪元中启用递进概率，并累计 150 次 UTR 保底</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">太阳风/流星雨/恒纪元期间不推进 UTR 保底</div></div>
     </div>
     <div class="callout tip" style="margin-top:10px">
       递进概率数值与原迷途风一致：基础 0.2%，鱼竿每领先地图 1 级 +0.1%。图 11（需 Lv.16+）时，Lv.16 约为 0.7%，Lv.20 约为 1.1%。
@@ -1336,7 +1336,7 @@ code, .ic {
       <li>【升级展示栏】为万能升级：木框/猫框/星空框未满 10 的全部校验</li>
       <li>材料足够则一并升级扣框；全部不足则报告各自还差多少</li>
       <li>星空木框提供 4 倍展示收益，最多 10 个</li>
-      <li>星空木框消耗<strong>星辰木框</strong>（奇迹获得）升级</li>
+      <li>星空木框消耗<strong>星辰木框</strong>升级；星辰木框通过奇迹获得，持有数量不设上限</li>
       <li>建设星空艇后才可升级星空木框</li>
     </ul>
   </div>
@@ -1465,7 +1465,7 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">自动回收</span><p class="cmd-desc">传奇猫雕像 Lv3 建成后，背包和新钓的猫猫乐园材料自动回收（每个 80 金币）。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>星空木框升级：</strong>解锁星空艇后，消耗星辰木框（奇迹获得）升级星空木框（4 倍展示收益，最多 10 个）。【升级展示栏】会一并校验。
+      <strong>星空木框升级：</strong>解锁星空艇后，消耗通过奇迹获得的星辰木框升级星空木框（4 倍展示收益，最多 10 个）。星辰木框持有数量不设上限；【升级展示栏】会一并校验。
     </div>
   </div>
 </div>
@@ -1483,10 +1483,10 @@ code, .ic {
     <p style="font-size:14px; line-height:1.7;">
       11-20 星空地图不参与 1-10 图的全局天气分配，每天独立判定。天气每天 <strong>11 点</strong>刷新。
       每天 <strong>5 张</strong>星空图有额外天气（太阳风 / 流星雨 / 恒纪元），另 <strong>5 张</strong>为<strong>乱纪元</strong>；额外天气用于增强流星鱼，<strong>不会生成迷途风</strong>。
-      UTR 在集齐该图全部 UR 后解锁，并开始累计 150 保底，与当天天气无关。
+      集齐该图全部 UR 后，乱纪元才会对该玩家觉醒；仅觉醒后的乱纪元启用 UTR 递进概率并推进 150 保底。
     </p>
     <div class="callout info" style="margin-top:10px">
-      <strong>与 1-10 图的关键区别：</strong>星空地图没有雨天、暴雨、猫天气，也<strong>不会生成迷途风</strong>。每天 5 张图随机额外天气、5 张乱纪元；UTR 在集齐全 UR 后常驻启用，与当天天气无关。
+      <strong>与 1-10 图的关键区别：</strong>星空地图没有雨天、暴雨、猫天气，也<strong>不会生成名为迷途风的天气</strong>。每天 5 张图随机额外天气、5 张乱纪元；全 UR 收集完成后，乱纪元显示不变，但结算时获得迷途风效果。
     </div>
   </div>
 
@@ -1500,12 +1500,12 @@ code, .ic {
           <tr><td><strong>太阳风</strong></td><td>🌬️</td><td>5 张额外天气内三选一</td><td>流星鱼出现率恒定 +2.5%（绝对加值，不与鱼竿等级加成乘算）</td></tr>
           <tr><td><strong>流星雨</strong></td><td>💫</td><td>5 张额外天气内三选一</td><td>星空鱼变得幸运</td></tr>
           <tr><td><strong>恒纪元</strong></td><td>🏛️</td><td>5 张额外天气内三选一</td><td>流星鱼数字范围限定为 2-8（不出现 0、1、9）</td></tr>
-          <tr><td><strong>乱纪元</strong></td><td>🌫️</td><td>每天固定 5 张</td><td>无额外效果；星空图不生成迷途风</td></tr>
+          <tr><td><strong>乱纪元</strong></td><td>🌫️</td><td>每天固定 5 张</td><td>未集齐该图全部 UR 时按晴天；集齐后觉醒并按迷途风效果结算</td></tr>
         </tbody>
       </table>
     </div>
     <div class="callout warn" style="margin-top:10px">
-      <strong>乱纪元的含义：</strong>乱纪元没有任何效果，只是表示「当前无特殊天气」。每天固定 5 张星空图为乱纪元；无有效天气记录时也会显示为乱纪元（而不是晴天）。
+      <strong>乱纪元的含义：</strong>乱纪元效果按玩家分别判定。未完成该图 UR 收集时没有额外效果；完成后显示仍为乱纪元，但会启用 UTR 递进概率与 150 次保底。
     </div>
   </div>
 
@@ -1518,10 +1518,11 @@ code, .ic {
     <ul class="clean">
       <li>每天生成时固定 5 张图为乱纪元</li>
       <li>天气尚未生成或无天气记录 → 默认显示为乱纪元</li>
-      <li>乱纪元本身没有效果，等同于「当前无特殊星空天气」</li>
+      <li>未集齐该图全部 UR → 对该玩家按晴天处理，不出 UTR、不推进保底</li>
+      <li>集齐该图全部 UR → 乱纪元觉醒，显示不变，结算时按迷途风效果处理</li>
     </ul>
     <div class="callout tip" style="margin-top:10px">
-      <strong>关于乱纪元：</strong>乱纪元没有额外效果。11-20 <strong>不会再出现迷途风</strong>；集齐该图全部 UR 后解锁的是 UTR 掉落与保底，而不是迷途风可见性。
+      <strong>关于乱纪元：</strong>11-20 <strong>不会生成名为迷途风的天气</strong>；完成全 UR 收集后，觉醒乱纪元会提供迷途风效果，启用 UTR 递进概率和 150 次保底。
     </div>
   </div>
 
@@ -1534,9 +1535,9 @@ code, .ic {
         <tbody>
           <tr><td>星空天气种类</td><td>太阳风 / 流星雨 / 恒纪元 / 乱纪元（全天生效）</td></tr>
           <tr><td>迷途风</td><td><strong>11-20 不生成</strong>（迷途风只存在于 1-10 图与 S1）</td></tr>
-          <tr><td>普通鱼 UTR</td><td>集齐该图全部 UR 后解锁；解锁后递进概率 + 150 保底常驻</td></tr>
-          <tr><td>保底计数</td><td>仅在 UTR 解锁后计数；未解锁时不累计</td></tr>
-          <tr><td>流星鱼</td><td>受太阳风/流星雨/恒纪元影响；乱纪元无加成</td></tr>
+          <tr><td>普通鱼 UTR</td><td>集齐该图全部 UR 后解锁候选池；仅觉醒乱纪元启用递进概率</td></tr>
+          <tr><td>保底计数</td><td>仅在觉醒乱纪元中累计；其他天气与未觉醒乱纪元均不累计</td></tr>
+          <tr><td>流星鱼</td><td>受太阳风/流星雨/恒纪元影响；乱纪元不提供流星鱼加成</td></tr>
         </tbody>
       </table>
     </div>
@@ -1555,7 +1556,7 @@ code, .ic {
       <li>天气持续全天（当天 23:00 至次日 23:00）</li>
       <li><strong>5 张</strong>图在<strong>太阳风 / 流星雨 / 恒纪元</strong>中随机其一</li>
       <li>另 <strong>5 张</strong>图固定为<strong>乱纪元</strong></li>
-      <li><strong>不生成迷途风</strong>；UTR 也不再绑定天气</li>
+      <li><strong>不生成名为迷途风的天气</strong>；觉醒后的乱纪元在结算时提供迷途风效果</li>
       <li>星空地图不出现雨天、暴雨、猫天气等 1-10 图天气类型</li>
       <li>星空地图不受星空艇满层影响（星空艇满层只替换 1-10 图和 S1 的晴天为迷途风）</li>
     </ul>
@@ -1566,12 +1567,12 @@ code, .ic {
     <div class="sec-h">星空图 UTR 与天气的关系</div>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><div class="step-text">集齐当前星空图所有鱼的 N/R/SR/SSR/UR</div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-text">UTR 自动解锁（不需要迷途风）</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">解锁后：递进概率 + 150 保底常驻计数</div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">星空天气只改流星鱼，不改 UTR 规则</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">该图乱纪元觉醒；天气名称仍显示为乱纪元</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">觉醒乱纪元按迷途风效果结算：递进概率生效并推进 150 保底</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">其他星空天气不启用 UTR 特殊判定，也不推进保底</div></div>
     </div>
     <div class="callout tip" style="margin-top:10px">
-      递进概率：基础 0.2%，鱼竿每领先地图 1 级 +0.1%。未解锁 UTR 前保底不计数。
+      递进概率：基础 0.2%，鱼竿每领先地图 1 级 +0.1%。未集齐全 UR 或不在乱纪元时，保底不计数。
     </div>
   </div>
 </div>
@@ -1798,7 +1799,7 @@ code, .ic {
           <tr><td>太阳风</td><td>流星鱼出现率恒定 +2.5%（绝对加值，不与鱼竿等级加成乘算）</td></tr>
           <tr><td>流星雨</td><td>星空鱼变得幸运</td></tr>
           <tr><td>恒纪元</td><td>流星鱼数字范围限定为 2-8（不出现 0、1、9）</td></tr>
-          <tr><td>乱纪元</td><td>无额外效果</td></tr>
+          <tr><td>乱纪元</td><td>未完成该图全 UR 时按晴天；完成后觉醒并按迷途风效果启用 UTR 递进概率与保底</td></tr>
         </tbody>
       </table>
     </div>
@@ -1841,7 +1842,7 @@ code, .ic {
     <div class="grid-2">
       <div class="bldg-card">
         <div class="bldg-name">星辰木框</div>
-        <div class="bldg-desc">通过奇迹功能获得，用于升级星空木框。升满 10 个星空木框共需 55 个。</div>
+        <div class="bldg-desc">通过奇迹功能获得，用于升级星空木框；持有数量不设上限。升满 10 个星空木框共需 55 个。</div>
       </div>
       <div class="bldg-card">
         <div class="bldg-name">星空木框</div>
@@ -1859,7 +1860,7 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果。</p></div>
       <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR）。</p></div>
-      <div class="cmd-card"><span class="cmd-name">星辰木框</span><p class="cmd-desc">奇迹奖励，用于升级星空木框；升满共需 55 个。</p></div>
+      <div class="cmd-card"><span class="cmd-name">星辰木框</span><p class="cmd-desc">通过奇迹获得，用于升级星空木框；持有数量不设上限，升满共需 55 个。</p></div>
       <div class="cmd-card"><span class="cmd-name">星空木框</span><p class="cmd-desc">消耗星辰木框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>
     </div>
   </div>
