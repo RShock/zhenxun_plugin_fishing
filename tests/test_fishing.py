@@ -445,6 +445,36 @@ class TestFishingLoopIntegration:
         assert result.bait_remaining == 0
         assert "没有其他鱼饵了" in ctx.buff_messages[-1]
 
+    async def test_bait_switch_only_updates_simulation_state(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
+
+        ctx = await self._context(db, duration_minutes=0, bait_remaining=0)
+        ctx.user.bait_id = "1"
+        ctx.bait = BaitData(
+            id=1, name="耗尽鱼饵", speed_bonus=0, price=1, description="测试"
+        )
+        switched_bait = BaitData(
+            id=2, name="备用鱼饵", speed_bonus=10, price=2, description="测试"
+        )
+        save = AsyncMock()
+        monkeypatch.setattr(ctx.user, "save", save)
+
+        result = await engine.simulate_fishing_loop(
+            ctx,
+            time_credit_minutes=0,
+            initial_available_baits={
+                "2": {"data": switched_bait, "remaining": 3},
+            },
+        )
+
+        assert result.bait is switched_bait
+        assert result.bait_remaining == 3
+        assert ctx.user.bait_id == "1"
+        save.assert_not_awaited()
+
 
 class TestSimulationResultIntegration:
     async def test_normal_settlement_passes_named_simulation_result(

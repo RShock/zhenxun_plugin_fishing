@@ -965,8 +965,6 @@ async def _switch_depleted_bait(ctx: FishingContext, state: _SimulationState) ->
         state.bait = new_bait
         state.bait_speed_bonus = new_bait.speed_bonus
         state.bait_remaining = new_count
-        ctx.user.bait_id = str(new_bait.id)
-        await ctx.user.save(update_fields=["bait_id"])
         return
     if state.bait:
         ctx.buff_messages.append(f"🎣 {state.bait.name}已用完，没有其他鱼饵了")
