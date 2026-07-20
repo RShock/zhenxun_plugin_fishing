@@ -39,17 +39,17 @@ def _today_local() -> date:
     return datetime.now(_TZ).date()
 
 
-def _weather_date() -> date:
-    """返回当前天气日对应的数据库日期。
+def _weather_date_at(at_time: datetime) -> date:
+    """返回指定时刻所属天气日的数据库日期。"""
+    local_time = at_time.astimezone(_TZ).replace(tzinfo=None) if at_time.tzinfo else at_time
+    if local_time.hour >= 23:
+        return local_time.date()
+    return local_time.date() - timedelta(days=1)
 
-    天气日从每天 23:00 开始，到次日 22:59 结束。
-    - 23:00-23:59 → 当天日期（新天气日刚开始）
-    - 00:00-22:59 → 前一天日期（仍在上一个天气日内）
-    """
-    now = datetime.now(_TZ)
-    if now.hour >= 23:
-        return now.date()
-    return now.date() - timedelta(days=1)
+
+def _weather_date() -> date:
+    """返回当前天气日对应的数据库日期。"""
+    return _weather_date_at(datetime.now(_TZ))
 
 
 async def ensure_weather_generated() -> bool:
@@ -373,20 +373,52 @@ async def generate_daily_weather() -> bool:
     return generated
 
 
+async def get_chaotic_era_windows(
+    location_id: str, start_time: datetime, end_time: datetime
+) -> list[tuple[datetime, datetime]]:
+    """返回结算区间内实际生效的乱纪元窗口。"""
+    if not is_starry_location(location_id) or start_time >= end_time:
+        return []
+
+    start = _make_naive(start_time)
+    end = _make_naive(end_time)
+    weather_dates: list[date] = []
+    cursor = _weather_date_at(start)
+    last_date = _weather_date_at(end - timedelta(microseconds=1))
+    while cursor <= last_date:
+        weather_dates.append(cursor)
+        cursor += timedelta(days=1)
+
+    weathers = await FishingWeather.filter(
+        location_id=location_id,
+        date__in=weather_dates,
+        weather_type="chaotic_era",
+    ).all()
+    windows: list[tuple[datetime, datetime]] = []
+    for weather in weathers:
+        weather_start = _make_naive(weather.start_time) if weather.start_time else start
+        weather_end = _make_naive(weather.end_time) if weather.end_time else end
+        overlap_start = max(start, weather_start)
+        overlap_end = min(end, weather_end)
+        if overlap_start < overlap_end:
+            windows.append((overlap_start, overlap_end))
+    return sorted(windows)
+
+
 async def is_chaotic_era_active(
     location_id: str, at_time: datetime | None = None
 ) -> bool:
     """判断指定星空图当前是否处于乱纪元（仅判断显示天气，不含玩家解锁）。"""
     if not is_starry_location(location_id):
         return False
+    check_time = _make_naive(at_time or _now_local())
     weather = await FishingWeather.filter(
         location_id=location_id,
-        date=_weather_date(),
+        date=_weather_date_at(check_time),
         weather_type="chaotic_era",
     ).first()
     if not weather:
         return False
-    check_time = _make_naive(at_time or _now_local())
     start = _make_naive(weather.start_time) if weather.start_time else None
     end = _make_naive(weather.end_time) if weather.end_time else None
     return (start is None or check_time >= start) and (

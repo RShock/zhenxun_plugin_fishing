@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
@@ -927,6 +929,40 @@ class TestStarryUtrPityAndWeather:
         assert "lost_wind" not in created
         assert sum(1 for t in created if t in special) == 5
         assert sum(1 for t in created if t == "chaotic_era") == 5
+
+    @pytest.mark.asyncio
+    async def test_chaotic_windows_follow_each_weather_day_across_23(self, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing import weather_service as ws
+
+        old_weather = type(
+            "Weather",
+            (),
+            {
+                "start_time": datetime(2026, 7, 19, 23, 0),
+                "end_time": datetime(2026, 7, 20, 23, 0),
+            },
+        )()
+        captured = {}
+
+        class FakeFilter:
+            async def all(self):
+                return [old_weather]
+
+        class FakeWeather:
+            @classmethod
+            def filter(cls, **kwargs):
+                captured.update(kwargs)
+                return FakeFilter()
+
+        monkeypatch.setattr(ws, "FishingWeather", FakeWeather)
+        windows = await ws.get_chaotic_era_windows(
+            "11", datetime(2026, 7, 20, 22, 50), datetime(2026, 7, 20, 23, 10)
+        )
+
+        assert captured["date__in"] == [date(2026, 7, 19), date(2026, 7, 20)]
+        assert windows == [
+            (datetime(2026, 7, 20, 22, 50), datetime(2026, 7, 20, 23, 0))
+        ]
 
 
 class TestPityHintsSkipFrame:
