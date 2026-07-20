@@ -820,7 +820,7 @@ class TestStarryUtrPityAndWeather:
         )
         assert any("迷途风UTR保底" in h for h in normal_hints)
 
-    def test_display_prob_starry_utr_unlocked_without_lost_wind(self):
+    def test_display_prob_starry_utr_unlocked_still_requires_lost_wind(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.core.probability import (
             calculate_display_probabilities,
         )
@@ -832,7 +832,16 @@ class TestStarryUtrPityAndWeather:
             weather_lost_wind=False,
             starry_utr_unlocked=True,
         )
-        assert probs.get("UTR", 0) > 0
+        assert probs.get("UTR", 0) == 0
+
+        active = calculate_display_probabilities(
+            rod_level=16,
+            difficulty=10,
+            max_rarity="UTR",
+            weather_lost_wind=True,
+            starry_utr_unlocked=True,
+        )
+        assert active.get("UTR", 0) > 0
 
         locked = calculate_display_probabilities(
             rod_level=16,

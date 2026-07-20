@@ -62,9 +62,9 @@ def calculate_display_probabilities(
     if material_rate > 0:
         independent["material_rate"] = material_rate
 
-    # 迷途风和星空图的递进 UTR 从普通稀有度分布中切出；按字典中的
-    # 稀有度顺序优先扣除低稀有度，避免任一稀有度出现负概率。
-    if weather_lost_wind or starry_utr_unlocked:
+    # 递进 UTR 只在迷途风效果实际生效时从普通稀有度分布中切出；
+    # 星空成就仅负责解锁候选池，不能绕过乱纪元的天气门控。
+    if weather_lost_wind:
         utr_probability = get_lost_wind_utr_probability(
             rod_level, difficulty
         ) * max(0.0, weather_lost_wind_multiplier)
