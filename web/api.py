@@ -3,10 +3,14 @@
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 
 from .key_manager import KeyManager
+
+if TYPE_CHECKING:
+    from ..config import ConfigManager
 
 # ── 认证 ──────────────────────────────────────────────────────────────
 

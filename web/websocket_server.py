@@ -1,9 +1,9 @@
 import asyncio
 import hashlib
 import json
+from pathlib import Path
 import time
 import traceback
-from pathlib import Path
 
 import aiohttp
 from aiohttp import web
@@ -24,7 +24,11 @@ _CLIENT_CSS = """
 <style>
 .fish-list{grid-template-columns:repeat(auto-fill,minmax(85px,1fr))!important}
 .item,.upgrade-item{cursor:pointer!important;transition:all .15s!important}
-.item:hover,.upgrade-item:hover:not(.max){transform:scale(1.03)!important;box-shadow:0 2px 8px rgba(0,0,0,.15)!important}
+.item:hover,
+.upgrade-item:hover:not(.max){
+transform:scale(1.03)!important;
+box-shadow:0 2px 8px rgba(0,0,0,.15)!important
+}
 </style>
 """
 
@@ -82,7 +86,12 @@ class WebSocketServer:
     # ── 路由注册 ──
 
     def _setup_routes(self):
-        from .api import get_achievements, get_collection, get_scenes, get_state
+        from .api import (
+            get_achievements,
+            get_collection,
+            get_scenes,
+            get_state,
+        )
 
         # API / WS / 显式页面入口必须注册在静态路由之前，
         # 否则 prefix="/" 的静态资源会先匹配（目录只显示列表、API 直接 404）
