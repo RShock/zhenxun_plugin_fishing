@@ -623,6 +623,33 @@ class TestBackpackPotionInventory:
         ]
 
 
+class TestStarryExhibitionCurrentScoring:
+    def test_old_exhibition_snapshot_is_recalculated_with_current_rules(self):
+        from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
+            build_starry_fish_cards,
+        )
+
+        cards = build_starry_fish_cards(
+            [
+                {
+                    "id": "005500",
+                    "score": 4.903650,
+                    "display_score": 5,
+                    "reward_pool": "middle",
+                    "features": ["6位回文", "星空飞机"],
+                }
+            ]
+        )
+
+        assert len(cards) == 1
+        card = cards[0]
+        assert card["score"] == pytest.approx(7.995, abs=0.001)
+        assert card["display_score"] == 8
+        assert card["band"] == "珍品"
+        assert card["reward_pool"] == "高级奖池"
+        assert "三对" in card["features"]
+
+
 class TestMeteorBackpackInventory:
     def test_build_meteor_inventory_excludes_exhibition_includes_legacy(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.backpack.view import (

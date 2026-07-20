@@ -318,23 +318,22 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
     for record in records:
         fish_id = str(record.get("id", "0")).zfill(6)
         scored = score_starry_fish(fish_id)
-        feature_names = list(record.get("features") or [])
-        if not feature_names:
-            feature_names = [feature.display_name for feature in scored.features]
+        # 展馆记录保存的是入馆时的分数快照；番型规则更新后，旧快照会过期。
+        # 展示页始终按当前规则重算，避免老展品长期显示旧分数和旧番型。
+        # 这里只修正展示，不追补历史奖池奖励或累计努力值。
+        feature_names = [feature.display_name for feature in scored.features]
         digit_matched = _starry_feature_digit_mask(scored.features)
         cards.append(
             {
                 "id": scored.id_text,
                 "digits": list(scored.id_text),
                 "digit_matched": digit_matched,
-                "score": round(float(record.get("score", scored.raw_score)), 3),
-                "display_score": int(
-                    record.get("display_score", scored.display_score)
-                ),
-                "band": band(int(record.get("display_score", scored.display_score))),
+                "score": round(scored.raw_score, 3),
+                "display_score": scored.display_score,
+                "band": band(scored.display_score),
                 "reward_pool": REWARD_POOL_NAMES.get(
-                    record.get("reward_pool", scored.reward_pool),
-                    record.get("reward_pool", scored.reward_pool),
+                    scored.reward_pool,
+                    scored.reward_pool,
                 ),
                 "features": feature_names[:6],
                 "feature_summary": " / ".join(feature_names[:3])
