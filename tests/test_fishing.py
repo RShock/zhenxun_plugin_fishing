@@ -165,6 +165,33 @@ class TestStepSettlement:
         assert hasattr(result, "bait")
         assert hasattr(result, "buff_messages")
 
+    async def test_settle_step_persists_auto_switched_bait(self, db, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.bait_id = "1"
+        await start_fishing(USER_ID, LOCATION_1, "TestUser")
+        switched_bait = Mock(id=2, speed_bonus=20)
+        step = actions.StepResult(
+            new_fish=[],
+            new_bait_consumed=0,
+            frame_pity=0,
+            cat_frame_pity=0,
+            bait=switched_bait,
+            bait_remaining=1,
+        )
+        status = await db.status_get(USER_ID)
+        ctx = Mock(user=user)
+
+        async def fake_compute(*args, **kwargs):
+            return step, status, ctx
+
+        monkeypatch.setattr(actions, "_compute_settle_step", fake_compute)
+        await actions.settle_fishing_step(USER_ID)
+
+        assert user.bait_id == "2"
+
     async def test_settle_step_accumulates_fish(self, db):
         user = await db.user_get(USER_ID)
         user.rod_level = 5
