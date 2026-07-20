@@ -1,6 +1,7 @@
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.config import (
+    DAILY_GIFT_LIMIT,
     ConfigManager,
     calculate_fish_price,
     generate_fish_numeric_id,
@@ -391,19 +392,25 @@ class TestGiftFish:
         ok, msg = await gift_fish(USER_ID, TARGET_ID, "99999")
         assert ok is False
 
-    async def test_gift_utr_unlock_does_not_count_daily_limit(self, db):
+    async def test_gift_utr_unlock_ignores_full_daily_limit(self, db):
+        """次数用满后仍可赠送未解锁 UTR，且不额外消耗赠送次数。"""
         fish_name, numeric_id = self._first_location_fish("UTR")
         await db.backpack_add_fish(USER_ID, fish_name, "UTR", numeric_id, count=1)
+        for _ in range(DAILY_GIFT_LIMIT):
+            await db.user_increment_gift_count(USER_ID)
+        gift_count_before = await db.user_get_gift_count(USER_ID)
+        assert gift_count_before == DAILY_GIFT_LIMIT
         user_before = await db.user_get(USER_ID)
         gold_before = user_before.gold
 
         ok, msg = await gift_fish(USER_ID, TARGET_ID, numeric_id)
 
         assert ok is True
-        gift_count = await db.user_get_gift_count(USER_ID)
-        assert gift_count == 0
+        assert await db.user_get_gift_count(USER_ID) == gift_count_before
         user_after = await db.user_get(USER_ID)
-        assert user_after.gold - gold_before == 2 * self._utr_price(fish_name)
+        assert user_after.gold == gold_before + 2 * self._utr_price(fish_name)
+        sender_fish = await db.backpack_get_fish_by_numeric_id(USER_ID, numeric_id)
+        assert sender_fish is None
         target_fish = await db.backpack_get_fish_by_numeric_id(TARGET_ID, numeric_id)
         assert target_fish is None
         collected = await db.collection_get_user_collected(TARGET_ID)
