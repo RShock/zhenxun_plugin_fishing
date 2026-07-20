@@ -21,6 +21,7 @@ from .config import (
     normalize_fish_numeric_id,
 )
 from .core.result import add_fish_to_user
+from .core.starry_rewards import grant_rewards_for_starry_fish
 from .models import FishingUser, FishingWeather
 
 
@@ -326,22 +327,30 @@ async def gm_add_items(
         return False, "请指定物品名称！"
 
     success_lines: list[str] = []
+    success_details: list[str] = []
     fail_lines: list[str] = []
     for item_name, count in item_specs:
         ok, msg = await gm_add_item(user_id, item_name, count)
         if ok:
             success_lines.append(msg)
+            # 部分物品（如星穹流星鱼）会在首行后返回评分/奖励详情。
+            # 汇总时保留这些详情，避免只剩下紧凑摘要。
+            _, separator, detail = msg.partition("\n")
+            if separator and detail.strip():
+                success_details.append(f"【{item_name}×{count}】\n{detail.strip()}")
         else:
             fail_lines.append(f"{item_name}×{count}：{msg}")
 
     if not success_lines and fail_lines:
         return False, "添加失败：\n" + "\n".join(fail_lines)
 
-    # 成功时给出紧凑摘要
+    # 成功时给出紧凑摘要，并附上有意义的物品详情。
     summary_bits: list[str] = []
     for item_name, count in item_specs:
         summary_bits.append(f"{item_name}×{count}")
     head = f"已给用户 {user_id} 添加：{'、'.join(summary_bits)}"
+    if success_details:
+        head += "\n" + "\n".join(success_details)
     if fail_lines:
         head += "\n部分失败：\n" + "\n".join(fail_lines)
         return True, head
@@ -569,19 +578,76 @@ async def _remove_starry_fish(user_id: str, number: str, count: int) -> bool:
     return True
 
 
+def _format_starry_reward_entry(reward: dict) -> str:
+    """把单条星穹奖励 dict 格式化为可读文本。"""
+    name = str(reward.get("name") or reward.get("key") or "未知奖励")
+    count = int(reward.get("count", 1) or 1)
+    parts = [f"{name}×{count}"]
+    if reward.get("score_bonus"):
+        parts.append(f"努力值+{reward['score_bonus']}")
+    if reward.get("upgrade_from"):
+        parts.append(f"碎片合成:{reward['upgrade_from']}")
+    if reward.get("granted") is False:
+        parts.append("发放失败")
+    return " ".join(parts)
+
+
+def _format_gm_meteor_reward_feedback(
+    number: str,
+    per_fish_rewards: list[list[dict]],
+) -> str:
+    """汇总 GM 添加流星鱼时的评分/奖池/抽奖反馈。"""
+    from .core.starry_system import REWARD_POOL_NAMES, score_starry_fish
+
+    scored = score_starry_fish(number)
+    pool_name = REWARD_POOL_NAMES.get(scored.reward_pool, scored.reward_pool)
+    lines = [
+        f"评分: {scored.display_score} | 奖池: {pool_name}",
+    ]
+    if scored.reward_pool == "none":
+        lines.append("奖励: 无（评分为0不进奖池）")
+        return "\n".join(lines)
+
+    if len(per_fish_rewards) == 1:
+        rewards = per_fish_rewards[0]
+        if not rewards:
+            lines.append("奖励: 本条未抽中/未发放")
+        else:
+            lines.append(
+                "奖励: " + "；".join(_format_starry_reward_entry(r) for r in rewards)
+            )
+        return "\n".join(lines)
+
+    for idx, rewards in enumerate(per_fish_rewards, 1):
+        if not rewards:
+            lines.append(f"#{idx}: 未抽中/未发放")
+        else:
+            detail = "；".join(_format_starry_reward_entry(r) for r in rewards)
+            lines.append(f"#{idx}: {detail}")
+    return "\n".join(lines)
+
+
 async def _handle_meteor_fish(
     user_id: str, spec: _GmItemSpec, count: int
 ) -> tuple[bool, str]:
     number = spec.item_id
     is_starry = int(number) <= 999_999
     if count >= 0:
+        per_fish_rewards: list[list[dict]] = []
         for _ in range(count):
             if is_starry:
                 await FishingUser.add_starry_fish(user_id, number, "GM")
+                rewards = await grant_rewards_for_starry_fish(user_id, number)
+                per_fish_rewards.append(list(rewards or []))
             else:
                 await FishingUser.add_item(user_id, number, "meteor_fish", 1)
         logger.info(f"GM给用户 {user_id} 添加 {count} 条流星鱼 #{number}")
-        return True, f"已给用户 {user_id} 添加 {count} 条流星鱼 #{number}！"
+        msg = f"已给用户 {user_id} 添加 {count} 条流星鱼 #{number}！"
+        if is_starry:
+            msg += "\n" + _format_gm_meteor_reward_feedback(number, per_fish_rewards)
+        else:
+            msg += "\n（旧版流星鱼道具，不走星穹奖池）"
+        return True, msg
 
     success = (
         await _remove_starry_fish(user_id, number, -count)

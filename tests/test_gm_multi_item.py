@@ -184,23 +184,90 @@ class TestGmAddItemIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        ("item", "expected_method", "expected_args"),
+        ("item", "expected_method", "expected_args", "expected_reward_args"),
         [
-            ("流星鱼123", "add_starry_fish", ("10001", "123", "GM")),
-            ("流星鱼1234567", "add_item", ("10001", "1234567", "meteor_fish", 1)),
+            (
+                "流星鱼123",
+                "add_starry_fish",
+                ("10001", "123", "GM"),
+                ("10001", "123"),
+            ),
+            (
+                "流星鱼1234567",
+                "add_item",
+                ("10001", "1234567", "meteor_fish", 1),
+                None,
+            ),
         ],
     )
     async def test_meteor_fish_batch(
-        self, monkeypatch, item, expected_method, expected_args
+        self,
+        monkeypatch,
+        item,
+        expected_method,
+        expected_args,
+        expected_reward_args,
     ):
         operation = AsyncMock()
+        grant_reward = AsyncMock(
+            return_value=[
+                {
+                    "key": "corn",
+                    "name": "玉米",
+                    "count": 1,
+                    "pool": "low",
+                    "pool_name": "低级奖池",
+                    "granted": True,
+                }
+            ]
+        )
         monkeypatch.setattr(gm.FishingUser, expected_method, operation)
+        monkeypatch.setattr(gm, "grant_rewards_for_starry_fish", grant_reward)
 
         result = await gm.gm_add_item("10001", item, 3)
 
         assert result[0] is True
         assert operation.await_count == 3
         operation.assert_awaited_with(*expected_args)
+        assert f"已给用户 10001 添加 3 条流星鱼 #{item.removeprefix('流星鱼')}！" in result[1]
+        if expected_reward_args:
+            assert grant_reward.await_count == 3
+            grant_reward.assert_awaited_with(*expected_reward_args)
+            assert "评分:" in result[1]
+            assert "奖池:" in result[1]
+            assert "玉米×1" in result[1]
+        else:
+            grant_reward.assert_not_awaited()
+            assert "旧版流星鱼道具" in result[1]
+
+    @pytest.mark.asyncio
+    async def test_meteor_fish_reward_feedback_single(self, monkeypatch):
+        """单条星穹流星鱼应回传评分/奖池/奖励明细。"""
+        add_starry = AsyncMock()
+        grant_reward = AsyncMock(
+            return_value=[
+                {
+                    "key": "wish_score",
+                    "name": "星空祈愿努力值",
+                    "count": 1,
+                    "pool": "middle",
+                    "pool_name": "中级奖池",
+                    "score_bonus": 0.5,
+                    "granted": True,
+                }
+            ]
+        )
+        monkeypatch.setattr(gm.FishingUser, "add_starry_fish", add_starry)
+        monkeypatch.setattr(gm, "grant_rewards_for_starry_fish", grant_reward)
+
+        ok, message = await gm.gm_add_item("10001", "流星鱼123", 1)
+
+        assert ok is True
+        assert "已给用户 10001 添加 1 条流星鱼 #123！" in message
+        assert "评分:" in message
+        assert "奖池:" in message
+        assert "星空祈愿努力值×1" in message
+        assert "努力值+0.5" in message
 
     @pytest.mark.asyncio
     async def test_unknown_item_and_invalid_count_do_not_mutate(self, monkeypatch):
@@ -228,12 +295,41 @@ class TestGmAddItemIntegration:
             True,
             "已给用户 10001 添加：时光药水×3、UTR自选券×2",
         )
+        assert add_item.await_count == 2
         assert add_item.await_args_list[0].args == (
             "10001", "time_potion", "potion", 3
         )
         assert add_item.await_args_list[1].args == (
             "10001", "utr_select_ticket", "ticket", 2
         )
+
+    @pytest.mark.asyncio
+    async def test_multi_item_summary_keeps_meteor_reward_feedback(self, monkeypatch):
+        """gm添加汇总层不能丢弃流星鱼评分和奖励详情。"""
+        add_starry = AsyncMock()
+        grant_reward = AsyncMock(
+            return_value=[
+                {
+                    "key": "corn",
+                    "name": "玉米",
+                    "count": 2,
+                    "pool": "low",
+                    "pool_name": "低级奖池",
+                    "granted": True,
+                }
+            ]
+        )
+        monkeypatch.setattr(gm.FishingUser, "add_starry_fish", add_starry)
+        monkeypatch.setattr(gm, "grant_rewards_for_starry_fish", grant_reward)
+
+        ok, message = await gm.gm_add_items("10001", [("流星鱼220089", 1)])
+
+        assert ok is True
+        assert "已给用户 10001 添加：流星鱼220089×1" in message
+        assert "【流星鱼220089×1】" in message
+        assert "评分:" in message
+        assert "奖池:" in message
+        assert "奖励: 玉米×2" in message
 
     def test_suffix_x(self):
         specs = parse_gm_item_specs("时光药水x3,真多多药水", default_count=1)
