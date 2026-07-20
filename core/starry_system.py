@@ -657,35 +657,16 @@ def find_miracle_subset(
 ) -> list[int] | None:
     """Find a non-empty subset whose sum ≡ target (mod mod_base).
 
-    始终用 meet-in-the-middle（二分枚举子集和）精确搜索。
-    候选最多取 ``max_exact_n``（默认 26）个**编号最大**的鱼；
-    超过此数量时直接丢弃较小编号，接受极低的漏匹配概率以保速度。
+    始终用 meet-in-the-middle（二分枚举子集和）对全部背包候选精确搜索，
+    不再截断到编号最大的若干条，确保已有解不会因编号排序被漏掉。
     Returns original indices into ``values``, or None.
     """
-    del large_n_attempts, rng  # API compat only
+    del max_exact_n, large_n_attempts, rng  # API compat only
 
     normalized = [int(value) % mod_base for value in values]
-    n = len(normalized)
-    if n == 0:
+    if not normalized:
         return None
-
-    # 只在最大的 max_exact_n 个编号上做 MITM
-    if n <= max_exact_n:
-        candidate_idxs = list(range(n))
-    else:
-        # 编号（mod 后）从大到小；同分用原下标稳定排序
-        candidate_idxs = sorted(
-            range(n),
-            key=lambda i: (normalized[i], i),
-            reverse=True,
-        )[:max_exact_n]
-        candidate_idxs.sort()  # MITM 内部用相对下标，再映射回原下标
-
-    sub = [normalized[i] for i in candidate_idxs]
-    local = _mitm_exact_indices(sub, target, mod_base)
-    if not local:
-        return None
-    return sorted(candidate_idxs[i] for i in local)
+    return _mitm_exact_indices(normalized, target, mod_base)
 
 
 def build_exhibition_entries(entries: Iterable[dict]) -> list[dict]:
