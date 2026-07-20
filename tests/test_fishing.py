@@ -1,5 +1,9 @@
+from contextlib import asynccontextmanager
+from copy import deepcopy
 from datetime import datetime, timedelta
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import (
     SimulationResult,
@@ -152,6 +156,75 @@ class TestStepSettlement:
     async def test_settle_step_returns_none_when_not_fishing(self, db):
         result = await settle_fishing_step(USER_ID)
         assert result is None
+
+    async def test_settle_step_keeps_auto_switched_bait_ephemeral_and_writes_atomically(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
+        from zhenxun.plugins.zhenxun_plugin_fishing.core.context import StepResult
+        from zhenxun.plugins.zhenxun_plugin_fishing.models.user import FishingUser
+
+        user = await db.user_get(USER_ID)
+        user.bait_id = "1"
+        user.fishing_status = {"start_time": datetime.now().isoformat()}
+        switched_bait = BaitData(
+            id=2, name="自动换饵", speed_bonus=0, price=1, description="测试"
+        )
+        step = StepResult(
+            new_fish=[],
+            new_bait_consumed=1,
+            frame_pity=0,
+            cat_frame_pity=0,
+            bait=switched_bait,
+            bait_remaining=3,
+            utr_pity=0,
+            buff_messages=[],
+            bait_usage={"2": 1},
+        )
+        updated_status = {"start_time": user.fishing_status["start_time"], "done": True}
+        monkeypatch.setattr(
+            actions,
+            "_compute_settle_step",
+            AsyncMock(return_value=(step, updated_status, Mock(user=user))),
+        )
+        events = []
+
+        @asynccontextmanager
+        async def transaction():
+            snapshot = deepcopy(user.__dict__)
+            events.append("transaction.enter")
+            try:
+                yield None
+            except Exception:
+                user.__dict__.clear()
+                user.__dict__.update(snapshot)
+                events.append("transaction.rollback")
+                raise
+
+        async def update_status(user_id, status):
+            events.append("status.write")
+            user.fishing_status = status
+
+        async def fail_bait(*args):
+            events.append("bait.write")
+            raise RuntimeError("bait write failed")
+
+        monkeypatch.setattr(actions, "_stop_db_transaction", transaction)
+        monkeypatch.setattr(FishingUser, "update_fishing_status", update_status)
+        monkeypatch.setattr(actions, "consume_bait_incremental", fail_bait)
+
+        with pytest.raises(RuntimeError, match="bait write failed"):
+            await settle_fishing_step(USER_ID)
+
+        assert user.bait_id == "1"
+        assert user.fishing_status == {"start_time": updated_status["start_time"]}
+        assert events == [
+            "transaction.enter",
+            "status.write",
+            "bait.write",
+            "transaction.rollback",
+        ]
 
     async def test_settle_step_returns_step_result(self, db):
         user = await db.user_get(USER_ID)

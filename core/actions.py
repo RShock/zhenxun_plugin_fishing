@@ -298,12 +298,15 @@ async def settle_fishing_step(user_id: str, gm_mode: bool = False) -> StepResult
         return None
 
     step, updated_status, ctx = computed
-    await FishingUser.update_fishing_status(user_id, updated_status)
 
-    if step.new_bait_consumed > 0:
-        await consume_bait_incremental(
-            user_id, ctx.user, step.bait_usage, step.buff_messages
-        )
+    # 模拟阶段只计算自动换饵结果，不持久化 user.bait_id；状态与鱼饵扣除
+    # 必须在同一事务中提交，避免状态已推进但鱼饵未扣除。
+    async with _stop_db_transaction():
+        await FishingUser.update_fishing_status(user_id, updated_status)
+        if step.bait_usage:
+            await consume_bait_incremental(
+                user_id, ctx.user, step.bait_usage, step.buff_messages
+            )
 
     return step
 
