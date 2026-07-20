@@ -116,6 +116,30 @@ class TestStopSettlementTransaction:
         assert messages.index("🐱 猫送了7金币") < messages.index("🐱 猫送了2个猫框")
         assert messages.index("🐱 猫送了2个猫框") < messages.index("🐱 猫送了3个玉米")
 
+    async def test_starry_score_threshold_grants_s2_ticket_once(self, db, monkeypatch):
+        user = await _arrange_settlement(db, monkeypatch)
+        user.starry_score_accumulated = 1200.0
+        plan = actions._StopSettlementPlan(
+            user_id=USER_ID,
+            user=user,
+            gm_mode=False,
+            is_private=True,
+            step=_step(),
+            updated_status={},
+            is_new_sign=False,
+            display_income=0,
+            days_missed=0,
+            corn_count=0,
+        )
+
+        actions._set_starry_score_info(plan, score=1.0, count=1)
+        actions._set_starry_score_info(plan, score=1.0, count=1)
+
+        assert user.s2_ticket_claimed is True
+        assert "s2_ticket_claimed" in plan.dirty
+        assert plan.starry_score_info["claimed"] is True
+        assert plan.messages.count("🎫 星空努力值达标，已获得 S2 入场券") == 1
+
     async def test_mid_write_error_rolls_back_and_preserves_status(
         self, db, monkeypatch
     ):

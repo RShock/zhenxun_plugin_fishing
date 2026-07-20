@@ -695,6 +695,12 @@ def _set_starry_score_info(plan: _StopSettlementPlan, score: float, count: int) 
         return
     accumulated = float(plan.user.starry_score_accumulated or 0)
     target = float(S2_TICKET_SCORE_THRESHOLD)
+    if accumulated >= target and not bool(
+        getattr(plan.user, "s2_ticket_claimed", False)
+    ):
+        plan.user.s2_ticket_claimed = True
+        plan.dirty.add("s2_ticket_claimed")
+        plan.messages.append("🎫 星空努力值达标，已获得 S2 入场券")
     target_display = int(target) if target.is_integer() else target
     progress_pct = min(100.0, accumulated / target * 100) if target else 0.0
     plan.starry_score_info = {
