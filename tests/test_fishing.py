@@ -402,6 +402,33 @@ class TestFishingLoopIntegration:
         assert result.bait_remaining == 0
         assert result.bait_usage == {"test-bait": 1}
 
+    async def test_utr_pity_149_notifies_after_guaranteed_catch(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import FishData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
+
+        ctx = await self._context(db, duration_minutes=0)
+
+        async def effects(*_args, **_kwargs):
+            return {"weather_lost_wind": True}
+
+        def catch(*args, **_kwargs):
+            args[4].append((FishData(id="test-utr", base_price=1), "UTR", 1))
+            return args[3], 0
+
+        monkeypatch.setattr(engine, "_calculate_loop_effects", effects)
+        monkeypatch.setattr(engine, "_calculate_fishing_interval", lambda *_: 5.0)
+        monkeypatch.setattr(engine, "_catch_fish_at_interval", catch)
+
+        await engine.simulate_fishing_loop(
+            ctx,
+            initial_utr_pity=149,
+            time_credit_minutes=5,
+        )
+
+        assert any("保底触发" in message for message in ctx.buff_messages)
+
     async def test_bait_exhaustion_switches_to_no_bait_mode(self, db, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData
         from zhenxun.plugins.zhenxun_plugin_fishing.core import engine

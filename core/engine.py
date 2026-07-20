@@ -1177,7 +1177,9 @@ async def simulate_fishing_loop(
             (not _starry and effects.get("weather_lost_wind", False))
             or (_starry and effects.get("max_rarity", ctx.location.max_rarity) == "UTR")
         )
-        utr_was_guaranteed = state.utr_pity >= UTR_PITY_THRESHOLD and _utr_active
+        utr_was_guaranteed = (
+            state.utr_pity + 1 >= UTR_PITY_THRESHOLD and _utr_active
+        )
         from ..starry import is_starry_location as _is_starry
 
         frame_was_guaranteed = (
