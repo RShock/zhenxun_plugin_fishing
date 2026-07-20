@@ -17,6 +17,7 @@ FAMILIES = [
     "snake",
     "palindrome",
     "range",
+    "parity",
     "rhythm",
     "star_airplane",
     "pairs",
@@ -31,6 +32,7 @@ CN_FAMILY = {
     "snake": "贪吃蛇",
     "palindrome": "镜像回文",
     "range": "区间色系",
+    "parity": "奇偶色系",
     "rhythm": "周期节奏",
     "star_airplane": "星空飞机",
     "pairs": "对子",
@@ -45,6 +47,7 @@ NOTE = {
     "snake": "每步最多相差 1，允许相等，且方向至少转折一次。",
     "palindrome": "回文不含全同号，全同号已被同号连段吸收。",
     "range": "全小/全大只在完整 6 位成立时计分。",
+    "parity": "全奇为六位均取 1/3/5/7/9；全偶为六位均取 0/2/4/6/8，两者互斥且各计一次。",
     "rhythm": "周期结构独立计分，保留 ABAB、ABCABC。",
     "star_airplane": "6 位版星空飞机：第 2-5 位每一位都处于至少 2 连块中。",
     "pairs": "对子统计恰好长度为 2 的同号连段；3 位及以上同号连段不计对。同家族最大匹配：三对吸收两对。",
@@ -59,6 +62,8 @@ def make_features():
             features.append({"family": fam, "length": length, "label": f"{length}_{fam}"})
     features.append({"family": "range", "length": DIGITS, "label": "6_all_small_0_4"})
     features.append({"family": "range", "length": DIGITS, "label": "6_all_big_5_9"})
+    features.append({"family": "parity", "length": DIGITS, "label": "6_all_odd"})
+    features.append({"family": "parity", "length": DIGITS, "label": "6_all_even"})
     features.append({"family": "rhythm", "length": 4, "label": "ABAB"})
     features.append({"family": "rhythm", "length": 6, "label": "ABCABC"})
     features.append({"family": "star_airplane", "length": DIGITS, "label": "star_airplane"})
@@ -135,6 +140,14 @@ def all_small(d):
 
 def all_big(d):
     return all(5 <= x <= 9 for x in d)
+
+
+def all_odd(d):
+    return all(x % 2 == 1 for x in d)
+
+
+def all_even(d):
+    return all(x % 2 == 0 for x in d)
 
 
 def motif_abab(d, s):
@@ -226,6 +239,12 @@ def raw_and_max_features(d):
     if all_big(d):
         i = FEATURE_BY_LABEL["6_all_big_5_9"]
         present.add(i); raw[i] += 1; maximal[i] += 1
+    if all_odd(d):
+        i = FEATURE_BY_LABEL["6_all_odd"]
+        present.add(i); raw[i] += 1; maximal[i] += 1
+    if all_even(d):
+        i = FEATURE_BY_LABEL["6_all_even"]
+        present.add(i); raw[i] += 1; maximal[i] += 1
     for s in range(DIGITS - 4 + 1):
         if motif_abab(d, s):
             i = FEATURE_BY_LABEL["ABAB"]
@@ -268,6 +287,10 @@ def score_digits(d, weights, explain=False):
         add("6_all_small_0_4", "range", "1-6")
     if all_big(d):
         add("6_all_big_5_9", "range", "1-6")
+    if all_odd(d):
+        add("6_all_odd", "parity", "1-6", "六位数字全部为奇数")
+    if all_even(d):
+        add("6_all_even", "parity", "1-6", "六位数字全部为偶数")
     if star_airplane(d):
         add("star_airplane", "star_airplane", "1-6", "第2-5位均属于至少2连块")
 
@@ -319,6 +342,8 @@ def label_cn(label):
     direct = {
         "6_all_small_0_4": "6位全小(0-4)",
         "6_all_big_5_9": "6位全大(5-9)",
+        "6_all_odd": "6位全奇",
+        "6_all_even": "6位全偶",
         "ABAB": "ABAB",
         "ABCABC": "ABCABC",
         "star_airplane": "星空飞机",

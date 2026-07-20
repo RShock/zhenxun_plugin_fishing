@@ -1653,7 +1653,7 @@ code, .ic {
 
   <!-- 番型分组与分值 -->
   <div class="card">
-    <div class="sec-h">流星鱼番型一览（共 32 种）</div>
+    <div class="sec-h">流星鱼番型一览（共 34 种）</div>
     <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
       6 位编号按<strong>多个番型家族</strong>分别判定：<strong>不同家族可以叠加</strong>，分数相加后再四舍五入得到展示分。
       同一家族内不会把「被更长结构包住」的短段重复计分；部分家族还有「纯正档替代普通档」「高档吸收低档」的规则。
@@ -1666,7 +1666,7 @@ code, .ic {
         <li><strong>滑梯家族</strong>：普通滑梯允许停顿，包含全程停顿的全同号窗口；同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
         <li><strong>贪吃蛇家族</strong>：同一窗口若是「纯正贪吃蛇」（每步必动 ±1 且有转向），只按<strong>纯正</strong>计，不再计普通贪吃蛇。</li>
         <li><strong>对子家族</strong>：两对 / 三对只取更高的一档（有三对时不计两对）。</li>
-        <li><strong>葫芦 / 星空飞机 / 区间色系</strong>：满足条件时各计一次。</li>
+        <li><strong>葫芦 / 星空飞机 / 区间色系 / 奇偶色系</strong>：满足条件时各计一次。</li>
       </ul>
     </div>
     <div class="callout info" style="margin-bottom:12px">
@@ -1737,6 +1737,12 @@ code, .ic {
             <td>6 位全小 (0-4)</td><td>1.81</td><td>六位数字全部落在 0–4</td>
           </tr>
           <tr><td>6 位全大 (5-9)</td><td>1.81</td><td>六位数字全部落在 5–9</td></tr>
+
+          <tr>
+            <td rowspan="2"><span class="tag t-star">奇偶色系</span><br><span style="font-size:11px;color:var(--sub)">互斥·命中计一次</span></td>
+            <td>6 位全奇</td><td>1.81</td><td>六位数字全部为奇数（1、3、5、7、9），概率 1.5625%</td>
+          </tr>
+          <tr><td>6 位全偶</td><td>1.81</td><td>六位数字全部为偶数（0、2、4、6、8），概率 1.5625%</td></tr>
 
           <tr>
             <td rowspan="2"><span class="tag t-utr">周期节奏</span><br><span style="font-size:11px;color:var(--sub)">可与其它家族叠加</span></td>

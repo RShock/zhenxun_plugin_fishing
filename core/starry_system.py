@@ -98,6 +98,7 @@ CN_FAMILY = {
     "snake": "贪吃蛇",
     "palindrome": "镜像回文",
     "range": "区间色系",
+    "parity": "奇偶色系",
     "rhythm": "周期节奏",
     "star_airplane": "星空飞机",
     "pairs": "对子",
@@ -131,6 +132,10 @@ FEATURES = [
     ("palindrome", 6, "6_palindrome", 3.004365),
     ("range", 6, "6_all_small_0_4", 1.806180),
     ("range", 6, "6_all_big_5_9", 1.806180),
+    # 全奇/全偶：每一位均有 5/10 的合法数字，概率=(1/2)^6=1/64
+    # 分值 = -log10(1/64) = 1.806180
+    ("parity", 6, "6_all_odd", 1.806180),
+    ("parity", 6, "6_all_even", 1.806180),
     ("rhythm", 4, "ABAB", 1.598599),
     ("rhythm", 6, "ABCABC", 3.142668),
     ("star_airplane", 6, "star_airplane", 1.899285),
@@ -366,6 +371,10 @@ def score_starry_fish(value: int | str) -> StarryFish:
         features.append(_feature("6_all_small_0_4", "range", "1-6"))
     if all(5 <= digit <= 9 for digit in digits):
         features.append(_feature("6_all_big_5_9", "range", "1-6"))
+    if all(digit % 2 == 1 for digit in digits):
+        features.append(_feature("6_all_odd", "parity", "1-6", "六位数字全部为奇数"))
+    if all(digit % 2 == 0 for digit in digits):
+        features.append(_feature("6_all_even", "parity", "1-6", "六位数字全部为偶数"))
     if _star_airplane(digits):
         features.append(
             _feature("star_airplane", "star_airplane", "1-6", "第2-5位均属于至少2连块")
@@ -467,6 +476,8 @@ def label_cn(label: str) -> str:
     direct = {
         "6_all_small_0_4": "6位全小(0-4)",
         "6_all_big_5_9": "6位全大(5-9)",
+        "6_all_odd": "6位全奇",
+        "6_all_even": "6位全偶",
         "ABAB": "ABAB",
         "ABCABC": "ABCABC",
         "star_airplane": "星空飞机",

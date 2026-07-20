@@ -396,10 +396,11 @@ class TestStarWishNumbers:
             "6_slide",
             "6_palindrome",
             "6_all_big_5_9",
+            "6_all_odd",
             "star_airplane",
         }
-        assert scored.raw_score == pytest.approx(15.047072, abs=0.000001)
-        assert scored.display_score == 15
+        assert scored.raw_score == pytest.approx(16.853252, abs=0.000001)
+        assert scored.display_score == 17
         assert scored.reward_pool == "ultimate"
         assert not any(
             feature.label.startswith(("3_", "4_", "5_"))
@@ -448,6 +449,28 @@ class TestStarWishNumbers:
         # 用 000001：windows 00000=[5], 00001=[4,1]
         not_fh = score_starry_fish("000001")
         assert "full_house" not in {f.label for f in not_fh.features}
+
+    def test_all_odd_and_all_even_features(self):
+        odd_score = score_starry_fish("135791")
+        odd_labels = {f.label for f in odd_score.features}
+        assert "6_all_odd" in odd_labels
+        assert "6_all_even" not in odd_labels
+        assert next(
+            f for f in odd_score.features if f.label == "6_all_odd"
+        ).score == pytest.approx(1.806180)
+
+        even_score = score_starry_fish("024680")
+        even_labels = {f.label for f in even_score.features}
+        assert "6_all_even" in even_labels
+        assert "6_all_odd" not in even_labels
+        assert next(
+            f for f in even_score.features if f.label == "6_all_even"
+        ).score == pytest.approx(1.806180)
+
+        mixed_score = score_starry_fish("123456")
+        mixed_labels = {f.label for f in mixed_score.features}
+        assert "6_all_odd" not in mixed_labels
+        assert "6_all_even" not in mixed_labels
 
     def test_starry_reward_pool_boundaries_match_design(self):
         assert get_reward_pool(5) == "middle"

@@ -367,7 +367,7 @@ footer {
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <h2 id="s3">3 番型与分数系统</h2>
 
-<p>每一条星空鱼都是一个6位彩票号码，通过<strong>最大番种匹配算法</strong>计算展示分数。算法已在 <code>doc/s2设计/six_digit_lottery.py</code> 中完整实现，评估了 <mark class="key">32种特征番型</mark>，并基于概率的对数计算权重。</p>
+<p>每一条星空鱼都是一个6位彩票号码，通过<strong>最大番种匹配算法</strong>计算展示分数。算法已在 <code>doc/s2设计/six_digit_lottery.py</code> 中完整实现，评估了 <mark class="key">34种特征番型</mark>，并基于概率的对数计算权重。</p>
 
 <h3>3.1 番型家族</h3>
 
@@ -901,7 +901,7 @@ footer {
   <thead><tr><th>文件</th><th>用途</th></tr></thead>
   <tbody>
     <tr><td><code>six_digit_lottery.py</code></td><td>6位数字评分核心算法，遍历全部100万号码生成统计</td></tr>
-    <tr><td><code>six_fan_stats.tsv</code></td><td>32种番型的出现概率与权重</td></tr>
+    <tr><td><code>six_fan_stats.tsv</code></td><td>34种番型的出现概率与权重</td></tr>
     <tr><td><code>six_rounded_score_distribution.tsv</code></td><td>展示分0&ndash;17的分布</td></tr>
     <tr><td><code>starry_fish_simulation.py</code></td><td>三场景究极奖励模拟（旧机制）+ 努力值机制模拟（新机制）</td></tr>
     <tr><td><code>cat_frame_simulation.py</code></td><td>55个猫框收集时间模拟（星空木框升级）</td></tr>
