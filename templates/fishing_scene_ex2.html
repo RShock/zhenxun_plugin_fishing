@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing:border-box; }
+    html,body { margin:0; background:#03050d; }
+    body { width:420px; padding:14px; color:#edf8ff; font-family:'Microsoft YaHei',sans-serif; }
+    .header { margin:0 0 12px; }
+    h1 { margin:0; font-size:19px; letter-spacing:1px; }
+    .sub { margin-top:4px; color:#7998ad; font-size:11px; }
+    .case { margin-bottom:13px; padding:7px; border:1px solid rgba(88,198,255,.26); border-radius:11px; background:linear-gradient(145deg,#0d1b2b,#080c18); box-shadow:0 7px 20px rgba(0,0,0,.35); }
+    .case:last-child { margin-bottom:0; }
+    .label { display:flex; align-items:center; height:27px; font-size:13px; font-weight:700; }
+    .index { display:inline-grid; place-items:center; width:20px; height:20px; margin-right:7px; border-radius:50%; color:#04131f; background:#69dcff; }
+    .detail { margin-left:auto; color:#7daac0; font-size:10px; font-weight:400; }
+    .viewport { position:relative; width:376px; height:211px; overflow:hidden; border-radius:7px; background:#010308; }
+    canvas { width:100%; height:100%; display:block; image-rendering:auto; }
+    .badge { position:absolute; right:7px; bottom:6px; z-index:3; padding:2px 6px; border:1px solid rgba(138,230,255,.25); border-radius:8px; color:#bcefff; background:rgba(2,8,18,.74); font-size:9px; }
+    .blackhole .viewport::after { content:'EVENT HORIZON'; position:absolute; left:148px; top:96px; z-index:2; width:80px; text-align:center; color:rgba(255,218,154,.72); font-size:7px; letter-spacing:1.2px; pointer-events:none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>钓鱼场景 EX2 · 时空畸变</h1>
+    <div class="sub">逐像素 UV 逆映射 / WebGL2 fragment shader / Canvas2D 安全降级</div>
+  </div>
+  {% for case in cases %}
+  <section class="case {{ case.effect }}">
+    <div class="label"><span class="index">{{ case.index }}</span>{{ case.title }}<span class="detail">{{ case.detail }}</span></div>
+    <div class="viewport">
+      <canvas class="fx" width="752" height="422" data-effect="{{ case.effect }}" data-src="{{ case.scene_uri }}"></canvas>
+      <span class="badge">等待渲染…</span>
+    </div>
+  </section>
+  {% endfor %}
+<script>
+(() => {
+  'use strict';
+  const vertexSource = `#version 300 es
+    in vec2 a_position;
+    out vec2 v_uv;
+    void main(){ v_uv=a_position*.5+.5; gl_Position=vec4(a_position,0.,1.); }
+  `;
+  const fragmentSource = `#version 300 es
+    precision highp float;
+    uniform sampler2D u_scene;
+    uniform int u_mode;
+    uniform vec2 u_aspect;
+    in vec2 v_uv;
+    out vec4 outColor;
+
+    vec4 safeSample(vec2 uv){
+      vec2 edge=smoothstep(vec2(0.),vec2(.025),uv)*smoothstep(vec2(0.),vec2(.025),1.-uv);
+      return texture(u_scene,clamp(uv,0.,1.))*edge.x*edge.y;
+    }
+    void main(){
+      vec2 uv=v_uv;
+      if(u_mode==0){
+        float local=exp(-pow((uv.y-.53)/.24,2.));
+        float split=tanh((uv.y-.51)*11.);
+        float bend=.145*split*local + .055*sin(uv.x*15.5+uv.y*8.)*local;
+        uv.x-=bend;
+        uv.y-=.075*sin((uv.x-.5)*7.)*local + .065*split*exp(-pow((uv.x-.5)/.32,2.));
+        outColor=safeSample(uv);
+      }else if(u_mode==1){
+        vec2 p=(uv-.5)*u_aspect;
+        float r=max(length(p),.012);
+        float influence=smoothstep(.78,.05,r);
+        float angle=-2.9*influence*influence-.38/r*influence;
+        mat2 rot=mat2(cos(angle),-sin(angle),sin(angle),cos(angle));
+        p=rot*p*(1.+.34*influence);
+        uv=p/u_aspect+.5;
+        vec4 col=safeSample(uv);
+        float throat=smoothstep(.075,.17,r);
+        float spiral=.18*exp(-pow((r-.19)/.065,2.))*(.65+.35*sin(26.*r-angle*3.));
+        col.rgb+=spiral*vec3(.22,.55,.95);
+        outColor=vec4(col.rgb*throat,1.);
+      }else{
+        vec2 center=vec2(.52,.50);
+        vec2 p=(uv-center)*u_aspect;
+        float r=max(length(p),.008);
+        vec2 dir=p/r;
+        float horizon=.115;
+        float lens=.042/(r+.025)*smoothstep(.72,.12,r);
+        vec2 base=(p+dir*lens)/u_aspect+center;
+        float chroma=.010*exp(-pow((r-.245)/.09,2.));
+        float rr=safeSample(base+dir*chroma).r;
+        float gg=safeSample(base).g;
+        float bb=safeSample(base-dir*chroma).b;
+        vec3 col=vec3(rr,gg,bb);
+        float ring=exp(-pow((r-.19)/.022,2.));
+        float ring2=exp(-pow((r-.245)/.055,2.));
+        col+=ring*vec3(1.4,.72,.22)+ring2*vec3(.24,.16,.46);
+        float disk=exp(-pow(p.y/(.025+.10*abs(p.x)),2.))*smoothstep(.13,.18,r)*smoothstep(.72,.19,r);
+        col+=disk*vec3(1.15,.38,.08)*(1.+.45*sin(p.x*62.));
+        float shadow=smoothstep(horizon-.018,horizon+.018,r);
+        col*=shadow;
+        outColor=vec4(col,1.);
+      }
+    }
+  `;
+
+  function shader(gl,type,source){
+    const s=gl.createShader(type); gl.shaderSource(s,source); gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function drawWebGL(canvas,img,mode){
+    const surface=document.createElement('canvas'); surface.width=canvas.width; surface.height=canvas.height;
+    const gl=surface.getContext('webgl2',{alpha:false,antialias:true,preserveDrawingBuffer:true});
+    if(!gl) throw new Error('WebGL2 unavailable');
+    const program=gl.createProgram();
+    gl.attachShader(program,shader(gl,gl.VERTEX_SHADER,vertexSource));
+    gl.attachShader(program,shader(gl,gl.FRAGMENT_SHADER,fragmentSource));
+    gl.linkProgram(program);
+    if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+    gl.useProgram(program);
+    const buffer=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    const pos=gl.getAttribLocation(program,'a_position'); gl.enableVertexAttribArray(pos); gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+    const tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+    gl.uniform1i(gl.getUniformLocation(program,'u_mode'),mode);
+    gl.uniform2f(gl.getUniformLocation(program,'u_aspect'),canvas.width/canvas.height,1);
+    gl.viewport(0,0,canvas.width,canvas.height); gl.drawArrays(gl.TRIANGLES,0,6); gl.finish();
+    const output=canvas.getContext('2d');
+    if(!output) throw new Error('Canvas2D output unavailable');
+    output.drawImage(surface,0,0);
+  }
+  function drawFallback(canvas,img,mode){
+    const ctx=canvas.getContext('2d'); const w=canvas.width,h=canvas.height;
+    ctx.fillStyle='#02040b';ctx.fillRect(0,0,w,h);
+    if(mode===0){
+      for(let y=0;y<h;y+=4){
+        const t=y/h-.5, local=Math.exp(-Math.pow(t/.25,2));
+        const dx=(Math.tanh(t*10)*72+Math.sin(y*.075)*25)*local;
+        ctx.drawImage(img,0,y*img.height/h,img.width,Math.max(1,4*img.height/h),dx,y,w,5);
+      }
+    }else{
+      ctx.drawImage(img,0,0,w,h);
+      const g=ctx.createRadialGradient(w*.52,h*.5,mode===2?36:18,w*.52,h*.5,mode===2?155:125);
+      if(mode===1){g.addColorStop(0,'#000');g.addColorStop(.2,'rgba(0,0,0,.95)');g.addColorStop(.48,'rgba(30,110,210,.35)');g.addColorStop(1,'transparent');}
+      else{g.addColorStop(0,'#000');g.addColorStop(.28,'#000');g.addColorStop(.36,'rgba(255,128,28,.95)');g.addColorStop(.48,'rgba(80,120,255,.28)');g.addColorStop(1,'transparent');}
+      ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+    }
+  }
+  const modes={warp:0,vortex:1,blackhole:2};
+  const jobs=[...document.querySelectorAll('canvas.fx')].map(canvas=>new Promise(resolve=>{
+    const img=new Image(); img.hidden=true; img.className='shader-source'; document.body.appendChild(img);
+    img.onload=()=>{
+      let backend='WebGL2 shader';
+      try{drawWebGL(canvas,img,modes[canvas.dataset.effect]);}
+      catch(e){console.warn('EX2 WebGL2 fallback:',e);backend='Canvas2D 降级';drawFallback(canvas,img,modes[canvas.dataset.effect]);}
+      canvas.parentElement.querySelector('.badge').textContent=backend;
+      canvas.dataset.rendered='true'; resolve();
+    };
+    img.onerror=()=>{drawFallback(canvas,img,modes[canvas.dataset.effect]);canvas.dataset.rendered='error-fallback';resolve();};
+    img.src=canvas.dataset.src;
+  }));
+  Promise.all(jobs).then(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.documentElement.dataset.ex2Ready='true'; window.__FISHING_EX2_READY__=true;
+  })));
+})();
+</script>
+</body>
+</html>

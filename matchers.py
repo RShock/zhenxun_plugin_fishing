@@ -103,6 +103,12 @@ test_fishing_scene_ex_matcher = on_regex(
     priority=5,
     block=True,
 )
+test_fishing_scene_ex2_matcher = on_regex(
+    r"^\s*(?:测试)?钓鱼场景\s*[eE][xX]2\s*$",
+    permission=SUPERUSER,
+    priority=5,
+    block=True,
+)
 test_scene_render_matcher = on_regex(
     r"^\s*测试场景渲染\s*((?:\d+)|[sS]1)\s*$",
     permission=SUPERUSER,

@@ -685,7 +685,7 @@ code, .ic {
         <tbody>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。不填地图按当前流程选择；支持 1-20 和 S1。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。</td></tr>
-          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获，右上角会显示累计星空鱼分数。每次查看都会结算并重置计时器。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>背包</code></td><td>查看鱼、鱼饵、药水、展示框、素材等库存。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>卖鱼 [筛选]</code></td><td>卖出鱼。不带参数默认排除 UTR。支持稀有度、鱼 ID、全部等筛选。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>锁鱼 筛选</code> / <code>解锁 筛选</code></td><td>保护或解除保护鱼。支持鱼 ID、稀有度（SR/UTR）、位置通配符（<code>S1**</code>）、全部。</td></tr>
@@ -721,7 +721,7 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水互斥。</p></div>
       <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、展示木框、猫猫框也有效。与真多多药水互斥。</p></div>
-      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼结果，并从本次开钓时间起重新结算全部已钓时段。</p></div>
+      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼结果，并从本次开钓时间起重新结算全部已钓时段；结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
@@ -869,7 +869,8 @@ code, .ic {
           <tr><td><code>gm补成就 [@用户]</code></td><td>重新检查并补发用户成就</td></tr>
           <tr><td><code>测试渲染 [名称]</code></td><td>测试渲染相关资源</td></tr>
           <tr><td><code>测试场景渲染 ID</code></td><td>随机渲染角色到指定场景图，检查站位和遮挡</td></tr>
-          <tr><td><code>测试钓鱼场景ex</code></td><td>一次生成四张场景效果对照图，检查斜切、透视、上下扭曲与水波热浪效果</td></tr>
+          <tr><td><code>测试钓鱼场景ex</code></td><td>一次生成四张基础场景效果对照图，检查斜切、透视、上下扭曲与水波热浪效果</td></tr>
+          <tr><td><code>钓鱼场景EX2</code> / <code>测试钓鱼场景EX2</code></td><td>一次展示强局部上下扭曲、漩涡吸入，以及含引力透镜、事件视界和色散的黑洞效果</td></tr>
           <tr><td><code>钓鱼调试 [开启/关闭/状态]</code></td><td>控制钓鱼调试模式</td></tr>
           <tr><td><code>钓鱼公告 内容</code></td><td>向所有活跃群广播消息</td></tr>
         </tbody>

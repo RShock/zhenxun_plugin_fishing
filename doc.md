@@ -143,6 +143,7 @@
 - 实现见 `render/fishing_scene.py`：`_parse_scene_layout` / `_allocate_track_slots` / `_place_on_tracks` / `_place_on_heights`
 - 超管调试指令 `测试场景渲染 ID` 可随机渲染 8 个角色到指定场景图上，ID 支持数字地图与 S1，用于检查多轨道分布、遮挡与姓名错开
 - 超管调试指令 `测试钓鱼场景ex` 由 `render/fishing_scene_ex.py` 与 `templates/fishing_scene_ex.html` 生成单张纵向长截图，固定依次加载 1～4 图四张不同场景图，用于对照验证前四类图片变形能力：① CSS 二维平移/缩放/旋转/斜切；② CSS 3D 整体透视；③ 将图片按横向网格切片后，对上、下切片施加不同方向和幅度的位移/斜切/缩放；④ SVG `feTurbulence` + `feDisplacementMap` 水波热浪位移。该指令仅做渲染能力测试，不影响正式钓鱼场景。
+- 超管调试指令 `钓鱼场景EX2`（兼容 `测试钓鱼场景EX2`）由 `render/fishing_scene_ex2.py` 与 `templates/fishing_scene_ex2.html` 生成单张纵向截图。页面优先创建 WebGL2 上下文，以 GLSL ES 3.00 fragment shader 对每个输出像素执行 UV 逆映射，分别展示：① 使用局部高斯权重、`tanh` 上下分区与正弦扰动形成强局部上下差异扭曲；② 半径相关旋转角与向心缩放形成漩涡吸入；③ 径向偏折采样形成引力透镜，并叠加事件视界遮蔽、光子环/吸积盘以及 RGB 分通道偏移色散。图片加载、GPU `finish`、双 `requestAnimationFrame` 后设置 `window.__FISHING_EX2_READY__`；渲染入口额外等待稳定帧。WebGL2 不可用或 shader 编译失败时自动改用 Canvas2D 切片/径向渐变降级，PlaywrightEngine 失败时再以 `html_to_pic` 等待截图并重试三次。
 
 ## 工程目录约定
 
@@ -293,6 +294,7 @@
 
 - 展示木框保底 `FRAME_PITY_THRESHOLD=150`，迷途风 UTR 保底 `UTR_PITY_THRESHOLD=150`，猫猫框保底 `CAT_FRAME_PITY_THRESHOLD=15`
 - 钓鱼状态页面和网页端右上角均显示全部三种保底计数（当前/阈值）
+- 钓鱼状态图右上角显示玩家 `starry_score_accumulated`，渲染前使用 `floor(x + 0.5)` 四舍五入为整数；数据由 `core/actions.py::check_fishing_status` 传入 `render/fishing_status.py` 与 `templates/fishing_status.html`
 - buff 时间轴显示规则：
   - 钓鱼状态/钓鱼页面：显示开钓时间1小时前到当前时间8小时后的区间，标记开钓时间位置
   - 收杆页面：显示开钓到收杆的时间区间，不显示多余时间
@@ -578,7 +580,7 @@ probability = 0.002 + lead × 0.001  # 即 0.2% + lead × 0.1%
 | 回档药水 | 清空当前钓鱼进度，并从原 `start_time` 重新结算完整已钓时段 | — | `钓鱼使用 回档药水` | `shop/potion_use.py` → `use_rollback_potion` |
 | 幸运药水 | 双次结算取更高稀有度，同稀有度优先图鉴未收集鱼种；不可叠加，重复使用时间往后堆叠（剩余+8h） | 8h | `钓鱼使用 幸运药水` | `shop/potion_use.py` → `use_lucky_potion` |
 
-- 回档药水机制：保留会话原 `start_time`，清空已累计的鱼获、鱼饵消耗、猫吃鱼与礼物等结果，并将 `last_settle_time` 同步重置为原 `start_time`；随后调用 `check_fishing_status`，按当前规则重新模拟从开钓到当前时刻的完整时间线，避免只从用药时刻开始结算。
+- 回档药水机制：保留会话原 `start_time`，清空已累计的鱼获、鱼饵消耗、猫吃鱼与礼物等结果，并将 `last_settle_time` 同步重置为原 `start_time`；随后仅调用 `check_fishing_status`，按当前规则重新模拟从开钓到当前时刻的完整时间线并返回钓鱼状态图，避免只从用药时刻开始结算。该流程不调用 `stop_fishing`，也不调用 `get_status_count` / `increment_status_count` 读写每日状态次数。
 - 真多多药水机制：单实例 buff（`BUFF_TYPE_DUODUO`），使用时若已存在未过期多多 buff 则 `end_time += 8h * 数量`，否则新建 `8h * 数量` buff；效果不可叠加，固定 `rod_level -= 1`，`quantity = 2`；**数量翻倍对 UTR 鱼生效，但对展示木框等非鱼类道具不生效**（保底木框路径返回 quantity=1）；**对流星鱼后置生效**：不改掉落率与编号生成，在 `roll_starry_fish` 得到最终编号后由 `expand_starry_fish_with_duoduo` 检查多多并复制为两条**相同编号**流星鱼（展示/入库/抽奖各计 2 条）；**多多药水支持小数倍率合并**：`_compute_duoduo_quantity(duoduo_count, cat_park_double_rate)` 将多多整数倍率（`1 << duoduo_count`）与猫乐园旋转逗猫棒的小数概率倍率合并为浮点总倍率，整数部分为保底数量，小数部分为额外 +1 的概率（如 1.10 → 90%得1条/10%得2条），使两种翻倍机制在结算层面统一
 - 幸运药水机制：单实例 buff（`BUFF_TYPE_LUCKY_DOUBLE`），使用时若已存在未过期幸运 buff 则 `end_time += 8h`，否则新建 8h buff；引擎 `_catch_fish_with_buffs` 中抽第二条鱼，按封顶后稀有度比较——更高稀有度取第二条，相同稀有度时若第一条已图鉴收集而第二条未收集则取第二条；钓鱼状态页左上角显示 ⭐ 图标
 - **真多多/幸运药水互斥**：同一时间只能有 1 种药水生效。使用幸运药水前若检测到未过期的真多多 buff（`BUFF_TYPE_DUODUO`）则拒绝使用；使用真多多药水前若检测到未过期的幸运 buff（`BUFF_TYPE_LUCKY_DOUBLE`）则拒绝使用；提示"同一时间只有1种药水可以生效"。检查发生在扣减药水之前，未消耗道具
