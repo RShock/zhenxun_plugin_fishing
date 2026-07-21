@@ -131,41 +131,6 @@ def _calc_entry_price(
     return calculate_fish_price(fish_data, rarity, effective_difficulty)
 
 
-def apply_repair_displays_from_backpack_on_user(
-    user,
-    dirty: set[str],
-) -> list[str]:
-    """按现有展示价值规则，用背包历史鱼补齐或升级展示栏。"""
-    candidates: list[tuple[int, str, str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    backpack = user.backpack if isinstance(user.backpack, dict) else {}
-    for numeric_id, entry in backpack.items():
-        if not isinstance(entry, dict) or int(entry.get("count", 0) or 0) <= 0:
-            continue
-        fish_name = str(entry.get("fish_name", ""))
-        rarity = str(entry.get("rarity", "N"))
-        key = (fish_name, rarity)
-        if key in seen or fish_name == "展示木框":
-            continue
-        fish_data = ConfigManager.get_fish_by_name(fish_name)
-        if not fish_data:
-            continue
-        seen.add(key)
-        value = calculate_fish_price(fish_data, rarity, 0) * 2
-        candidates.append((value, fish_name, rarity, str(numeric_id)))
-
-    messages: list[str] = []
-    for _value, fish_name, rarity, numeric_id in sorted(
-        candidates, key=lambda item: item[0], reverse=True
-    ):
-        message = apply_auto_display_on_user(
-            user, fish_name, rarity, numeric_id, dirty
-        )
-        if message:
-            messages.append(message)
-    return messages
-
-
 def apply_auto_display_on_user(
     user,
     fish_name: str,

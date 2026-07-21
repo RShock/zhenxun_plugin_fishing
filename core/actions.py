@@ -771,10 +771,6 @@ def _apply_catch_achievement_display_stage(
             plan.dirty,
         )
     )
-    for display_message in sm.apply_repair_displays_from_backpack_on_user(
-        plan.user, plan.dirty
-    ):
-        plan.messages.append(f"🏆 自动展示: {display_message}")
     _append_pity_hints(plan)
     _log_stop_result(plan, fish_coins)
     render_data = _build_stop_render_data(

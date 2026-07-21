@@ -5,8 +5,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
+from zhenxun.plugins.zhenxun_plugin_fishing.core import actions, stop_mutations
 from zhenxun.plugins.zhenxun_plugin_fishing.core.context import StepResult
+from zhenxun.plugins.zhenxun_plugin_fishing.core.result import add_fish_to_user
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
 from zhenxun.plugins.zhenxun_plugin_fishing.models import user_mutations
 
@@ -80,19 +81,66 @@ def _transaction_with_memory_rollback(user, events):
 
 
 class TestStopSettlementTransaction:
-    async def test_stop_repairs_historical_high_value_fish_and_is_idempotent(
+    async def test_add_fish_to_user_auto_displays_new_fish(self, db):
+        user = await db.user_get(USER_ID)
+        user.display_slots = 1
+
+        result = await add_fish_to_user(
+            USER_ID,
+            [("小鲫鱼", "N", "111", 1)],
+            check_achievements=False,
+        )
+
+        assert user.displays == {
+            "1": {"fish_name": "小鲫鱼", "rarity": "N", "numeric_id": "111"}
+        }
+        assert any("自动展示" in message for message in result["messages"])
+
+    async def test_add_fish_to_user_respects_auto_display_false(self, db):
+        user = await db.user_get(USER_ID)
+        user.display_slots = 1
+
+        result = await add_fish_to_user(
+            USER_ID,
+            [("小鲫鱼", "N", "111", 1)],
+            check_achievements=False,
+            auto_display=False,
+        )
+
+        assert user.displays == {}
+        assert user.backpack["111"]["count"] == 1
+        assert not any("自动展示" in message for message in result["messages"])
+
+    async def test_apply_add_fish_entries_respects_auto_display_false(self, db):
+        user = await db.user_get(USER_ID)
+        user.display_slots = 1
+        dirty = set()
+
+        result = stop_mutations.apply_add_fish_entries_on_user(
+            user,
+            [("小鲫鱼", "N", "111", 1)],
+            dirty,
+            check_achievements=False,
+            auto_display=False,
+        )
+
+        assert user.displays == {}
+        assert user.backpack["111"]["count"] == 1
+        assert not any("自动展示" in message for message in result["messages"])
+
+    async def test_stop_only_auto_displays_new_fish_without_scanning_history(
         self, db, monkeypatch
     ):
         user = await _arrange_settlement(db, monkeypatch)
         user.backpack = {
-            "111": {"fish_name": "小鲫鱼", "rarity": "N", "count": 1},
-            "121": {"fish_name": "麦穗鱼", "rarity": "N", "count": 1},
             "141": {"fish_name": "草鱼", "rarity": "N", "count": 1},
         }
-        user.displays = {
-            "1": {"fish_name": "小鲫鱼", "rarity": "N", "numeric_id": "111"}
-        }
-        user.display_slots = 2
+        user.displays = {}
+        user.display_slots = 1
+        status = actions._compute_settle_step.return_value[1]
+        status["fish_caught"] = [
+            {"fish_id": "小鲫鱼", "rarity": "N", "count": 1}
+        ]
         monkeypatch.setattr(
             actions,
             "_stop_db_transaction",
@@ -109,18 +157,14 @@ class TestStopSettlementTransaction:
 
         await stop_fishing(USER_ID)
 
-        expected_displays = {
-            "1": {"fish_name": "麦穗鱼", "rarity": "N", "numeric_id": "121"},
-            "2": {"fish_name": "草鱼", "rarity": "N", "numeric_id": "141"},
+        assert user.displays == {
+            "1": {"fish_name": "小鲫鱼", "rarity": "N", "numeric_id": "111"}
         }
-        assert user.displays == expected_displays
-        assert len(save_calls) == 1
-
-        await start_fishing(USER_ID, LOCATION_ID, "SettlementUser")
-        save_calls.clear()
-        await stop_fishing(USER_ID)
-
-        assert user.displays == expected_displays
+        assert user.backpack["141"] == {
+            "fish_name": "草鱼",
+            "rarity": "N",
+            "count": 1,
+        }
         assert len(save_calls) == 1
 
     async def test_success_writes_full_chain_once(self, db, monkeypatch):
