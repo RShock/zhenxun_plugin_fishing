@@ -361,7 +361,7 @@ def _patch_render(monkeypatch):
         f"{FISHING_PKG}.render.backpack",
         f"{FISHING_PKG}.render.shop",
         f"{FISHING_PKG}.render.collection",
-        f"{FISHING_PKG}.render.misc",
+        f"{FISHING_PKG}.render.common",
         f"{FISHING_PKG}.render",
         f"{FISHING_PKG}.utils",
     ]:
@@ -401,7 +401,7 @@ def _patch_nonebot(monkeypatch):
     monkeypatch.setattr(
         f"{FISHING_PKG}.shop.potion_use.logger", mock_logger, raising=False
     )
-    monkeypatch.setattr(f"{FISHING_PKG}.shop.misc.logger", mock_logger, raising=False)
+    monkeypatch.setattr(f"{FISHING_PKG}.shop.account.logger", mock_logger, raising=False)
     monkeypatch.setattr(
         f"{FISHING_PKG}.backpack.sell.logger", mock_logger, raising=False
     )

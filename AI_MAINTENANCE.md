@@ -586,7 +586,7 @@ fishing/
 
 2. **保底计数器双存储**：`frame_pity_counter` 等既存 `FishingUser` 模型又存 `fishing_status` 字典，收杆时需要合并。
 
-3. **向后兼容门面模式**：`fishing.py`、`shop.py`、`backpack.py` 为 thin facade，仅 re-export。新增逻辑必须放入 `core/`、`shop/`、`backpack/` 子包。
+3. **兼容门面模式**：`fishing.py` 暂作旧 API 的 thin facade；`shop/`、`backpack/` 直接以包的 `__init__.py` 作为公开入口。新增逻辑必须放入对应子包。
 
 4. **config.py 的 re-export**：所有常量从 `constants.py` 导入并通过 `config.py` 重新导出。旧代码仍可 `from .config import RARITY_INDEX`。
 

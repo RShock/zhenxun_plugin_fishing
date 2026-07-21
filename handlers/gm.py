@@ -8,7 +8,7 @@ from nonebot.adapters import Event, Message
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 
-from ..fishing import stop_fishing
+from ..core import stop_fishing
 from ..gm import parse_qq_id_list
 from ..matchers import (
     gm_add_item_matcher,

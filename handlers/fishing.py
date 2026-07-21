@@ -9,7 +9,7 @@ from nonebot.matcher import Matcher
 from nonebot.params import Arg, RegexGroup
 
 from ..config import ConfigManager
-from ..fishing import check_fishing_status, render_scene, start_fishing, stop_fishing
+from ..core import check_fishing_status, render_scene, start_fishing, stop_fishing
 from ..core.actions import run_post_settlement
 from ..matchers import fishing_matcher, status_matcher, stop_fishing_matcher
 from ..models import FishingUser

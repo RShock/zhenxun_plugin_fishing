@@ -3,7 +3,8 @@ import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
-CONFIG_DIR = Path(__file__).parent / "config"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2]
+CONFIG_DIR = PLUGIN_ROOT / "config"
 
 RARITY_DISTRIBUTION = [
     [0.6655, 0.3345, 0.0000, 0.0000, 0.0000, 0.0000],

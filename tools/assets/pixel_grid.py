@@ -10,9 +10,9 @@
 
 横向 1536，竖向 1024，更适合 GPT 绘图。
 CLI 用法:
-    python pixel_grid.py grid_16.png --cell-size 16
-    python pixel_grid.py grid_32.png --cell-size 32
-    python pixel_grid.py place art.png out.png --cell-size 16 --gx 4 --gy 4
+    python tools/assets/pixel_grid.py grid_16.png --cell-size 16
+    python tools/assets/pixel_grid.py grid_32.png --cell-size 32
+    python tools/assets/pixel_grid.py place art.png out.png --cell-size 16 --gx 4 --gy 4
 """
 
 from pathlib import Path

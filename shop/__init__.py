@@ -6,10 +6,10 @@ shop/ — 商店、药水、打窝、皮肤子包。
   purchase   — 购买、装备升级、展示栏升级
   nest       — 打窝
   potion_use — 药水使用（时光、回档、幸运、闪光、展示木框加速、UTR自选券）
-  misc       — 兑换、签到、改名、皮肤切换
+  account    — 兑换、签到、改名、皮肤切换
 """
 
-from .misc import change_skin, check_sign, exchange_to_gold, rename_fishing_user
+from .account import change_skin, check_sign, exchange_to_gold, rename_fishing_user
 from .nest import do_cat_frame_nest, do_nest
 from .potion_use import (
     use_display_frame_buff,
@@ -53,7 +53,7 @@ __all__ = [
     "use_flash_potion",
     "use_utr_select_ticket",
     "use_display_frame_buff",
-    # misc
+    # account
     "exchange_to_gold",
     "check_sign",
     "rename_fishing_user",

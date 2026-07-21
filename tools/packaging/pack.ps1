@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$PluginDir = $PSScriptRoot
+$PluginDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $PluginName = Split-Path $PluginDir -Leaf
 $Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $OutputDir = Join-Path $PluginDir "dist"
@@ -57,7 +57,7 @@ function Test-ShouldExclude {
     )
     if ($excludeExts -contains $ext) { return $true }
 
-    if ($name -ieq 'pack.ps1') { return $true }
+    if ($p -ieq 'tools/packaging/pack.ps1') { return $true }
     if ($name -like 'fishing_pack_list_*.txt') { return $true }
 
     return $false

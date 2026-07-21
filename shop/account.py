@@ -1,5 +1,5 @@
 """
-商店杂项 — 兑换金币、签到、改名、皮肤管理。
+玩家账户操作 — 兑换金币、签到、改名、皮肤管理。
 """
 
 from zhenxun.services.log import logger
