@@ -272,26 +272,7 @@
 
 ---
 
-## 十三、模拟系统说明
-
-### 13.1 模拟文件
-
-`tests/cat_park_sim/simulation.py` — 独立运行, 不依赖 NoneBot
-
-### 13.2 运行方式
-
-```powershell
-# 单次模拟
-python tests/cat_park_sim/simulation.py
-
-# 指定种子
-python tests/cat_park_sim/simulation.py 42
-
-# 批量测试 (50次, 输出统计)
-python tests/cat_park_sim/simulation.py batch
-```
-
-### 13.3 关键参数速查
+## 十三、关键参数速查
 
 | 参数 | 值 |
 |------|-----|
@@ -306,44 +287,9 @@ python tests/cat_park_sim/simulation.py batch
 
 ---
 
-## 十四、Demo 与地图编辑器说明
+## 十四、已知设计边界与待定事项
 
-### 14.1 Demo 文件
-
-`../fishing/demo/cat_park/index.html` — 纯前端独立运行的模拟钓鱼页面
-
-### 14.2 运行方式
-
-```powershell
-python -m http.server 8767 --directory zhenxun/plugins/fishing/demo/cat_park
-# 浏览器访问 http://localhost:8767
-```
-
-### 14.3 Demo 功能
-
-- 点击「抛竿一天！」模拟 12h 钓鱼，结算鱼获、材料、签到
-- 点击建筑槽弹出升级面板（显示材料需求、当前持有、建筑效果）
-- 手动选择「升级！」消耗材料建造
-- 天气标签显示当日天气，可触发6种效果
-- 图鉴收集追踪 (X/60)
-- 竣工弹窗
-
-### 14.4 地图编辑器
-
-`../fishing/demo/cat_park/map_editor.html` — 纯前端地图编辑器页面。
-
-功能：
-- 导入乐园背景图
-- 拖拽 9 个设施标记调整像素坐标，或在左侧直接输入 X/Y
-- 为每个设施的 Lv1/Lv2/Lv3 上传图片，并按当前等级预览
-- 滚轮/按钮缩放画布，支持按默认百分比重置坐标
-- 导出 `cat_park_map.json`，内容包含背景尺寸、设施名称、等级、坐标和各等级图片文件名
-
----
-
-## 十五、已知设计边界与待定事项
-
-### 15.1 已定型（不应随意修改）
+### 14.1 已定型（不应随意修改）
 
 - 9 栋建筑的功能定义
 - 雕像门控的 3 级解锁规则
@@ -351,14 +297,14 @@ python -m http.server 8767 --directory zhenxun/plugins/fishing/demo/cat_park
 - 鱼价 1.0×（原0.99×折扣已移除，避免隐藏折扣稀释建筑加成增幅）
 - 材料 3 种及其分布（ab/bc/ac 各 2 + a/b/c 各 1）
 
-### 15.2 可微调参数
+### 14.2 可微调参数
 
 - 材料基础掉率（当前实现按 45% 固定，调此参数直接影响建设天数；由 balance_v20 推导）
 - 建筑具体成本的单个数值
 - 签到奖池内容
 - 24h 钓鱼量（可改为可配置）
 
-### 15.3 尚未设计的
+### 14.3 尚未设计的
 
 - 竣工后「每日稳定收益」的确切数值
 - 图鉴收集满 60/60 后的奖励（如有）

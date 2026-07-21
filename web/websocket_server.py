@@ -102,19 +102,8 @@ class WebSocketServer:
         self._app.router.add_get("/api/player/{user_id}/state", get_state)
         self._app.router.add_get("/api/player/{user_id}/achievements", get_achievements)
         self._app.router.add_get("/api/player/{user_id}/collection", get_collection)
-        # 目录 URL 默认不会自动打开 index.html，这里强制落到编辑器页面
-        self._app.router.add_get(
-            "/_lab/track-editor", self._track_editor_index
-        )
-        self._app.router.add_get(
-            "/_lab/track-editor/", self._track_editor_index
-        )
         self._app.router.add_static("/api/resource/", _RESOURCES_DIR)
         self._app.router.add_static("/", _STATIC_DIR, show_index=True)
-
-    async def _track_editor_index(self, request: web.Request) -> web.FileResponse:
-        path = _STATIC_DIR / "_lab" / "track-editor" / "index.html"
-        return web.FileResponse(path)
 
     # ── WebSocket 处理 ──
 

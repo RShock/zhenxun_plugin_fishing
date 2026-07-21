@@ -126,8 +126,7 @@ r:\zhenxun_bot\zhenxun\plugins\fishing\tests\
 ├── test_regex_patterns.py         # 正则匹配模式测试
 ├── test_fish_selection.py         # 鱼获选择解析（parse_fish_selection）
 ├── test_achievement_gold.py       # 成就和金币系统
-├── test_lost_wind.py              # 迷途风天气逻辑
-└── cat_park_sim/simulation.py     # 猫公园模拟测试
+└── test_lost_wind.py              # 迷途风天气逻辑
 ```
 
 **运行方式（完整 bot 仓库）**：

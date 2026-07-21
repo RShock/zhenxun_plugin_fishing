@@ -139,7 +139,6 @@
 - **兼容**：
   1. 无 `T…@` → 旧高度格式 `83` / `75_65`
   2. 历史 `T4@...`（带容量数字）仍可解析，容量数字被忽略
-- **在线轨道编辑器**：`http://<host>:4159/_lab/track-editor/` 或 `.../index.html`（手机优先布局，大按钮/大字号）。可选地图、点选/拖拽编辑多条轨道，导出准确文件名到剪贴板。列表优先 `GET /api/scenes`，未重启时回退静态 `scenes.json`
 - **文件名坐标**：接近整数（误差 ≤0.1）四舍五入为整数，其余保留 1 位小数，避免路径过长导致 Windows/`file://` 裂图
 - 实现见 `render/fishing_scene.py`：`_parse_scene_layout` / `_allocate_track_slots` / `_place_on_tracks` / `_place_on_heights`
 - 超管调试指令 `测试场景渲染 ID` 可随机渲染 8 个角色到指定场景图上，ID 支持数字地图与 S1，用于检查多轨道分布、遮挡与姓名错开
@@ -536,8 +535,7 @@ probability = 0.002 + lead × 0.001  # 即 0.2% + lead × 0.1%
 ## 猫猫乐园
 
 - 当前主设计文档：`event/猫猫乐园/GAME_DESIGN.md`（v4，新版统一乐园逻辑）
-- 可交互模拟钓鱼页面：`../fishing/demo/cat_park/index.html`，纯前端页面，点击“抛竿一天！”模拟 12h 钓鱼、材料/鱼获、签到、建筑升级和竣工
-- 地图编辑器页面：`../fishing/demo/cat_park/map_editor.html`，用于导入背景图、拖拽 9 个设施坐标、上传各等级设施图并导出 `cat_park_map.json`；后端建设图使用纯 `render_html` 渲染地图区域：背景图和设施图均为 HTML 绝对定位元素；设施以导出坐标作为图片中心点，按 y 坐标从上到下叠加，且会按 `cat_park_map.json` 的 `backgroundSize` 与实际 `大地图.png` 尺寸比例同步缩放坐标和设施图，避免压缩地图后坐标跑位
+- 后端建设图使用纯 `render_html` 渲染地图区域：背景图和设施图均为 HTML 绝对定位元素；设施以 `cat_park_map.json` 的导出坐标作为图片中心点，按 y 坐标从上到下叠加，并按配置背景尺寸与实际 `大地图.png` 尺寸比例同步缩放坐标和设施图
 - **S1 配置统一在 `config/locations.json`**（id=S1，difficulty=6，max_rarity=UTR），不再硬编码在 `cat_park.py` 中；`get_cat_park_location()` 从 `ConfigManager.get_location("S1")` 取数据；`ConfigManager.get_location(id)` 的数字索引快捷方式会校验 `loc.id == location_id`，避免 `"11"` 误命中 S1
 - 地图选择（`render/misc.py`）：S1 不再额外 append，而是按 `has_cat_park_ticket` 过滤——白名单用户或满足解锁条件的用户可见并可进入 S1。
 - 当前实现核心：`418648118`、`470103427` 强制解锁并显示 S1；其他用户集齐任意两张普通地图的全部 UTR 图鉴后也可解锁并进入；输入 `钓鱼S1`/`钓鱼s1` 进入猫猫乐园；每竿 30%~45% 概率获得建设材料（稀有度统一为 N，随猫爬架广场等级递增），其余概率获得 10 种活动鱼；活动鱼写在 `config/fish.json`，S1 内部鱼编号为 0~9，鱼编号格式统一为 `s1{fish_idx}{rarity_idx}`（如 `s101`），输入兼容 `S1xx` 与旧 `-1xx` 并自动迁移为小写 `s1xx`；图片按 `resources/images/fish/s1-鱼名.png` 查找；`建设猫猫乐园 [编号/建筑名]` 使用 `resources/images/event1/大地图.png` 作为空地背景，显示 3 种素材图标库存，并按建设进度叠加 9 栋建筑；传奇猫雕像按 Lv1/Lv2/Lv3 门控后续等级，最终奖励鱼竿 +1
