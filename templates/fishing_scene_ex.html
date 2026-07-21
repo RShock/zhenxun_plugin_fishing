@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing:border-box; }
+    html, body { margin:0; padding:0; background:#07141f; }
+    body { width:360px; padding:12px; color:#e9f7ff; font-family:'Microsoft YaHei',sans-serif; }
+    .title { margin:0 0 10px; font-size:16px; font-weight:700; letter-spacing:1px; }
+    .case { margin:0 0 12px; padding:8px; overflow:hidden; border:1px solid rgba(130,220,255,.24); border-radius:10px; background:rgba(18,48,65,.92); }
+    .case:last-child { margin-bottom:0; }
+    .label { height:22px; font-size:12px; line-height:18px; color:#ccefff; }
+    .index { display:inline-block; width:18px; height:18px; margin-right:5px; border-radius:50%; text-align:center; color:#06202d; background:#78ddff; font-weight:700; }
+    .viewport { position:relative; width:318px; height:178px; overflow:hidden; border-radius:6px; background:#02090d; }
+    .scene { width:100%; height:100%; display:block; object-fit:cover; image-rendering:pixelated; }
+
+    /* 1. 单元素基础二维变换：平移、缩放、旋转与斜切。 */
+    .skew .scene { transform:translate(-7px, 2px) scale(1.08) rotate(-1.2deg) skewX(-8deg); transform-origin:center; }
+
+    /* 2. 对整个图片平面做 3D 透视，不拆分图层。 */
+    .perspective { perspective:360px; background:#061018; }
+    .perspective .scene { transform:translateY(1px) rotateX(10deg) rotateY(-13deg) scale(1.08); transform-origin:center; }
+
+    /* 3. 横向网格切片分别位移/缩放，令上、下区域产生不同方向和幅度的扭曲。 */
+    .mesh { background:#05131a; }
+    .mesh-strip { position:absolute; left:-12px; width:342px; height:23px; background-image:var(--scene); background-repeat:no-repeat; background-size:318px 178px; image-rendering:pixelated; transform-origin:center; }
+    .mesh-strip:nth-child(1) { top:0;   background-position:12px 0;      transform:translateX(-6px) skewX(-7deg) scaleX(1.02); }
+    .mesh-strip:nth-child(2) { top:22px; background-position:12px -22px; transform:translateX(-3px) skewX(-4deg) scaleX(1.01); }
+    .mesh-strip:nth-child(3) { top:44px; background-position:12px -44px; transform:translateX(1px) skewX(-1deg); }
+    .mesh-strip:nth-child(4) { top:66px; background-position:12px -66px; transform:translateX(4px) skewX(2deg) scaleX(.99); }
+    .mesh-strip:nth-child(5) { top:88px; background-position:12px -88px; transform:translateX(6px) skewX(4deg) scaleX(1.01); }
+    .mesh-strip:nth-child(6) { top:110px; background-position:12px -110px; transform:translateX(3px) skewX(7deg) scaleX(1.03); }
+    .mesh-strip:nth-child(7) { top:132px; background-position:12px -132px; transform:translateX(-2px) skewX(10deg) scaleX(1.05); }
+    .mesh-strip:nth-child(8) { top:154px; height:24px; background-position:12px -154px; transform:translateX(-7px) skewX(13deg) scaleX(1.07); }
+
+    /* 4. SVG turbulence 作为位移图，模拟水波/热浪的折射扰动。 */
+    .displacement .scene { width:calc(100% + 16px); margin-left:-8px; filter:url(#water-heat-displacement); }
+    .filter-defs { position:absolute; width:0; height:0; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <svg class="filter-defs" aria-hidden="true">
+    <filter id="water-heat-displacement" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.065" numOctaves="2" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="13" xChannelSelector="R" yChannelSelector="B"/>
+    </filter>
+  </svg>
+  <h1 class="title">测试钓鱼场景 EX · 图片变形对照</h1>
+  {% for case in cases %}
+  <section class="case {{ case.effect }}">
+    <div class="label"><span class="index">{{ case.index }}</span>{{ case.title }}</div>
+    <div class="viewport{% if case.effect == 'perspective' %} perspective{% endif %}">
+      {% if case.effect == 'mesh' %}
+        {% for _ in range(8) %}<i class="mesh-strip" style="--scene:url('{{ case.scene_uri }}')"></i>{% endfor %}
+      {% else %}
+        <img class="scene" src="{{ case.scene_uri }}" alt="{{ case.title }}">
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</body>
+</html>

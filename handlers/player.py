@@ -17,6 +17,7 @@ from ..matchers import (
     debug_render_matcher,
     rename_matcher,
     skin_matcher,
+    test_fishing_scene_ex_matcher,
     test_render_matcher,
     test_scene_render_matcher,
     weather_forecast_matcher,
@@ -26,6 +27,7 @@ from ..render import (
     _get_all_skin_files,
     render_emoji_test,
     render_fishing_scene,
+    render_fishing_scene_ex_test,
     render_weather_forecast,
 )
 from ..shop import change_skin, get_skin_list_image, rename_fishing_user
@@ -171,6 +173,19 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         await matcher.send(msg)
     except Exception as e:
         await matcher.finish(f"渲染测试失败: {e}")
+
+
+@test_fishing_scene_ex_matcher.handle()
+async def _(event: Event, matcher: Matcher):
+    user_id = event.get_user_id()
+    is_private = _is_private_chat(event)
+    try:
+        image = await render_fishing_scene_ex_test()
+        await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+    except Exception as e:
+        await _send_text(
+            matcher, f"钓鱼场景 EX 测试失败: {e}", user_id, is_private=is_private
+        )
 
 
 @test_scene_render_matcher.handle()

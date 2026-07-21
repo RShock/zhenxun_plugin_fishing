@@ -29,6 +29,7 @@ from .fishing_scene import (
     render_fishing_scene,
     render_skin_list,
 )
+from .fishing_scene_ex import render_fishing_scene_ex_test
 from .fishing_status import render_fishing_status
 from .common import (
     render_exchange_result,
@@ -69,6 +70,7 @@ __all__ = [
     "render_exchange_result",
     "render_fishing_result",
     "render_fishing_scene",
+    "render_fishing_scene_ex_test",
     "render_fishing_start",
     "render_fishing_status",
     "render_html",
