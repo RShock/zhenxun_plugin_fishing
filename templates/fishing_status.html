@@ -5,6 +5,7 @@
 {% block extra_css %}
 .container { position: relative; }
 .lucky-badge { position: absolute; top: 8px; left: 10px; font-size: 22px; z-index: 10; line-height: 1; }
+.starry-score { position: absolute; top: 8px; right: 10px; z-index: 10; font-size: 12px; font-weight: 700; color: #596579; }
 .section { margin-bottom: 12px; }
 .section-title { font-size: 14px; font-weight: bold; color: #333; padding: 6px 10px; background: #f0f7ff; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #4facfe; }
 .fish-list { padding: 0 4px; }
@@ -48,6 +49,7 @@
 
 {% block content %}
 {% if lucky_active %}<div class="lucky-badge">⭐</div>{% endif %}
+<div class="starry-score">星空鱼分数 {{ starry_score_accumulated }}</div>
 <div class="title">🎣 钓鱼状态</div>
 <div class="info-line">📍 {{ location_name }} (Lv.{{ location_difficulty }}) · ⚔️ 渔力：{{ fishing_power }}（鱼竿等级：{{ rod_level }}，钓鱼难度：{{ location_difficulty }}）</div>
 <div class="info-line{% if not weather_active %} weather-inactive{% endif %}">{{ weather_emoji }} {{ weather_name }}{% if weather_desc %}（{{ weather_desc }}）{% endif %} · ⏳ 已钓鱼 {{ duration_text }} · 🐟 累计 {{ total_count }} 条{% if new_count > 0 %}（+{{ new_count }}）{% endif %} · ⏱️ 间隔 {{ fishing_interval | round(1) }} 分钟/条{% if speed_bonus_detail %}（{{ speed_bonus_detail }}）{% endif %}</div>

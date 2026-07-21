@@ -470,6 +470,7 @@ async def check_fishing_status(
         utr_pity=status_dict.get("utr_pity", user.utr_pity_counter),
         cat_frame_pity=status_dict.get("cat_frame_pity", user.cat_frame_pity_counter),
         meteor_fish_numbers=status_dict.get("meteor_fish_numbers") or None,
+        starry_score_accumulated=float(user.starry_score_accumulated or 0),
     )
 
     return image, step

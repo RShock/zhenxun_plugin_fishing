@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from math import floor
 import time
 
 from ..config import calculate_fish_price
@@ -350,6 +351,7 @@ async def render_fishing_status(
     cat_frame_pity_threshold: int = 15,
     meteor_fish_numbers: list[int] | None = None,
     bait_remaining: int | None = None,
+    starry_score_accumulated: float = 0.0,
 ) -> bytes:
     t0 = time.perf_counter()
 
@@ -428,6 +430,7 @@ async def render_fishing_status(
         frame_pity_threshold=frame_pity_threshold,
         utr_pity_threshold=utr_pity_threshold,
         cat_frame_pity_threshold=cat_frame_pity_threshold,
+        starry_score_accumulated=floor(starry_score_accumulated + 0.5),
     )
     t3 = time.perf_counter()
 
