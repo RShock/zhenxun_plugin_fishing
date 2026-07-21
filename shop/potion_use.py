@@ -64,11 +64,11 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     await FishingUser.remove_item(user_id, "回档药水", "potion", 1)
 
-    now = datetime.now()
+    original_start_time = status_dict["start_time"]
     reset_status = {
         "location_id": status_dict["location_id"],
-        "start_time": status_dict["start_time"],
-        "last_settle_time": now.isoformat(),
+        "start_time": original_start_time,
+        "last_settle_time": original_start_time,
         "fish_caught": [],
         "bait_consumed": 0,
         "frame_pity": user.frame_pity_counter,
