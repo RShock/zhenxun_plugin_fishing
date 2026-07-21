@@ -451,11 +451,14 @@ async def render_cat_park_image(user_id: str, message: str = "") -> bytes:
                 next_text += f"（{reason}）"
             elif lacks:
                 next_text += f"（材料不足：{'、'.join(lacks)}）"
+        level_icon = _EVENT_IMAGE_DIR / f"level_{level}.png"
+        level_src = level_icon.as_uri() if level_icon.exists() else ""
         rows.append(
             {
                 "idx": idx,
                 "name": name,
                 "level": level,
+                "level_src": level_src,
                 "next": next_text,
                 "effect": effect,
                 "can": can_upgrade,
@@ -479,6 +482,26 @@ async def render_cat_park_image(user_id: str, message: str = "") -> bytes:
         + f"<div><div class='mn'>{card['name']}</div><div class='mc'>×{card['count']}</div></div></div>"
         for card in material_cards
     )
+
+    def _level_html(row: dict[str, Any]) -> str:
+        if row["level_src"]:
+            return (
+                f"<div class='level'>"
+                f"<img class='level-icon' src='{row['level_src']}' alt='Lv{row['level']}' />"
+                f"</div>"
+            )
+        return f"<div class='level'>Lv{row['level']}</div>"
+
+    rows_html = "".join(
+        f"<div class='row {r['status_cls']}'>"
+        f"<div class='idx'>{r['idx']}</div>"
+        f"<div class='name'>{r['name']}</div>"
+        f"{_level_html(r)}"
+        f"<div><div class='next'>{r['next']}</div>"
+        f"<div class='effect'>下级效果：{r['effect']}</div></div>"
+        f"</div>"
+        for r in rows
+    )
     html = f"""
 <!doctype html><html><head><meta charset='utf-8'>
 <style>
@@ -494,11 +517,12 @@ body {{ margin:0; padding:14px; width:720px; box-sizing:border-box; font-family:
 .material img {{ width:34px; height:34px; object-fit:contain; image-rendering:pixelated; }}
 .material .mn {{ font-size:13px; font-weight:700; }}
 .material .mc {{ font-size:14px; color:#d36b20; font-weight:800; }}
-.row {{ display:grid; grid-template-columns:32px 120px 48px 1fr; gap:8px; align-items:start; padding:6px 0; border-top:1px solid #ead8bd; font-size:14px; }}
+.row {{ display:grid; grid-template-columns:32px 120px 56px 1fr; gap:8px; align-items:center; padding:6px 0; border-top:1px solid #ead8bd; font-size:14px; }}
 .row:first-child {{ border-top:0; }}
 .idx {{ font-weight:800; color:#8a8a8a; }}
 .name {{ font-weight:700; }}
-.level {{ color:#8a8a8a; }}
+.level {{ display:flex; align-items:center; justify-content:center; color:#8a8a8a; min-height:40px; }}
+.level-icon {{ width:40px; height:auto; max-height:48px; object-fit:contain; image-rendering:pixelated; }}
 .next {{ color:#8a8a8a; }}
 .effect {{ color:#8a8a8a; font-size:13px; margin-top:2px; }}
 .row.can-build .idx, .row.can-build .name, .row.can-build .level, .row.can-build .next, .row.can-build .effect {{ color:#2e7d32; }}
@@ -512,7 +536,7 @@ body {{ margin:0; padding:14px; width:720px; box-sizing:border-box; font-family:
 <div class='panel'>
 {f"<div class='msg'>{message}</div>" if message else ""}
 <div class='materials'>{material_html}</div>
-{"".join(f"<div class='row {r['status_cls']}'><div class='idx'>{r['idx']}</div><div class='name'>{r['name']}</div><div class='level'>Lv{r['level']}</div><div><div class='next'>{r['next']}</div><div class='effect'>下级效果：{r['effect']}</div></div></div>" for r in rows)}
+{rows_html}
 <div class='hint'>发送「建设猫猫乐园 编号/建筑名」升级建筑<br>编号可紧贴指令，也支持空格分隔，如「建设猫猫乐园4567」「建设猫猫乐园 4 5 6 7」<br>建筑效果仅在猫猫乐园内有效</div>
 </div></body></html>
 """
