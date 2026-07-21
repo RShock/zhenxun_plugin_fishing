@@ -80,6 +80,49 @@ def _transaction_with_memory_rollback(user, events):
 
 
 class TestStopSettlementTransaction:
+    async def test_stop_repairs_historical_high_value_fish_and_is_idempotent(
+        self, db, monkeypatch
+    ):
+        user = await _arrange_settlement(db, monkeypatch)
+        user.backpack = {
+            "111": {"fish_name": "小鲫鱼", "rarity": "N", "count": 1},
+            "121": {"fish_name": "麦穗鱼", "rarity": "N", "count": 1},
+            "141": {"fish_name": "草鱼", "rarity": "N", "count": 1},
+        }
+        user.displays = {
+            "1": {"fish_name": "小鲫鱼", "rarity": "N", "numeric_id": "111"}
+        }
+        user.display_slots = 2
+        monkeypatch.setattr(
+            actions,
+            "_stop_db_transaction",
+            _transaction_with_memory_rollback(user, []),
+        )
+        real_save_dirty = user_mutations.save_dirty
+        save_calls = []
+
+        async def tracked_save_dirty(saved_user, dirty):
+            save_calls.append(set(dirty))
+            await real_save_dirty(saved_user, dirty)
+
+        monkeypatch.setattr(user_mutations, "save_dirty", tracked_save_dirty)
+
+        await stop_fishing(USER_ID)
+
+        expected_displays = {
+            "1": {"fish_name": "麦穗鱼", "rarity": "N", "numeric_id": "121"},
+            "2": {"fish_name": "草鱼", "rarity": "N", "numeric_id": "141"},
+        }
+        assert user.displays == expected_displays
+        assert len(save_calls) == 1
+
+        await start_fishing(USER_ID, LOCATION_ID, "SettlementUser")
+        save_calls.clear()
+        await stop_fishing(USER_ID)
+
+        assert user.displays == expected_displays
+        assert len(save_calls) == 1
+
     async def test_success_writes_full_chain_once(self, db, monkeypatch):
         user = await _arrange_settlement(db, monkeypatch)
         events = []
