@@ -36,7 +36,9 @@ _TIME_POTION_IGNORED_BUFF_TYPES = frozenset(
 )
 
 
-async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes | str]:
+async def use_time_potion_settle(
+    user_id: str, hours: int, potion_count: int = 0
+) -> tuple[bool, bytes | str]:
     """使用时光药水，先结算历史待处理时间，再结算药水时间。
 
     所有结果合并到钓鱼状态（status_dict），等用户收杆时统一结算。
@@ -54,15 +56,11 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
 
     # ── 读取当前保底计数（status_dict 优先，若无则从 user 记录读取）──
     user = await FishingUser.get_user(user_id)
-    frame_pity = status_dict.get(
-        "frame_pity", user.frame_pity_counter if user else 0
-    )
+    frame_pity = status_dict.get("frame_pity", user.frame_pity_counter if user else 0)
     cat_frame_pity = status_dict.get(
         "cat_frame_pity", user.cat_frame_pity_counter if user else 0
     )
-    utr_pity = status_dict.get(
-        "utr_pity", user.utr_pity_counter if user else 0
-    )
+    utr_pity = status_dict.get("utr_pity", user.utr_pity_counter if user else 0)
 
     # 累计变量
     all_fish: list = []
@@ -147,8 +145,7 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
 
     # 过滤多多/幸运/闪光 buff（仅阶段二；闪光作为独立 buff 可与多多/幸运叠加）
     ctx2.buffs = [
-        b for b in ctx2.buffs
-        if b.buff_type not in _TIME_POTION_IGNORED_BUFF_TYPES
+        b for b in ctx2.buffs if b.buff_type not in _TIME_POTION_IGNORED_BUFF_TYPES
     ]
 
     simulation2 = await simulate_fishing_loop(
@@ -210,6 +207,10 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
         cat_gifts=merged_cat_gifts_result,
         meteor_fish_numbers=all_meteor if all_meteor else None,
     )
+    if potion_count > 0:
+        updated_status["time_potions_used"] = (
+            int(status_dict.get("time_potions_used", 0)) + potion_count
+        )
     await FishingUser.update_fishing_status(user_id, updated_status)
 
     # 鱼饵消耗

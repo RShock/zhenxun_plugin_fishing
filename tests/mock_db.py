@@ -375,6 +375,8 @@ class MockDB:
             "bait_consumed": 0,
             "frame_pity": u.frame_pity_counter,
             "utr_pity": u.utr_pity_counter,
+            "cat_frame_pity": u.cat_frame_pity_counter,
+            "time_potions_used": 0,
         }
         return u.fishing_status
 
@@ -511,9 +513,7 @@ class MockDB:
                 count += 1
         return count
 
-    async def backpack_lock_by_location_prefix(
-        self, user_id: str, prefix: str
-    ) -> int:
+    async def backpack_lock_by_location_prefix(self, user_id: str, prefix: str) -> int:
         u = await self.user_get(user_id)
         if not isinstance(u.backpack, dict):
             return 0

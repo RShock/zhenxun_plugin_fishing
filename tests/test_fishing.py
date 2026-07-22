@@ -5,6 +5,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
+
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import (
     SimulationResult,
     check_fishing_status,
@@ -51,6 +53,35 @@ class TestStartFishing:
         user.rod_level = 1
         image, ok, hint = await start_fishing(USER_ID, "999")
         assert ok is False
+
+    async def test_shadow_scene_is_hidden_and_restricted(self, db, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing import render as render_module
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
+
+        scene_mock = AsyncMock(return_value=b"SHADOW_SCENE")
+        select_mock = AsyncMock(return_value=b"LOCATION_LIST")
+        monkeypatch.setattr(actions, "render_scene", scene_mock)
+        monkeypatch.setattr(render_module, "render_location_select", select_mock)
+
+        denied_image, denied_ok, denied_hint = await start_fishing(
+            "418648119", "-11", "Denied"
+        )
+        assert denied_image == b"LOCATION_LIST"
+        assert denied_ok is False
+        assert "指定测试账号" in denied_hint
+        assert await FishingUser.get_status("418648119") is None
+
+        image, ok, hint = await start_fishing("418648118", "-11", "ShadowTester")
+        assert image == b"SHADOW_SCENE"
+        assert ok is True
+        assert hint == ""
+        status = await FishingUser.get_status("418648118")
+        assert status is not None
+        assert status["location_id"] == "11"
+        assert status["shadow_scene"] is True
+        assert status["time_potions_used"] == 0
+        rendered_location = scene_mock.await_args.args[1]
+        assert rendered_location.id == "11"
 
     async def test_start_fishing_sign_in_on_first_fish(self, db):
         await start_fishing(USER_ID, LOCATION_1, "TestUser")
@@ -402,9 +433,7 @@ class TestFishingLoopIntegration:
         assert result.bait_remaining == 0
         assert result.bait_usage == {"test-bait": 1}
 
-    async def test_utr_pity_149_notifies_after_guaranteed_catch(
-        self, db, monkeypatch
-    ):
+    async def test_utr_pity_149_notifies_after_guaranteed_catch(self, db, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.config import FishData
         from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
 
@@ -445,9 +474,7 @@ class TestFishingLoopIntegration:
         assert result.bait_remaining == 0
         assert "没有其他鱼饵了" in ctx.buff_messages[-1]
 
-    async def test_bait_switch_only_updates_simulation_state(
-        self, db, monkeypatch
-    ):
+    async def test_bait_switch_only_updates_simulation_state(self, db, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData
         from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
 

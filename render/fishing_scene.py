@@ -566,6 +566,7 @@ async def render_fishing_scene(
     hook_level: int = 0,
     weather_info: dict | None = None,
     material_rate: float = 0.0,
+    scene_inverted: bool = False,
 ) -> bytes:
     from .fishing_result import render_fishing_start
 
@@ -633,6 +634,7 @@ async def render_fishing_scene(
         weather_active=weather.active,
         weather_overlay_uri=weather.overlay_uri,
         material_rate=material_rate,
+        scene_inverted=scene_inverted,
     )
 
     t_html = time.perf_counter()

@@ -3,7 +3,9 @@
 from datetime import datetime, timedelta
 import inspect
 import json
+from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -38,7 +40,81 @@ def test_public_render_signatures_remain_compatible():
         "buff_messages",
     ]
     assert scene_params["weather_info"].default is None
+    assert scene_params["scene_inverted"].default is False
     assert status_params["weather_info"].default is None
+
+
+def test_shadow_scene_template_rotates_the_complete_card():
+    template = (
+        Path(fishing_scene.__file__).parent.parent / "templates" / "fishing_scene.html"
+    ).read_text(encoding="utf-8")
+
+    assert ".sw.scene-inverted { transform:rotate(180deg);" in template
+    assert 'class="sw{% if scene_inverted %} scene-inverted{% endif %}"' in template
+
+
+@pytest.mark.asyncio
+async def test_scene_renderer_forwards_shadow_scene_flag(monkeypatch):
+    from zhenxun.plugins.zhenxun_plugin_fishing.core import scene
+
+    now = datetime.now()
+    location = SimpleNamespace(
+        id="11",
+        name="shadow-lake",
+        difficulty=11,
+        max_rarity="UTR",
+        fish_pool=[],
+    )
+    user = SimpleNamespace(
+        rod_level=11,
+        hook_level=0,
+        bait_id="0",
+        achievements=["collect_scene_11"],
+    )
+    render_mock = AsyncMock(return_value=b"SHADOW_IMAGE")
+
+    monkeypatch.setattr(scene, "collect_scene_players", AsyncMock(return_value=[]))
+    monkeypatch.setattr(scene, "get_location_weather", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        scene.FishingWeather, "get_today_weather", AsyncMock(return_value=None)
+    )
+    monkeypatch.setattr(
+        scene.FishingBuff, "get_location_buff_count", AsyncMock(return_value=0)
+    )
+    monkeypatch.setattr(
+        scene.FishingBuff,
+        "get_frame_buff_count_for_location",
+        AsyncMock(return_value=0),
+    )
+
+    class _NoBuffQuery:
+        async def first(self):
+            return None
+
+    monkeypatch.setattr(scene.FishingBuff, "filter", lambda **kwargs: _NoBuffQuery())
+    monkeypatch.setattr(scene.FishingUser, "get_user", AsyncMock(return_value=user))
+    monkeypatch.setattr(scene, "get_bait_info", AsyncMock(return_value=("", 0, 0)))
+    monkeypatch.setattr(scene, "calculate_display_probabilities", lambda *a, **k: {})
+    monkeypatch.setattr(
+        scene.FishingUser,
+        "get_status",
+        AsyncMock(
+            return_value={
+                "location_id": "11",
+                "start_time": now.isoformat(),
+                "shadow_scene": True,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        scene.FishingBuff,
+        "get_active_buffs_for_fishing",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(scene, "render_fishing_scene", render_mock)
+
+    assert await scene.render_scene("418648118", location) == b"SHADOW_IMAGE"
+    assert render_mock.await_args.kwargs["scene_inverted"] is True
 
 
 def test_scene_preparation_handles_defaults_and_boundary_weather(monkeypatch):

@@ -52,8 +52,11 @@ async def test_time_potion_persists_progress_then_end_fishing_applies_rewards(db
 
     persisted_status = await FishingUser.get_status(user_id)
     assert persisted_status is not None
+    assert persisted_status["time_potions_used"] == 1
     assert persisted_status["fish_caught"]
-    assert datetime.fromisoformat(persisted_status["last_settle_time"]) <= datetime.now()
+    assert (
+        datetime.fromisoformat(persisted_status["last_settle_time"]) <= datetime.now()
+    )
 
     # 经过一个可结算时段后，从公开收杆入口完成会话并落库奖励。
     persisted_status["last_settle_time"] = (

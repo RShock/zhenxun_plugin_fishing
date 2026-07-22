@@ -35,6 +35,10 @@ from .scene import render_scene
 from .settlement_status import build_settlement_status
 from .speed import build_speed_bonus_detail, calculate_effective_fishing_interval
 
+SHADOW_SCENE_INPUT = "-11"
+SHADOW_SCENE_LOCATION_ID = "11"
+SHADOW_SCENE_USER_ID = "418648118"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 内部辅助
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -194,19 +198,31 @@ async def start_fishing(
                 image = await render_scene(user_id, loc, group_id=group_id)
                 return image, False, "你已经在钓鱼了，输入【收杆】结束钓鱼！"
 
-    location = ConfigManager.get_location(location_id)
+    shadow_scene = location_id == SHADOW_SCENE_INPUT
+    if shadow_scene and str(user_id) != SHADOW_SCENE_USER_ID:
+        locations = ConfigManager.get_locations()
+        from ..render import render_location_select
+
+        image = await render_location_select(user_id, locations, user.rod_level)
+        return image, False, "该隐藏测试地图仅对指定测试账号开放。"
+
+    effective_location_id = SHADOW_SCENE_LOCATION_ID if shadow_scene else location_id
+    location = ConfigManager.get_location(effective_location_id)
     from ..cat_park import has_cat_park_ticket, is_cat_park_location
     from ..starry import has_starry_ship, is_starry_location
 
-    if (
-        not location
-        or (
-            is_cat_park_location(location_id) and not await has_cat_park_ticket(user_id)
-        )
-        or (is_starry_location(location_id) and not await has_starry_ship(user_id))
-        or (
-            not is_cat_park_location(location_id)
-            and user.rod_level < location.difficulty
+    if not location or (
+        not shadow_scene
+        and (
+            (
+                is_cat_park_location(location_id)
+                and not await has_cat_park_ticket(user_id)
+            )
+            or (is_starry_location(location_id) and not await has_starry_ship(user_id))
+            or (
+                not is_cat_park_location(location_id)
+                and user.rod_level < location.difficulty
+            )
         )
     ):
         locations = ConfigManager.get_locations()
@@ -219,7 +235,11 @@ async def start_fishing(
     user.bait_id = str(best_bait_id)
     await user.save(update_fields=["bait_id"])
 
-    await FishingUser.start_fishing(user_id, location.id)
+    status = await FishingUser.start_fishing(user_id, location.id)
+    if shadow_scene:
+        # 玩法数据仍绑定 11 图，只用状态标记控制当前玩家的场景倒转。
+        status["shadow_scene"] = True
+        await FishingUser.update_fishing_status(user_id, status)
     image = await render_scene(user_id, location, group_id=group_id)
     logger.info(f"用户 {user_id} 在 {location.name} 开始钓鱼")
     return image, True, ""
@@ -473,7 +493,6 @@ async def check_fishing_status(
         utr_pity=status_dict.get("utr_pity", user.utr_pity_counter),
         cat_frame_pity=status_dict.get("cat_frame_pity", user.cat_frame_pity_counter),
         meteor_fish_numbers=status_dict.get("meteor_fish_numbers") or None,
-        starry_score_accumulated=float(user.starry_score_accumulated or 0),
     )
 
     return image, step
@@ -557,9 +576,7 @@ async def _apply_session_reward_stage(plan: _StopSettlementPlan) -> None:
     plan.total_fish = deserialize_fish_caught(status.get("fish_caught", []))
     plan.total_bait_consumed = status.get("bait_consumed", 0)
     plan.frame_pity = status.get("frame_pity", plan.user.frame_pity_counter)
-    plan.cat_frame_pity = status.get(
-        "cat_frame_pity", plan.user.cat_frame_pity_counter
-    )
+    plan.cat_frame_pity = status.get("cat_frame_pity", plan.user.cat_frame_pity_counter)
     plan.utr_pity = status.get("utr_pity", plan.user.utr_pity_counter)
     plan.cat_eaten_fish = deserialize_fish_caught(status.get("cat_eaten_fish", []))
     plan.cat_gifts = status.get("cat_gifts", default_cat_gifts())
@@ -632,7 +649,6 @@ def _apply_pity_cat_gift_stage(plan: _StopSettlementPlan) -> None:
         plan.utr_pity,
         plan.dirty,
     )
-
 
 
 def _apply_starry_rewards(plan: _StopSettlementPlan) -> tuple[float, int]:

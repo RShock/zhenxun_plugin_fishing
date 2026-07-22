@@ -685,7 +685,7 @@ code, .ic {
         <tbody>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。不填地图按当前流程选择；支持 1-20 和 S1。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。</td></tr>
-          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获，右上角会显示累计星空鱼分数。每次查看都会结算并重置计时器。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>背包</code></td><td>查看鱼、鱼饵、药水、展示框、素材等库存。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>卖鱼 [筛选]</code></td><td>卖出鱼。不带参数默认排除 UTR。支持稀有度、鱼 ID、全部等筛选。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>锁鱼 筛选</code> / <code>解锁 筛选</code></td><td>保护或解除保护鱼。支持鱼 ID、稀有度（SR/UTR）、位置通配符（<code>S1**</code>）、全部。</td></tr>
@@ -721,7 +721,7 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水互斥。</p></div>
       <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、展示木框、猫猫框也有效。与真多多药水互斥。</p></div>
-      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼结果，并从本次开钓时间起重新结算全部已钓时段；结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
+      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼结果，并从本次开钓时间起重新结算全部已钓时段；本轮已使用的时光药水会等量退回。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
@@ -1150,8 +1150,7 @@ code, .ic {
     <div class="callout info">
       <strong>两种解锁方式：</strong>
       <br>① 集齐任意两张普通地图（1-10）的全部 UTR 图鉴
-      <br>② 白名单用户可强制解锁
-    </div>
+      <br>    </div>
     <div class="cmd-card" style="margin-top:10px">
       <span class="cmd-name">钓鱼S1</span>
       <p class="cmd-desc">进入猫猫乐园地图开始钓鱼。</p>
@@ -1641,7 +1640,7 @@ code, .ic {
         <thead><tr><th>奖池</th><th>内容</th></tr></thead>
         <tbody>
           <tr><td>低级</td><td>玉米、黑商额外兑换券、中级抽奖碎片、0.5积分（等概率）</td></tr>
-          <tr><td>中级</td><td>多多药水、幸运药水、重置药水、猫框 ×3、高级抽奖碎片</td></tr>
+          <tr><td>中级</td><td>多多药水、幸运药水、回档药水、猫框 ×3、高级抽奖碎片</td></tr>
           <tr><td>高级</td><td>闪光药水、时光药水、UTR 自选券、究极抽奖碎片</td></tr>
           <tr><td>究极</td><td>时光药水 ×10、UTR 自选券 ×10</td></tr>
         </tbody>
@@ -1656,7 +1655,7 @@ code, .ic {
 
   <!-- 番型分组与分值 -->
   <div class="card">
-    <div class="sec-h">流星鱼番型一览（共 34 种）</div>
+    <div class="sec-h">流星鱼番型一览（共 36 种）</div>
     <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
       6 位编号按<strong>多个番型家族</strong>分别判定：<strong>不同家族可以叠加</strong>，分数相加后再四舍五入得到展示分。
       同一家族内不会把「被更长结构包住」的短段重复计分；部分家族还有「纯正档替代普通档」「高档吸收低档」的规则。
@@ -1767,6 +1766,16 @@ code, .ic {
           <tr>
             <td><span class="tag t-cat">葫芦</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
             <td>葫芦</td><td>2.45</td><td>任意连续 5 位为 <code>AAABB</code> 或 <code>AABBB</code>，如 <code>11122x</code>、<code>x22333</code></td>
+          </tr>
+
+          <tr>
+            <td><span class="tag t-utr">分块连号</span><br><span style="font-size:11px;color:var(--sub)">命中计一次·可叠加</span></td>
+            <td>连号</td><td>2.66</td><td>将六位拆成 3 个二位数或 2 个三位数，块值严格递增或递减 1。如 <code>111213</code> = 11/12/13，<code>100101</code> = 100/101</td>
+          </tr>
+
+          <tr>
+            <td><span class="tag t-basic">兜底番型</span><br><span style="font-size:11px;color:var(--sub)">不与任何番型叠加</span></td>
+            <td>屁胡</td><td>0.80</td><td>赋分按「某数字至少 3 次」的宽松概率（约 15.76%，可含其他番型形状）；<strong>结算</strong>仅在其他番型全不匹配时生效，有任何其他番型则不计</td>
           </tr>
         </tbody>
       </table>
@@ -1943,12 +1952,16 @@ code, .ic {
     ['palindrome', 6, '6_palindrome', 3.004365],
     ['range', 6, '6_all_small_0_4', 1.806180],
     ['range', 6, '6_all_big_5_9', 1.806180],
+    ['parity', 6, '6_all_odd', 1.806180],
+    ['parity', 6, '6_all_even', 1.806180],
     ['rhythm', 4, 'ABAB', 1.598599],
     ['rhythm', 6, 'ABCABC', 3.142668],
     ['star_airplane', 6, 'star_airplane', 1.899285],
     ['pairs', 2, 'two_pair', 1.359121],
     ['pairs', 3, 'three_pair', 3.091515],
-    ['full_house', 5, 'full_house', 2.454693]
+    ['full_house', 5, 'full_house', 2.454693],
+    ['chunk_sequence', 6, 'chunk_sequence', 2.658763],
+    ['pihu', 6, 'pihu', 0.802444]
   ];
   var STARRY_FEATURE_SCORES = {};
   STARRY_FEATURES.forEach(function(item){ STARRY_FEATURE_SCORES[item[2]] = item[3]; });
@@ -2029,8 +2042,10 @@ code, .ic {
   function starryLabelCn(label){
     var direct = {
       '6_all_small_0_4': '6位全小(0-4)', '6_all_big_5_9': '6位全大(5-9)',
+      '6_all_odd': '6位全奇', '6_all_even': '6位全偶',
       ABAB: 'ABAB', ABCABC: 'ABCABC', star_airplane: '星空飞机',
-      two_pair: '两对', three_pair: '三对', full_house: '葫芦'
+      two_pair: '两对', three_pair: '三对', full_house: '葫芦',
+      chunk_sequence: '连号', pihu: '屁胡'
     };
     if(direct[label]) return direct[label];
     var separator = label.indexOf('_');
@@ -2062,6 +2077,10 @@ code, .ic {
       features.push(starryFeature('6_all_small_0_4', 'range', '1-6'));
     if(digits.every(function(digit){ return digit >= 5 && digit <= 9; }))
       features.push(starryFeature('6_all_big_5_9', 'range', '1-6'));
+    if(digits.every(function(digit){ return digit % 2 === 1; }))
+      features.push(starryFeature('6_all_odd', 'parity', '1-6', '六位数字全部为奇数'));
+    if(digits.every(function(digit){ return digit % 2 === 0; }))
+      features.push(starryFeature('6_all_even', 'parity', '1-6', '六位数字全部为偶数'));
     var airplane = true;
     for(var i = 1; i < 5; i++){
       if(digits[i] !== digits[i - 1] && digits[i] !== digits[i + 1]) airplane = false;
@@ -2123,6 +2142,24 @@ code, .ic {
     if(fullHouseSpans.length){
       var fullSpan = (fullHouseSpans[0][0] + 1) + '-' + fullHouseSpans[fullHouseSpans.length - 1][1];
       features.push(starryFeature('full_house', 'full_house', fullSpan, '5位窗口为AAABB或AABBB'));
+    }
+
+    var twoDigit = [digits[0] * 10 + digits[1], digits[2] * 10 + digits[3], digits[4] * 10 + digits[5]];
+    var twoStep = twoDigit[1] - twoDigit[0];
+    var sequenceMode = (Math.abs(twoStep) === 1 && twoDigit[2] - twoDigit[1] === twoStep) ? '2+2+2' : '';
+    if(!sequenceMode){
+      var firstThree = digits[0] * 100 + digits[1] * 10 + digits[2];
+      var secondThree = digits[3] * 100 + digits[4] * 10 + digits[5];
+      if(Math.abs(secondThree - firstThree) === 1) sequenceMode = '3+3';
+    }
+    if(sequenceMode)
+      features.push(starryFeature('chunk_sequence', 'chunk_sequence', '1-6', '按' + sequenceMode + '分块后严格递增或递减1'));
+
+    if(!features.length){
+      var frequencies = {};
+      digits.forEach(function(digit){ frequencies[digit] = (frequencies[digit] || 0) + 1; });
+      var hasTriple = Object.keys(frequencies).some(function(key){ return frequencies[key] >= 3; });
+      if(hasTriple) features.push(starryFeature('pihu', 'pihu', '1-6', '结算兜底：无其他番型且某数字至少出现3次'));
     }
     features.sort(function(left, right){
       if(left.score !== right.score) return right.score - left.score;

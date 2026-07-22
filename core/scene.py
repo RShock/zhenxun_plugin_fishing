@@ -185,6 +185,7 @@ async def render_scene(
         hook_level=user.hook_level,
         weather_info=weather_info,
         material_rate=material_rate,
+        scene_inverted=bool(status_dict and status_dict.get("shadow_scene")),
     )
 
     t2 = _time.perf_counter()

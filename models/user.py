@@ -64,7 +64,9 @@ def _normalize_backpack_numeric_ids(backpack: dict) -> tuple[dict, bool]:
         if new_id in normalized:
             existing = normalized[new_id]
             existing["count"] = existing.get("count", 0) + entry.get("count", 0)
-            existing["locked"] = existing.get("locked", False) or entry.get("locked", False)
+            existing["locked"] = existing.get("locked", False) or entry.get(
+                "locked", False
+            )
         else:
             normalized[new_id] = dict(entry)
     return normalized, changed
@@ -78,7 +80,9 @@ def _normalize_collection(collection: dict) -> tuple[dict, bool]:
             fish_name = key
             normalized.setdefault(fish_name, {})
             for rarity, count in value.items():
-                normalized[fish_name][rarity] = normalized[fish_name].get(rarity, 0) + int(count or 0)
+                normalized[fish_name][rarity] = normalized[fish_name].get(
+                    rarity, 0
+                ) + int(count or 0)
             continue
         parts = str(key).split("|", 1)
         if len(parts) != 2:
@@ -86,7 +90,9 @@ def _normalize_collection(collection: dict) -> tuple[dict, bool]:
             continue
         fish_name, rarity = parts
         normalized.setdefault(fish_name, {})
-        normalized[fish_name][rarity] = normalized[fish_name].get(rarity, 0) + int(value or 0)
+        normalized[fish_name][rarity] = normalized[fish_name].get(rarity, 0) + int(
+            value or 0
+        )
         changed = True
     return normalized, changed
 
@@ -179,7 +185,9 @@ class FishingUser(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     user_id = fields.CharField(255, unique=True, description="用户ID")
     rod_level = fields.IntField(default=0, description="钓竿等级(含额外加成)")
-    bonus_rod_level = fields.IntField(default=0, description="额外鱼竿等级(猫猫乐园3级雕像)")
+    bonus_rod_level = fields.IntField(
+        default=0, description="额外鱼竿等级(猫猫乐园3级雕像)"
+    )
     hook_level = fields.IntField(default=0, description="鱼钩等级")
     bait_id = fields.CharField(50, default="0", description="当前鱼饵ID(0=不使用)")
     preferred_bait_id = fields.CharField(
@@ -200,19 +208,25 @@ class FishingUser(Model):
     frame_pity_counter = fields.IntField(default=0, description="展示木框保底计数器")
     cat_frame_pity_counter = fields.IntField(default=0, description="猫猫框保底计数器")
     utr_pity_counter = fields.IntField(default=0, description="迷途风UTR保底计数器")
-    black_market_pity_counter = fields.IntField(default=0, description="黑商秘密保底计数器(连续失败次数)")
+    black_market_pity_counter = fields.IntField(
+        default=0, description="黑商秘密保底计数器(连续失败次数)"
+    )
 
     # ── 流星鱼 / 星空祈愿系统 ──
-    starry_score_accumulated = fields.FloatField(default=0.0, description="流星鱼累计分数(星空祈愿努力值)")
+    starry_score_accumulated = fields.FloatField(
+        default=0.0, description="流星鱼累计分数(星空祈愿努力值)"
+    )
     star_frames = fields.IntField(default=0, description="星辰木框数量(奇迹奖励)")
     starry_frames = fields.IntField(default=0, description="星空木框数量(星辰木框升级)")
-    s2_ticket_claimed = fields.BooleanField(default=False, description="是否已领取S2入场券")
+    s2_ticket_claimed = fields.BooleanField(
+        default=False, description="是否已领取S2入场券"
+    )
     starry_fish = fields.JSONField(
         default=list, description="流星鱼背包[{id, score, display_score, ...}]"
     )
     starry_exhibition = fields.JSONField(
         default=list,
-        description="流星鱼展馆[{fish_name, rarity, numeric_id, score, ...}]"
+        description="流星鱼展馆[{fish_name, rarity, numeric_id, score, ...}]",
     )
     auto_sell = fields.BooleanField(default=False, description="自动卖鱼开关")
     auto_sell_rarity = fields.CharField(
@@ -997,7 +1011,9 @@ class FishingUser(Model):
                     "slot": int(slot_str),
                     "fish_name": entry.get("fish_name", ""),
                     "rarity": entry.get("rarity", "N"),
-                    "numeric_id": normalize_fish_numeric_id(entry.get("numeric_id", "")),
+                    "numeric_id": normalize_fish_numeric_id(
+                        entry.get("numeric_id", "")
+                    ),
                 }
             )
         result.sort(key=lambda d: d["slot"])
@@ -1053,7 +1069,9 @@ class FishingUser(Model):
                         "slot": int(slot_str),
                         "fish_name": entry.get("fish_name", ""),
                         "rarity": entry.get("rarity", "N"),
-                        "numeric_id": normalize_fish_numeric_id(entry.get("numeric_id", "")),
+                        "numeric_id": normalize_fish_numeric_id(
+                            entry.get("numeric_id", "")
+                        ),
                     }
                 )
         return result
@@ -1079,6 +1097,7 @@ class FishingUser(Model):
             "frame_pity": user.frame_pity_counter,
             "utr_pity": user.utr_pity_counter,
             "cat_frame_pity": user.cat_frame_pity_counter,
+            "time_potions_used": 0,
         }
         await user.save(update_fields=["fishing_status"])
         return user.fishing_status

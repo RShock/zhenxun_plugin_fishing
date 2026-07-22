@@ -16,6 +16,7 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { margin:0; padding:0; }
         .sw { width:{{ container_width }}px; font-family:'Microsoft YaHei','Segoe UI Emoji',sans-serif; }
+        .sw.scene-inverted { transform:rotate(180deg); transform-origin:center center; }
         .sb { position:relative; width:{{ container_width }}px; overflow:hidden; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; }
         .sbg { width:100%; display:block; image-rendering:pixelated; }
         .wo { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; z-index:5; image-rendering:pixelated; opacity:0.7; }
@@ -49,7 +50,7 @@
     </style>
 </head>
 <body>
-<div class="sw">
+<div class="sw{% if scene_inverted %} scene-inverted{% endif %}">
   <div class="sb">
     <img src="{{ scene_uri }}" class="sbg">
     {% if weather_overlay_uri %}

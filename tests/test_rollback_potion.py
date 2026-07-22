@@ -1,6 +1,7 @@
 """回档药水重新结算时间锚点的专用回归测试。"""
 
 from datetime import datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -12,14 +13,8 @@ from zhenxun.plugins.zhenxun_plugin_fishing.render import fishing_status
 from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import use_rollback_potion
 
 
-@pytest.mark.parametrize(
-    ("score", "expected"),
-    [(12.49, 12), (12.5, 13), (None, 0), (0, 0)],
-)
 @pytest.mark.asyncio
-async def test_fishing_status_rounds_and_renders_starry_score(
-    monkeypatch, score, expected
-):
+async def test_fishing_status_omits_accumulated_starry_score(monkeypatch):
     captured = {}
 
     def capture_template(template, **context):
@@ -42,13 +37,17 @@ async def test_fishing_status_rounds_and_renders_starry_score(
         total_bait_consumed=0,
         new_bait_consumed=0,
         probabilities={},
-        starry_score_accumulated=score or 0,
     )
 
     assert result == b"STATUS_IMAGE"
     assert captured["template"] == "fishing_status.html"
-    assert captured["context"]["starry_score_accumulated"] == expected
-    assert isinstance(captured["context"]["starry_score_accumulated"], int)
+    assert "starry_score_accumulated" not in captured["context"]
+    template = (
+        Path(fishing_status.__file__).parent.parent
+        / "templates"
+        / "fishing_status.html"
+    ).read_text(encoding="utf-8")
+    assert "星空鱼分数" not in template
 
 
 @pytest.mark.asyncio
@@ -75,6 +74,8 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
             "utr_pity": 97,
             "cat_eaten_fish": [{"fish_id": "草鱼", "rarity": "R", "count": 1}],
             "cat_gifts": {"gold": 100},
+            "time_potions_used": 3,
+            "shadow_scene": True,
         },
     )
 
@@ -88,8 +89,12 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
 
     check_mock = AsyncMock(side_effect=fake_check_fishing_status)
     stop_mock = AsyncMock(side_effect=AssertionError("回档药水不应调用收杆"))
-    get_daily_mock = AsyncMock(side_effect=AssertionError("回档药水不应读取每日状态次数"))
-    increment_daily_mock = AsyncMock(side_effect=AssertionError("回档药水不应写入每日状态次数"))
+    get_daily_mock = AsyncMock(
+        side_effect=AssertionError("回档药水不应读取每日状态次数")
+    )
+    increment_daily_mock = AsyncMock(
+        side_effect=AssertionError("回档药水不应写入每日状态次数")
+    )
     monkeypatch.setattr(actions, "check_fishing_status", check_mock)
     monkeypatch.setattr(actions, "stop_fishing", stop_mock)
     monkeypatch.setattr(FishingUser, "get_status_count", get_daily_mock)
@@ -112,4 +117,8 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert observed_status["cat_frame_pity"] == 12
     assert observed_status["utr_pity"] == 13
     assert observed_status["cat_eaten_fish"] == []
+    assert observed_status["time_potions_used"] == 0
+    assert observed_status["shadow_scene"] is True
     assert await FishingUser.get_item(user_id, "回档药水", "potion") is None
+    refunded = await FishingUser.get_item(user_id, "time_potion", "potion")
+    assert refunded == {"item_id": "time_potion", "item_type": "potion", "count": 3}

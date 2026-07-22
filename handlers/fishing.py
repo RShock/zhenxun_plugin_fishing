@@ -22,7 +22,13 @@ from ..services.limit_service import (
     max_status_views,
     remaining_stop_actions,
 )
-from ..utils import _ensure_user, _get_nickname, _is_private_chat, _send_image, _send_text
+from ..utils import (
+    _ensure_user,
+    _get_nickname,
+    _is_private_chat,
+    _send_image,
+    _send_text,
+)
 
 
 @fishing_matcher.handle()
@@ -72,7 +78,7 @@ async def _(event: Event, matcher: Matcher, location=Arg("location")):
     if location_input.lower() == "s1":
         location_input = "S1"
     else:
-        match = re.search(r"\d+", location_input)
+        match = re.search(r"-?\d+", location_input)
         if match:
             location_input = match.group()
 

@@ -14,7 +14,9 @@ from ..services import get_or_create_user
 from .view import get_status_image
 
 
-async def use_time_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool, bytes | str]:
+async def use_time_potion(
+    user_id: str, count: int = 1, **kwargs
+) -> tuple[bool, bytes | str]:
     if count < 1:
         return False, "数量必须大于0"
 
@@ -48,7 +50,8 @@ async def use_time_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool,
     from ..core.potion import use_time_potion_settle
 
     hours = 8 * count
-    return await use_time_potion_settle(user_id, hours)
+    success, result = await use_time_potion_settle(user_id, hours, potion_count=count)
+    return success, result
 
 
 async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
@@ -65,6 +68,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     await FishingUser.remove_item(user_id, "回档药水", "potion", 1)
 
     original_start_time = status_dict["start_time"]
+    time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
     reset_status = {
         "location_id": status_dict["location_id"],
         "start_time": original_start_time,
@@ -76,8 +80,13 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "utr_pity": user.utr_pity_counter,
         "cat_eaten_fish": [],
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
+        "time_potions_used": 0,
     }
+    if status_dict.get("shadow_scene"):
+        reset_status["shadow_scene"] = True
     await FishingUser.update_fishing_status(user_id, reset_status)
+    if time_potions_used:
+        await FishingUser.add_item(user_id, "time_potion", "potion", time_potions_used)
 
     from ..core.actions import check_fishing_status
 
@@ -85,7 +94,10 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     if image is None:
         image = await get_status_image(user_id)
 
-    logger.info(f"用户 {user_id} 使用回档药水，重置钓鱼进度")
+    logger.info(
+        f"用户 {user_id} 使用回档药水，重置钓鱼进度，"
+        f"退还时光药水 {time_potions_used} 瓶"
+    )
     return True, image
 
 
@@ -119,12 +131,17 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
         user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
     )
     if existing:
-        existing.end_time = _make_naive(existing.end_time) + timedelta(hours=total_hours)
+        existing.end_time = _make_naive(existing.end_time) + timedelta(
+            hours=total_hours
+        )
         await existing.save(update_fields=["end_time"])
         logger.info(
             f"用户 {user_id} 使用{actual_count}瓶幸运药水，时间堆叠至 {existing.end_time}（+{total_hours}h）"
         )
-        return True, f"幸运药水生效！钓鱼变得幸运 ⭐，剩余时间+{total_hours}小时（使用{actual_count}瓶）"
+        return (
+            True,
+            f"幸运药水生效！钓鱼变得幸运 ⭐，剩余时间+{total_hours}小时（使用{actual_count}瓶）",
+        )
     else:
         await FishingBuff.add_user_buff(
             user_id=user_id,
@@ -133,8 +150,13 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
             value=1,
             description="幸运药水：钓鱼变得幸运",
         )
-        logger.info(f"用户 {user_id} 使用{actual_count}瓶幸运药水，获得幸运buff（{total_hours}小时）")
-        return True, f"幸运药水生效！钓鱼变得幸运 ⭐，持续{total_hours}小时（使用{actual_count}瓶）"
+        logger.info(
+            f"用户 {user_id} 使用{actual_count}瓶幸运药水，获得幸运buff（{total_hours}小时）"
+        )
+        return (
+            True,
+            f"幸运药水生效！钓鱼变得幸运 ⭐，持续{total_hours}小时（使用{actual_count}瓶）",
+        )
 
 
 async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool, str]:
@@ -161,14 +183,19 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
     await FishingUser.remove_item(user_id, "真多多药水", "potion", count)
 
     duration = timedelta(hours=8 * count)
-    existing = await FishingBuff.get_active_user_buff(user_id, BuffEffect.BUFF_TYPE_DUODUO)
+    existing = await FishingBuff.get_active_user_buff(
+        user_id, BuffEffect.BUFF_TYPE_DUODUO
+    )
     if existing:
         existing.end_time = _make_naive(existing.end_time) + duration
         await existing.save(update_fields=["end_time"])
         logger.info(
             f"用户 {user_id} 使用{count}瓶真多多药水，时间堆叠至 {existing.end_time}"
         )
-        return True, f"真多多药水生效！鱼竿等级-1，鱼获数量翻倍，剩余时间+{8 * count}小时"
+        return (
+            True,
+            f"真多多药水生效！鱼竿等级-1，鱼获数量翻倍，剩余时间+{8 * count}小时",
+        )
 
     await FishingBuff.add_user_buff(
         user_id=user_id,
@@ -178,7 +205,9 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
         description="真多多药水：鱼竿等级-1，钓到的鱼数量翻倍",
     )
 
-    logger.info(f"用户 {user_id} 使用{count}瓶真多多药水，获得多多buff（{8 * count}小时）")
+    logger.info(
+        f"用户 {user_id} 使用{count}瓶真多多药水，获得多多buff（{8 * count}小时）"
+    )
     return True, f"真多多药水生效！鱼竿等级-1，鱼获数量翻倍，持续{8 * count}小时"
 
 
@@ -228,9 +257,7 @@ async def use_display_frame_buff(
     if actual_frames < count:
         msg += f"\n已达到{MAX_FRAME_BUFF_LAYERS * 5}%上限，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
 
-    logger.info(
-        f"用户 {user_id} 使用展示木框{layers_to_add}层，当前全图{new_total}层"
-    )
+    logger.info(f"用户 {user_id} 使用展示木框{layers_to_add}层，当前全图{new_total}层")
     return True, msg
 
 
@@ -256,7 +283,9 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
         user_id, BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
     )
     if existing:
-        existing.end_time = _make_naive(existing.end_time) + timedelta(hours=total_hours)
+        existing.end_time = _make_naive(existing.end_time) + timedelta(
+            hours=total_hours
+        )
         await existing.save(update_fields=["end_time"])
         logger.info(
             f"用户 {user_id} 使用{actual_count}瓶闪光药水，时间堆叠至 {existing.end_time}（+{total_hours}h）"
@@ -274,7 +303,9 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
         value=1,
         description="闪光药水：伽马射线暴（太阳风+流星雨+恒纪元）",
     )
-    logger.info(f"用户 {user_id} 使用{actual_count}瓶闪光药水，获得伽马射线暴（{total_hours}小时）")
+    logger.info(
+        f"用户 {user_id} 使用{actual_count}瓶闪光药水，获得伽马射线暴（{total_hours}小时）"
+    )
     return (
         True,
         f"💥 闪光药水生效！伽马射线暴持续{total_hours}小时"
@@ -344,7 +375,10 @@ async def use_utr_select_ticket(
         if target:
             fish_name = alt
     if not target:
-        return False, f"未找到鱼种「{fish_name}」，请输入正确的鱼名（如地图中的 UTR 鱼）"
+        return (
+            False,
+            f"未找到鱼种「{fish_name}」，请输入正确的鱼名（如地图中的 UTR 鱼）",
+        )
 
     if not await _location_has_any_utr(user_id, target.location_id):
         return (

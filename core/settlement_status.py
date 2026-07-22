@@ -18,16 +18,21 @@ def build_settlement_status(
     existing_meteor = status_dict.get("meteor_fish_numbers", [])
     if meteor_fish_numbers:
         existing_meteor = existing_meteor + meteor_fish_numbers
-    return {
-        "location_id": status_dict["location_id"],
-        "start_time": status_dict["start_time"],
-        "last_settle_time": last_settle_time.isoformat(),
-        "fish_caught": serialize_fish_caught(fish_caught),
-        "bait_consumed": bait_consumed,
-        "frame_pity": frame_pity,
-        "cat_frame_pity": cat_frame_pity,
-        "utr_pity": utr_pity,
-        "cat_eaten_fish": serialize_fish_caught(cat_eaten_fish),
-        "cat_gifts": cat_gifts,
-        "meteor_fish_numbers": existing_meteor,
-    }
+    # 保留影子场景、药水计数等会话元数据；结算只覆盖它负责推进的字段。
+    updated_status = dict(status_dict)
+    updated_status.update(
+        {
+            "location_id": status_dict["location_id"],
+            "start_time": status_dict["start_time"],
+            "last_settle_time": last_settle_time.isoformat(),
+            "fish_caught": serialize_fish_caught(fish_caught),
+            "bait_consumed": bait_consumed,
+            "frame_pity": frame_pity,
+            "cat_frame_pity": cat_frame_pity,
+            "utr_pity": utr_pity,
+            "cat_eaten_fish": serialize_fish_caught(cat_eaten_fish),
+            "cat_gifts": cat_gifts,
+            "meteor_fish_numbers": existing_meteor,
+        }
+    )
+    return updated_status
