@@ -129,9 +129,9 @@ class TestSellFish:
         ok, msg = await sell_fish(USER_ID, rarity_letter.lower())
         remaining = await db.backpack_get_user_fish(USER_ID)
         remaining_ids = {f["numeric_id"] for f in remaining}
-        assert target["numeric_id"] in remaining_ids, (
-            f"锁定的鱼({target['rarity']})被卖掉了！msg={msg}"
-        )
+        assert (
+            target["numeric_id"] in remaining_ids
+        ), f"锁定的鱼({target['rarity']})被卖掉了！msg={msg}"
 
     async def test_sell_locked_ur_two_locations(self, db):
         """模拟：鲢鱼UR从两个不同钓场获得(不同numeric_id)，锁住其中一个，卖鱼ur不应卖掉已锁的"""
@@ -270,8 +270,18 @@ class TestLockFish:
         """锁鱼 S1** 应锁定猫猫乐园全部鱼，不影响普通图。"""
         user = await db.user_get(USER_ID)
         user.backpack = {
-            "s101": {"fish_name": "橘座鲫鱼", "rarity": "N", "count": 1, "locked": False},
-            "s102": {"fish_name": "暹罗鳊鱼", "rarity": "R", "count": 1, "locked": False},
+            "s101": {
+                "fish_name": "橘座鲫鱼",
+                "rarity": "N",
+                "count": 1,
+                "locked": False,
+            },
+            "s102": {
+                "fish_name": "暹罗鳊鱼",
+                "rarity": "R",
+                "count": 1,
+                "locked": False,
+            },
             "111": {"fish_name": "小鲫鱼", "rarity": "N", "count": 1, "locked": False},
         }
         await user.save(update_fields=["backpack"])
@@ -287,8 +297,18 @@ class TestLockFish:
         """解锁 S1** 应解锁猫猫乐园全部鱼，不影响普通图。"""
         user = await db.user_get(USER_ID)
         user.backpack = {
-            "s101": {"fish_name": "橘座鲫鱼", "rarity": "N", "count": 1, "locked": True},
-            "s102": {"fish_name": "暹罗鳊鱼", "rarity": "R", "count": 1, "locked": True},
+            "s101": {
+                "fish_name": "橘座鲫鱼",
+                "rarity": "N",
+                "count": 1,
+                "locked": True,
+            },
+            "s102": {
+                "fish_name": "暹罗鳊鱼",
+                "rarity": "R",
+                "count": 1,
+                "locked": True,
+            },
             "111": {"fish_name": "小鲫鱼", "rarity": "N", "count": 1, "locked": True},
         }
         await user.save(update_fields=["backpack"])
@@ -456,7 +476,9 @@ class TestBlackMarketExchange:
         )
 
     def test_market_exchange_prefix_and_trigger_detection(self):
-        assert extract_market_exchange_input("黑商交换 鲤鱼UR草鱼SSR") == "鲤鱼UR草鱼SSR"
+        assert (
+            extract_market_exchange_input("黑商交换 鲤鱼UR草鱼SSR") == "鲤鱼UR草鱼SSR"
+        )
         assert extract_market_exchange_input("白商 鲤鱼UR草鱼SSR") == "鲤鱼UR草鱼SSR"
         assert should_parse_market_exchange("鲤鱼UR草鱼SSR") is True
         assert should_parse_market_exchange("123 456 ") is True
@@ -512,7 +534,9 @@ class TestBlackMarketExchange:
             "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
             lambda: 0.9,
         )
-        await db.backpack_add_fish(USER_ID, source.name, source.rarity, source.numeric_id, count=1)
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
 
         ok, msg, should_reply = await black_market_exchange(
             USER_ID,
@@ -529,21 +553,24 @@ class TestBlackMarketExchange:
         source = find_fish_target("小鲫鱼", "UR")
         target = find_fish_target("小鲫鱼", "N")
         assert source is not None and target is not None
-        await db.backpack_add_fish(USER_ID, source.name, source.rarity, source.numeric_id, count=2)
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=2
+        )
         await lock_fish(USER_ID, source.numeric_id)
 
-        ok, msg, should_reply = await black_market_exchange(USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}")
+        ok, msg, should_reply = await black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
 
         assert ok is True
         assert should_reply is True
-        assert "（已自动锁定）" in msg
+        assert "自动展示" in msg
         remaining = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
         assert remaining["count"] == 1
         received = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
-        assert received is not None
-        assert received["locked"] is True
+        assert received is None
         displays = await db.display_get_user_displays(USER_ID)
-        assert not any(item["numeric_id"] == target.numeric_id for item in displays)
+        assert any(item["numeric_id"] == target.numeric_id for item in displays)
         second_ok, second_msg, second_should_reply = await black_market_exchange(
             USER_ID,
             f"{source.name} {source.rarity} {target.name} {target.rarity}",
@@ -551,6 +578,33 @@ class TestBlackMarketExchange:
         assert second_ok is False
         assert second_should_reply is True
         assert "今天已经" in second_msg
+
+    async def test_locked_source_first_utr_does_not_claim_auto_lock(
+        self, db, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
+            lambda: 0.9,
+        )
+        source = find_fish_target("橘座鲫鱼", "UTR")
+        target = find_fish_target("小鲫鱼", "UTR")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        await lock_fish(USER_ID, source.numeric_id)
+
+        ok, msg, should_reply = await black_market_exchange(
+            USER_ID,
+            f"{source.name} {source.rarity} {target.name} {target.rarity}",
+        )
+
+        assert ok is True, msg
+        assert should_reply is True
+        assert "UTR图鉴已解锁" in msg
+        assert "已自动锁定" not in msg
+        received = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
+        assert received is None
 
     def test_same_rarity_random_excludes_target_and_source(self, monkeypatch):
         source = find_fish_target("小鲫鱼", "UR")
@@ -585,7 +639,13 @@ class TestBlackMarketExchange:
         black_source = find_fish_target("小鲫鱼", "UR")
         black_target = find_fish_target("小鲫鱼", "N")
         assert black_source is not None and black_target is not None
-        await db.backpack_add_fish(USER_ID, black_source.name, black_source.rarity, black_source.numeric_id, count=1)
+        await db.backpack_add_fish(
+            USER_ID,
+            black_source.name,
+            black_source.rarity,
+            black_source.numeric_id,
+            count=1,
+        )
 
         ok, msg, should_reply = await black_market_exchange(
             USER_ID,
@@ -603,7 +663,13 @@ class TestBlackMarketExchange:
         records = await db.exchange_list_active_records()
         assert len(records) == 1
 
-        await db.backpack_add_fish(TARGET_ID, black_target.name, black_target.rarity, black_target.numeric_id, count=1)
+        await db.backpack_add_fish(
+            TARGET_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
         white_ok, white_msg, white_should_reply = await white_market_exchange(
             TARGET_ID,
             f"{black_target.name} {black_target.rarity} {black_source.name} {black_source.rarity}",
@@ -622,7 +688,13 @@ class TestBlackMarketExchange:
         black_source = find_fish_target("小鲫鱼", "UR")
         black_target = find_fish_target("小鲫鱼", "N")
         assert black_source is not None and black_target is not None
-        await db.backpack_add_fish(USER_ID, black_source.name, black_source.rarity, black_source.numeric_id, count=1)
+        await db.backpack_add_fish(
+            USER_ID,
+            black_source.name,
+            black_source.rarity,
+            black_source.numeric_id,
+            count=1,
+        )
 
         ok, msg, should_reply = await black_market_exchange(
             USER_ID,
@@ -632,6 +704,47 @@ class TestBlackMarketExchange:
         assert should_reply is True
 
         # TARGET_ID 已解锁来源鱼（白商可获得鱼），应被过滤
-        await db.collection_mark_collected(TARGET_ID, black_source.name, black_source.rarity, 1)
+        await db.collection_mark_collected(
+            TARGET_ID, black_source.name, black_source.rarity, 1
+        )
         image = await render_white_market_records(TARGET_ID)
         assert isinstance(image, bytes)
+
+    async def test_white_market_renders_reverse_direction_and_category(
+        self, db, monkeypatch
+    ):
+        """白商应显示并按黑商记录的逆方向判断可直接交换。"""
+        black_source = find_fish_target("小鲫鱼", "UR")
+        black_target = find_fish_target("小鲫鱼", "N")
+        assert black_source is not None and black_target is not None
+        await db.exchange_create_black_record(USER_ID, black_source, black_target)
+        await db.backpack_add_fish(
+            TARGET_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
+
+        captured = {}
+
+        def _capture_template(name, **kwargs):
+            captured.update(kwargs)
+            return "<html>fake</html>"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.render.base.render_template",
+            _capture_template,
+        )
+
+        await render_white_market_records(TARGET_ID)
+
+        now_groups = captured["categories"][0]["groups"]
+        possible_groups = captured["categories"][1]["groups"]
+        assert len(now_groups) == 1
+        assert possible_groups == []
+        assert now_groups[0]["source_name"] == black_target.name
+        assert now_groups[0]["source_rarity"] == black_target.rarity
+        targets = now_groups[0]["target_groups"][0]["targets"]
+        assert targets[0]["name"] == black_source.name
+        assert targets[0]["rarity"] == black_source.rarity

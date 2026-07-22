@@ -37,10 +37,11 @@ _NAME_EXCHANGE_TRIGGER_RE = re.compile(
 )
 _ID_EXCHANGE_TRIGGER_RE = re.compile(r"(?<!\d)\d{3}(?!\d)\D+(?<!\d)\d{3}(?!\d)")
 _ID_EXCHANGE_RE = re.compile(
-    r"^\D*(?P<src_id>(?<!\d)\d{3}(?!\d))\D+"
-    r"(?P<dst_id>(?<!\d)\d{3}(?!\d))\D*$"
+    r"^\D*(?P<src_id>(?<!\d)\d{3}(?!\d))\D+" r"(?P<dst_id>(?<!\d)\d{3}(?!\d))\D*$"
 )
-_MARKET_PREFIX_RE = re.compile(r"^\s*(?:黑商|黑市|白商|白市)(?:交换)?\s*", re.IGNORECASE)
+_MARKET_PREFIX_RE = re.compile(
+    r"^\s*(?:黑商|黑市|白商|白市)(?:交换)?\s*", re.IGNORECASE
+)
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,7 @@ def parse_black_market_exchange(text: str) -> tuple[str, str, str, str] | None:
 
 def extract_market_exchange_input(text: str) -> str:
     return _MARKET_PREFIX_RE.sub("", text or "", count=1).strip()
+
 
 def should_parse_market_exchange(text: str) -> bool:
     text = text or ""
@@ -328,21 +330,22 @@ async def render_white_market_records(user_id: str) -> bytes:
         if collected_cache[key]:
             continue
 
-        # 判定所属分区
-        cache_key = record.source_numeric_id
+        # 白商执行黑商的逆交换：支付黑商目标鱼，获得黑商来源鱼。
+        # 因此“现在可交换”应检查用户是否持有黑商目标鱼。
+        cache_key = record.target_numeric_id
         if cache_key not in backpack_cache:
             fish = await FishingUser.get_fish_by_numeric_id(
-                user_id, record.source_numeric_id
+                user_id, record.target_numeric_id
             )
             backpack_cache[cache_key] = fish is not None and fish.get("count", 0) > 0
 
         if backpack_cache[cache_key]:
             cat = "现在可交换"
         else:
-            unlock_key = f"{record.source_location_id}|{record.source_rarity}"
+            unlock_key = f"{record.target_location_id}|{record.target_rarity}"
             if unlock_key not in unlock_cache:
                 unlock_cache[unlock_key] = await _is_location_unlocked(
-                    user, record.source_location_id, record.source_rarity
+                    user, record.target_location_id, record.target_rarity
                 )
             if not unlock_cache[unlock_key]:
                 continue
@@ -350,23 +353,30 @@ async def render_white_market_records(user_id: str) -> bytes:
 
         shown_reverse_keys.add(reverse_key)
 
-        cat_entries[cat].append({
-            "source_name": record.source_name,
-            "source_rarity": record.source_rarity,
-            "source_rarity_idx": RARITY_INDEX.get(record.source_rarity, 0),
-            "source_location": record.source_location_name,
-            "source_location_id": record.source_location_id,
-            "source_scene_level": record.source_scene_level,
-            "source_numeric_id": record.source_numeric_id,
-            "source_img": get_fish_image_src(record.source_name, record.source_location_id),
-            "target_name": record.target_name,
-            "target_rarity": record.target_rarity,
-            "target_rarity_idx": RARITY_INDEX.get(record.target_rarity, 0),
-            "target_location": record.target_location_name,
-            "target_location_id": record.target_location_id,
-            "target_scene_level": record.target_scene_level,
-            "target_img": get_fish_image_src(record.target_name, record.target_location_id),
-        })
+        cat_entries[cat].append(
+            {
+                # 页面左侧是白商支付鱼（黑商 target），右侧是白商获得鱼（黑商 source）。
+                "source_name": record.target_name,
+                "source_rarity": record.target_rarity,
+                "source_rarity_idx": RARITY_INDEX.get(record.target_rarity, 0),
+                "source_location": record.target_location_name,
+                "source_location_id": record.target_location_id,
+                "source_scene_level": record.target_scene_level,
+                "source_numeric_id": record.target_numeric_id,
+                "source_img": get_fish_image_src(
+                    record.target_name, record.target_location_id
+                ),
+                "target_name": record.source_name,
+                "target_rarity": record.source_rarity,
+                "target_rarity_idx": RARITY_INDEX.get(record.source_rarity, 0),
+                "target_location": record.source_location_name,
+                "target_location_id": record.source_location_id,
+                "target_scene_level": record.source_scene_level,
+                "target_img": get_fish_image_src(
+                    record.source_name, record.source_location_id
+                ),
+            }
+        )
 
     # 对每个分类进行二重分组
     categories: dict[str, list[dict]] = {}
@@ -395,18 +405,24 @@ async def render_white_market_records(user_id: str) -> bytes:
                     "_target_scene_level": entry["target_scene_level"],
                     "targets": [],
                 }
-            sg["_target_map"][tid]["targets"].append({
-                "name": entry["target_name"],
-                "rarity": entry["target_rarity"],
-                "_rarity_idx": entry["target_rarity_idx"],
-                "img": entry["target_img"],
-            })
+            sg["_target_map"][tid]["targets"].append(
+                {
+                    "name": entry["target_name"],
+                    "rarity": entry["target_rarity"],
+                    "_rarity_idx": entry["target_rarity_idx"],
+                    "img": entry["target_img"],
+                }
+            )
 
         # 转为列表并排序
         source_list = list(source_map.values())
         # 左侧鱼排序：稀有度降序 → 场景等级升序 → 名称
         source_list.sort(
-            key=lambda s: (-s["_source_rarity_idx"], s["_source_scene_level"], s["source_name"])
+            key=lambda s: (
+                -s["_source_rarity_idx"],
+                s["_source_scene_level"],
+                s["source_name"],
+            )
         )
         for sg in source_list:
             groups = list(sg["_target_map"].values())
@@ -523,13 +539,15 @@ async def black_market_exchange(
     inherited_lock = bool(fish.get("locked", False))
     await FishingUser.remove_fish_by_numeric_id(user_id, source.numeric_id, 1)
     await FishingUser.increment_black_market_count(user_id)
+    # 黑商获得的目标鱼始终尝试自动上框；来源鱼的锁定状态仍在入包后独立继承。
     result = await add_fish_to_user(
         user_id,
         [(actual_target.name, actual_target.rarity, actual_target.numeric_id, 1)],
-        auto_display=not inherited_lock,
+        auto_display=True,
     )
+    lock_inherited = False
     if inherited_lock:
-        await FishingUser.toggle_lock_by_numeric_id(
+        lock_inherited = await FishingUser.toggle_lock_by_numeric_id(
             user_id, actual_target.numeric_id, True
         )
     await FishingExchangeRecord.create_black_record(user_id, source, actual_target)
@@ -539,7 +557,7 @@ async def black_market_exchange(
         messages.append("票券：已消耗 1 张黑商额外兑换券")
     messages.extend(result["achievement_messages"])
 
-    lock_hint = "（已自动锁定）" if inherited_lock else ""
+    lock_hint = "（已自动锁定）" if lock_inherited else ""
     msg = (
         f"黑商交换成功：消耗 {source.name}({source.rarity}) "
         f"→ 获得 {actual_target.name}({actual_target.rarity}){lock_hint}"
@@ -551,7 +569,9 @@ async def black_market_exchange(
     return True, msg, True
 
 
-async def white_market_exchange(user_id: str, exchange_input: str) -> tuple[bool, str, bool]:
+async def white_market_exchange(
+    user_id: str, exchange_input: str
+) -> tuple[bool, str, bool]:
     result = parse_market_exchange(exchange_input)
     if not result.should_reply:
         return False, "", False
