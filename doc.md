@@ -281,7 +281,7 @@
 
 - **鱼入状态架构**：时光药水**不做任何独立结算**——阶段一和阶段二的鱼获全部合并到钓鱼状态（`status_dict`），用户收杆时由 `end_fishing` 统一处理：入包、猫礼物发放、保底写回、自动锁鱼/卖鱼/卖猫乐园材料。
 
-- 实现位置：`core/potion.py` 的 `use_time_potion_settle`，两阶段共用 `_prepare_fishing_context(gm_mode=False)`：阶段一用原始 `status_dict`（`settle_start` = 历史时间），不传 `freeze_buff_time`；阶段二设 `ctx_status_potion["last_settle_time"]` = `now`，过滤多多/幸运 buff 后传入 `simulate_fishing_loop(time_credit_minutes=hours*60, freeze_buff_time=now)`；阶段一的 bait_remaining 手动继承到阶段二
+- 实现位置：`core/potion.py` 的 `use_time_potion_settle`，两阶段共用 `_prepare_fishing_context(gm_mode=False)`：阶段一用原始 `status_dict`（`settle_start` = 历史时间），不传 `freeze_buff_time`；阶段二设 `ctx_status_potion["last_settle_time"]` = `now`，过滤多多/幸运/闪光 buff 后传入 `simulate_fishing_loop(time_credit_minutes=hours*60, freeze_buff_time=now)`；阶段一的 bait_remaining 手动继承到阶段二
 
 ## 赠送系统
 
@@ -714,7 +714,7 @@ probability = 0.002 + lead × 0.001  # 即 0.2% + lead × 0.1%
 - **流星雨**：星空鱼变得幸运。
 - **恒纪元**：流星鱼数字仅包含 **2-8**（不出现 0、1、9），共 7^6=117649 种组合；此规则不在游戏内体现，仅文档说明。
 - **乱纪元**：未完成该图 UR 收集时按晴天处理；完成后对该玩家觉醒，并在保持乱纪元显示的同时按迷途风效果结算，启用 UTR 递进概率与 150 次保底。
-- **闪光药水**：激活伽马射线暴 buff（持续 8 小时），同时触发太阳风 + 流星雨 + 恒纪元三种天气效果。
+- **闪光药水**：激活伽马射线暴 buff（持续 8 小时），同时触发太阳风 + 流星雨 + 恒纪元三种天气效果。可与真多多/幸运药水叠加；时光药水阶段二结算时忽略闪光 buff（不与时光联动）。
 
 #### 奇迹功能
 

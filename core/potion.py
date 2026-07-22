@@ -26,10 +26,12 @@ from .settlement_status import build_settlement_status
 from .speed import build_speed_bonus_detail, calculate_effective_fishing_interval
 
 # 时光药水结算时应忽略的药水 buff 类型（仅阶段二过滤）
+# 闪光药水（伽马射线暴）同样不与时光联动；但闪光作为独立 buff 可与多多/幸运叠加
 _TIME_POTION_IGNORED_BUFF_TYPES = frozenset(
     {
         BuffEffect.BUFF_TYPE_DUODUO,
         BuffEffect.BUFF_TYPE_LUCKY_BOOST,
+        BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST,
     }
 )
 
@@ -143,7 +145,7 @@ async def use_time_potion_settle(user_id: str, hours: int) -> tuple[bool, bytes 
         ctx2.bait = simulation1.bait
         ctx2.bait_remaining = simulation1.bait_remaining
 
-    # 过滤多多/幸运 buff（仅阶段二）
+    # 过滤多多/幸运/闪光 buff（仅阶段二；闪光作为独立 buff 可与多多/幸运叠加）
     ctx2.buffs = [
         b for b in ctx2.buffs
         if b.buff_type not in _TIME_POTION_IGNORED_BUFF_TYPES
