@@ -590,18 +590,21 @@ def get_starry_fish_drop_rate(
     *,
     rod_level: int = 0,
     solar_wind: bool = False,
+    gamma_ray_burst: bool = False,
 ) -> float:
     """计算星空鱼（流星鱼）掉落率。
 
-    公式（绝对加值，互不乘算）：
-    - 基础 5%
-    - 鱼竿等级每超过 10 级 1 级：+0.5%
-    - 太阳风：恒定 +2.5%
+    基础、鱼竿和太阳风先按绝对加值合计；闪光药水自带太阳风，
+    并在合计后将最终掉落率翻倍，最终概率不超过 100%。
     """
     rod_bonus_levels = max(0, int(rod_level) - STARRY_FISH_ROD_BONUS_THRESHOLD)
     rod_bonus = rod_bonus_levels * STARRY_FISH_ROD_BONUS_PER_LEVEL
-    solar_bonus = STARRY_FISH_SOLAR_WIND_BONUS if solar_wind else 0.0
-    return min(1.0, STARRY_FISH_DROP_RATE + rod_bonus + solar_bonus)
+    has_solar_wind = solar_wind or gamma_ray_burst
+    solar_bonus = STARRY_FISH_SOLAR_WIND_BONUS if has_solar_wind else 0.0
+    drop_rate = STARRY_FISH_DROP_RATE + rod_bonus + solar_bonus
+    if gamma_ray_burst:
+        drop_rate *= 2
+    return min(1.0, drop_rate)
 
 
 def roll_starry_fish(
@@ -611,8 +614,13 @@ def roll_starry_fish(
     meteor_shower: bool = False,
     hengjiyuan: bool = False,
     lucky_double: bool = False,
+    gamma_ray_burst: bool = False,
 ) -> StarryFish | None:
-    drop_rate = get_starry_fish_drop_rate(rod_level=rod_level, solar_wind=solar_wind)
+    drop_rate = get_starry_fish_drop_rate(
+        rod_level=rod_level,
+        solar_wind=solar_wind,
+        gamma_ray_burst=gamma_ray_burst,
+    )
     if random.random() >= drop_rate:
         return None
 

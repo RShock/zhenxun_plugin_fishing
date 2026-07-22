@@ -603,6 +603,7 @@ def _try_append_starry_meteor_fish(
         meteor_shower=has_meteor_shower,
         hengjiyuan=has_hengjiyuan,
         lucky_double=bool(effects and effects.get("lucky_double_active", False)),
+        gamma_ray_burst=has_gamma_burst,
     )
     if starry_fish is not None:
         # 真多多后置：先得到最终编号产物，再检查多多并复制为两条同号

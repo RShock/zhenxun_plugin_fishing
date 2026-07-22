@@ -15,6 +15,25 @@ from ..services import get_or_create_user
 from .view import get_status_image
 
 
+_MUTEX_POTION_BUFFS = (
+    (BuffEffect.BUFF_TYPE_DUODUO, "真多多药水"),
+    (BuffEffect.BUFF_TYPE_LUCKY_BOOST, "幸运药水"),
+    (BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST, "闪光药水"),
+)
+
+
+async def _get_active_mutex_potion_name(
+    user_id: str, current_buff_type: str
+) -> str | None:
+    """同类药水允许续时，但三种核心药水之间不能同时生效。"""
+    for buff_type, potion_name in _MUTEX_POTION_BUFFS:
+        if buff_type == current_buff_type:
+            continue
+        if await FishingBuff.get_active_user_buff(user_id, buff_type):
+            return potion_name
+    return None
+
+
 async def use_time_potion(
     user_id: str, count: int = 1, **kwargs
 ) -> tuple[bool, bytes | str]:
@@ -117,12 +136,11 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
     if actual_count < 1:
         return False, "幸运药水不足，需要1瓶（当前0瓶）"
 
-    # 互斥检查：真多多药水生效中时禁止使用幸运药水
-    duoduo_active = await FishingBuff.get_active_user_buff(
-        user_id, BuffEffect.BUFF_TYPE_DUODUO
+    active_potion = await _get_active_mutex_potion_name(
+        user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
     )
-    if duoduo_active:
-        return False, "同一时间只有1种药水可以生效（真多多药水生效中）"
+    if active_potion:
+        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
 
     await FishingUser.remove_item(user_id, "幸运药水", "potion", actual_count)
 
@@ -175,12 +193,11 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
     if potion_count < count:
         count = potion_count
 
-    # 互斥检查：幸运药水生效中时禁止使用真多多药水
-    lucky_active = await FishingBuff.get_active_user_buff(
-        user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
+    active_potion = await _get_active_mutex_potion_name(
+        user_id, BuffEffect.BUFF_TYPE_DUODUO
     )
-    if lucky_active:
-        return False, "同一时间只有1种药水可以生效（幸运药水生效中）"
+    if active_potion:
+        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
 
     await FishingUser.remove_item(user_id, "真多多药水", "potion", count)
 
@@ -266,7 +283,7 @@ async def use_display_frame_buff(
 async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool, str]:
     """使用闪光药水，叠加 count * 8 小时的伽马射线暴 buff。
 
-    生效期间视为同时拥有：太阳风 + 流星雨 + 恒纪元（引擎已处理）。
+    生效期间视为同时拥有太阳风、流星雨、恒纪元，并使流星鱼掉率翻倍。
     """
     if count < 1:
         return False, "数量必须大于0"
@@ -277,6 +294,12 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
     actual_count = min(count, potion_count)
     if actual_count < 1:
         return False, "闪光药水不足，需要1瓶（当前0瓶）"
+
+    active_potion = await _get_active_mutex_potion_name(
+        user_id, BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
+    )
+    if active_potion:
+        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
 
     await FishingUser.remove_item(user_id, "闪光药水", "potion", actual_count)
     total_hours = actual_count * 8
@@ -295,7 +318,7 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
         return (
             True,
             f"💥 闪光药水生效！伽马射线暴已叠加 +{total_hours}小时"
-            f"（太阳风+流星雨+恒纪元，使用{actual_count}瓶）",
+            f"（太阳风+流星雨+恒纪元，流星鱼掉率翻倍，使用{actual_count}瓶）",
         )
 
     await FishingBuff.add_user_buff(
@@ -303,7 +326,7 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
         buff_type=BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST,
         duration_minutes=total_hours * 60,
         value=1,
-        description="闪光药水：伽马射线暴（太阳风+流星雨+恒纪元）",
+        description="闪光药水：伽马射线暴（三重天气，流星鱼掉率翻倍）",
     )
     logger.info(
         f"用户 {user_id} 使用{actual_count}瓶闪光药水，获得伽马射线暴（{total_hours}小时）"
@@ -311,7 +334,7 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
     return (
         True,
         f"💥 闪光药水生效！伽马射线暴持续{total_hours}小时"
-        f"（太阳风+流星雨+恒纪元，使用{actual_count}瓶）",
+        f"（太阳风+流星雨+恒纪元，流星鱼掉率翻倍，使用{actual_count}瓶）",
     )
 
 

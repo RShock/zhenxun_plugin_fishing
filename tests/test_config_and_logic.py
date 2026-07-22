@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -212,6 +213,54 @@ class TestCatchFish:
         )
 
         assert meteor_numbers == [654321]
+
+    def test_flash_potion_doubles_starry_fish_drop_chance_in_engine(
+        self, monkeypatch
+    ):
+        location = ConfigManager.get_location("11")
+        fish = ConfigManager.get_fish(location.fish_pool[0])
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system.random.random",
+            lambda: 0.10,
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system.random.randint",
+            lambda start, end: 123456,
+        )
+
+        solar_only_numbers = []
+        _try_append_starry_meteor_fish(
+            location,
+            fish,
+            "N",
+            solar_only_numbers,
+            effects={
+                "rod_level": 0,
+                "_active_buffs": [
+                    SimpleNamespace(
+                        buff_type=BuffEffect.BUFF_TYPE_WEATHER_SOLAR_WIND
+                    )
+                ],
+            },
+        )
+        assert solar_only_numbers == []  # 7.5% 不足以命中 10% 随机值
+
+        flash_numbers = []
+        _try_append_starry_meteor_fish(
+            location,
+            fish,
+            "N",
+            flash_numbers,
+            effects={
+                "rod_level": 0,
+                "_active_buffs": [
+                    SimpleNamespace(
+                        buff_type=BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
+                    )
+                ],
+            },
+        )
+        assert len(flash_numbers) == 1  # (5% + 2.5%) × 2 = 15%
 
     def test_cap_rarity(self):
         assert _cap_rarity(5, "UR") == "UR"

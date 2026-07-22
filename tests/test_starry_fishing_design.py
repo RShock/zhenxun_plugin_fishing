@@ -376,6 +376,21 @@ class TestStarWishNumbers:
         multiplied = (STARRY_FISH_DROP_RATE + rod_bonus) * 1.5
         assert rate != pytest.approx(multiplied)
 
+    def test_flash_potion_doubles_final_starry_fish_drop_rate(self):
+        """闪光先包含太阳风加成，再把合计后的最终掉率翻倍。"""
+        normal = get_starry_fish_drop_rate(rod_level=20, solar_wind=True)
+        flash = get_starry_fish_drop_rate(
+            rod_level=20, gamma_ray_burst=True
+        )
+
+        assert flash == pytest.approx(normal * 2)
+        assert flash == pytest.approx(0.25)
+
+    def test_flash_potion_drop_rate_is_capped_at_one(self):
+        assert get_starry_fish_drop_rate(
+            rod_level=300, gamma_ray_burst=True
+        ) == pytest.approx(1.0)
+
     def test_hengjiyuan_generation_uses_digits_2_to_8(self):
         for _ in range(100):
             fish_id = format_starry_fish_id(generate_starry_fish_id(hengjiyuan=True))
