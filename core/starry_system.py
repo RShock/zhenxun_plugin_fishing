@@ -6,6 +6,7 @@ reuse these helpers without duplicating the six-digit scoring rules.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 import math
@@ -41,7 +42,7 @@ STARRY_REWARD_POOL_ITEMS: dict[str, tuple[dict[str, object], ...]] = {
         {"key": "duoduo_potion", "name": "真多多药水", "count": 1},
         {"key": "lucky_potion", "name": "幸运药水", "count": 1},
         {"key": "reset_potion", "name": "回档药水", "count": 1},
-        {"key": "cat_frame", "name": "猫猫框", "count": 1},
+        {"key": "cat_frame", "name": "猫猫框", "count": 3},
         {"key": "lottery_fragment_mid", "name": "高级抽奖碎片", "count": 1},
     ),
     "high": (
@@ -103,6 +104,8 @@ CN_FAMILY = {
     "star_airplane": "星空飞机",
     "pairs": "对子",
     "full_house": "葫芦",
+    "chunk_sequence": "分块连号",
+    "pihu": "屁胡",
 }
 
 FEATURES = [
@@ -144,6 +147,12 @@ FEATURES = [
     # 葫芦：任意 5 位窗口为 AAABB 或 AABBB；存在即计一次
     # 分值 = -log10(出现概率)，全量 3510/1e6 → 2.454693
     ("full_house", 5, "full_house", 2.454693),
+    # 分块连号：2+2+2 或 3+3 分块后，块值严格递增/递减 1；命中计一次
+    # 全量 2194/1e6 → 2.658763
+    ("chunk_sequence", 6, "chunk_sequence", 2.658763),
+    # 屁胡赋分采用宽松理论概率：只看是否有某数字至少出现 3 次，允许同时包含其他番型。
+    # 全量 157600/1e6 → 0.802444；实际结算仍是严格兜底，不与其他番型叠加。
+    ("pihu", 6, "pihu", 0.802444),
 ]
 FEATURE_BY_LABEL = {
     label: i for i, (_family, _length, label, _score) in enumerate(FEATURES)
@@ -205,8 +214,7 @@ def _window_same(digits: Sequence[int], start: int, length: int) -> bool:
 def _window_step(digits: Sequence[int], start: int, length: int) -> bool:
     diff = digits[start + 1] - digits[start]
     return diff in (1, -1) and all(
-        digits[start + i] - digits[start + i - 1] == diff
-        for i in range(2, length)
+        digits[start + i] - digits[start + i - 1] == diff for i in range(2, length)
     )
 
 
@@ -239,8 +247,7 @@ def _window_snake(digits: Sequence[int], start: int, length: int, pure: bool) ->
 
 def _window_palindrome(digits: Sequence[int], start: int, length: int) -> bool:
     return all(
-        digits[start + i] == digits[start + length - 1 - i]
-        for i in range(length // 2)
+        digits[start + i] == digits[start + length - 1 - i] for i in range(length // 2)
     )
 
 
@@ -255,6 +262,23 @@ def _motif_abab(digits: Sequence[int], start: int) -> bool:
 def _motif_abcabc(digits: Sequence[int]) -> bool:
     a, b, c = digits[0], digits[1], digits[2]
     return a == digits[3] and b == digits[4] and c == digits[5] and len({a, b, c}) == 3
+
+
+def _chunk_sequence_mode(digits: Sequence[int]) -> str | None:
+    """识别六位编号按 2+2+2 或 3+3 分块后的相邻整数连号。"""
+    two_digit = [digits[i] * 10 + digits[i + 1] for i in range(0, DIGITS, 2)]
+    if (
+        two_digit[1] - two_digit[0] == two_digit[2] - two_digit[1]
+        and abs(two_digit[1] - two_digit[0]) == 1
+    ):
+        return "2+2+2"
+    three_digit = [
+        digits[0] * 100 + digits[1] * 10 + digits[2],
+        digits[3] * 100 + digits[4] * 10 + digits[5],
+    ]
+    if abs(three_digit[1] - three_digit[0]) == 1:
+        return "3+3"
+    return None
 
 
 def _star_airplane(digits: Sequence[int]) -> bool:
@@ -418,9 +442,7 @@ def score_starry_fish(value: int | str) -> StarryFish:
             if ok["palindrome"][(start, length)] and not _contained_in_larger(
                 ok["palindrome"], start, length
             ):
-                features.append(
-                    _feature(f"{length}_palindrome", "palindrome", span)
-                )
+                features.append(_feature(f"{length}_palindrome", "palindrome", span))
 
     for start in range(DIGITS - 4 + 1):
         if _motif_abab(digits, start):
@@ -460,6 +482,23 @@ def score_starry_fish(value: int | str) -> StarryFish:
             _feature("full_house", "full_house", span, "5位窗口为AAABB或AABBB")
         )
 
+    sequence_mode = _chunk_sequence_mode(digits)
+    if sequence_mode:
+        features.append(
+            _feature(
+                "chunk_sequence",
+                "chunk_sequence",
+                "1-6",
+                f"按{sequence_mode}分块后严格递增或递减1",
+            )
+        )
+
+    # 屁胡是严格兜底番型：其他任何番型均未命中时才有资格触发。
+    if not features and max(Counter(digits).values()) >= 3:
+        features.append(
+            _feature("pihu", "pihu", "1-6", "无其他番型且某数字至少出现3次")
+        )
+
     features = sorted(features, key=lambda item: (-item.score, item.span, item.label))
     raw_score = sum(item.score for item in features)
     display_score = int(math.floor(raw_score + 0.5))
@@ -484,6 +523,8 @@ def label_cn(label: str) -> str:
         "two_pair": "两对",
         "three_pair": "三对",
         "full_house": "葫芦",
+        "chunk_sequence": "连号",
+        "pihu": "屁胡",
     }
     if label in direct:
         return direct[label]
@@ -649,9 +690,7 @@ def _mitm_exact_indices(
         if left_mask == 0 and right_mask == 0:
             continue
         indices = [index for index in range(nl) if left_mask & (1 << index)]
-        indices.extend(
-            mid + index for index in range(nr) if right_mask & (1 << index)
-        )
+        indices.extend(mid + index for index in range(nr) if right_mask & (1 << index))
         if indices:
             return indices
     return None

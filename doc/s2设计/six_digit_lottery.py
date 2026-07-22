@@ -1,7 +1,7 @@
 import argparse
 import csv
 import math
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -22,6 +22,8 @@ FAMILIES = [
     "star_airplane",
     "pairs",
     "full_house",
+    "chunk_sequence",
+    "pihu",
 ]
 
 CN_FAMILY = {
@@ -37,6 +39,8 @@ CN_FAMILY = {
     "star_airplane": "星空飞机",
     "pairs": "对子",
     "full_house": "葫芦",
+    "chunk_sequence": "分块连号",
+    "pihu": "屁胡",
 }
 
 NOTE = {
@@ -52,6 +56,8 @@ NOTE = {
     "star_airplane": "6 位版星空飞机：第 2-5 位每一位都处于至少 2 连块中。",
     "pairs": "对子统计恰好长度为 2 的同号连段；3 位及以上同号连段不计对。同家族最大匹配：三对吸收两对。",
     "full_house": "葫芦：任意 5 位窗口为 AAABB 或 AABBB（恰好两段同号，长度 3+2 或 2+3）；存在即计一次。",
+    "chunk_sequence": "连号：按 2+2+2 或 3+3 分块后，块值严格递增或递减 1；存在即计一次。",
+    "pihu": "屁胡：赋分按「某数字至少出现 3 次」的宽松概率（允许包含其他番型）；结算仍严格兜底，有其他番型时不计。",
 }
 
 
@@ -59,18 +65,27 @@ def make_features():
     features = []
     for fam in ["same_run", "step_high", "slide", "pure_snake", "snake", "palindrome"]:
         for length in range(3, DIGITS + 1):
-            features.append({"family": fam, "length": length, "label": f"{length}_{fam}"})
+            features.append(
+                {"family": fam, "length": length, "label": f"{length}_{fam}"}
+            )
     features.append({"family": "range", "length": DIGITS, "label": "6_all_small_0_4"})
     features.append({"family": "range", "length": DIGITS, "label": "6_all_big_5_9"})
     features.append({"family": "parity", "length": DIGITS, "label": "6_all_odd"})
     features.append({"family": "parity", "length": DIGITS, "label": "6_all_even"})
     features.append({"family": "rhythm", "length": 4, "label": "ABAB"})
     features.append({"family": "rhythm", "length": 6, "label": "ABCABC"})
-    features.append({"family": "star_airplane", "length": DIGITS, "label": "star_airplane"})
+    features.append(
+        {"family": "star_airplane", "length": DIGITS, "label": "star_airplane"}
+    )
     features.append({"family": "pairs", "length": 2, "label": "two_pair"})
     features.append({"family": "pairs", "length": 3, "label": "three_pair"})
     features.append({"family": "full_house", "length": 5, "label": "full_house"})
+    features.append(
+        {"family": "chunk_sequence", "length": 6, "label": "chunk_sequence"}
+    )
+    features.append({"family": "pihu", "length": 6, "label": "pihu"})
     return features
+
 
 FEATURES = make_features()
 FEATURE_BY_LABEL = {f["label"]: i for i, f in enumerate(FEATURES)}
@@ -100,12 +115,16 @@ def window_same(d, s, length):
 
 def window_step(d, s, length):
     diff = d[s + 1] - d[s]
-    return diff in (1, -1) and all(d[s + i] - d[s + i - 1] == diff for i in range(2, length))
+    return diff in (1, -1) and all(
+        d[s + i] - d[s + i - 1] == diff for i in range(2, length)
+    )
 
 
 def window_slide(d, s, length):
     diffs = [d[s + i] - d[s + i - 1] for i in range(1, length)]
-    return any(x != 0 for x in diffs) and (all(x in (0, 1) for x in diffs) or all(x in (0, -1) for x in diffs))
+    return any(x != 0 for x in diffs) and (
+        all(x in (0, 1) for x in diffs) or all(x in (0, -1) for x in diffs)
+    )
 
 
 def window_snake(d, s, length, pure):
@@ -159,6 +178,19 @@ def motif_abcabc(d):
     return a == d[3] and b == d[4] and c == d[5] and len({a, b, c}) == 3
 
 
+def chunk_sequence_mode(d):
+    two_digit = [d[i] * 10 + d[i + 1] for i in range(0, DIGITS, 2)]
+    if (
+        two_digit[1] - two_digit[0] == two_digit[2] - two_digit[1]
+        and abs(two_digit[1] - two_digit[0]) == 1
+    ):
+        return "2+2+2"
+    three_digit = [d[0] * 100 + d[1] * 10 + d[2], d[3] * 100 + d[4] * 10 + d[5]]
+    if abs(three_digit[1] - three_digit[0]) == 1:
+        return "3+3"
+    return None
+
+
 def star_airplane(d):
     return all(d[i] == d[i - 1] or d[i] == d[i + 1] for i in range(1, DIGITS - 1))
 
@@ -208,12 +240,36 @@ def contained_in_larger(ok, s, length):
 
 def build_ok(d):
     return {
-        "same_run": {(s, l): window_same(d, s, l) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
-        "step_high": {(s, l): window_step(d, s, l) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
-        "slide": {(s, l): window_slide(d, s, l) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
-        "pure_snake": {(s, l): window_snake(d, s, l, True) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
-        "snake": {(s, l): window_snake(d, s, l, False) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
-        "palindrome": {(s, l): window_pal(d, s, l) for l in range(3, DIGITS + 1) for s in range(DIGITS - l + 1)},
+        "same_run": {
+            (s, l): window_same(d, s, l)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
+        "step_high": {
+            (s, l): window_step(d, s, l)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
+        "slide": {
+            (s, l): window_slide(d, s, l)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
+        "pure_snake": {
+            (s, l): window_snake(d, s, l, True)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
+        "snake": {
+            (s, l): window_snake(d, s, l, False)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
+        "palindrome": {
+            (s, l): window_pal(d, s, l)
+            for l in range(3, DIGITS + 1)
+            for s in range(DIGITS - l + 1)
+        },
     }
 
 
@@ -223,7 +279,14 @@ def raw_and_max_features(d):
     raw = defaultdict(int)
     maximal = defaultdict(int)
 
-    for family in ["same_run", "step_high", "slide", "pure_snake", "snake", "palindrome"]:
+    for family in [
+        "same_run",
+        "step_high",
+        "slide",
+        "pure_snake",
+        "snake",
+        "palindrome",
+    ]:
         for length in range(3, DIGITS + 1):
             feature_id = fid(family, length)
             for s in range(DIGITS - length + 1):
@@ -235,41 +298,71 @@ def raw_and_max_features(d):
 
     if all_small(d):
         i = FEATURE_BY_LABEL["6_all_small_0_4"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     if all_big(d):
         i = FEATURE_BY_LABEL["6_all_big_5_9"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     if all_odd(d):
         i = FEATURE_BY_LABEL["6_all_odd"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     if all_even(d):
         i = FEATURE_BY_LABEL["6_all_even"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     for s in range(DIGITS - 4 + 1):
         if motif_abab(d, s):
             i = FEATURE_BY_LABEL["ABAB"]
-            present.add(i); raw[i] += 1; maximal[i] += 1
+            present.add(i)
+            raw[i] += 1
+            maximal[i] += 1
     if motif_abcabc(d):
         i = FEATURE_BY_LABEL["ABCABC"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     if star_airplane(d):
         i = FEATURE_BY_LABEL["star_airplane"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
 
     pair_runs = exact_pair_runs(d)
     pair_count = len(pair_runs)
     if pair_count >= 3:
         i = FEATURE_BY_LABEL["three_pair"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
     elif pair_count == 2:
         i = FEATURE_BY_LABEL["two_pair"]
-        present.add(i); raw[i] += 1; maximal[i] += 1
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
 
     fh_spans = full_house_spans(d)
     if fh_spans:
         i = FEATURE_BY_LABEL["full_house"]
         present.add(i)
         raw[i] += len(fh_spans)
+        maximal[i] += 1
+
+    if chunk_sequence_mode(d):
+        i = FEATURE_BY_LABEL["chunk_sequence"]
+        present.add(i)
+        raw[i] += 1
+        maximal[i] += 1
+
+    if not present and max(Counter(d).values()) >= 3:
+        i = FEATURE_BY_LABEL["pihu"]
+        present.add(i)
+        raw[i] += 1
         maximal[i] += 1
 
     return present, raw, maximal, ok
@@ -281,7 +374,15 @@ def score_digits(d, weights, explain=False):
 
     def add(label, family, span, note=""):
         score = weights[FEATURE_BY_LABEL[label]]
-        items.append({"label": label, "family": family, "span": span, "score": score, "note": note})
+        items.append(
+            {
+                "label": label,
+                "family": family,
+                "span": span,
+                "score": score,
+                "note": note,
+            }
+        )
 
     if all_small(d):
         add("6_all_small_0_4", "range", "1-6")
@@ -297,19 +398,34 @@ def score_digits(d, weights, explain=False):
     for length in range(3, DIGITS + 1):
         for s in range(DIGITS - length + 1):
             span = f"{s + 1}-{s + length}"
-            if ok["same_run"][(s, length)] and not contained_in_larger(ok["same_run"], s, length):
+            if ok["same_run"][(s, length)] and not contained_in_larger(
+                ok["same_run"], s, length
+            ):
                 add(f"{length}_same_run", "same_run", span)
-            if ok["slide"][(s, length)] and not contained_in_larger(ok["slide"], s, length):
+            if ok["slide"][(s, length)] and not contained_in_larger(
+                ok["slide"], s, length
+            ):
                 if ok["step_high"][(s, length)]:
-                    add(f"{length}_step_high", "step_high", span, "纯正替代普通滑梯计分")
+                    add(
+                        f"{length}_step_high", "step_high", span, "纯正替代普通滑梯计分"
+                    )
                 else:
                     add(f"{length}_slide", "slide", span)
-            if ok["snake"][(s, length)] and not contained_in_larger(ok["snake"], s, length):
+            if ok["snake"][(s, length)] and not contained_in_larger(
+                ok["snake"], s, length
+            ):
                 if ok["pure_snake"][(s, length)]:
-                    add(f"{length}_pure_snake", "pure_snake", span, "纯正替代普通贪吃蛇计分")
+                    add(
+                        f"{length}_pure_snake",
+                        "pure_snake",
+                        span,
+                        "纯正替代普通贪吃蛇计分",
+                    )
                 else:
                     add(f"{length}_snake", "snake", span)
-            if ok["palindrome"][(s, length)] and not contained_in_larger(ok["palindrome"], s, length):
+            if ok["palindrome"][(s, length)] and not contained_in_larger(
+                ok["palindrome"], s, length
+            ):
                 add(f"{length}_palindrome", "palindrome", span, "同号回文已被同号吸收")
 
     for s in range(DIGITS - 4 + 1):
@@ -332,6 +448,18 @@ def score_digits(d, weights, explain=False):
         span = f"{fh_spans[0][0] + 1}-{fh_spans[-1][1]}"
         add("full_house", "full_house", span, "5位窗口为AAABB或AABBB")
 
+    sequence_mode = chunk_sequence_mode(d)
+    if sequence_mode:
+        add(
+            "chunk_sequence",
+            "chunk_sequence",
+            "1-6",
+            f"按{sequence_mode}分块后严格递增或递减1",
+        )
+
+    if not items and max(Counter(d).values()) >= 3:
+        add("pihu", "pihu", "1-6", "无其他番型且某数字至少出现3次")
+
     total = sum(x["score"] for x in items)
     if explain:
         return total, sorted(items, key=lambda x: (-x["score"], x["span"], x["label"]))
@@ -350,6 +478,8 @@ def label_cn(label):
         "two_pair": "两对",
         "three_pair": "三对",
         "full_house": "葫芦",
+        "chunk_sequence": "连号",
+        "pihu": "屁胡",
     }
     if label in direct:
         return direct[label]
@@ -398,15 +528,45 @@ def run_full():
         for i, c in maximal.items():
             max_counts[i] += c
 
+        # 屁胡是特殊概率口径：赋分统计允许号码同时命中其他番型。
+        # raw_counts / max_counts 仍保留实际结算命中数，便于核对兜底规则。
+        pihu_id = FEATURE_BY_LABEL["pihu"]
+        if pihu_id not in present and max(Counter(d).values()) >= 3:
+            presence[pihu_id] += 1
+
     weights = []
     with (ROOT / "six_fan_stats.tsv").open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
-        writer.writerow(["id", "family", "length", "label", "presence_count", "raw_occurrence_count", "maximal_occurrence_count", "probability", "rarity_points"])
+        writer.writerow(
+            [
+                "id",
+                "family",
+                "length",
+                "label",
+                "presence_count",
+                "raw_occurrence_count",
+                "maximal_occurrence_count",
+                "probability",
+                "rarity_points",
+            ]
+        )
         for i, feat in enumerate(FEATURES):
             p = presence[i] / TOTAL
             points = -math.log10(p) if p else 0.0
             weights.append(points)
-            writer.writerow([i, feat["family"], feat["length"], feat["label"], presence[i], raw_counts[i], max_counts[i], f"{p:.12f}", f"{points:.6f}"])
+            writer.writerow(
+                [
+                    i,
+                    feat["family"],
+                    feat["length"],
+                    feat["label"],
+                    presence[i],
+                    raw_counts[i],
+                    max_counts[i],
+                    f"{p:.12f}",
+                    f"{points:.6f}",
+                ]
+            )
 
     rounded_hist = defaultdict(int)
     tenth_hist = defaultdict(int)
@@ -428,25 +588,38 @@ def run_full():
     top.sort(key=lambda x: (-x[0], x[1]))
     top = top[:TOP_N]
 
-    with (ROOT / "six_rounded_score_distribution.tsv").open("w", encoding="utf-8", newline="") as f:
+    with (ROOT / "six_rounded_score_distribution.tsv").open(
+        "w", encoding="utf-8", newline=""
+    ) as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(["rounded_score", "count", "probability"])
         for score in sorted(rounded_hist):
             count = rounded_hist[score]
             writer.writerow([score, count, f"{count / TOTAL:.12f}"])
 
-    with (ROOT / "six_score_distribution.tsv").open("w", encoding="utf-8", newline="") as f:
+    with (ROOT / "six_score_distribution.tsv").open(
+        "w", encoding="utf-8", newline=""
+    ) as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(["score_floor", "score_ceiling", "count", "probability"])
         for bin_id in sorted(tenth_hist):
             count = tenth_hist[bin_id]
-            writer.writerow([f"{bin_id / 10:.1f}", f"{(bin_id + 1) / 10:.1f}", count, f"{count / TOTAL:.12f}"])
+            writer.writerow(
+                [
+                    f"{bin_id / 10:.1f}",
+                    f"{(bin_id + 1) / 10:.1f}",
+                    count,
+                    f"{count / TOTAL:.12f}",
+                ]
+            )
 
     with (ROOT / "six_top_scores.tsv").open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(["rank", "id", "score", "rounded_score"])
         for rank, (score, n) in enumerate(top, 1):
-            writer.writerow([rank, f"{n:06d}", f"{score:.6f}", int(math.floor(score + 0.5))])
+            writer.writerow(
+                [rank, f"{n:06d}", f"{score:.6f}", int(math.floor(score + 0.5))]
+            )
 
     mean = score_sum / TOTAL
     var = score_sq_sum / TOTAL - mean * mean
@@ -466,7 +639,9 @@ def load_fans():
 
 
 def load_rounded():
-    with (ROOT / "six_rounded_score_distribution.tsv").open("r", encoding="utf-8", newline="") as f:
+    with (ROOT / "six_rounded_score_distribution.tsv").open(
+        "r", encoding="utf-8", newline=""
+    ) as f:
         return list(csv.DictReader(f, delimiter="\t"))
 
 
@@ -476,7 +651,9 @@ def write_report():
     with (ROOT / "six_top_scores.tsv").open("r", encoding="utf-8", newline="") as f:
         top = list(csv.DictReader(f, delimiter="\t"))[:30]
     summary = {}
-    for line in (ROOT / "six_score_summary.txt").read_text(encoding="utf-8").splitlines():
+    for line in (
+        (ROOT / "six_score_summary.txt").read_text(encoding="utf-8").splitlines()
+    ):
         if "=" in line:
             k, v = line.split("=", 1)
             summary[k] = v
@@ -486,7 +663,9 @@ def write_report():
     lines = []
     lines.append("# 6位幸运 ID 概率、番种与整数分分布")
     lines.append("")
-    lines.append("本版将号码空间改为 `000000` 到 `999999`，共 10^6 个 ID。规则沿用 9 位 v2 的最大番种设计，但全小/全大和星空飞机改为 6 位语境。")
+    lines.append(
+        "本版将号码空间改为 `000000` 到 `999999`，共 10^6 个 ID。规则沿用 9 位 v2 的最大番种设计，但全小/全大和星空飞机改为 6 位语境。"
+    )
     lines.append("")
     lines.append("## 设计口径")
     lines.append("")
@@ -495,8 +674,12 @@ def write_report():
     lines.append("3. 同号吸收同号回文。")
     lines.append("4. 全小/全大只在完整 6 位成立：全小为 0-4，全大为 5-9。")
     lines.append("5. 6 位星空飞机：第 2 到第 5 位每一位都必须和左邻或右邻相同。")
-    lines.append("6. 对子：统计恰好长度为 2 的同号连段；两对 / 三对同家族，三对吸收两对。")
-    lines.append("7. 葫芦：任意 5 位窗口为 AAABB 或 AABBB；存在即计一次，不因双窗口叠分。")
+    lines.append(
+        "6. 对子：统计恰好长度为 2 的同号连段；两对 / 三对同家族，三对吸收两对。"
+    )
+    lines.append(
+        "7. 葫芦：任意 5 位窗口为 AAABB 或 AABBB；存在即计一次，不因双窗口叠分。"
+    )
     lines.append("8. 游戏展示分为原始总分四舍五入后的整数分。")
     lines.append("")
     lines.append("## 全量摘要")
@@ -516,14 +699,18 @@ def write_report():
         count = int(r["count"])
         cumulative += count
         ge_count = total - cumulative + count
-        lines.append(f"| {score} | {band(score)} | {count:,} | {count / total:.12f} | {ge_count:,} | {ge_count / total:.12f} |")
+        lines.append(
+            f"| {score} | {band(score)} | {count:,} | {count / total:.12f} | {ge_count:,} | {ge_count / total:.12f} |"
+        )
     lines.append("")
     lines.append("## 番种分值与出现概率")
     lines.append("")
     lines.append("| 番种 | 家族 | 长度 | 命中号码数 | 出现概率 | 番种分值 |")
     lines.append("|---|---|---:|---:|---:|---:|")
     for r in sorted(fans, key=lambda x: float(x["rarity_points"]), reverse=True):
-        lines.append(f"| {label_cn(r['label'])} | {CN_FAMILY[r['family']]} | {r['length']} | {int(r['presence_count']):,} | {float(r['probability']):.12f} | {float(r['rarity_points']):.6f} |")
+        lines.append(
+            f"| {label_cn(r['label'])} | {CN_FAMILY[r['family']]} | {r['length']} | {int(r['presence_count']):,} | {float(r['probability']):.12f} | {float(r['rarity_points']):.6f} |"
+        )
     lines.append("")
     lines.append("## 按家族拆分")
     for family in FAMILIES:
@@ -538,15 +725,21 @@ def write_report():
         lines.append("| 番种 | 概率 | 分值 |")
         lines.append("|---|---:|---:|")
         for r in sorted(rows, key=lambda x: (int(x["length"]), x["label"])):
-            lines.append(f"| {label_cn(r['label'])} | {float(r['probability']):.12f} | {float(r['rarity_points']):.6f} |")
+            lines.append(
+                f"| {label_cn(r['label'])} | {float(r['probability']):.12f} | {float(r['rarity_points']):.6f} |"
+            )
     lines.append("")
     lines.append("## Top 30")
     lines.append("")
     lines.append("| 排名 | ID | 原始分 | 展示分 |")
     lines.append("|---:|---|---:|---:|")
     for r in top:
-        lines.append(f"| {r['rank']} | `{r['id']}` | {float(r['score']):.6f} | {r['rounded_score']} |")
-    (ROOT / "six_digit_game_design_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        lines.append(
+            f"| {r['rank']} | `{r['id']}` | {float(r['score']):.6f} | {r['rounded_score']} |"
+        )
+    (ROOT / "six_digit_game_design_report.md").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
 
 
 def explain_id(text):
@@ -562,13 +755,21 @@ def explain_id(text):
     if not items:
         print("-\t无显著最大番种\t-\t0.000000\t")
     for item in items:
-        print(f"{CN_FAMILY[item['family']]}\t{label_cn(item['label'])}\t{item['span']}\t{item['score']:.6f}\t{item['note']}")
+        print(
+            f"{CN_FAMILY[item['family']]}\t{label_cn(item['label'])}\t{item['span']}\t{item['score']:.6f}\t{item['note']}"
+        )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--full", action="store_true", help="run full 6-digit enumeration")
-    parser.add_argument("--report", action="store_true", help="regenerate report from existing TSV files")
+    parser.add_argument(
+        "--full", action="store_true", help="run full 6-digit enumeration"
+    )
+    parser.add_argument(
+        "--report",
+        action="store_true",
+        help="regenerate report from existing TSV files",
+    )
     parser.add_argument("--id", help="explain a single 6-digit id")
     args = parser.parse_args()
     if args.full:
@@ -579,6 +780,7 @@ def main():
         explain_id(args.id)
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()

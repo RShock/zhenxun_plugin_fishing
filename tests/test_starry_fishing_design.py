@@ -245,9 +245,7 @@ class TestStarWishNumbers:
 
     def test_miracle_subset_returns_none_when_no_non_empty_subset_matches(self):
         assert (
-            find_starry_miracle_subset(
-                [1, 2, 4, 8], target=31, mod_base=10_000_000
-            )
+            find_starry_miracle_subset([1, 2, 4, 8], target=31, mod_base=10_000_000)
             is None
         )
 
@@ -291,7 +289,6 @@ class TestStarWishNumbers:
         indices = find_starry_miracle_subset(values)
         assert indices == [0]
 
-
     @pytest.mark.asyncio
     async def test_try_claim_miracle_consumes_backpack_and_grants_frame(self, db):
         """?????????? starry_fish ??????? +1??????"""
@@ -299,7 +296,9 @@ class TestStarWishNumbers:
 
         user, _ = await FishingUser.get_or_create_user("miracle_user_1")
         # 8 ??????????? 7777777
-        miracle_bag = [{"id": 999999, "score": 1.0, "location_id": "11"} for _ in range(7)]
+        miracle_bag = [
+            {"id": 999999, "score": 1.0, "location_id": "11"} for _ in range(7)
+        ]
         miracle_bag.append({"id": 777784, "score": 1.0, "location_id": "11"})
         miracle_bag.append({"id": 111111, "score": 1.0, "location_id": "11"})  # ????
         user.starry_fish = miracle_bag
@@ -327,6 +326,7 @@ class TestStarWishNumbers:
         from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
 
         user, _ = await FishingUser.get_or_create_user("miracle_user_2")
+
         def _bag():
             return [{"id": 999999} for _ in range(7)] + [{"id": 777784}]
 
@@ -340,7 +340,6 @@ class TestStarWishNumbers:
         assert int(user2.star_frames) >= 2
         remaining = [int(x.get("id", 0)) for x in (user2.starry_fish or [])]
         assert remaining == [100]
-
 
     def test_starry_fish_id_is_six_digits(self):
         assert format_starry_fish_id(1) == "000001"
@@ -367,7 +366,9 @@ class TestStarWishNumbers:
         # 旧逻辑会是 0.05 * 1.5 = 0.075；新逻辑应为 0.05 + 0.025 = 0.075（Lv<=10 时数值巧合相同）
         # 高竿时必须体现绝对加值：Lv.20 + 太阳风 = 10% + 2.5% = 12.5%，而非 10% * 1.5
         rate = get_starry_fish_drop_rate(rod_level=20, solar_wind=True)
-        rod_bonus = (20 - STARRY_FISH_ROD_BONUS_THRESHOLD) * STARRY_FISH_ROD_BONUS_PER_LEVEL
+        rod_bonus = (
+            20 - STARRY_FISH_ROD_BONUS_THRESHOLD
+        ) * STARRY_FISH_ROD_BONUS_PER_LEVEL
         expected = STARRY_FISH_DROP_RATE + rod_bonus + STARRY_FISH_SOLAR_WIND_BONUS
         assert rate == pytest.approx(expected)
         assert rate == pytest.approx(0.125)
@@ -403,8 +404,7 @@ class TestStarWishNumbers:
         assert scored.display_score == 17
         assert scored.reward_pool == "ultimate"
         assert not any(
-            feature.label.startswith(("3_", "4_", "5_"))
-            for feature in scored.features
+            feature.label.startswith(("3_", "4_", "5_")) for feature in scored.features
         )  # 每个窗口家族内仍由 6 位长段吸收短段
 
     def test_pair_features_two_and_three_pair(self):
@@ -413,13 +413,21 @@ class TestStarWishNumbers:
         labels = {f.label for f in two.features}
         assert "two_pair" in labels
         assert "three_pair" not in labels
-        assert any(f.score == pytest.approx(1.359121) for f in two.features if f.label == "two_pair")
+        assert any(
+            f.score == pytest.approx(1.359121)
+            for f in two.features
+            if f.label == "two_pair"
+        )
 
         three = score_starry_fish("001122")
         labels = {f.label for f in three.features}
         assert "three_pair" in labels
         assert "two_pair" not in labels  # 同家族最大匹配
-        assert any(f.score == pytest.approx(3.091515) for f in three.features if f.label == "three_pair")
+        assert any(
+            f.score == pytest.approx(3.091515)
+            for f in three.features
+            if f.label == "three_pair"
+        )
 
         # 4 连同号 + 1 对：只有 1 段长度恰好为 2，不构成两对
         mixed = score_starry_fish("000011")
@@ -433,7 +441,11 @@ class TestStarWishNumbers:
         aaabb = score_starry_fish("000112")
         labels = {f.label for f in aaabb.features}
         assert "full_house" in labels
-        assert any(f.score == pytest.approx(2.454693) for f in aaabb.features if f.label == "full_house")
+        assert any(
+            f.score == pytest.approx(2.454693)
+            for f in aaabb.features
+            if f.label == "full_house"
+        )
 
         aabbb = score_starry_fish("001112")
         assert "full_house" in {f.label for f in aabbb.features}
@@ -472,12 +484,49 @@ class TestStarWishNumbers:
         assert "6_all_odd" not in mixed_labels
         assert "6_all_even" not in mixed_labels
 
+    def test_chunk_sequence_feature(self):
+        for number, mode in (
+            ("111213", "2+2+2"),
+            ("131211", "2+2+2"),
+            ("100101", "3+3"),
+            ("101100", "3+3"),
+            ("000001", "3+3"),
+        ):
+            scored = score_starry_fish(number)
+            feature = next(f for f in scored.features if f.label == "chunk_sequence")
+            assert feature.score == pytest.approx(2.658763)
+            assert mode in feature.note
+
+        for number in ("111315", "100102", "999000"):
+            assert "chunk_sequence" not in {
+                f.label for f in score_starry_fish(number).features
+            }
+
+    def test_pihu_is_fallback_only(self):
+        pihu = score_starry_fish("002150")
+        assert [feature.label for feature in pihu.features] == ["pihu"]
+        assert pihu.raw_score == pytest.approx(0.802444)
+        assert pihu.display_score == 1
+
+        # 虽有至少三个 1，但已经命中 3 位回文，不能再叠屁胡。
+        patterned = score_starry_fish("101245")
+        assert "3_palindrome" in {f.label for f in patterned.features}
+        assert "pihu" not in {f.label for f in patterned.features}
+
+        # 连号本身也会阻止屁胡兜底。
+        sequence = score_starry_fish("000001")
+        assert "chunk_sequence" in {f.label for f in sequence.features}
+        assert "pihu" not in {f.label for f in sequence.features}
+
+        # 没有任意数字达到 3 次时，即使无其他番型也不能屁胡。
+        no_triple = score_starry_fish("024579")
+        assert "pihu" not in {f.label for f in no_triple.features}
+
     def test_starry_reward_pool_boundaries_match_design(self):
         assert get_reward_pool(5) == "middle"
         assert get_reward_pool(6) == "high"
         assert get_reward_pool(10) == "high"
         assert get_reward_pool(11) == "ultimate"
-
 
     def test_draw_starry_reward_none_pool_returns_none(self):
         assert draw_starry_reward("none") is None
@@ -519,6 +568,14 @@ class TestStarryRewardItemKeys:
         assert "utr_select_ticket" in high_keys
         assert "utr_select_ticket" in ultimate_keys
 
+    def test_middle_pool_cat_frame_grants_three(self):
+        cat_frame = next(
+            item
+            for item in STARRY_REWARD_POOL_ITEMS["middle"]
+            if item["key"] == "cat_frame"
+        )
+        assert cat_frame["count"] == 3
+
     def test_low_pool_includes_wish_score_bonus(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
             STARRY_REWARD_POOL_ITEMS,
@@ -532,10 +589,14 @@ class TestStarryRewardItemKeys:
         wish = next(item for item in low_items if item["key"] == "wish_score")
         assert wish["score_bonus"] == 0.5
         assert wish["name"] == "0.5积分"
-        low_frag = next(item for item in low_items if item["key"] == "lottery_fragment_low")
+        low_frag = next(
+            item for item in low_items if item["key"] == "lottery_fragment_low"
+        )
         assert low_frag["name"] == "中级抽奖碎片"
         mid_items = STARRY_REWARD_POOL_ITEMS["middle"]
-        mid_frag = next(item for item in mid_items if item["key"] == "lottery_fragment_mid")
+        mid_frag = next(
+            item for item in mid_items if item["key"] == "lottery_fragment_mid"
+        )
         assert mid_frag["name"] == "高级抽奖碎片"
         high_items = STARRY_REWARD_POOL_ITEMS["high"]
         high_frag = next(
@@ -652,7 +713,6 @@ class TestUtrSelectNormalize:
         assert _normalize_utr_fish_name("") == ""
 
 
-
 class TestStarryFramePityFreeze:
     def test_starry_map_freezes_frame_pity(self):
         """11-20 星空图不累计展示木框保底。"""
@@ -686,8 +746,9 @@ class TestStarryFramePityFreeze:
 
         loc = None
         for item in ConfigManager.get_locations():
-            if (not is_starry_location(item.id)
-                    and not str(item.id).lower().startswith("s")):
+            if not is_starry_location(item.id) and not str(item.id).lower().startswith(
+                "s"
+            ):
                 loc = item
                 break
         assert loc is not None
@@ -702,7 +763,6 @@ class TestStarryFramePityFreeze:
             assert new_frame == 0
         else:
             assert new_frame > 10
-
 
 
 class TestStarryUtrPityAndWeather:
@@ -722,7 +782,9 @@ class TestStarryUtrPityAndWeather:
         from zhenxun.plugins.zhenxun_plugin_fishing.starry import is_starry_location
 
         for item in ConfigManager.get_locations():
-            if not is_starry_location(item.id) and not str(item.id).lower().startswith("s"):
+            if not is_starry_location(item.id) and not str(item.id).lower().startswith(
+                "s"
+            ):
                 return item
         raise AssertionError("需要普通地图")
 
@@ -807,7 +869,11 @@ class TestStarryUtrPityAndWeather:
             weather_lost_wind=True,
             location=loc,
         )
-        if rarity == "UTR" and fish is not None and getattr(fish, "id", None) != "展示木框":
+        if (
+            rarity == "UTR"
+            and fish is not None
+            and getattr(fish, "id", None) != "展示木框"
+        ):
             assert new_utr_on == 0
         else:
             assert new_utr_on == 21
@@ -887,7 +953,9 @@ class TestStarryUtrPityAndWeather:
         from zhenxun.plugins.zhenxun_plugin_fishing.starry import is_starry_location
 
         location = next(
-            item for item in ConfigManager.get_locations() if is_starry_location(item.id)
+            item
+            for item in ConfigManager.get_locations()
+            if is_starry_location(item.id)
         )
         fish = ConfigManager.get_fish(location.fish_pool[0])
         assert fish is not None

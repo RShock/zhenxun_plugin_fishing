@@ -33,3 +33,5 @@ id	family	length	label	presence_count	raw_occurrence_count	maximal_occurrence_co
 31	pairs	2	two_pair	43740	43740	43740	0.043740000000	1.359121
 32	pairs	3	three_pair	810	810	810	0.000810000000	3.091515
 33	full_house	5	full_house	3510	3600	3510	0.003510000000	2.454693
+34	chunk_sequence	6	chunk_sequence	2194	2194	2194	0.002194000000	2.658763
+35	pihu	6	pihu	157600	20712	20712	0.157600000000	0.802444
