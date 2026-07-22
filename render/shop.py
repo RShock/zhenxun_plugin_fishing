@@ -24,9 +24,11 @@ async def render_shop(
         rod_section["desc"] = "当前等级: 20级 · 奇迹彼岸钓竿"
     elif rod_level == 10 and user_id:
         # Lv.10 未建设星空艇时，升级入口替换为星空艇建设入口。
-        from ..starry import STARRY_SHIP_COST, has_starry_ship
+        # 注意：不可 import has_starry_ship 同名函数，会遮蔽参数布尔值，
+        # 导致下方「星空木框」在未建艇时仍错误显示。
+        from ..starry import STARRY_SHIP_COST, has_starry_ship as check_starry_ship
 
-        if not await has_starry_ship(user_id):
+        if not await check_starry_ship(user_id):
             rod_section["name"] = "🚀 购买星空艇"
             rod_section["desc"] = "解锁第二部分【星空钓鱼】"
             rod_section["price"] = STARRY_SHIP_COST

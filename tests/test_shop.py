@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import AsyncMock, patch
+
 from zhenxun.plugins.zhenxun_plugin_fishing.starry import (
     STARRY_SHIP_ITEM_ID,
     STARRY_SHIP_ITEM_TYPE,
@@ -14,9 +16,70 @@ from zhenxun.plugins.zhenxun_plugin_fishing.shop import (
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
 from zhenxun.plugins.zhenxun_plugin_fishing.models import BuffEffect
+from zhenxun.plugins.zhenxun_plugin_fishing.render.shop import render_shop
 
 
 USER_ID = "test_user_001"
+
+
+class TestShopRenderStarryFrame:
+    """鱼店渲染：星空木框升级仅在已建星空艇后展示。"""
+
+    async def _capture_frame_rows(self, **kwargs):
+        captured = {}
+
+        def fake_render_template(name, **ctx):
+            captured["frame_upgrade"] = ctx.get("frame_upgrade")
+            return "<html></html>"
+
+        with (
+            patch(
+                "zhenxun.plugins.zhenxun_plugin_fishing.render.shop.render_template",
+                side_effect=fake_render_template,
+            ),
+            patch(
+                "zhenxun.plugins.zhenxun_plugin_fishing.render.shop.render_html",
+                new_callable=AsyncMock,
+                return_value=b"img",
+            ),
+            patch(
+                "zhenxun.plugins.zhenxun_plugin_fishing.starry.has_starry_ship",
+                new_callable=AsyncMock,
+                return_value=kwargs.get("has_starry_ship", False),
+            ),
+        ):
+            await render_shop(
+                baits=[],
+                potions=[],
+                rod_level=kwargs.get("rod_level", 10),
+                rod_upgrade_price=1000,
+                hook_level=0,
+                hook_upgrade_price=100,
+                display_slots=3,
+                display_frames=0,
+                cat_frames=0,
+                upgraded_display_count=0,
+                gold=0,
+                user_id=USER_ID,
+                starry_frames=0,
+                has_starry_ship=kwargs.get("has_starry_ship", False),
+                star_frames=5,
+            )
+        rows = (captured.get("frame_upgrade") or {}).get("rows") or []
+        return rows
+
+    async def test_starry_frame_hidden_before_ship(self):
+        rows = await self._capture_frame_rows(has_starry_ship=False, rod_level=10)
+        assert not any(r.get("key") == "starry" for r in rows)
+
+    async def test_starry_frame_visible_after_ship(self):
+        rows = await self._capture_frame_rows(has_starry_ship=True, rod_level=10)
+        assert any(r.get("key") == "starry" for r in rows)
+
+    async def test_starry_frame_hidden_before_ship_low_rod(self):
+        # 低竿等级同样不应展示星空木框
+        rows = await self._capture_frame_rows(has_starry_ship=False, rod_level=5)
+        assert not any(r.get("key") == "starry" for r in rows)
 
 
 class TestUpgradeRod:
