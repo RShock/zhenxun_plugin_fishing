@@ -23,6 +23,12 @@ from ..models import (
     _make_naive,
 )
 from ..render import render_fishing_status
+from ..scene_instance import (
+    SHADOW_SCENE_INPUT,
+    SHADOW_SCENE_LOCATION_ID,
+    SHADOW_SCENE_USER_ID,
+    get_scene_instance_id,
+)
 from ..services import build_buff_messages, calculate_display_income, get_or_create_user
 from ..weather_service import ensure_weather_generated, get_location_weather
 from .bait import consume_bait_incremental, select_bait_with_preference
@@ -34,10 +40,6 @@ from .probability import calculate_display_probabilities
 from .scene import render_scene
 from .settlement_status import build_settlement_status
 from .speed import build_speed_bonus_detail, calculate_effective_fishing_interval
-
-SHADOW_SCENE_INPUT = "-11"
-SHADOW_SCENE_LOCATION_ID = "11"
-SHADOW_SCENE_USER_ID = "418648118"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 内部辅助
@@ -136,7 +138,11 @@ async def _prepare_fishing_context(
         settle_start = start_time
 
     buffs = await FishingBuff.get_active_buffs_for_fishing(
-        user_id, location.id, settle_start, now
+        user_id,
+        location.id,
+        settle_start,
+        now,
+        location_buff_target_id=get_scene_instance_id(status_dict, location.id),
     )
 
     # 星空图的乱纪元只是一层显示名称：完成该图收集后，结算效果等同迷途风；
@@ -237,8 +243,9 @@ async def start_fishing(
 
     status = await FishingUser.start_fishing(user_id, location.id)
     if shadow_scene:
-        # 玩法数据仍绑定 11 图，只用状态标记控制当前玩家的场景倒转。
+        # ?????? 11 ????????????? -11 ???????
         status["shadow_scene"] = True
+        status["scene_instance_id"] = SHADOW_SCENE_INPUT
         await FishingUser.update_fishing_status(user_id, status)
     image = await render_scene(user_id, location, group_id=group_id)
     logger.info(f"用户 {user_id} 在 {location.name} 开始钓鱼")
@@ -400,7 +407,11 @@ async def check_fishing_status(
     bait = ConfigManager.get_bait(user.bait_id)
 
     active_buffs = await FishingBuff.get_active_buffs_for_fishing(
-        user_id, location.id, start_time, datetime.now()
+        user_id,
+        location.id,
+        start_time,
+        datetime.now(),
+        location_buff_target_id=get_scene_instance_id(status_dict, location.id),
     )
     effects = None
     if active_buffs:
@@ -592,7 +603,11 @@ async def _apply_session_reward_stage(plan: _StopSettlementPlan) -> None:
     if plan.gm_mode:
         plan.now = plan.start_time + timedelta(hours=10)
     plan.buffs = await FishingBuff.get_active_buffs_for_fishing(
-        plan.user_id, plan.location.id, plan.start_time, plan.now
+        plan.user_id,
+        plan.location.id,
+        plan.start_time,
+        plan.now,
+        location_buff_target_id=get_scene_instance_id(status, plan.location.id),
     )
 
 

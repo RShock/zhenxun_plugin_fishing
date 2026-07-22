@@ -405,7 +405,16 @@ class MockDB:
             for u in self._users.values()
             if u.fishing_status
             and isinstance(u.fishing_status, dict)
-            and u.fishing_status.get("location_id") == location_id
+            and (
+                u.fishing_status.get("scene_instance_id")
+                or (
+                    "-11"
+                    if u.fishing_status.get("shadow_scene")
+                    and u.fishing_status.get("location_id") == "11"
+                    else u.fishing_status.get("location_id")
+                )
+            )
+            == location_id
         ]
 
     # --- FishingUser: Backpack (backpack JSONB) ---
@@ -823,9 +832,15 @@ class MockDB:
         return b
 
     async def buff_get_active_buffs_for_fishing(
-        self, user_id, location_id, start_time, end_time
+        self,
+        user_id,
+        location_id,
+        start_time,
+        end_time,
+        location_buff_target_id=None,
     ):
         result = []
+        scene_target_id = location_buff_target_id or location_id
         for target_type, target_id in [
             ("user", user_id),
             ("location", location_id),
@@ -834,7 +849,23 @@ class MockDB:
             for b in self._buffs:
                 if b.target_type == target_type and b.target_id == target_id:
                     if b.start_time < end_time and b.end_time > start_time:
+                        if (
+                            target_type == "location"
+                            and scene_target_id != location_id
+                            and b.buff_type == "nest"
+                        ):
+                            continue
                         result.append(b)
+        if scene_target_id != location_id:
+            for b in self._buffs:
+                if (
+                    b.target_type == "location"
+                    and b.target_id == scene_target_id
+                    and b.buff_type == "nest"
+                    and b.start_time < end_time
+                    and b.end_time > start_time
+                ):
+                    result.append(b)
         has_lost_wind = any(b.buff_type == "weather_lost_wind" for b in result)
         if has_lost_wind:
             unlocked = await self.has_unlocked_lost_wind(user_id, location_id)

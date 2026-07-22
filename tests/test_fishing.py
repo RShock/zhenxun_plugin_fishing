@@ -78,10 +78,24 @@ class TestStartFishing:
         status = await FishingUser.get_status("418648118")
         assert status is not None
         assert status["location_id"] == "11"
+        assert status["scene_instance_id"] == "-11"
         assert status["shadow_scene"] is True
         assert status["time_potions_used"] == 0
         rendered_location = scene_mock.await_args.args[1]
         assert rendered_location.id == "11"
+
+    async def test_shadow_scene_players_are_isolated_from_map_11(self, db):
+        shadow_id = "418648118"
+        normal_id = "shadow-isolation-normal"
+        await FishingUser.start_fishing(shadow_id, "11")
+        shadow_status = await FishingUser.get_status(shadow_id)
+        shadow_status["scene_instance_id"] = "-11"
+        shadow_status["shadow_scene"] = True
+        await FishingUser.update_fishing_status(shadow_id, shadow_status)
+        await FishingUser.start_fishing(normal_id, "11")
+
+        assert await FishingUser.get_location_fishers("-11") == [shadow_id]
+        assert await FishingUser.get_location_fishers("11") == [normal_id]
 
     async def test_start_fishing_sign_in_on_first_fish(self, db):
         await start_fishing(USER_ID, LOCATION_1, "TestUser")

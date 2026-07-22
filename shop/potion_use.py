@@ -9,6 +9,7 @@ from zhenxun.services.log import logger
 from ..core.cat_gift import default_cat_gifts
 from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
+from ..scene_instance import get_scene_instance_id
 from ..services import get_or_create_user
 
 from .view import get_status_image
@@ -84,6 +85,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     }
     if status_dict.get("shadow_scene"):
         reset_status["shadow_scene"] = True
+        reset_status["scene_instance_id"] = get_scene_instance_id(status_dict)
     await FishingUser.update_fishing_status(user_id, reset_status)
     if time_potions_used:
         await FishingUser.add_item(user_id, "time_potion", "potion", time_potions_used)

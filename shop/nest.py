@@ -8,6 +8,7 @@ from zhenxun.services.log import logger
 
 from ..config import DAILY_NEST_LIMIT, MAX_NEST_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser
+from ..scene_instance import get_scene_instance_id
 from ..services import get_or_create_user
 
 
@@ -19,6 +20,7 @@ async def do_nest(
         return False, "你还没有在钓鱼，无法打窝！请先【钓鱼 地点编号】开始钓鱼"
 
     location_id = status["location_id"]
+    scene_instance_id = get_scene_instance_id(status, location_id)
     location = ConfigManager.get_location(location_id)
     if not location:
         return False, "当前钓鱼地点无效"
@@ -48,7 +50,7 @@ async def do_nest(
 
     current_nest_buffs = await FishingBuff.filter(
         target_type=BuffEffect.TARGET_TYPE_LOCATION,
-        target_id=location_id,
+        target_id=scene_instance_id,
         buff_type=BuffEffect.BUFF_TYPE_NEST,
         end_time__gt=datetime.now(),
     ).all()
@@ -71,7 +73,7 @@ async def do_nest(
     duration_hours = ConfigManager.get_nest_duration_hours()
     for _ in range(layers_to_add):
         await FishingBuff.add_location_buff(
-            location_id=location_id,
+            location_id=scene_instance_id,
             buff_type=BuffEffect.BUFF_TYPE_NEST,
             duration_hours=duration_hours,
             value=5,
@@ -119,6 +121,7 @@ async def do_cat_frame_nest(
         return False, "你还没有在钓鱼，无法使用猫猫框打窝！请先【钓鱼 地点编号】开始钓鱼"
 
     location_id = status["location_id"]
+    scene_instance_id = get_scene_instance_id(status, location_id)
     location = ConfigManager.get_location(location_id)
     if not location:
         return False, "当前钓鱼地点无效"
@@ -145,7 +148,7 @@ async def do_cat_frame_nest(
 
     current_nest_buffs = await FishingBuff.filter(
         target_type=BuffEffect.TARGET_TYPE_LOCATION,
-        target_id=location_id,
+        target_id=scene_instance_id,
         buff_type=BuffEffect.BUFF_TYPE_NEST,
         end_time__gt=datetime.now(),
     ).all()
@@ -161,7 +164,7 @@ async def do_cat_frame_nest(
     duration_hours = ConfigManager.get_nest_duration_hours()
     for _ in range(layers_to_add):
         await FishingBuff.add_location_buff(
-            location_id=location_id,
+            location_id=scene_instance_id,
             buff_type=BuffEffect.BUFF_TYPE_NEST,
             duration_hours=duration_hours,
             value=5,

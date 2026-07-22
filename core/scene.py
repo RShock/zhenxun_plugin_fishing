@@ -10,16 +10,17 @@ from ..cat_park import is_cat_park_location
 from ..config import LocationData
 from ..models import BuffEffect, FishingBuff, FishingUser, FishingWeather, _make_naive
 from ..render import render_fishing_scene
+from ..scene_instance import get_scene_instance_id
 from ..weather_service import get_location_weather
 from .bait import get_bait_info
 from .probability import calculate_display_probabilities
 
 
 async def collect_scene_players(
-    location: LocationData, group_id: str | None
+    scene_instance_id: str, group_id: str | None
 ) -> list[dict]:
     """收集同一钓场的在线玩家列表。"""
-    fisher_ids = await FishingUser.get_location_fishers(location.id)
+    fisher_ids = await FishingUser.get_location_fishers(scene_instance_id)
 
     if group_id:
         try:
@@ -65,7 +66,9 @@ async def render_scene(
 
     t0 = _time.perf_counter()
 
-    players = await collect_scene_players(location, group_id)
+    status_dict = await FishingUser.get_status(user_id)
+    scene_instance_id = get_scene_instance_id(status_dict, location.id)
+    players = await collect_scene_players(scene_instance_id, group_id)
     weather_info = await get_location_weather(location.id, user_id)
 
     # 迷途风互斥可见性
@@ -91,7 +94,7 @@ async def render_scene(
                     filtered.append(p)
             players = filtered
 
-    nest_speed_bonus = await FishingBuff.get_location_buff_count(location.id)
+    nest_speed_bonus = await FishingBuff.get_location_buff_count(scene_instance_id)
     nest_speed_bonus = nest_speed_bonus * 5
 
     frame_speed_bonus = await FishingBuff.get_frame_buff_count_for_location(location.id)
@@ -138,14 +141,17 @@ async def render_scene(
         ),
     )
 
-    status_dict = await FishingUser.get_status(user_id)
     buffs = []
     fishing_start_time = None
     if status_dict:
         start_time = _make_naive(datetime.fromisoformat(status_dict["start_time"]))
         fishing_start_time = start_time
         buffs = await FishingBuff.get_active_buffs_for_fishing(
-            user_id, location.id, start_time, now
+            user_id,
+            location.id,
+            start_time,
+            now,
+            location_buff_target_id=scene_instance_id,
         )
         if buffs:
             from ..models import FishingBuffCalculator

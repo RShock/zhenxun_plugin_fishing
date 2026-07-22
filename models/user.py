@@ -23,6 +23,7 @@ from ..config import (
     MAX_STATUS_PER_DAY,
     normalize_fish_numeric_id,
 )
+from ..scene_instance import get_scene_instance_id
 from . import user_mutations as mut
 
 
@@ -1133,7 +1134,8 @@ class FishingUser(Model):
         result = []
         for user in users:
             if user.fishing_status and isinstance(user.fishing_status, dict):
-                if user.fishing_status.get("location_id") == location_id:
+                scene_id = get_scene_instance_id(user.fishing_status)
+                if scene_id == location_id:
                     result.append(user.user_id)
         return result
 
@@ -1143,7 +1145,7 @@ class FishingUser(Model):
         counts: dict[str, int] = {}
         for user in users:
             if user.fishing_status and isinstance(user.fishing_status, dict):
-                lid = user.fishing_status.get("location_id")
+                lid = get_scene_instance_id(user.fishing_status)
                 if lid:
                     counts[lid] = counts.get(lid, 0) + 1
         return counts

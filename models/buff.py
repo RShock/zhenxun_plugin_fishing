@@ -224,8 +224,11 @@ class FishingBuff(Model):
         location_id: str,
         start_time: datetime,
         end_time: datetime,
+        location_buff_target_id: str | None = None,
     ) -> list["FishingBuff"]:
+        """????????????? Buff ????????????"""
         buffs = []
+        scene_target_id = location_buff_target_id or location_id
         for target_type, target_id in [
             (BuffEffect.TARGET_TYPE_USER, user_id),
             (BuffEffect.TARGET_TYPE_LOCATION, location_id),
@@ -237,7 +240,23 @@ class FishingBuff(Model):
                 start_time__lt=end_time,
                 end_time__gt=start_time,
             ).all()
+            if (
+                target_type == BuffEffect.TARGET_TYPE_LOCATION
+                and scene_target_id != location_id
+            ):
+                user_buffs = [
+                    b for b in user_buffs if b.buff_type != BuffEffect.BUFF_TYPE_NEST
+                ]
             buffs.extend(user_buffs)
+        if scene_target_id != location_id:
+            scene_nest_buffs = await cls.filter(
+                target_type=BuffEffect.TARGET_TYPE_LOCATION,
+                target_id=scene_target_id,
+                buff_type=BuffEffect.BUFF_TYPE_NEST,
+                start_time__lt=end_time,
+                end_time__gt=start_time,
+            ).all()
+            buffs.extend(scene_nest_buffs)
         has_lost_wind = any(
             b.buff_type == BuffEffect.BUFF_TYPE_WEATHER_LOST_WIND for b in buffs
         )
