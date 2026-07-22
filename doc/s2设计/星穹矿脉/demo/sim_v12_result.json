@@ -1,0 +1,718 @@
+{
+  "version": "S2 v4.1",
+  "summary": {
+    "won": true,
+    "total_days": 35,
+    "first_order_resets": 20,
+    "shards_left": 8,
+    "shards_spent": 12,
+    "techs": [
+      "layer",
+      "reset",
+      "start",
+      "upgrade"
+    ],
+    "first_three_cycle_days": [
+      5,
+      5,
+      5
+    ],
+    "late_cycle_days": [
+      1,
+      1,
+      1
+    ],
+    "first_three_manual": [
+      11,
+      11,
+      11
+    ],
+    "late_manual": [
+      0,
+      0,
+      0
+    ],
+    "total_manual": 66,
+    "no_stall": true,
+    "config": {
+      "core": 100000000.0,
+      "pulses_per_day": 4,
+      "max_cycle_days": 8,
+      "second_order_need": 20,
+      "speed_step": 2.0,
+      "depth_scale": 200000.0,
+      "target_days_low": 28,
+      "target_days_high": 40,
+      "target_manual_max": 80
+    }
+  },
+  "history": [
+    {
+      "reset": 1,
+      "total_day": 5,
+      "cycle_days": 5,
+      "manual_actions": 11,
+      "reward": 1,
+      "shards": 1,
+      "techs": [],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        340.90183045120006,
+        7.199999999999999,
+        1.25,
+        0.14,
+        0.015
+      ],
+      "depth_before_reset": 105347543.30624
+    },
+    {
+      "reset": 2,
+      "total_day": 10,
+      "cycle_days": 5,
+      "manual_actions": 11,
+      "reward": 1,
+      "shards": 2,
+      "techs": [],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        340.90183045120006,
+        7.199999999999999,
+        1.25,
+        0.14,
+        0.015
+      ],
+      "depth_before_reset": 105347543.30624
+    },
+    {
+      "reset": 3,
+      "total_day": 15,
+      "cycle_days": 5,
+      "manual_actions": 11,
+      "reward": 1,
+      "shards": 3,
+      "techs": [],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        5,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        340.90183045120006,
+        7.199999999999999,
+        1.25,
+        0.14,
+        0.015
+      ],
+      "depth_before_reset": 105347543.30624
+    },
+    {
+      "reset": 4,
+      "total_day": 17,
+      "cycle_days": 2,
+      "manual_actions": 6,
+      "reward": 1,
+      "shards": 1,
+      "techs": [
+        "start"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        626.4087521048168,
+        11.328000000000001,
+        2.6550000000000002,
+        0.24780000000000002,
+        0.0
+      ],
+      "depth_before_reset": 183774118.77680337
+    },
+    {
+      "reset": 5,
+      "total_day": 19,
+      "cycle_days": 2,
+      "manual_actions": 6,
+      "reward": 1,
+      "shards": 2,
+      "techs": [
+        "start"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        626.4087521048168,
+        11.328000000000001,
+        2.6550000000000002,
+        0.24780000000000002,
+        0.0
+      ],
+      "depth_before_reset": 183774118.77680337
+    },
+    {
+      "reset": 6,
+      "total_day": 21,
+      "cycle_days": 2,
+      "manual_actions": 6,
+      "reward": 1,
+      "shards": 3,
+      "techs": [
+        "start"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        626.4087521048168,
+        11.328000000000001,
+        2.6550000000000002,
+        0.24780000000000002,
+        0.0
+      ],
+      "depth_before_reset": 183774118.77680337
+    },
+    {
+      "reset": 7,
+      "total_day": 22,
+      "cycle_days": 1,
+      "manual_actions": 4,
+      "reward": 1,
+      "shards": 1,
+      "techs": [
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        8,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        605.8737115343135,
+        11.1392,
+        1.7405,
+        0.48734000000000005,
+        0.0
+      ],
+      "depth_before_reset": 300909539.6370039
+    },
+    {
+      "reset": 8,
+      "total_day": 23,
+      "cycle_days": 1,
+      "manual_actions": 4,
+      "reward": 1,
+      "shards": 2,
+      "techs": [
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        8,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        605.8737115343135,
+        11.1392,
+        1.7405,
+        0.48734000000000005,
+        0.0
+      ],
+      "depth_before_reset": 300909539.6370039
+    },
+    {
+      "reset": 9,
+      "total_day": 24,
+      "cycle_days": 1,
+      "manual_actions": 4,
+      "reward": 1,
+      "shards": 3,
+      "techs": [
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        8,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        605.8737115343135,
+        11.1392,
+        1.7405,
+        0.48734000000000005,
+        0.0
+      ],
+      "depth_before_reset": 300909539.6370039
+    },
+    {
+      "reset": 10,
+      "total_day": 25,
+      "cycle_days": 1,
+      "manual_actions": 1,
+      "reward": 1,
+      "shards": 1,
+      "techs": [
+        "layer",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        304.5758297978981,
+        9.200979199999999,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 115221925.16341963
+    },
+    {
+      "reset": 11,
+      "total_day": 26,
+      "cycle_days": 1,
+      "manual_actions": 1,
+      "reward": 1,
+      "shards": 2,
+      "techs": [
+        "layer",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        304.5758297978981,
+        9.200979199999999,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 115221925.16341963
+    },
+    {
+      "reset": 12,
+      "total_day": 27,
+      "cycle_days": 1,
+      "manual_actions": 1,
+      "reward": 1,
+      "shards": 3,
+      "techs": [
+        "layer",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        304.5758297978981,
+        9.200979199999999,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 115221925.16341963
+    },
+    {
+      "reset": 13,
+      "total_day": 28,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 1,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        592.0387222420545,
+        13.959199871999997,
+        4.362249959999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 179170370.70793092
+    },
+    {
+      "reset": 14,
+      "total_day": 29,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 2,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        592.0387222420545,
+        13.959199871999997,
+        4.362249959999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 179170370.70793092
+    },
+    {
+      "reset": 15,
+      "total_day": 30,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 3,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        592.0387222420545,
+        13.959199871999997,
+        4.362249959999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 179170370.70793092
+    },
+    {
+      "reset": 16,
+      "total_day": 31,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 4,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        779.4454698023334,
+        17.061244287999997,
+        5.331638839999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 218986008.6430267
+    },
+    {
+      "reset": 17,
+      "total_day": 32,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 5,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        779.4454698023334,
+        17.061244287999997,
+        5.331638839999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 218986008.6430267
+    },
+    {
+      "reset": 18,
+      "total_day": 33,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 6,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        779.4454698023334,
+        17.061244287999997,
+        5.331638839999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 218986008.6430267
+    },
+    {
+      "reset": 19,
+      "total_day": 34,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 7,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        966.852217362612,
+        20.163288703999996,
+        6.301027719999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 258801646.57812244
+    },
+    {
+      "reset": 20,
+      "total_day": 35,
+      "cycle_days": 1,
+      "manual_actions": 0,
+      "reward": 1,
+      "shards": 8,
+      "techs": [
+        "layer",
+        "reset",
+        "start",
+        "upgrade"
+      ],
+      "cleared": {
+        "levels": true,
+        "stocks": true,
+        "automation": true,
+        "progress": true
+      },
+      "levels_before_reset": [
+        6,
+        0,
+        0,
+        0,
+        0
+      ],
+      "stock_before_reset": [
+        966.852217362612,
+        20.163288703999996,
+        6.301027719999999,
+        0.0,
+        0.0
+      ],
+      "depth_before_reset": 258801646.57812244
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-/* S2 猫猫挖矿 v1.3 — 白色上班办公风 · 手机优先 */
+/* S2 猫猫挖矿 v4 — 对齐钓鱼状态页的温和蓝白信息卡 · 手机优先 */
 
 :root {
   --bg: #f3f5f8;
@@ -9,9 +9,9 @@
   --text: #0f172a;
   --muted: #64748b;
   --muted-2: #94a3b8;
-  --primary: #2563eb;
-  --primary-soft: #eff6ff;
-  --primary-border: #bfdbfe;
+  --primary: #4facfe;
+  --primary-soft: #f0f7ff;
+  --primary-border: #bfe3ff;
   --success: #059669;
   --success-soft: #ecfdf5;
   --warn: #d97706;
@@ -226,6 +226,19 @@ h1 {
   margin: 0;
   border: none;
   padding: 0;
+}
+
+.card-head {
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary);
+  border-bottom: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.upgrade.locked {
+  opacity: 0.58;
+  background: #f8fafc;
 }
 
 .card-tag {

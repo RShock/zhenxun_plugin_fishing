@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="format-detection" content="telephone=no" />
-  <title>星穹矿业 · 工位面板</title>
-  <link rel="stylesheet" href="style.css?v=3.1.0" />
+  <title>星穹矿脉状态 · S2 v4.1</title>
+  <link rel="stylesheet" href="style.css?v=4.1.0" />
 </head>
 <body>
   <div class="hold-banner" id="holdBanner" hidden>
@@ -23,9 +23,9 @@
       <div class="brand-row">
         <div class="brand-badge">OA</div>
         <div class="brand-text">
-          <div class="eyebrow">星穹矿业集团 · 内部系统</div>
-          <h1>矿工工位面板</h1>
-          <div class="sub">手动每天 3 次 · 每项单独买自动 · 仅开关 · 地心 1e306</div>
+          <div class="eyebrow">猫咪矿工队 · S2</div>
+          <h1>星穹矿脉状态</h1>
+          <div class="sub">五层矿物 · 各矿独立无限升级 · Lv.3~5 自动化 · 挖穿重置</div>
         </div>
       </div>
       <div class="status-pills" id="statusPills">
@@ -40,25 +40,25 @@
     <div class="grid">
       <div class="card card-main">
         <div class="card-head">
-          <h2>今日 KPI</h2>
-          <span class="card-tag">实时看板</span>
+          <h2>当前星球</h2>
+          <span class="card-tag">挂机状态</span>
         </div>
 
         <div class="hero-stats">
           <div class="hero">
-            <div class="k">账面矿币</div>
+            <div class="k">累计一阶无限</div>
             <div class="v gold" id="coinsVal">0</div>
           </div>
           <div class="hero">
             <div class="k">掘进深度 / 地心目标</div>
-            <div class="v" id="depthVal">0 / 1e306</div>
+            <div class="v" id="depthVal">0 / 1e28</div>
           </div>
         </div>
 
         <div class="bar-wrap">
           <div class="bar-label">
-            <span>项目进度 · 挖穿星球</span>
-            <span id="depthBarLabel">0 / 1e306</span>
+            <span>本轮进度 · 挖穿星球</span>
+            <span id="depthBarLabel">0% · 风化壳</span>
           </div>
           <div class="bar"><i id="depthBar"></i></div>
         </div>
@@ -73,23 +73,23 @@
 
         <div class="stats">
           <div class="stat">
-            <div class="k">作业间隔</div>
-            <div class="v" id="intervalVal">8.0s</div>
+            <div class="k">手动额度</div>
+            <div class="v" id="intervalVal">每日至多 3 次</div>
           </div>
           <div class="stat">
-            <div class="k">单次产量</div>
-            <div class="v pink" id="qtyVal">1</div>
+            <div class="k">已发现矿物</div>
+            <div class="v pink" id="qtyVal">1 / 5</div>
           </div>
           <div class="stat">
-            <div class="k">单次进尺</div>
-            <div class="v" id="dptVal">1</div>
+            <div class="k">永久产量倍率</div>
+            <div class="v" id="dptVal">×1e0</div>
           </div>
           <div class="stat">
-            <div class="k">一阶∞ 审批</div>
-            <div class="v" id="inf1Val">未触发</div>
+            <div class="k">二阶无限进度</div>
+            <div class="v" id="inf1Val">0%</div>
           </div>
           <div class="stat">
-            <div class="k">累计工单</div>
+            <div class="k">累计挖穿</div>
             <div class="v" id="ticksVal">0</div>
           </div>
           <div class="stat">
@@ -106,28 +106,28 @@
 
       <div class="card card-shop">
         <div class="card-head">
-          <h2>设备采购</h2>
+          <h2>矿物升级</h2>
           <span class="card-tag">手动 3 次/日</span>
         </div>
         <div class="hint" style="margin-top:0;margin-bottom:10px;">
-          「升级」=手动（每天最多 3 次）。「买自动」=单独购买该项自动能力（也占手动 1 次）。买后只剩开关，每波每项最多自动升 1 级。
+          前三次必须完整手动重玩；随后依次解锁开局、升级、地层和一阶重置自动化。
         </div>
         <div id="shop" class="shop"></div>
       </div>
 
       <div class="card card-ore">
         <div class="card-head">
-          <h2>本段产出明细</h2>
-          <span class="card-tag">自动入账</span>
+          <h2>矿物库存</h2>
+          <span class="card-tag">本轮库存</span>
         </div>
         <div class="ore-grid" id="oreGrid"></div>
-        <div class="hint">大批量走期望结算 · 深度不截断</div>
+        <div class="hint">升级协议解锁前，点击库存区进行一次批量升级；挖穿会清除库存、等级、自动化、地层与进度</div>
       </div>
 
       <div class="card card-rarity">
         <div class="card-head">
-          <h2>品级概率表</h2>
-          <span class="card-tag">质检口径</span>
+          <h2>五矿成长</h2>
+          <span class="card-tag">当前等级</span>
         </div>
         <div id="rarityBars" class="rarity-bars"></div>
       </div>
@@ -144,9 +144,9 @@
 
   <nav class="dock" aria-label="出勤操作">
     <div class="dock-cmds">
-      <button class="gold dock-main" id="btnStart" type="button">上班</button>
-      <button id="btnStatus" type="button">状态</button>
-      <button id="btnStop" type="button">下班</button>
+      <button class="gold dock-main" id="btnStart" type="button">挖矿</button>
+      <button id="btnStatus" type="button">挖矿状态</button>
+      <button id="btnStop" type="button">结束挖矿</button>
       <button id="btnDay" type="button">次日</button>
     </div>
     <div class="dock-speed" role="group" aria-label="模拟加速">
@@ -161,12 +161,12 @@
   <div class="toast" id="toast"></div>
   <div class="modal" id="winModal">
     <div class="modal-card">
-      <h3>项目结项 · 二阶无限达成</h3>
-      <p id="winText"></p>
-      <button id="btnReset" type="button">新开一颗星球项目</button>
+      <h3>二阶无限 · 稳定态外推</h3>
+      <p id="winText">门槛为 10<sup>308</sup> 次一阶无限。前期逐轮精确结算；永久科技固定后只精确采样一次完整一阶循环，再按“精确前缀 + 单循环 × 剩余轮数”批量结算，绝不遍历天文轮次。矿物长挂机沿用期望值与 ±2% 可复现受控扰动。</p>
+      <button id="btnReset" type="button">重新模拟</button>
     </div>
   </div>
 
-  <script src="game.js?v=3.0.0"></script>
+  <script src="game_v4.js?v=4.0.0"></script>
 </body>
 </html>
