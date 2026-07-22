@@ -1,0 +1,165 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#08152e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>S2 星空垂钓实验室</title>
+  <link rel="stylesheet" href="styles.css?v=1.0.0">
+</head>
+<body>
+  <div class="stars stars-a"></div><div class="stars stars-b"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">S2 · STARRY FISH LAB</div>
+        <h1>星空垂钓实验室</h1>
+      </div>
+      <button class="icon-btn" id="saveBtn" type="button" aria-label="保存游戏">⌁<span>已保存</span></button>
+    </header>
+
+    <main>
+      <section class="page active" data-page="fish">
+        <article class="hero-card weather-lost_wind" id="heroCard">
+          <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+          <div class="hero-top">
+            <div>
+              <span class="day-chip" id="dayLabel">第 1 天</span>
+              <h2 id="locationLabel">牛奶河 · 11图</h2>
+              <p id="weatherDesc">迷途风穿过水面，星光若隐若现。</p>
+            </div>
+            <div class="weather-symbol" id="weatherSymbol">〰</div>
+          </div>
+          <div class="hero-bottom">
+            <div class="attempt-wrap">
+              <span>今日垂钓</span>
+              <strong><b id="castsLeft">140</b> / <span id="castsMax">140</span></strong>
+            </div>
+            <div class="weather-pill"><i></i><span id="weatherName">迷途风</span></div>
+          </div>
+        </article>
+
+        <section class="metrics-grid">
+          <article class="metric-card score-card">
+            <div class="metric-icon">✦</div><div><span>努力值</span><strong><b id="effortValue">0</b> / <b id="effortTarget">1200</b></strong></div>
+            <div class="progress"><i id="effortBar"></i></div>
+          </article>
+          <article class="metric-card"><div class="metric-icon purple">◈</div><div><span>星空鱼</span><strong id="starryCount">0</strong></div></article>
+          <article class="metric-card"><div class="metric-icon blue">⌁</div><div><span>累计评分</span><strong id="scoreValue">0</strong></div></article>
+          <article class="metric-card"><div class="metric-icon gold">♜</div><div><span>S2 入场券</span><strong id="ticketValue">0</strong></div></article>
+        </section>
+
+        <section class="buff-strip" id="buffStrip"></section>
+
+        <article class="catch-card" id="catchCard">
+          <div class="catch-empty" id="catchEmpty">
+            <div class="bobber"><i></i><span></span></div>
+            <h3>星海正在等待</h3><p>点击「抛竿」进行一次结算，星空鱼基础出现率为 5%。</p>
+          </div>
+          <div class="catch-result hidden" id="catchResult">
+            <div class="result-head"><span id="resultTag">STARLIGHT CATCH</span><b id="resultTime">刚刚</b></div>
+            <div class="fish-id" id="resultFishId">123456</div>
+            <div class="score-medal"><strong id="resultScore">2</strong><span>分 · <b id="resultBand">小吉</b></span></div>
+            <div class="feature-list" id="resultFeatures"></div>
+            <div class="reward-line" id="resultReward"></div>
+          </div>
+        </article>
+
+        <div class="action-row">
+          <button class="primary-action" id="castBtn" type="button"><span>抛竿</span><small>消耗 1 次今日垂钓</small></button>
+          <button class="secondary-action" id="autoDayBtn" type="button"><span>快进到次日</span><small>自动结算剩余次数</small></button>
+        </div>
+
+        <article class="log-card">
+          <div class="section-head"><h3>今日潮汐记录</h3><button id="clearLogBtn" type="button">清空</button></div>
+          <div class="timeline" id="timeline"></div>
+        </article>
+      </section>
+
+      <section class="page" data-page="bag">
+        <div class="page-title"><div><span>COLLECTION</span><h2>星空背包</h2></div><b id="bagCapacity">0 条</b></div>
+        <div class="inventory-tabs">
+          <button class="active" data-inventory="fish" type="button">星空鱼</button>
+          <button data-inventory="items" type="button">道具</button>
+          <button data-inventory="frames" type="button">木框</button>
+        </div>
+        <div id="fishInventory" class="inventory-panel active"></div>
+        <div id="itemInventory" class="inventory-panel"></div>
+        <div id="frameInventory" class="inventory-panel"></div>
+      </section>
+
+      <section class="page" data-page="gallery">
+        <div class="page-title"><div><span>EXHIBITION</span><h2>星空鱼展馆</h2></div><b>TOP 10</b></div>
+        <article class="gallery-intro"><div class="gallery-globe">✦</div><div><h3>最高评分自动入馆</h3><p>评分达到 4 分及以上的星空鱼，会按分数与编号自动陈列。</p></div></article>
+        <div class="gallery-list" id="galleryList"></div>
+      </section>
+
+      <section class="page" data-page="lab">
+        <div class="page-title"><div><span>DEBUG CONSOLE</span><h2>时序调试台</h2></div><b>本地存档</b></div>
+        <article class="debug-card featured">
+          <div class="section-head"><h3>时间推进</h3><span>用于快速验证成长节奏</span></div>
+          <div class="debug-grid">
+            <button data-sim-days="1" type="button"><strong>+1 天</strong><small>完整模拟一天</small></button>
+            <button data-sim-days="7" type="button"><strong>+7 天</strong><small>模拟一周</small></button>
+            <button data-sim-days="30" type="button"><strong>+30 天</strong><small>模拟一个月</small></button>
+            <button id="simTicketBtn" type="button"><strong>至入场券</strong><small>最多模拟 365 天</small></button>
+          </div>
+        </article>
+        <article class="debug-card">
+          <div class="section-head"><h3>环境覆盖</h3><button id="rollWeatherBtn" type="button">重抽天气</button></div>
+          <label class="field-label">强制天气</label>
+          <div class="segmented" id="weatherDebug">
+            <button data-weather="auto" class="active" type="button">自动</button><button data-weather="lost_wind" type="button">迷途风</button><button data-weather="solar_wind" type="button">太阳风</button><button data-weather="meteor_shower" type="button">流星雨</button><button data-weather="hengjiyuan" type="button">恒纪元</button>
+          </div>
+          <label class="switch-row"><span><b>必出星空鱼</b><small>将掉落判定临时设为 100%</small></span><input id="forceDrop" type="checkbox"><i></i></label>
+          <label class="switch-row"><span><b>锁定今日次数</b><small>抛竿不消耗今日垂钓次数</small></span><input id="infiniteCasts" type="checkbox"><i></i></label>
+        </article>
+        <article class="debug-card">
+          <div class="section-head"><h3>Buff 模拟</h3><span>无需消耗背包道具</span></div>
+          <div class="toggle-grid">
+            <label><input id="dbgLucky" type="checkbox"><i>☘</i><span>幸运药水<small>双重比较</small></span></label>
+            <label><input id="dbgFlash" type="checkbox"><i>ϟ</i><span>闪光药水<small>三天气合一</small></span></label>
+            <label><input id="dbgDuoduo" type="checkbox"><i>∞</i><span>真多多药水<small>复制最终鱼</small></span></label>
+          </div>
+        </article>
+        <article class="debug-card">
+          <div class="section-head"><h3>数值注入</h3><span>立即写入存档</span></div>
+          <div class="grant-grid">
+            <button data-grant="score" type="button">+100 努力值</button><button data-grant="fish" type="button">+10 星空鱼</button><button data-grant="cat" type="button">+10 猫框</button><button data-grant="star" type="button">+10 星辰木框</button>
+          </div>
+        </article>
+        <article class="debug-card danger-zone">
+          <div class="section-head"><h3>存档工具</h3><span id="storageSize">0 KB</span></div>
+          <div class="save-tools"><button id="exportBtn" type="button">导出存档</button><button id="importBtn" type="button">导入存档</button><button id="resetBtn" class="danger" type="button">重置进度</button></div>
+          <input id="importFile" type="file" accept="application/json" hidden>
+        </article>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="active" data-target="fish" type="button"><i>◉</i><span>垂钓</span></button>
+      <button data-target="bag" type="button"><i>◇</i><span>背包</span></button>
+      <button data-target="gallery" type="button"><i>♢</i><span>展馆</span></button>
+      <button data-target="lab" type="button"><i>⌘</i><span>调试</span></button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal" id="miracleModal" aria-hidden="true">
+    <div class="modal-card miracle-modal">
+      <div class="miracle-rays"></div><div class="modal-symbol">7777777</div>
+      <span>SUBSET MIRACLE</span><h2>奇迹发生了</h2>
+      <p id="miracleText">若干星空鱼的编号之和尾数命中七个 7。</p>
+      <button id="miracleOk" type="button">收下星辰木框</button>
+    </div>
+  </div>
+  <div class="modal" id="ticketModal" aria-hidden="true">
+    <div class="modal-card ticket-modal"><div class="ticket-art">S2<small>PASS</small></div><span>EFFORT MILESTONE</span><h2>获得 S2 入场券</h2><p>努力值已经跨过阶段门槛。溢出努力值会保留，可继续累积下一张。</p><button id="ticketOk" type="button">继续航行</button></div>
+  </div>
+
+  <script src="game.js?v=1.0.0"></script>
+</body>
+</html>
+
