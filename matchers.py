@@ -130,13 +130,5 @@ build_starry_ship_matcher = on_fishing_command("建设星空艇")
 fishing_announcement_matcher = on_command(
     "钓鱼公告", permission=SUPERUSER, priority=5, block=True
 )
-set_bait_matcher = on_regex(
-    r"^\s*设定鱼饵\s*(\S+)?\s*$",
-    priority=1,
-    block=True,
-)
-sell_bait_matcher = on_regex(
-    r"^\s*卖出鱼饵\s*(\S+)?\s*$",
-    priority=1,
-    block=True,
-)
+set_bait_matcher = on_fishing_command("设定鱼饵")
+sell_bait_matcher = on_fishing_command("卖出鱼饵")

@@ -1,5 +1,9 @@
-"""
-钓鱼引擎 — 模拟循环、鱼种捕获、稀有度抽选。
+"""钓鱼引擎 — 纯模拟循环、鱼种捕获、稀有度抽选。
+
+技术约束：引擎只计算 ``SimulationResult``，不得写数据库或发送消息；持久化由
+``core.actions`` 统一完成。模拟时的 ``catch_time`` 是 naive datetime，数据库读取的
+Buff 时间可能带时区，比较前必须经 ``models.user._make_naive`` 归一化。布尔 Buff
+必须按每次捕获时间判断有效区间，数值 Buff 则通过 ``get_effects_at_time`` 叠加。
 """
 
 from dataclasses import dataclass, field

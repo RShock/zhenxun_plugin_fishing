@@ -1,8 +1,8 @@
 # 钓鱼插件 AI 维护文档
 
 > **用途**：AI 编码助手在修改此插件前/后的必读参考。
-> **维护规则**：添加新功能或修改业务逻辑后，必须同步更新本文档。
-> **通用备注**：每次修改项目均需要同时同步到网页端 `web/static/help.html`，以及文档 `doc.md`。只需要语法检查。
+> **维护规则**：添加新功能或修改业务逻辑后，把关键技术约束就近写入对应代码注释。
+> **通用备注**：玩家可见行为变化时检查并手工维护 `web/static/help.html`；不要从指令注册表自动生成帮助页。
 
 ---
 
@@ -651,8 +651,8 @@ export PYTHONIOENCODING=utf-8
 ```bash
 .venv/Scripts/python.exe - <<'PY'
 from pathlib import Path
-p = Path("zhenxun/plugins/zhenxun_plugin_fishing/doc.md")
-print("星空祈愿" in p.read_text(encoding="utf-8"))
+p = Path("zhenxun/plugins/zhenxun_plugin_fishing/commands.py")
+print("设定鱼饵" in p.read_text(encoding="utf-8"))
 PY
 ```
 

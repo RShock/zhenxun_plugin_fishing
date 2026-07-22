@@ -60,8 +60,8 @@ class BuffEffect:
     TARGET_TYPE_GLOBAL = "global"
 
     # ===== Buff 元数据注册表（单一数据源）=====
-    # 新建 buff 时必须在此注册，否则显示层无法获取中文名。
-    # 修改 display_name / color 时只需改这一处，所有显示层自动同步。
+    # 新增 buff_type 必须先在此注册中文名/颜色；显示层与消息层均从此派生，
+    # 否则玩家界面会回退并暴露内部英文 key。若参与数值计算，还要同步 BUFF_EFFECTS。
     BUFF_REGISTRY: dict[str, BuffMeta] = {
         BUFF_TYPE_NEST: BuffMeta(BUFF_TYPE_NEST, "打窝加速", "#4CAF50", "🪺"),
         BUFF_TYPE_SPEED_BOOST: BuffMeta(BUFF_TYPE_SPEED_BOOST, "加速药水", "#2196F3", "⚡"),

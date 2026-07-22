@@ -2,7 +2,16 @@
 
 import pytest
 
-from zhenxun.plugins.zhenxun_plugin_fishing.web.command_router import CommandRouter
+from zhenxun.plugins.zhenxun_plugin_fishing.commands import (
+    COMMAND_DEFS,
+    get_command_pattern,
+    iter_command_aliases,
+    iter_web_commands,
+)
+from zhenxun.plugins.zhenxun_plugin_fishing.web.command_router import (
+    _COMMAND_TABLE,
+    CommandRouter,
+)
 
 
 @pytest.fixture(scope="module")
@@ -37,6 +46,10 @@ def command_router() -> CommandRouter:
         ("建设猫猫乐园 4 5 6 7", "建设猫猫乐园", ("4 5 6 7",)),
         ("建设猫猫乐园猫屋", "建设猫猫乐园", ("猫屋",)),
         ("建设猫猫乐园 猫屋", "建设猫猫乐园", ("猫屋",)),
+        ("设定鱼饵 玉米鱼饵", "设定鱼饵", ("玉米鱼饵",)),
+        ("设置鱼饵 自动", "设定鱼饵", ("自动",)),
+        ("卖出鱼饵 玉米鱼饵", "卖出鱼饵", ("玉米鱼饵",)),
+        ("卖鱼饵 玉米鱼饵", "卖出鱼饵", ("玉米鱼饵",)),
     ],
 )
 def test_public_router_accepts_supported_commands(
@@ -70,6 +83,16 @@ def test_public_router_rejects_invalid_or_trailing_input(
     command_router: CommandRouter, command: str
 ):
     assert command_router.find_matcher(command) is None
+
+
+def test_public_command_registry_drives_web_and_plugin_metadata(command_router):
+    web_commands = list(iter_web_commands())
+
+    assert len(_COMMAND_TABLE) == len(web_commands)
+    assert {command.name for command in web_commands} >= {"设定鱼饵", "卖出鱼饵"}
+    assert "钓鱼公告" not in {command.name for command in web_commands}
+    assert {"设定鱼饵", "卖出鱼饵", "钓鱼公告"} <= set(iter_command_aliases())
+    assert all(not hasattr(command, "category") for command in COMMAND_DEFS)
 
 
 @pytest.mark.asyncio

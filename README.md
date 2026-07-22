@@ -36,7 +36,7 @@ python -m pytest tests -q --confcutdir=.
 ## 文档入口
 
 - `AI_MAINTENANCE.md`：维护流程、架构规则和修改检查表
-- `doc.md`：当前程序技术实现
-- `web/static/help.html`：面向玩家的玩法帮助
+- 运行时技术约束：就近写在对应模块、类与函数注释中
+- `web/static/help.html`：面向玩家的玩法帮助，保持手工维护
 - `DESIGN.md`：设计入口
 - `doc/`：历史设计与研究档案

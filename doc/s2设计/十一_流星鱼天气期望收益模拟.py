@@ -530,7 +530,7 @@ def print_comparison(rows: list[dict], rod_level: int = 10) -> None:
     print()
     print("说明（均来自代码，非臆造）：")
     print("  - 星空天气仅 chaotic_era / solar_wind / meteor_shower / hengjiyuan")
-    print("  - 乱纪元 = 无特殊效果基准（doc.md / weather_service）")
+    print("  - 乱纪元 = 无特殊效果基准（weather_service）")
     print("  - 太阳风只加掉率，条件分数分布 = 乱纪元")
     print("  - 流星雨 / 恒纪元改分数分布（starry_system.roll_starry_fish）")
     print("  - 迷途风属于 1-10 图，星空图不生成")

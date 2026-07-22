@@ -45,74 +45,15 @@ _COMMAND_TABLE: list[tuple[re.Pattern, Matcher, str]] = []
 
 
 def _import_matchers():
-    """延迟导入所有 matcher 并构建指令表。"""
-    from ..commands import get_command_pattern
-    from ..matchers import (
-        auto_lock_matcher,
-        auto_sell_matcher,
-        backpack_matcher,
-        black_market_matcher,
-        build_starry_ship_matcher,
-        buy_matcher,
-        cat_park_build_matcher,
-        collection_matcher,
-        display_slot_matcher,
-        exchange_matcher,
-        fishing_matcher,
-        gift_fish_matcher,
-        lock_fish_matcher,
-        nest_matcher,
-        rename_matcher,
-        sell_fish_matcher,
-        shop_matcher,
-        starry_exhibition_matcher,
-        skin_matcher,
-        status_matcher,
-        stop_fishing_matcher,
-        unlock_fish_matcher,
-        upgrade_hook_matcher,
-        upgrade_rod_matcher,
-        use_item_matcher,
-        weather_forecast_matcher,
-        white_market_exchange_matcher,
-        white_market_matcher,
-    )
-
-    matcher_map = {
-        "钓鱼": fishing_matcher,
-        "收杆": stop_fishing_matcher,
-        "背包": backpack_matcher,
-        "卖鱼": sell_fish_matcher,
-        "鱼店": shop_matcher,
-        "升级钓竿": upgrade_rod_matcher,
-        "升级鱼钩": upgrade_hook_matcher,
-        "购买": buy_matcher,
-        "升级展示栏": display_slot_matcher,
-        "钓鱼状态": status_matcher,
-        "打窝": nest_matcher,
-        "图鉴": collection_matcher,
-        "星空鱼展馆": starry_exhibition_matcher,
-        "兑换": exchange_matcher,
-        "黑商交换": black_market_matcher,
-        "白商": white_market_matcher,
-        "白商交换": white_market_exchange_matcher,
-        "锁鱼": lock_fish_matcher,
-        "解锁": unlock_fish_matcher,
-        "赠送": gift_fish_matcher,
-        "自动卖鱼": auto_sell_matcher,
-        "自动锁鱼": auto_lock_matcher,
-        "改名": rename_matcher,
-        "更换皮肤": skin_matcher,
-        "使用物品": use_item_matcher,
-        "天气": weather_forecast_matcher,
-        "建设猫猫乐园": cat_park_build_matcher,
-        "建设星空艇": build_starry_ship_matcher,
-    }
+    """按公开指令注册表延迟装配 Web 路由，不维护第二份指令清单。"""
+    from ..commands import iter_web_commands
+    from .. import matchers
 
     _table: list[tuple[re.Pattern, Matcher, str]] = []
-    for name, matcher in matcher_map.items():
-        compiled = re.compile(f"^{get_command_pattern(name)}$")
-        _table.append((compiled, matcher, name))
+    for command in iter_web_commands():
+        matcher = getattr(matchers, command.matcher)
+        compiled = re.compile(f"^{command.pattern}$")
+        _table.append((compiled, matcher, command.name))
 
     _COMMAND_TABLE.clear()
     _COMMAND_TABLE.extend(_table)

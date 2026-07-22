@@ -80,7 +80,7 @@ print(f"""
   1. 集齐当前星空图所有UR → 成就 collect_scene_{{id}} 完成
   2. achievement_service.py: 星空图显示"✨ UTR稀有度已对你解锁！"
   3. core/scene.py & core/actions.py: max_rarity 从 UR → UTR
-  4. 星空图天气系统: 仅【流星】一种天气 (doc.md L332)
+  4. 星空图天气系统不生成名为迷途风的天气
      → 迷途风天气在星空图永远不会出现！
   5. engine.py Part1: UTR保底检查需 weather_lost_wind=True → ✗ 不触发
   6. engine.py Part2: 迷途风UTR随机需 weather_lost_wind=True → ✗ 不触发

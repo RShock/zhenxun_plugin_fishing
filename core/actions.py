@@ -1,5 +1,8 @@
-"""
-钓鱼核心操作 — start_fishing, stop_fishing, check_fishing_status, settle_fishing_step。
+"""钓鱼用例编排与结算边界。
+
+调用链固定为 Handler → 本模块 → 纯计算引擎/服务 → Model；Handler 不应直接编写
+业务状态。结算遵循「先在内存模拟、成功后单事务落库」：状态、鱼获、鱼饵与统计必须
+原子提交，失败时整体回滚；自动选出的临时鱼饵只属于本轮结果，不覆盖玩家持久化偏好。
 """
 
 from __future__ import annotations
