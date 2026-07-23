@@ -321,14 +321,16 @@ async def render_white_market_records(user_id: str) -> bytes:
         if reverse_key in shown_reverse_keys:
             continue
 
-        # 只显示交换来源鱼（白商可获得）未被当前用户解锁过的记录
+        # 默认只显示图鉴未解锁的可换回鱼；自己的黑商记录例外，允许逆交换拿回曾交出的鱼。
         key = (record.source_name, record.source_rarity)
-        if key not in collected_cache:
-            collected_cache[key] = await FishingUser.is_collected(
-                user_id, record.source_name, record.source_rarity
-            )
-        if collected_cache[key]:
-            continue
+        is_own_record = str(record.user_id) == str(user_id)
+        if not is_own_record:
+            if key not in collected_cache:
+                collected_cache[key] = await FishingUser.is_collected(
+                    user_id, record.source_name, record.source_rarity
+                )
+            if collected_cache[key]:
+                continue
 
         # 白商执行黑商的逆交换：支付黑商目标鱼，获得黑商来源鱼。
         # 因此“现在可交换”应检查用户是否持有黑商目标鱼。
@@ -618,13 +620,17 @@ async def white_market_exchange(
     )
     await FishingExchangeRecord.invalidate_record(record.id, user_id)
 
-    helper_nickname = await _get_nickname(record.user_id)
     messages = list(result["messages"])
     messages.extend(result["achievement_messages"])
+    if str(record.user_id) == str(user_id):
+        helper_line = "已逆交换自己的黑商记录，对应记录已失效。"
+    else:
+        helper_nickname = await _get_nickname(record.user_id)
+        helper_line = f"{helper_nickname} 帮助了你，对应黑商记录已失效。"
     msg = (
         f"白商交换成功：消耗 {source.name}({source.rarity}) "
         f"→ 获得 {target.name}({target.rarity})\n"
-        f"{helper_nickname} 帮助了你，对应黑商记录已失效。"
+        f"{helper_line}"
     )
     if messages:
         msg += "\n" + "\n".join(messages)

@@ -710,6 +710,70 @@ class TestBlackMarketExchange:
         image = await render_white_market_records(TARGET_ID)
         assert isinstance(image, bytes)
 
+    async def test_white_market_shows_own_record_even_if_collected(
+        self, db, monkeypatch
+    ):
+        """自己的黑商记录即使已解锁可换回鱼，仍应显示在白商列表中。"""
+        black_source = find_fish_target("小鲫鱼", "UR")
+        black_target = find_fish_target("小鲫鱼", "N")
+        assert black_source is not None and black_target is not None
+        await db.exchange_create_black_record(USER_ID, black_source, black_target)
+        # 黑商达成者通常已图鉴过交出的鱼
+        await db.collection_mark_collected(
+            USER_ID, black_source.name, black_source.rarity, 1
+        )
+        await db.backpack_add_fish(
+            USER_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
+
+        captured = {}
+
+        def _capture_template(name, **kwargs):
+            captured.update(kwargs)
+            return "<html>fake</html>"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.render.base.render_template",
+            _capture_template,
+        )
+
+        await render_white_market_records(USER_ID)
+
+        now_groups = captured["categories"][0]["groups"]
+        assert len(now_groups) == 1
+        assert now_groups[0]["source_name"] == black_target.name
+        targets = now_groups[0]["target_groups"][0]["targets"]
+        assert targets[0]["name"] == black_source.name
+
+    async def test_white_market_reverse_own_black_record(self, db):
+        """允许玩家用白商逆交换自己的黑商记录。"""
+        black_source = find_fish_target("小鲫鱼", "UR")
+        black_target = find_fish_target("小鲫鱼", "N")
+        assert black_source is not None and black_target is not None
+        await db.exchange_create_black_record(USER_ID, black_source, black_target)
+        await db.backpack_add_fish(
+            USER_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
+
+        ok, msg, should_reply = await white_market_exchange(
+            USER_ID,
+            f"{black_target.name} {black_target.rarity} {black_source.name} {black_source.rarity}",
+        )
+
+        assert ok is True
+        assert should_reply is True
+        assert "自己的黑商记录" in msg
+        records = await db.exchange_list_active_records()
+        assert records == []
+
     async def test_white_market_renders_reverse_direction_and_category(
         self, db, monkeypatch
     ):
