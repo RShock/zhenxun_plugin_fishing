@@ -37,13 +37,13 @@ class TestParseSpecialAndLayout:
 
 class TestParseSceneLayoutEffects:
     def test_heights_with_longline(self):
-        layout = fs._parse_scene_layout("14-星砂漠-S@longline_50")
+        layout = fs._parse_scene_layout("15-云鲸庭-S@longline_50")
         assert layout["mode"] == "heights"
         assert layout["heights"] == [50]
         assert layout["effects"] == ["longline"]
 
     def test_tracks_with_longline(self):
-        layout = fs._parse_scene_layout("14-星砂漠-S@longline+T@10,80_40,85")
+        layout = fs._parse_scene_layout("15-云鲸庭-S@longline+T@10,80_40,85")
         assert layout["mode"] == "tracks"
         assert layout["effects"] == ["longline"]
         assert len(layout["tracks"]) == 1
@@ -57,28 +57,28 @@ class TestParseSceneLayoutEffects:
 
 class TestForegroundDiscovery:
     def test_is_foreground_suffixes(self, tmp_path: Path):
-        assert fs._is_foreground_scene_file(tmp_path / "14-星砂漠-fg.png")
-        assert fs._is_foreground_scene_file(tmp_path / "14-星砂漠_fg.png")
-        assert not fs._is_foreground_scene_file(tmp_path / "14-星砂漠-S@longline_50.png")
+        assert fs._is_foreground_scene_file(tmp_path / "15-云鲸庭-fg.png")
+        assert fs._is_foreground_scene_file(tmp_path / "15-云鲸庭_fg.png")
+        assert not fs._is_foreground_scene_file(tmp_path / "15-云鲸庭-S@longline_50.png")
 
     def test_find_scene_skips_foreground(self, monkeypatch, tmp_path: Path):
-        bg = tmp_path / "14-星砂漠-S@longline_50.png"
-        fg = tmp_path / "14-星砂漠-fg.png"
+        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        fg = tmp_path / "15-云鲸庭-fg.png"
         bg.write_bytes(b"bg")
         fg.write_bytes(b"fg")
         monkeypatch.setattr(fs, "SCENES_IMAGES_PATH", tmp_path)
-        loc = SimpleNamespace(id="14", name="星砂漠")
+        loc = SimpleNamespace(id="15", name="云鲸庭")
         found, layout = fs._find_scene_file(loc)
         assert found == bg
         assert layout["effects"] == ["longline"]
 
     def test_find_foreground_file(self, monkeypatch, tmp_path: Path):
-        bg = tmp_path / "14-星砂漠-S@longline_50.png"
-        fg = tmp_path / "14-星砂漠-fg.png"
+        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        fg = tmp_path / "15-云鲸庭-fg.png"
         bg.write_bytes(b"bg")
         fg.write_bytes(b"fg")
         monkeypatch.setattr(fs, "SCENES_IMAGES_PATH", tmp_path)
-        loc = SimpleNamespace(id="14", name="星砂漠")
+        loc = SimpleNamespace(id="15", name="云鲸庭")
         assert fs._find_foreground_file(loc) == fg
 
 

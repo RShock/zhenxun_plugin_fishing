@@ -427,7 +427,7 @@ r:\zhenxun_bot\tests\
 esources/images/scenes/ + 
 ender/fishing_scene.py + 	emplates/fishing_scene.html）：
 - 背景文件名：{id}-{名称}-{layout}.png。layout 可为旧高度（50 / 50_60）或多轨道 T@x,y_x,y+T@...。
-- 特殊渲染标记：S@effect 写在 layout 段。例：14-星砂漠-S@longline_50.png、14-星砂漠-S@longline+T@...png。多效果逗号分隔：S@longline,foo+T@...。
+- 特殊渲染标记：S@effect 写在 layout 段。例：15-云鲸庭-S@longline_50.png、15-云鲸庭-S@longline+T@...png。多效果逗号分隔：S@longline,foo+T@...。
 - 当前特效 longline：角色图上半 60% 不拉伸；60%–70% 钓线带拉伸到场景底部；70% 以下丢弃；角色顶部与普通渲染对齐。
 - 前景层（可选）：{id}-{名称}-fg.png（或 _fg）。遮挡角色，不遮挡名字。get_scenes / 背景查找会跳过前景文件。
 - 轨道位置编辑器：/_lab/track-editor/（web/static/_lab/track-editor/）。加载/导出须保留 S@... 特效标记；本地兜底清单 scenes.json。
