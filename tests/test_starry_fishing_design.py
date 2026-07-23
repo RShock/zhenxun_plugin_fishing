@@ -560,7 +560,7 @@ class TestStarWishNumbers:
         assert colors[2] is None
         assert texts[0] == "#ffffff"
 
-        # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR
+        # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥15 分 → UTR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
 
         feat = StarryFeature("pihu", "pihu", "1,2,6", 0.802444)
@@ -577,6 +577,14 @@ class TestStarWishNumbers:
                 reward_pool=pool,
             )
             assert pool_colors[0] == RARITY_COLORS[rarity]
+
+        _mask, utr_colors, _ = _starry_feature_digit_styles(
+            [feat],
+            "002150",
+            reward_pool="ultimate",
+            display_score=15,
+        )
+        assert utr_colors[0] == RARITY_COLORS["UTR"]
 
     def test_starry_reward_pool_boundaries_match_design(self):
         assert get_reward_pool(5) == "middle"

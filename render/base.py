@@ -331,8 +331,13 @@ _REWARD_POOL_RARITY = {
 }
 
 
-def _pool_mark_rarity(reward_pool: str = "") -> str:
-    """Map starry reward pool key to fish rarity color key."""
+def _pool_mark_rarity(reward_pool: str = "", display_score: int = 0) -> str:
+    """Map starry reward pool / score to fish rarity color key.
+
+    奖池：无→N、低→R、中→SR、高→SSR、究极→UR；展示分 ≥15 升为 UTR。
+    """
+    if int(display_score or 0) >= 15:
+        return "UTR"
     key = (reward_pool or "none").strip().lower()
     return _REWARD_POOL_RARITY.get(key, "N")
 
@@ -357,10 +362,11 @@ def _starry_feature_digit_styles(
     features,
     id_text: str = "",
     reward_pool: str = "",
+    display_score: int = 0,
 ) -> tuple[list[bool], list[str | None], list[str | None]]:
     """Return matched mask + pool-tier backgrounds for each digit.
 
-    命中位由番型 span 决定（屁胡只标同号）；背景色按该鱼奖池对应稀有度色。
+    命中位由番型 span 决定（屁胡只标同号）；背景色按奖池，≥15 分用 UTR 色。
     """
     mask = [False] * 6
     for feature in features or []:
@@ -368,11 +374,11 @@ def _starry_feature_digit_styles(
         for idx in _parse_feature_span_positions(span):
             mask[idx] = True
 
-    rarity = _pool_mark_rarity(reward_pool)
+    rarity = _pool_mark_rarity(reward_pool, display_score=display_score)
     color = RARITY_COLORS.get(rarity, RARITY_COLORS.get("N", "#808080"))
-    text = _contrast_text_color(color)
+    text_color = _contrast_text_color(color)
     colors: list[str | None] = [color if hit else None for hit in mask]
-    texts: list[str | None] = [text if hit else None for hit in mask]
+    texts: list[str | None] = [text_color if hit else None for hit in mask]
     return mask, colors, texts
 
 
@@ -380,12 +386,14 @@ def _starry_feature_digit_mask(
     features,
     id_text: str = "",
     reward_pool: str = "",
+    display_score: int = 0,
 ) -> list[bool]:
     """Mark digits covered by matched feature spans (1-based inclusive)."""
     mask, _colors, _texts = _starry_feature_digit_styles(
         features,
         id_text,
         reward_pool=reward_pool,
+        display_score=display_score,
     )
     return mask
 
@@ -407,6 +415,7 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
             scored.features,
             scored.id_text,
             reward_pool=scored.reward_pool,
+            display_score=scored.display_score,
         )
         cards.append(
             {
