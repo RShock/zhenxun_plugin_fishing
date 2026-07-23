@@ -417,6 +417,11 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
             reward_pool=scored.reward_pool,
             display_score=scored.display_score,
         )
+        # 卡片外壳按奖池稀有度染色（与普通鱼 fish-item 同色系）；命中位数字另有标记。
+        pool_rarity = _pool_mark_rarity(
+            scored.reward_pool, display_score=scored.display_score
+        )
+        pool_color = RARITY_COLORS.get(pool_rarity, RARITY_COLORS.get("N", "#808080"))
         cards.append(
             {
                 "id": scored.id_text,
@@ -424,6 +429,8 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
                 "digit_matched": digit_matched,
                 "digit_colors": digit_colors,
                 "digit_text_colors": digit_text_colors,
+                "pool_rarity": pool_rarity,
+                "pool_color": pool_color,
                 "score": round(scored.raw_score, 3),
                 "display_score": scored.display_score,
                 "band": band(scored.display_score),

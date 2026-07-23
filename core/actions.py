@@ -710,6 +710,10 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
     last = claims[-1]
     claim_count = len(claims)
     consumed = sum(int(claim.get("subset_count") or 0) for claim in claims)
+    consumed_groups = [list(claim.get("consumed_ids") or []) for claim in claims]
+    consumed_ids: list[str] = []
+    for group in consumed_groups:
+        consumed_ids.extend(group)
     if claim_count == 1:
         subtitle = f"消耗 {consumed} 条流星鱼达成奇迹"
     else:
@@ -719,6 +723,8 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
         "claim_count": claim_count,
         "frames_gained": claim_count,
         "subset_count": consumed,
+        "consumed_ids": consumed_ids,
+        "consumed_groups": consumed_groups,
         "star_frames": int(last.get("star_frames") or 0),
         "can_upgrade_starry_frame": True,
         "hint": subtitle,

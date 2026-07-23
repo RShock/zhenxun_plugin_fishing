@@ -176,7 +176,7 @@
 {% if cards %}
 <div class="starry-grid">
     {% for card in cards %}
-    <div class="starry-card">
+    <div class="starry-card"{% if card.pool_color %} style="background: {{ card.pool_color }}20; border: 2px solid {{ card.pool_color }};"{% endif %}>
         <div class="starry-card-top">
             <div class="starry-id">
                 {% for digit in card.digits %}<span class="starry-digit{% if card.digit_matched and card.digit_matched[loop.index0] %} matched{% endif %}"{% if card.digit_colors and card.digit_colors[loop.index0] %} style="background: {{ card.digit_colors[loop.index0] }}; color: {{ card.digit_text_colors[loop.index0] }}; box-shadow: 0 0 0 1px {{ card.digit_colors[loop.index0] }};"{% endif %}>{{ digit }}</span>{% endfor %}

@@ -506,7 +506,11 @@ def apply_add_starry_fish(
 
 
 def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
-    from ..core.starry_system import MIRACLE_TARGET, find_miracle_subset
+    from ..core.starry_system import (
+        MIRACLE_TARGET,
+        find_miracle_subset,
+        format_starry_fish_id,
+    )
 
     current_frames = int(user.star_frames or 0)
     backpack = list(_ensure_list(user.starry_fish))
@@ -527,9 +531,14 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     subset_count = len(subset_records)
     mark_dirty(dirty, "starry_fish", "star_frames")
 
+    # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
+    consumed_ids = [
+        format_starry_fish_id(item.get("id", 0)) for item in subset_records
+    ]
     return {
         "target": MIRACLE_TARGET,
         "subset_count": subset_count,
+        "consumed_ids": consumed_ids,
         "star_frames": user.star_frames,
         "hint": "流星鱼编号相加后，末七位为 7777777",
     }

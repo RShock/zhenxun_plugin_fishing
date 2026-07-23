@@ -244,6 +244,20 @@
     color: #86efac;
     line-height: 1.5;
 }
+.miracle-consumed {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: normal;
+    color: rgba(226, 232, 240, 0.72);
+    line-height: 1.55;
+    letter-spacing: 0.2px;
+    word-break: break-all;
+}
+.miracle-consumed .miracle-id {
+    font-family: Consolas, monospace;
+    color: rgba(253, 230, 138, 0.88);
+}
 .buff-timeline { margin-top: 4px; padding: 0 4px; }
 .timeline-rows { position: relative; }
 .timeline-row { height: 2px; position: relative; margin-bottom: 1px; background: #eee; border-radius: 0; overflow: hidden; }
@@ -301,6 +315,13 @@
         · 消耗 {{ miracle.subset_count }} 条流星鱼
         {% if miracle.can_upgrade_starry_frame %}· 已可用于升级星空木框{% endif %}
     </div>
+    {% if miracle.consumed_groups and miracle.claim_count and miracle.claim_count > 1 %}
+    {% for group in miracle.consumed_groups %}
+    <div class="miracle-consumed">第{{ loop.index }}次要因：{% for id in group %}<span class="miracle-id">{{ id }}</span>{% if not loop.last %} · {% endif %}{% endfor %}</div>
+    {% endfor %}
+    {% elif miracle.consumed_ids %}
+    <div class="miracle-consumed">要因编号：{% for id in miracle.consumed_ids %}<span class="miracle-id">{{ id }}</span>{% if not loop.last %} · {% endif %}{% endfor %}</div>
+    {% endif %}
 </div>
 {% endif %}
 {% if starry_cards or starry_score %}
@@ -326,7 +347,7 @@
     {% if starry_cards %}
     <div class="starry-result-grid">
         {% for card in starry_cards %}
-        <div class="starry-result-card">
+        <div class="starry-result-card"{% if card.pool_color %} style="background: {{ card.pool_color }}20; border: 2px solid {{ card.pool_color }};"{% endif %}>
             <div class="starry-result-top">
                 <div class="starry-id">
                     {% for digit in card.digits %}<span class="starry-digit{% if card.digit_matched and card.digit_matched[loop.index0] %} matched{% endif %}"{% if card.digit_colors and card.digit_colors[loop.index0] %} style="background: {{ card.digit_colors[loop.index0] }}; color: {{ card.digit_text_colors[loop.index0] }}; box-shadow: 0 0 0 1px {{ card.digit_colors[loop.index0] }};"{% endif %}>{{ digit }}</span>{% endfor %}

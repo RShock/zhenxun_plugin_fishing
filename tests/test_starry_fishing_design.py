@@ -312,6 +312,10 @@ class TestStarWishNumbers:
         assert info is not None
         assert info["subset_count"] >= 1
         assert info["star_frames"] == 1
+        assert "consumed_ids" in info
+        assert len(info["consumed_ids"]) == info["subset_count"]
+        # 6 位补零编号，便于收杆页小字展示
+        assert all(isinstance(x, str) and len(x) == 6 for x in info["consumed_ids"])
         user2 = await FishingUser.get_user("miracle_user_1")
         assert int(user2.star_frames) == 1
         remaining_ids = [int(x.get("id", 0)) for x in (user2.starry_fish or [])]
@@ -336,6 +340,9 @@ class TestStarWishNumbers:
 
         claims = await FishingUser.try_claim_miracles("miracle_user_2")
         assert len(claims) >= 2
+        for claim in claims:
+            assert claim.get("consumed_ids")
+            assert len(claim["consumed_ids"]) == claim["subset_count"]
         user2 = await FishingUser.get_user("miracle_user_2")
         assert int(user2.star_frames) >= 2
         remaining = [int(x.get("id", 0)) for x in (user2.starry_fish or [])]
@@ -541,10 +548,11 @@ class TestStarWishNumbers:
 
 
     def test_pihu_digit_mark_only_same_numbers(self):
-        """屁胡只高亮同号数字；标记色按奖池对应鱼稀有度。"""
+        """屁胡只高亮同号数字；卡片外壳按奖池稀有度染色（≥15 分 UTR）。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
             RARITY_COLORS,
             _starry_feature_digit_styles,
+            build_starry_fish_cards,
         )
 
         # 屁胡 display_score=1 → 低级奖池 → R
@@ -559,6 +567,11 @@ class TestStarWishNumbers:
         assert colors[0] == RARITY_COLORS["R"]
         assert colors[2] is None
         assert texts[0] == "#ffffff"
+
+        cards = build_starry_fish_cards([{"id": "002150", "location_id": "11"}])
+        assert len(cards) == 1
+        assert cards[0]["pool_rarity"] == "R"
+        assert cards[0]["pool_color"] == RARITY_COLORS["R"]
 
         # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥15 分 → UTR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
