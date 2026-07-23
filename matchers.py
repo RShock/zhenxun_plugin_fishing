@@ -110,7 +110,8 @@ test_fishing_scene_ex2_matcher = on_regex(
     block=True,
 )
 test_scene_render_matcher = on_regex(
-    r"^\s*测试场景渲染\s*((?:\d+)|[sS]1)\s*$",
+    # 支持：测试场景渲染 15 / 测试钓鱼场景 15（不与 EX/EX2 冲突）
+    r"^\s*测试(?:场景渲染|钓鱼场景)\s*((?:\d+)|[sS]1)\s*$",
     permission=SUPERUSER,
     priority=5,
     block=True,

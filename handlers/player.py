@@ -212,7 +212,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not location:
         await _send_text(
             matcher,
-            "未找到该场景，请使用数字ID或S1，例如：测试场景渲染11 或 测试场景渲染 11",
+            "未找到该场景，请使用数字ID或S1，例如：测试场景渲染 15 或 测试钓鱼场景 15",
             user_id,
             is_private=is_private,
         )

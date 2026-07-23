@@ -113,3 +113,16 @@ class TestLonglineActorView:
         )
         assert view["special"] == ""
         assert "body_h" not in view
+
+
+class TestLocationThumbnailSkipsForeground:
+    def test_find_location_image_skips_fg(self, monkeypatch, tmp_path: Path):
+        from zhenxun.plugins.zhenxun_plugin_fishing.render import base as render_base
+
+        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        fg = tmp_path / "15-云鲸庭-fg.png"
+        bg.write_bytes(b"bg")
+        fg.write_bytes(b"fg")
+        monkeypatch.setattr(render_base, "SCENES_IMAGES_PATH", tmp_path)
+        found = render_base._find_location_image_path("云鲸庭")
+        assert found == bg

@@ -450,13 +450,18 @@ def build_fish_list_data(
 
 
 def _find_location_image_path(location_name: str) -> Path | None:
+    """缩略图/天气卡用场景图：只用背景，跳过 *-fg 前景层。"""
     if not SCENES_IMAGES_PATH.exists():
         return None
 
     for f in SCENES_IMAGES_PATH.iterdir():
         if f.suffix != ".png":
             continue
-        parts = f.stem.split("-")
+        stem = f.stem
+        # 前景层仅用于完整钓鱼场景叠图，缩略图不展示
+        if stem.endswith("-fg") or stem.endswith("_fg"):
+            continue
+        parts = stem.split("-")
         if len(parts) >= 2 and parts[1] == location_name:
             return f
     return None
