@@ -461,6 +461,8 @@ async def render_cat_park_image(user_id: str, message: str = "") -> bytes:
                 "level_src": level_src,
                 "next": next_text,
                 "effect": effect,
+                # 满级时展示当前效果，未满级展示下级效果
+                "effect_label": "当前效果" if level >= 3 else "下级效果",
                 "can": can_upgrade,
                 "status_cls": "can-build" if can_upgrade else "normal",
             }
@@ -498,7 +500,7 @@ async def render_cat_park_image(user_id: str, message: str = "") -> bytes:
         f"<div class='name'>{r['name']}</div>"
         f"{_level_html(r)}"
         f"<div><div class='next'>{r['next']}</div>"
-        f"<div class='effect'>下级效果：{r['effect']}</div></div>"
+        f"<div class='effect'>{r['effect_label']}：{r['effect']}</div></div>"
         f"</div>"
         for r in rows
     )
