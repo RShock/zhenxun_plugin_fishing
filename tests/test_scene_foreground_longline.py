@@ -96,48 +96,75 @@ class TestLonglineAdaptiveBand:
         img.save(path)
         return path
 
-    def test_detects_five_narrow_rows_from_70pct(self, tmp_path: Path):
+    def test_stable_width_under_10_from_bottom(self, tmp_path: Path):
+        """宽度 <10 且连续 5 行相同，自下而上取最底部 5 行。"""
         fs._LONGLINE_BAND_CACHE.clear()
         h, w = 100, 20
-        # body block above 70, thin line rows 75-84 (10 rows), pick first 5
-        paint = {}
-        for y in range(0, 70):
-            paint[y] = list(range(0, 12))  # wide body
-        for y in range(75, 85):
-            paint[y] = [10]  # single pixel line
-        path = self._make_skin(tmp_path, "line.png", w, h, paint)
+        paint = {y: list(range(0, 12)) for y in range(0, 50)}  # wide body
+        # stable width=6 from y=60..89 (30 rows); lure wider at 90+
+        for y in range(60, 90):
+            paint[y] = list(range(0, 6))
+        for y in range(90, 95):
+            paint[y] = list(range(0, 14))
+        path = self._make_skin(tmp_path, "stable6.png", w, h, paint)
         band = fs._analyze_longline_band(path)
         assert band is not None
         body_ratio, crop_ratio = band
-        assert body_ratio == pytest.approx(0.75)
-        assert crop_ratio == pytest.approx(0.80)
+        # bottom 5 of stable run: 85..90
+        assert body_ratio == pytest.approx(0.85)
+        assert crop_ratio == pytest.approx(0.90)
 
-    def test_no_stretch_without_five_narrow_rows(self, tmp_path: Path):
+    def test_width_10_is_not_allowed(self, tmp_path: Path):
+        """低于 10：恰好 10 像素不算。"""
         fs._LONGLINE_BAND_CACHE.clear()
-        h, w = 100, 20
-        paint = {y: list(range(0, 12)) for y in range(0, 70)}
-        for y in range(75, 78):  # only 3 narrow rows
-            paint[y] = [10]
+        h, w = 40, 20
+        paint = {y: list(range(0, 10)) for y in range(0, h)}
+        path = self._make_skin(tmp_path, "ten.png", w, h, paint)
+        assert fs._analyze_longline_band(path) is None
+
+    def test_unstable_varying_width_not_matched(self, tmp_path: Path):
+        """宽度虽 <10 但不稳定（每行变化）则不拉伸。"""
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 40, 20
+        paint = {}
+        for y in range(h):
+            paint[y] = list(range(0, 1 + (y % 4)))  # 1..4 cycling
+        path = self._make_skin(tmp_path, "vary.png", w, h, paint)
+        assert fs._analyze_longline_band(path) is None
+
+    def test_need_five_stable_rows(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 40, 20
+        paint = {y: list(range(0, 12)) for y in range(h)}
+        for y in range(30, 34):  # only 4 rows width=3
+            paint[y] = [1, 2, 3]
         path = self._make_skin(tmp_path, "short.png", w, h, paint)
+        assert fs._analyze_longline_band(path) is None
+
+    def test_wide_body_like_cat_not_matched(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 20, 23
+        paint = {y: list(range(0, min(w, 15))) for y in range(h)}
+        path = self._make_skin(tmp_path, "catlike.png", w, h, paint)
         assert fs._analyze_longline_band(path) is None
 
     def test_cache_hit(self, tmp_path: Path):
         fs._LONGLINE_BAND_CACHE.clear()
         h, w = 100, 10
-        paint = {y: [1] for y in range(70, 80)}
+        paint = {y: [1] for y in range(70, 90)}
         path = self._make_skin(tmp_path, "cache.png", w, h, paint)
         a = fs._analyze_longline_band(path)
         b = fs._analyze_longline_band(path)
         assert a == b
-        # second call should use cache (same key present)
+        assert a is not None
         assert any(str(path.resolve()) in k[0] for k in fs._LONGLINE_BAND_CACHE)
 
     def test_actor_view_uses_adaptive_or_fallback(self, tmp_path: Path):
         fs._LONGLINE_BAND_CACHE.clear()
         h, w = 100, 20
-        paint = {y: list(range(8)) for y in range(0, 70)}
-        for y in range(80, 90):
-            paint[y] = [5]
+        paint = {y: list(range(8)) for y in range(0, 60)}
+        for y in range(70, 90):
+            paint[y] = [5]  # stable width 1
         path = self._make_skin(tmp_path, "actor.png", w, h, paint)
         skin_h = 100.0
         y_offset = -10
@@ -148,8 +175,13 @@ class TestLonglineAdaptiveBand:
         assert view["line_base"] + view["body_h"] == pytest.approx(y_offset + skin_h)
         # no band -> normal
         fs._LONGLINE_BAND_CACHE.clear()
+        # 宽身体且每行宽度变化，不应被识别为稳定细线
         path2 = self._make_skin(
-            tmp_path, "noline.png", w, h, {y: list(range(8)) for y in range(h)}
+            tmp_path,
+            "noline.png",
+            w,
+            h,
+            {y: list(range(0, 10 + (y % 3))) for y in range(h)},
         )
         view2 = fs._actor_view(
             path2, "T", (40.0, skin_h), (10.0, 70.0), y_offset, False, effects=["longline"]

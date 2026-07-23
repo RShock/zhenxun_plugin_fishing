@@ -24,10 +24,10 @@ from .fishing_status import _build_buff_timeline
 
 # Scene special render marker S@effect and optional foreground *-fg.png
 _SCENE_FG_SUFFIXES = ("-fg", "_fg")
-# 长钓线：从图片高度 70% 起扫描“窄行”（单行非透明像素数 1~4），
-# 取连续 5 行作为拉伸带；找不到则不拉伸。结果按文件缓存。
-_LONGLINE_SEARCH_START = 0.70
-_LONGLINE_NARROW_MAX = 5  # 非透明像素数须 < 5
+# 长钓线：自下而上扫描“稳定细线带”——单行非透明像素数 1~9（宽度 < 10），
+# 且连续 5 行宽度完全相同；取最靠近底部的 5 行作为拉伸采样带。找不到则不拉伸。
+# 结果按文件缓存。
+_LONGLINE_WIDTH_LIMIT = 10  # 宽度须 < 10
 _LONGLINE_BAND_ROWS = 5
 _LONGLINE_BAND_CACHE: dict[tuple[str, int, int], tuple[float, float] | None] = {}
 
@@ -483,12 +483,14 @@ def _scene_placements(
 
 
 def _analyze_longline_band(image_path: Path) -> tuple[float, float] | None:
-    """分析皮肤图中的细钓线带，返回 (body_ratio, crop_ratio)；无法识别则 None。
+    """分析皮肤图中的稳定细钓线带，返回 (body_ratio, crop_ratio)；无法识别则 None。
 
-    - 仅检查高度 >= 70% 的区域
-    - 窄行：该行非透明像素数满足 0 < count < 5
-    - 取第一段连续 >= 5 行的窄行区间中的 5 行作为拉伸采样带
+    - 自下而上扫描整图
+    - 候选行：该行非透明像素数满足 0 < count < 10
+    - 稳定：连续若干行宽度完全相同
+    - 取最靠近底部的、连续 >= 5 行稳定细线区间中的底部 5 行作为拉伸采样带
     - 形变后角色顶部与普通渲染一致（由调用方用 body_ratio 计算）
+    - 宽行须完整计数到 >=10 才能判非候选；不可在临界宽度提前截断
     """
     try:
         resolved = image_path.resolve()
@@ -509,39 +511,39 @@ def _analyze_longline_band(image_path: Path) -> tuple[float, float] | None:
                 result = None
             else:
                 alpha = rgba.getchannel("A")
-                start_y = min(height - 1, max(0, int(height * _LONGLINE_SEARCH_START)))
-                # 预取 alpha 全图数据，按行统计非透明像素
                 alpha_data = list(alpha.getdata())
-                narrow_flags: list[bool] = []
-                for y in range(start_y, height):
+                row_widths: list[int] = []
+                for y in range(height):
                     row_start = y * width
                     opaque = 0
                     for x in range(width):
                         if alpha_data[row_start + x] > 0:
                             opaque += 1
-                            if opaque >= _LONGLINE_NARROW_MAX:
+                            # 达到上限即可结束；opaque == limit 已不属于“低于 limit”
+                            if opaque >= _LONGLINE_WIDTH_LIMIT:
                                 break
-                    narrow_flags.append(0 < opaque < _LONGLINE_NARROW_MAX)
+                    row_widths.append(opaque)
 
-                run_start = 0
-                n = len(narrow_flags)
+                # 自下而上找：宽度 < 10 且连续相同宽度 >= 5 行
+                y = height - 1
                 chosen: tuple[int, int] | None = None
-                while run_start < n:
-                    if not narrow_flags[run_start]:
-                        run_start += 1
+                while y >= 0:
+                    w = row_widths[y]
+                    if not (0 < w < _LONGLINE_WIDTH_LIMIT):
+                        y -= 1
                         continue
-                    run_end = run_start
-                    while run_end < n and narrow_flags[run_end]:
-                        run_end += 1
-                    if run_end - run_start >= _LONGLINE_BAND_ROWS:
-                        # 取该连续区间靠上的 5 行（更贴近角色底部、远离图底噪声）
-                        chosen = (run_start, run_start + _LONGLINE_BAND_ROWS)
+                    y_end = y + 1  # exclusive
+                    y_start = y
+                    while y_start - 1 >= 0 and row_widths[y_start - 1] == w:
+                        y_start -= 1
+                    if y_end - y_start >= _LONGLINE_BAND_ROWS:
+                        # 取该稳定段最靠下的 5 行（更接近钩坠，远离角色身体）
+                        chosen = (y_end - _LONGLINE_BAND_ROWS, y_end)
                         break
-                    run_start = run_end
+                    y = y_start - 1
 
                 if chosen is not None:
-                    band_y0 = start_y + chosen[0]
-                    band_y1 = start_y + chosen[1]  # exclusive
+                    band_y0, band_y1 = chosen
                     body_ratio = band_y0 / height
                     crop_ratio = band_y1 / height
                     if crop_ratio > body_ratio + 1e-12:

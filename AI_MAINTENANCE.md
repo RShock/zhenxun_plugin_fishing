@@ -428,7 +428,7 @@ esources/images/scenes/ +
 ender/fishing_scene.py + 	emplates/fishing_scene.html）：
 - 背景文件名：{id}-{名称}-{layout}.png。layout 可为旧高度（50 / 50_60）或多轨道 T@x,y_x,y+T@...。
 - 特殊渲染标记：S@effect 写在 layout 段。例：15-云鲸庭-S@longline_50.png、15-云鲸庭-S@longline+T@...png。多效果逗号分隔：S@longline,foo+T@...。
-- 当前特效 `longline`：渲染前从图片 70% 高度起扫描“窄行”（单行非透明像素 1~4 个），取连续 5 行作为钓线拉伸带拉到场景底部；找不到则不拉伸。分析结果内存缓存。角色顶部与普通渲染对齐。
+- 当前特效 `longline`：渲染前自下而上扫描“稳定细线带”——单行非透明像素宽度 < 10，且连续 5 行宽度完全相同；取最靠下的 5 行作为钓线拉伸带拉到场景底部；找不到则不拉伸。宽行须完整计数到 >=10。分析结果内存缓存。角色顶部与普通渲染对齐。
 - 前景层（可选）：{id}-{名称}-fg.png（或 _fg）。遮挡角色，不遮挡名字。get_scenes / 背景查找会跳过前景文件。
 - 轨道位置编辑器：/_lab/track-editor/（web/static/_lab/track-editor/）。加载/导出须保留 S@... 特效标记；本地兜底清单 scenes.json。
 
