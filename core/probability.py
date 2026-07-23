@@ -76,10 +76,11 @@ def calculate_display_probabilities(
             probabilities[rarity] = probabilities.get(rarity, 0.0) - deducted
             remaining -= deducted
         applied_utr_probability = utr_probability - remaining
+        # 递进 UTR 已并入互斥稀有度分布供展示（保证总和为 1）。
+        # 不能再写入 independent_mechanics，否则状态页会同时出现粉色 UTR 与灰色 UTR。
         probabilities["UTR"] = (
             probabilities.get("UTR", 0.0) + applied_utr_probability
         )
-        independent["lost_wind_utr_rate"] = applied_utr_probability
 
     return DisplayProbabilities(
         probabilities,

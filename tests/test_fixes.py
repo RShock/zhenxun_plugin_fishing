@@ -44,8 +44,19 @@ class TestProbabilityDisplayRegressions:
         )
         expected = get_lost_wind_utr_probability(5, 3) * 1.1
         assert result["UTR"] == pytest.approx(expected)
+        assert "lost_wind_utr_rate" not in result.independent_mechanics
         assert all(probability >= 0 for probability in result.values())
         assert sum(result.values()) == pytest.approx(1.0)
+
+        from zhenxun.plugins.zhenxun_plugin_fishing.render.fishing_status import (
+            _probability_rows,
+        )
+
+        utr_rows = [
+            row for row in _probability_rows(result) if row["rarity_key"] == "UTR"
+        ]
+        assert len(utr_rows) == 1
+        assert utr_rows[0]["color"] == "#e91e63"
 
     @pytest.mark.asyncio
     async def test_black_market_uses_capped_probability(self, monkeypatch):
