@@ -59,10 +59,10 @@ class TestForegroundDiscovery:
     def test_is_foreground_suffixes(self, tmp_path: Path):
         assert fs._is_foreground_scene_file(tmp_path / "15-云鲸庭-fg.png")
         assert fs._is_foreground_scene_file(tmp_path / "15-云鲸庭_fg.png")
-        assert not fs._is_foreground_scene_file(tmp_path / "15-云鲸庭-S@longline_50.png")
+        assert not fs._is_foreground_scene_file(tmp_path / "15-云鲸庭-S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4.png")
 
     def test_find_scene_skips_foreground(self, monkeypatch, tmp_path: Path):
-        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        bg = tmp_path / "15-云鲸庭-S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4.png"
         fg = tmp_path / "15-云鲸庭-fg.png"
         bg.write_bytes(b"bg")
         fg.write_bytes(b"fg")
@@ -73,7 +73,7 @@ class TestForegroundDiscovery:
         assert layout["effects"] == ["longline"]
 
     def test_find_foreground_file(self, monkeypatch, tmp_path: Path):
-        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        bg = tmp_path / "15-云鲸庭-S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4.png"
         fg = tmp_path / "15-云鲸庭-fg.png"
         bg.write_bytes(b"bg")
         fg.write_bytes(b"fg")
@@ -119,7 +119,7 @@ class TestLocationThumbnailSkipsForeground:
     def test_find_location_image_skips_fg(self, monkeypatch, tmp_path: Path):
         from zhenxun.plugins.zhenxun_plugin_fishing.render import base as render_base
 
-        bg = tmp_path / "15-云鲸庭-S@longline_50.png"
+        bg = tmp_path / "15-云鲸庭-S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4.png"
         fg = tmp_path / "15-云鲸庭-fg.png"
         bg.write_bytes(b"bg")
         fg.write_bytes(b"fg")

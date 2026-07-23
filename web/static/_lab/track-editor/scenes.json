@@ -38,9 +38,9 @@
     {
       "id": "15",
       "name": "云鲸庭",
-      "layout": "S@longline_50",
-      "filename": "15-云鲸庭-S@longline_50.png",
-      "url": "/api/resource/images/scenes/15-%E4%BA%91%E9%B2%B8%E5%BA%AD-S%40longline_50.png"
+      "layout": "S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4",
+      "filename": "15-云鲸庭-S@longline+T@23.7,70.8_43.3,80.7_62,79.4_83,68.7+T@11.8,67.8_19.3,72.6+T@87.7,63.1_98.7,58.4.png",
+      "url": "/api/resource/images/scenes/15-%E4%BA%91%E9%B2%B8%E5%BA%AD-S%40longline%2BT%4023.7%2C70.8_43.3%2C80.7_62%2C79.4_83%2C68.7%2BT%4011.8%2C67.8_19.3%2C72.6%2BT%4087.7%2C63.1_98.7%2C58.4.png"
     },
     {
       "id": "2",
