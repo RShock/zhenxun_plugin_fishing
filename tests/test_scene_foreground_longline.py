@@ -82,29 +82,82 @@ class TestForegroundDiscovery:
         assert fs._find_foreground_file(loc) == fg
 
 
-class TestLonglineActorView:
-    def test_longline_preserves_top_and_sets_fields(self, tmp_path: Path):
-        img = tmp_path / "skin.png"
-        img.write_bytes(b"x")
+class TestLonglineAdaptiveBand:
+    def _make_skin(self, tmp_path: Path, name: str, width: int, height: int, paint_rows):
+        """paint_rows: dict[y] = list of x with opaque pixels."""
+        from PIL import Image
+
+        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        px = img.load()
+        for y, xs in paint_rows.items():
+            for x in xs:
+                px[x, y] = (255, 255, 255, 255)
+        path = tmp_path / name
+        img.save(path)
+        return path
+
+    def test_detects_five_narrow_rows_from_70pct(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 100, 20
+        # body block above 70, thin line rows 75-84 (10 rows), pick first 5
+        paint = {}
+        for y in range(0, 70):
+            paint[y] = list(range(0, 12))  # wide body
+        for y in range(75, 85):
+            paint[y] = [10]  # single pixel line
+        path = self._make_skin(tmp_path, "line.png", w, h, paint)
+        band = fs._analyze_longline_band(path)
+        assert band is not None
+        body_ratio, crop_ratio = band
+        assert body_ratio == pytest.approx(0.75)
+        assert crop_ratio == pytest.approx(0.80)
+
+    def test_no_stretch_without_five_narrow_rows(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 100, 20
+        paint = {y: list(range(0, 12)) for y in range(0, 70)}
+        for y in range(75, 78):  # only 3 narrow rows
+            paint[y] = [10]
+        path = self._make_skin(tmp_path, "short.png", w, h, paint)
+        assert fs._analyze_longline_band(path) is None
+
+    def test_cache_hit(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 100, 10
+        paint = {y: [1] for y in range(70, 80)}
+        path = self._make_skin(tmp_path, "cache.png", w, h, paint)
+        a = fs._analyze_longline_band(path)
+        b = fs._analyze_longline_band(path)
+        assert a == b
+        # second call should use cache (same key present)
+        assert any(str(path.resolve()) in k[0] for k in fs._LONGLINE_BAND_CACHE)
+
+    def test_actor_view_uses_adaptive_or_fallback(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 100, 20
+        paint = {y: list(range(8)) for y in range(0, 70)}
+        for y in range(80, 90):
+            paint[y] = [5]
+        path = self._make_skin(tmp_path, "actor.png", w, h, paint)
         skin_h = 100.0
         y_offset = -10
         view = fs._actor_view(
-            img,
-            "Tester",
-            (40.0, skin_h),
-            (100.0, 70.0),
-            y_offset,
-            True,
-            effects=["longline"],
+            path, "T", (40.0, skin_h), (10.0, 70.0), y_offset, True, effects=["longline"]
         )
         assert view["special"] == "longline"
-        body_h = skin_h * 0.60
-        assert view["body_h"] == pytest.approx(body_h)
-        # normal top = y_offset + skin_h; longline top = line_base + body_h
         assert view["line_base"] + view["body_h"] == pytest.approx(y_offset + skin_h)
-        assert view["line_img_height_pct"] == pytest.approx(1000.0)
-        assert view["line_img_top_pct"] == pytest.approx(-600.0)
+        # no band -> normal
+        fs._LONGLINE_BAND_CACHE.clear()
+        path2 = self._make_skin(
+            tmp_path, "noline.png", w, h, {y: list(range(8)) for y in range(h)}
+        )
+        view2 = fs._actor_view(
+            path2, "T", (40.0, skin_h), (10.0, 70.0), y_offset, False, effects=["longline"]
+        )
+        assert view2["special"] == ""
 
+
+class TestLonglineActorViewLegacyNames:
     def test_no_effects_normal(self, tmp_path: Path):
         img = tmp_path / "skin.png"
         img.write_bytes(b"x")

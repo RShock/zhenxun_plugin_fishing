@@ -24,8 +24,12 @@ from .fishing_status import _build_buff_timeline
 
 # Scene special render marker S@effect and optional foreground *-fg.png
 _SCENE_FG_SUFFIXES = ("-fg", "_fg")
-_LONGLINE_BODY_RATIO = 0.60
-_LONGLINE_CROP_RATIO = 0.70
+# 长钓线：从图片高度 70% 起扫描“窄行”（单行非透明像素数 1~4），
+# 取连续 5 行作为拉伸带；找不到则不拉伸。结果按文件缓存。
+_LONGLINE_SEARCH_START = 0.70
+_LONGLINE_NARROW_MAX = 5  # 非透明像素数须 < 5
+_LONGLINE_BAND_ROWS = 5
+_LONGLINE_BAND_CACHE: dict[tuple[str, int, int], tuple[float, float] | None] = {}
 
 
 def _find_weather_overlay(weather_type: str) -> str:
@@ -478,6 +482,77 @@ def _scene_placements(
     )
 
 
+def _analyze_longline_band(image_path: Path) -> tuple[float, float] | None:
+    """分析皮肤图中的细钓线带，返回 (body_ratio, crop_ratio)；无法识别则 None。
+
+    - 仅检查高度 >= 70% 的区域
+    - 窄行：该行非透明像素数满足 0 < count < 5
+    - 取第一段连续 >= 5 行的窄行区间中的 5 行作为拉伸采样带
+    - 形变后角色顶部与普通渲染一致（由调用方用 body_ratio 计算）
+    """
+    try:
+        resolved = image_path.resolve()
+        st = resolved.stat()
+        cache_key = (str(resolved), int(st.st_mtime_ns), int(st.st_size))
+    except OSError:
+        return None
+
+    if cache_key in _LONGLINE_BAND_CACHE:
+        return _LONGLINE_BAND_CACHE[cache_key]
+
+    result: tuple[float, float] | None = None
+    try:
+        with Image.open(resolved) as im:
+            rgba = im.convert("RGBA")
+            width, height = rgba.size
+            if width <= 0 or height < _LONGLINE_BAND_ROWS:
+                result = None
+            else:
+                alpha = rgba.getchannel("A")
+                start_y = min(height - 1, max(0, int(height * _LONGLINE_SEARCH_START)))
+                # 预取 alpha 全图数据，按行统计非透明像素
+                alpha_data = list(alpha.getdata())
+                narrow_flags: list[bool] = []
+                for y in range(start_y, height):
+                    row_start = y * width
+                    opaque = 0
+                    for x in range(width):
+                        if alpha_data[row_start + x] > 0:
+                            opaque += 1
+                            if opaque >= _LONGLINE_NARROW_MAX:
+                                break
+                    narrow_flags.append(0 < opaque < _LONGLINE_NARROW_MAX)
+
+                run_start = 0
+                n = len(narrow_flags)
+                chosen: tuple[int, int] | None = None
+                while run_start < n:
+                    if not narrow_flags[run_start]:
+                        run_start += 1
+                        continue
+                    run_end = run_start
+                    while run_end < n and narrow_flags[run_end]:
+                        run_end += 1
+                    if run_end - run_start >= _LONGLINE_BAND_ROWS:
+                        # 取该连续区间靠上的 5 行（更贴近角色底部、远离图底噪声）
+                        chosen = (run_start, run_start + _LONGLINE_BAND_ROWS)
+                        break
+                    run_start = run_end
+
+                if chosen is not None:
+                    band_y0 = start_y + chosen[0]
+                    band_y1 = start_y + chosen[1]  # exclusive
+                    body_ratio = band_y0 / height
+                    crop_ratio = band_y1 / height
+                    if crop_ratio > body_ratio + 1e-12:
+                        result = (body_ratio, crop_ratio)
+    except Exception:
+        result = None
+
+    _LONGLINE_BAND_CACHE[cache_key] = result
+    return result
+
+
 def _actor_view(
     image_path: Path,
     nickname: str,
@@ -506,26 +581,30 @@ def _actor_view(
         "special": "",
     }
     if "longline" in effects:
-        body_h = round(skin_h * _LONGLINE_BODY_RATIO, 2)
-        # Keep the same top as normal rendering; body uses top 60%,
-        # fishing-line band 60%-70% is stretched to the scene bottom.
-        line_base = round(y_offset + skin_h - body_h, 2)
-        band = _LONGLINE_CROP_RATIO - _LONGLINE_BODY_RATIO
-        view.update(
-            {
-                "special": "longline",
-                "body_h": body_h,
-                "line_base": line_base,
-                "line_img_height_pct": (
-                    round(100.0 / band, 4) if band > 1e-9 else 1000.0
-                ),
-                "line_img_top_pct": (
-                    round(-_LONGLINE_BODY_RATIO / band * 100.0, 4)
-                    if band > 1e-9
-                    else -600.0
-                ),
-            }
-        )
+        # 自适应识别细钓线带；识别失败则退回普通渲染，避免误拉脚部
+        band_ratios = _analyze_longline_band(image_path)
+        if band_ratios is not None:
+            body_ratio, crop_ratio = band_ratios
+            body_h = round(skin_h * body_ratio, 2)
+            # 保持与普通渲染相同的顶部：bottom = scene_bottom% + y_offset，高 skin_h
+            # body 高度 body_h 时，body 底边相对 y_offset 上移 (skin_h - body_h)
+            line_base = round(y_offset + skin_h - body_h, 2)
+            band = crop_ratio - body_ratio
+            view.update(
+                {
+                    "special": "longline",
+                    "body_h": body_h,
+                    "line_base": line_base,
+                    "line_img_height_pct": (
+                        round(100.0 / band, 4) if band > 1e-9 else 1000.0
+                    ),
+                    "line_img_top_pct": (
+                        round(-body_ratio / band * 100.0, 4) if band > 1e-9 else -600.0
+                    ),
+                    "line_body_ratio": round(body_ratio, 6),
+                    "line_crop_ratio": round(crop_ratio, 6),
+                }
+            )
     return view
 
 
