@@ -291,21 +291,134 @@ def build_meteor_fish_items(meteor_fish_numbers: list[int] | None) -> list[dict]
     return items
 
 
-def _starry_feature_digit_mask(features) -> list[bool]:
-    """Mark digits covered by matched feature spans (1-based inclusive)."""
-    mask = [False] * 6
-    for feature in features or []:
-        span = getattr(feature, "span", "") or ""
-        if "-" not in span:
+def _parse_feature_span_positions(span: str) -> list[int]:
+    """Parse 1-based span text into 0-based indices.
+
+    Supports continuous ranges and sparse lists: ``1-3``, ``1,2,6``, ``1-2,6``.
+    """
+    positions: list[int] = []
+    raw = (span or "").strip()
+    if not raw:
+        return positions
+    for part in raw.split(","):
+        token = part.strip()
+        if not token:
             continue
         try:
-            start_s, end_s = span.split("-", 1)
-            start = int(start_s) - 1
-            end = int(end_s)
+            if "-" in token:
+                start_s, end_s = token.split("-", 1)
+                start = int(start_s) - 1
+                end = int(end_s)
+                for idx in range(max(0, start), min(6, end)):
+                    positions.append(idx)
+            else:
+                idx = int(token) - 1
+                if 0 <= idx < 6:
+                    positions.append(idx)
         except (TypeError, ValueError):
             continue
-        for idx in range(max(0, start), min(6, end)):
+    return positions
+
+
+# 番型长度档次 → 与鱼稀有度相同的染色键（3→R … 6→UR；顶级 6 位同号等用 UTR）
+_FEATURE_LENGTH_RARITY = {3: "R", 4: "SR", 5: "SSR", 6: "UR"}
+_FEATURE_LABEL_RARITY = {
+    "two_pair": "SR",
+    "three_pair": "UR",
+    "full_house": "SSR",
+    "ABAB": "SR",
+    "ABCABC": "UR",
+    "star_airplane": "UR",
+    "chunk_sequence": "SSR",
+    "6_all_small_0_4": "UR",
+    "6_all_big_5_9": "UR",
+    "6_all_odd": "UR",
+    "6_all_even": "UR",
+    "6_same_run": "UTR",
+    "6_step_high": "UTR",
+}
+_RARITY_RANK = {"N": 0, "R": 1, "SR": 2, "SSR": 3, "UR": 4, "UTR": 5}
+
+
+def _feature_mark_rarity(feature, digits: list[int] | None = None) -> str:
+    """Map a matched feature to a fish-rarity key for digit background dyeing."""
+    label = getattr(feature, "label", "") or ""
+    family = getattr(feature, "family", "") or ""
+    if family == "pihu":
+        # 屁胡按同号出现次数定档：3→R / 4→SR / 5→SSR
+        if digits is not None:
+            from collections import Counter
+
+            counts = Counter(digits)
+            max_count = max((count for count in counts.values() if count >= 3), default=3)
+            return _FEATURE_LENGTH_RARITY.get(min(max_count, 6), "R")
+        return "R"
+    if label in _FEATURE_LABEL_RARITY:
+        return _FEATURE_LABEL_RARITY[label]
+    if label and label[0].isdigit():
+        try:
+            length = int(label.split("_", 1)[0])
+        except ValueError:
+            length = 3
+        return _FEATURE_LENGTH_RARITY.get(length, "R")
+    return "R"
+
+
+def _contrast_text_color(bg_hex: str) -> str:
+    """Pick light/dark text for a solid rarity background."""
+    raw = (bg_hex or "").lstrip("#")
+    if len(raw) != 6:
+        return "#1f2937"
+    try:
+        red = int(raw[0:2], 16)
+        green = int(raw[2:4], 16)
+        blue = int(raw[4:6], 16)
+    except ValueError:
+        return "#1f2937"
+    # 与鱼卡稀有色搭配：亮底（如 SSR 金）用深字，其余用白字
+    luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+    return "#1f2937" if luminance > 0.62 else "#ffffff"
+
+
+def _starry_feature_digit_styles(
+    features,
+    id_text: str = "",
+) -> tuple[list[bool], list[str | None], list[str | None]]:
+    """Return matched mask + rarity-colored backgrounds for each digit.
+
+    Background colors reuse fish ``RARITY_COLORS`` so 3/4/5/6 档与 R/SR/SSR/UR 同色。
+    """
+    mask = [False] * 6
+    rarity_keys: list[str | None] = [None] * 6
+    digits = [int(ch) for ch in id_text] if id_text else None
+    for feature in features or []:
+        span = getattr(feature, "span", "") or ""
+        positions = _parse_feature_span_positions(span)
+        if not positions:
+            continue
+        rarity = _feature_mark_rarity(feature, digits)
+        rank = _RARITY_RANK.get(rarity, 0)
+        for idx in positions:
             mask[idx] = True
+            current = rarity_keys[idx]
+            if current is None or rank > _RARITY_RANK.get(current, 0):
+                rarity_keys[idx] = rarity
+    colors: list[str | None] = []
+    texts: list[str | None] = []
+    for key in rarity_keys:
+        if not key:
+            colors.append(None)
+            texts.append(None)
+            continue
+        color = RARITY_COLORS.get(key, "#f59e0b")
+        colors.append(color)
+        texts.append(_contrast_text_color(color))
+    return mask, colors, texts
+
+
+def _starry_feature_digit_mask(features, id_text: str = "") -> list[bool]:
+    """Mark digits covered by matched feature spans (1-based inclusive)."""
+    mask, _colors, _texts = _starry_feature_digit_styles(features, id_text)
     return mask
 
 
@@ -322,12 +435,17 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
         # 展示页始终按当前规则重算，避免老展品长期显示旧分数和旧番型。
         # 这里只修正展示，不追补历史奖池奖励或累计努力值。
         feature_names = [feature.display_name for feature in scored.features]
-        digit_matched = _starry_feature_digit_mask(scored.features)
+        digit_matched, digit_colors, digit_text_colors = _starry_feature_digit_styles(
+            scored.features,
+            scored.id_text,
+        )
         cards.append(
             {
                 "id": scored.id_text,
                 "digits": list(scored.id_text),
                 "digit_matched": digit_matched,
+                "digit_colors": digit_colors,
+                "digit_text_colors": digit_text_colors,
                 "score": round(scored.raw_score, 3),
                 "display_score": scored.display_score,
                 "band": band(scored.display_score),

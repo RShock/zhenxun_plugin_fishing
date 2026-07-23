@@ -382,6 +382,37 @@ def _contained_in_larger(
     return False
 
 
+
+def _format_digit_span(positions: Iterable[int]) -> str:
+    """Compact 0-based indices into a 1-based span string (e.g. 1-2,6)."""
+    ordered = sorted({int(pos) for pos in positions if 0 <= int(pos) < DIGITS})
+    if not ordered:
+        return ""
+    ranges: list[tuple[int, int]] = []
+    start = prev = ordered[0]
+    for pos in ordered[1:]:
+        if pos == prev + 1:
+            prev = pos
+            continue
+        ranges.append((start, prev))
+        start = prev = pos
+    ranges.append((start, prev))
+    parts: list[str] = []
+    for left, right in ranges:
+        if left == right:
+            parts.append(str(left + 1))
+        else:
+            parts.append(f"{left + 1}-{right + 1}")
+    return ",".join(parts)
+
+
+def _pihu_positions(digits: Sequence[int]) -> list[int]:
+    """Positions whose digit value appears at least 3 times (屁胡同号位)."""
+    counts = Counter(digits)
+    hot = {digit for digit, count in counts.items() if count >= 3}
+    return [index for index, digit in enumerate(digits) if digit in hot]
+
+
 def _feature(label: str, family: str, span: str, note: str = "") -> StarryFeature:
     return StarryFeature(label, family, span, FEATURE_SCORE[label], note)
 
@@ -494,9 +525,16 @@ def score_starry_fish(value: int | str) -> StarryFish:
         )
 
     # 屁胡是严格兜底番型：其他任何番型均未命中时才有资格触发。
+    # 标记仅覆盖出现次数≥3的同号位，避免整段 1-6 全亮。
     if not features and max(Counter(digits).values()) >= 3:
+        pihu_pos = _pihu_positions(digits)
         features.append(
-            _feature("pihu", "pihu", "1-6", "无其他番型且某数字至少出现3次")
+            _feature(
+                "pihu",
+                "pihu",
+                _format_digit_span(pihu_pos),
+                "无其他番型且某数字至少出现3次",
+            )
         )
 
     features = sorted(features, key=lambda item: (-item.score, item.span, item.label))

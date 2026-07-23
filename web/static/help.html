@@ -2057,6 +2057,31 @@ code, .ic {
     };
     return length + '位' + suffix[family];
   }
+  function starryFormatDigitSpan(positions){
+    var ordered = positions.filter(function(pos, idx, arr){
+      return pos >= 0 && pos < 6 && arr.indexOf(pos) === idx;
+    }).sort(function(a, b){ return a - b; });
+    if(!ordered.length) return '';
+    var parts = [];
+    var start = ordered[0], prev = ordered[0];
+    for(var i = 1; i < ordered.length; i++){
+      var pos = ordered[i];
+      if(pos === prev + 1){ prev = pos; continue; }
+      parts.push(start === prev ? String(start + 1) : (start + 1) + '-' + (prev + 1));
+      start = prev = pos;
+    }
+    parts.push(start === prev ? String(start + 1) : (start + 1) + '-' + (prev + 1));
+    return parts.join(',');
+  }
+  function starryPihuPositions(digits){
+    var counts = {};
+    digits.forEach(function(digit){ counts[digit] = (counts[digit] || 0) + 1; });
+    var hot = {};
+    Object.keys(counts).forEach(function(key){ if(counts[key] >= 3) hot[key] = true; });
+    var positions = [];
+    digits.forEach(function(digit, index){ if(hot[digit]) positions.push(index); });
+    return positions;
+  }
   function starryFeature(label, family, span, note){
     return {label: label, name: starryLabelCn(label), family: family, span: span,
       score: STARRY_FEATURE_SCORES[label], note: note || ''};
@@ -2159,7 +2184,7 @@ code, .ic {
       var frequencies = {};
       digits.forEach(function(digit){ frequencies[digit] = (frequencies[digit] || 0) + 1; });
       var hasTriple = Object.keys(frequencies).some(function(key){ return frequencies[key] >= 3; });
-      if(hasTriple) features.push(starryFeature('pihu', 'pihu', '1-6', '结算兜底：无其他番型且某数字至少出现3次'));
+      if(hasTriple) features.push(starryFeature('pihu', 'pihu', starryFormatDigitSpan(starryPihuPositions(digits)), '结算兜底：无其他番型且某数字至少出现3次'));
     }
     features.sort(function(left, right){
       if(left.score !== right.score) return right.score - left.score;

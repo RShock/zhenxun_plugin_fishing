@@ -522,6 +522,8 @@ class TestStarWishNumbers:
         assert [feature.label for feature in pihu.features] == ["pihu"]
         assert pihu.raw_score == pytest.approx(0.802444)
         assert pihu.display_score == 1
+        # 002150 中 0 出现三次（位 1,2,6），只标记同号位而非整段 1-6
+        assert pihu.features[0].span == "1-2,6"
 
         # 虽有至少三个 1，但已经命中 3 位回文，不能再叠屁胡。
         patterned = score_starry_fish("101245")
@@ -536,6 +538,28 @@ class TestStarWishNumbers:
         # 没有任意数字达到 3 次时，即使无其他番型也不能屁胡。
         no_triple = score_starry_fish("024579")
         assert "pihu" not in {f.label for f in no_triple.features}
+
+
+    def test_pihu_digit_mark_only_same_numbers(self):
+        """屁胡只高亮同号数字；档次染色沿用鱼稀有度色。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
+            RARITY_COLORS,
+            _starry_feature_digit_styles,
+        )
+
+        scored = score_starry_fish("002150")
+        mask, colors, texts = _starry_feature_digit_styles(scored.features, scored.id_text)
+        assert mask == [True, True, False, False, False, True]
+        assert colors[0] == RARITY_COLORS["R"]
+        assert colors[2] is None
+        assert texts[0] == "#ffffff"
+
+        # 4 个同号的屁胡样例需要无其他番型；手工构造 feature 测定档
+        from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
+
+        feat4 = StarryFeature("pihu", "pihu", "1,3,5,6", 0.802444)
+        _mask, colors4, _ = _starry_feature_digit_styles([feat4], "101011")
+        assert colors4[0] == RARITY_COLORS["SR"]
 
     def test_starry_reward_pool_boundaries_match_design(self):
         assert get_reward_pool(5) == "middle"

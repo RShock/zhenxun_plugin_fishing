@@ -117,7 +117,7 @@
     const pairs=exactPairRuns(d);if(pairs.length>=2){const lab=pairs.length>=3?"three_pair":"two_pair";f.push(makeFeature(lab,"pairs",`${pairs[0][0]+1}-${pairs[pairs.length-1][1]}`))}
     const spans=[];for(let s=0;s<=1;s++)if(fullHouse(d,s))spans.push([s,s+5]);if(spans.length)f.push(makeFeature("full_house","full_house",`${spans[0][0]+1}-${spans[spans.length-1][1]}`));
     const seq=chunkSequence(d);if(seq)f.push(makeFeature("chunk_sequence","chunk_sequence","1-6",seq));
-    const counts={};d.forEach(x=>counts[x]=(counts[x]||0)+1);if(!f.length&&Math.max(...Object.values(counts))>=3)f.push(makeFeature("pihu","pihu","1-6"));
+    const counts={};d.forEach(x=>counts[x]=(counts[x]||0)+1);if(!f.length&&Math.max(...Object.values(counts))>=3){const hot=Object.keys(counts).filter(k=>counts[k]>=3).map(Number);const pos=digits.map((d,i)=>hot.includes(d)?i:-1).filter(i=>i>=0);const parts=[];let s=pos[0],p=pos[0];for(let i=1;i<pos.length;i++){const x=pos[i];if(x===p+1){p=x;continue;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));s=p=x;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));f.push(makeFeature("pihu","pihu",parts.join(",")));}
     f.sort((a,b)=>b.score-a.score||a.span.localeCompare(b.span)||a.label.localeCompare(b.label));const raw=f.reduce((a,x)=>a+x.score,0),display=Math.floor(raw+.5);
     return{id:Number(value),idText:formatId(value),rawScore:raw,displayScore:display,features:f,pool:rewardPool(display),band:band(display)};
   }
