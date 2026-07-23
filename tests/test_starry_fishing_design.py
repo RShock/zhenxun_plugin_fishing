@@ -541,25 +541,42 @@ class TestStarWishNumbers:
 
 
     def test_pihu_digit_mark_only_same_numbers(self):
-        """屁胡只高亮同号数字；档次染色沿用鱼稀有度色。"""
+        """屁胡只高亮同号数字；标记色按奖池对应鱼稀有度。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
             RARITY_COLORS,
             _starry_feature_digit_styles,
         )
 
+        # 屁胡 display_score=1 → 低级奖池 → R
         scored = score_starry_fish("002150")
-        mask, colors, texts = _starry_feature_digit_styles(scored.features, scored.id_text)
+        assert scored.reward_pool == "low"
+        mask, colors, texts = _starry_feature_digit_styles(
+            scored.features,
+            scored.id_text,
+            reward_pool=scored.reward_pool,
+        )
         assert mask == [True, True, False, False, False, True]
         assert colors[0] == RARITY_COLORS["R"]
         assert colors[2] is None
         assert texts[0] == "#ffffff"
 
-        # 4 个同号的屁胡样例需要无其他番型；手工构造 feature 测定档
+        # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
 
-        feat4 = StarryFeature("pihu", "pihu", "1,3,5,6", 0.802444)
-        _mask, colors4, _ = _starry_feature_digit_styles([feat4], "101011")
-        assert colors4[0] == RARITY_COLORS["SR"]
+        feat = StarryFeature("pihu", "pihu", "1,2,6", 0.802444)
+        for pool, rarity in (
+            ("none", "N"),
+            ("low", "R"),
+            ("middle", "SR"),
+            ("high", "SSR"),
+            ("ultimate", "UR"),
+        ):
+            _mask, pool_colors, _ = _starry_feature_digit_styles(
+                [feat],
+                "002150",
+                reward_pool=pool,
+            )
+            assert pool_colors[0] == RARITY_COLORS[rarity]
 
     def test_starry_reward_pool_boundaries_match_design(self):
         assert get_reward_pool(5) == "middle"
