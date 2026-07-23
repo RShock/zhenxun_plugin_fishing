@@ -430,17 +430,19 @@ class TestStarWishNumbers:
         )  # 每个窗口家族内仍由 6 位长段吸收短段
 
     def test_pair_features_two_and_three_pair(self):
-        """两对/三对：恰好长度 2 的同号连段；三对吸收两对。"""
-        two = score_starry_fish("001011")
+        """两对：相邻两段长度≥2且数字不同；三对：3段长度2且中间与两侧不同。三对吸收两对。"""
+        # 000011: runs=[0000, 11], 相邻且数字不同 → 两对
+        two = score_starry_fish("000011")
         labels = {f.label for f in two.features}
         assert "two_pair" in labels
         assert "three_pair" not in labels
         assert any(
-            f.score == pytest.approx(1.359121)
+            f.score == pytest.approx(1.595508)
             for f in two.features
             if f.label == "two_pair"
         )
 
+        # 001122: runs=[00, 11, 22], 三段长度2且中间与两侧不同 → 三对
         three = score_starry_fish("001122")
         labels = {f.label for f in three.features}
         assert "three_pair" in labels
@@ -451,12 +453,17 @@ class TestStarWishNumbers:
             if f.label == "three_pair"
         )
 
-        # 4 连同号 + 1 对：只有 1 段长度恰好为 2，不构成两对
-        mixed = score_starry_fish("000011")
-        labels = {f.label for f in mixed.features}
+        # 001100: runs=[00, 11, 00], 两侧相同但中间不同 → 仍是三对
+        three_same_sides = score_starry_fish("001100")
+        labels = {f.label for f in three_same_sides.features}
+        assert "three_pair" in labels
+        assert "two_pair" not in labels
+
+        # 001011: runs=[00, 1, 0, 11], 对子不相邻 → 不构成两对
+        non_adjacent = score_starry_fish("001011")
+        labels = {f.label for f in non_adjacent.features}
         assert "two_pair" not in labels
         assert "three_pair" not in labels
-        assert "4_same_run" in labels
 
     def test_full_house_feature(self):
         """葫芦：5 位窗口 AAABB / AABBB；存在即计一次。"""

@@ -142,7 +142,8 @@ FEATURES = [
     ("rhythm", 4, "ABAB", 1.598599),
     ("rhythm", 6, "ABCABC", 3.142668),
     ("star_airplane", 6, "star_airplane", 1.899285),
-    ("pairs", 2, "two_pair", 1.359121),
+    # 两对：相邻两段长度≥2且数字不同（如 000011）；全量 25380/1e6 → 1.595508
+    ("pairs", 2, "two_pair", 1.595508),
     ("pairs", 3, "three_pair", 3.091515),
     # 葫芦：任意 5 位窗口为 AAABB 或 AABBB；存在即计一次
     # 分值 = -log10(出现概率)，全量 3510/1e6 → 2.454693
@@ -288,22 +289,46 @@ def _star_airplane(digits: Sequence[int]) -> bool:
     )
 
 
-def _exact_pair_runs(digits: Sequence[int]) -> list[tuple[int, int]]:
-    """Return (start, end) of length-exactly-2 same-digit runs.
+def _detect_pairs(digits: Sequence[int]) -> tuple[int, str]:
+    """Adjacency-based pair detection.
 
-    A pair is a contiguous same-digit segment of length 2 only. Longer same
-    runs (3+) belong to same_run and do not count as pairs.
+    Returns (pair_type, span) where pair_type is 0 (none), 2 (two_pair), or 3 (three_pair).
+
+    two_pair: two consecutive runs both with length >= 2 and different digits.
+      e.g. 000011 → runs [0000, 11] → consecutive, both ≥2, 0≠1 → two_pair.
+    three_pair: exactly 3 runs of length 2 (covering all 6 digits),
+      middle run's digit differs from both sides (sides may be same).
+      e.g. 001122 → three_pair; 001100 → three_pair (sides same, middle different).
+    three_pair absorbs two_pair (checked first).
     """
-    runs: list[tuple[int, int]] = []
+    run_digit: list[int] = []
+    run_len: list[int] = []
+    run_start: list[int] = []
     index = 0
     while index < len(digits):
         end = index + 1
         while end < len(digits) and digits[end] == digits[index]:
             end += 1
-        if end - index == 2:
-            runs.append((index, end))
+        run_digit.append(digits[index])
+        run_len.append(end - index)
+        run_start.append(index)
         index = end
-    return runs
+
+    n = len(run_digit)
+
+    # three_pair: exactly 3 runs, each length 2, middle differs from both sides
+    if n == 3 and run_len[0] == 2 and run_len[1] == 2 and run_len[2] == 2:
+        if run_digit[1] != run_digit[0] and run_digit[1] != run_digit[2]:
+            span = f"{run_start[0] + 1}-{run_start[2] + run_len[2]}"
+            return 3, span
+
+    # two_pair: consecutive runs both length >= 2 and different digits
+    for i in range(n - 1):
+        if run_len[i] >= 2 and run_len[i + 1] >= 2 and run_digit[i] != run_digit[i + 1]:
+            span = f"{run_start[i] + 1}-{run_start[i + 1] + run_len[i + 1]}"
+            return 2, span
+
+    return 0, ""
 
 
 def _window_full_house(digits: Sequence[int], start: int) -> bool:
@@ -481,29 +506,25 @@ def score_starry_fish(value: int | str) -> StarryFish:
     if _motif_abcabc(digits):
         features.append(_feature("ABCABC", "rhythm", "1-6"))
 
-    pair_runs = _exact_pair_runs(digits)
-    pair_count = len(pair_runs)
-    if pair_count >= 2:
-        pair_span = f"{pair_runs[0][0] + 1}-{pair_runs[-1][1]}"
-        # 同家族最大匹配：三对吸收两对，不重复计分
-        if pair_count >= 3:
-            features.append(
-                _feature(
-                    "three_pair",
-                    "pairs",
-                    pair_span,
-                    "三段恰好长度为2的同号连段",
-                )
+    pair_type, pair_span = _detect_pairs(digits)
+    if pair_type >= 3:
+        features.append(
+            _feature(
+                "three_pair",
+                "pairs",
+                pair_span,
+                "三段长度为2且中间与两侧不同",
             )
-        else:
-            features.append(
-                _feature(
-                    "two_pair",
-                    "pairs",
-                    pair_span,
-                    "两段恰好长度为2的同号连段",
-                )
+        )
+    elif pair_type >= 2:
+        features.append(
+            _feature(
+                "two_pair",
+                "pairs",
+                pair_span,
+                "相邻两段长度≥2且数字不同",
             )
+        )
 
     full_house_spans = _full_house_spans(digits)
     if full_house_spans:

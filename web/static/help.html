@@ -1759,9 +1759,9 @@ code, .ic {
 
           <tr>
             <td rowspan="2"><span class="tag t-event">对子</span><br><span style="font-size:11px;color:var(--sub)">组内只取更高档</span></td>
-            <td>两对</td><td>1.36</td><td>恰好 2 段「长度为 2」的同号（3 连及以上不算对），如 <code>1122xx</code>、<code>11x22x</code></td>
+            <td>两对</td><td>1.60</td><td>相邻两段长度≥2且数字不同，如 <code>000011</code>、<code>001122</code></td>
           </tr>
-          <tr><td>三对</td><td>3.09</td><td>至少 3 段长度为 2 的同号，如 <code>112233</code>、<code>113355</code>；有三对时<strong>不计两对</strong></td></tr>
+          <tr><td>三对</td><td>3.09</td><td>恰好 3 段长度为 2 且中间与两侧不同（两侧可相同），如 <code>112233</code>、<code>110011</code>；有三对时<strong>不计两对</strong></td></tr>
 
           <tr>
             <td><span class="tag t-cat">葫芦</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
@@ -1957,7 +1957,7 @@ code, .ic {
     ['rhythm', 4, 'ABAB', 1.598599],
     ['rhythm', 6, 'ABCABC', 3.142668],
     ['star_airplane', 6, 'star_airplane', 1.899285],
-    ['pairs', 2, 'two_pair', 1.359121],
+    ['pairs', 2, 'two_pair', 1.595508],
     ['pairs', 3, 'three_pair', 3.091515],
     ['full_house', 5, 'full_house', 2.454693],
     ['chunk_sequence', 6, 'chunk_sequence', 2.658763],
@@ -2138,18 +2138,36 @@ code, .ic {
         new Set(digits.slice(0, 3)).size === 3)
       features.push(starryFeature('ABCABC', 'rhythm', '1-6'));
 
-    var pairRuns = [];
+    var runDigit = [], runLen = [], runStart = [];
     for(var index = 0; index < digits.length; ){
       var end = index + 1;
       while(end < digits.length && digits[end] === digits[index]) end++;
-      if(end - index === 2) pairRuns.push([index, end]);
+      runDigit.push(digits[index]);
+      runLen.push(end - index);
+      runStart.push(index);
       index = end;
     }
-    if(pairRuns.length >= 2){
-      var pairSpan = (pairRuns[0][0] + 1) + '-' + pairRuns[pairRuns.length - 1][1];
-      features.push(pairRuns.length >= 3
-        ? starryFeature('three_pair', 'pairs', pairSpan, '三段恰好长度为2的同号连段')
-        : starryFeature('two_pair', 'pairs', pairSpan, '两段恰好长度为2的同号连段'));
+    var pairType = 0, pairSpan = '';
+    var rn = runDigit.length;
+    if(rn === 3 && runLen[0] === 2 && runLen[1] === 2 && runLen[2] === 2){
+      if(runDigit[1] !== runDigit[0] && runDigit[1] !== runDigit[2]){
+        pairType = 3;
+        pairSpan = (runStart[0] + 1) + '-' + (runStart[2] + runLen[2]);
+      }
+    }
+    if(pairType === 0){
+      for(var ri = 0; ri < rn - 1; ri++){
+        if(runLen[ri] >= 2 && runLen[ri+1] >= 2 && runDigit[ri] !== runDigit[ri+1]){
+          pairType = 2;
+          pairSpan = (runStart[ri] + 1) + '-' + (runStart[ri+1] + runLen[ri+1]);
+          break;
+        }
+      }
+    }
+    if(pairType >= 3){
+      features.push(starryFeature('three_pair', 'pairs', pairSpan, '三段长度为2且中间与两侧不同'));
+    } else if(pairType >= 2){
+      features.push(starryFeature('two_pair', 'pairs', pairSpan, '相邻两段长度≥2且数字不同'));
     }
     var fullHouseSpans = [];
     for(var start = 0; start <= 1; start++){

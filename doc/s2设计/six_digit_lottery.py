@@ -54,7 +54,7 @@ NOTE = {
     "parity": "全奇为六位均取 1/3/5/7/9；全偶为六位均取 0/2/4/6/8，两者互斥且各计一次。",
     "rhythm": "周期结构独立计分，保留 ABAB、ABCABC。",
     "star_airplane": "6 位版星空飞机：第 2-5 位每一位都处于至少 2 连块中。",
-    "pairs": "对子统计恰好长度为 2 的同号连段；3 位及以上同号连段不计对。同家族最大匹配：三对吸收两对。",
+    "pairs": "两对：相邻两段长度≥2且数字不同的同号连段（如 000011）。三对：恰好 3 段长度为 2 且中间与两侧不同（两侧可相同，如 001100）。三对吸收两对。",
     "full_house": "葫芦：任意 5 位窗口为 AAABB 或 AABBB（恰好两段同号，长度 3+2 或 2+3）；存在即计一次。",
     "chunk_sequence": "连号：按 2+2+2 或 3+3 分块后，块值严格递增或递减 1；存在即计一次。",
     "pihu": "屁胡：赋分按「某数字至少出现 3 次」的宽松概率（允许包含其他番型）；结算仍严格兜底，有其他番型时不计。",
@@ -195,19 +195,38 @@ def star_airplane(d):
     return all(d[i] == d[i - 1] or d[i] == d[i + 1] for i in range(1, DIGITS - 1))
 
 
-def exact_pair_runs(d):
-    """Return (start, end) spans of length-exactly-2 same-digit runs."""
-    runs = []
+def detect_pairs(d):
+    """Adjacency-based pair detection.
+
+    Returns (pair_type, span) where pair_type is 0 (none), 2 (two_pair), or 3 (three_pair).
+
+    two_pair: two consecutive runs both with length >= 2 and different digits.
+    three_pair: exactly 3 runs of length 2, middle differs from both sides (sides may be same).
+    three_pair absorbs two_pair.
+    """
+    run_digit, run_len, run_start = [], [], []
     i = 0
     n = len(d)
     while i < n:
         j = i + 1
         while j < n and d[j] == d[i]:
             j += 1
-        if j - i == 2:
-            runs.append((i, j))
+        run_digit.append(d[i])
+        run_len.append(j - i)
+        run_start.append(i)
         i = j
-    return runs
+    m = len(run_digit)
+    # three_pair
+    if m == 3 and run_len[0] == 2 and run_len[1] == 2 and run_len[2] == 2:
+        if run_digit[1] != run_digit[0] and run_digit[1] != run_digit[2]:
+            span = f"{run_start[0] + 1}-{run_start[2] + run_len[2]}"
+            return 3, span
+    # two_pair
+    for i in range(m - 1):
+        if run_len[i] >= 2 and run_len[i + 1] >= 2 and run_digit[i] != run_digit[i + 1]:
+            span = f"{run_start[i] + 1}-{run_start[i + 1] + run_len[i + 1]}"
+            return 2, span
+    return 0, ""
 
 
 def window_full_house(d, s):
@@ -333,14 +352,13 @@ def raw_and_max_features(d):
         raw[i] += 1
         maximal[i] += 1
 
-    pair_runs = exact_pair_runs(d)
-    pair_count = len(pair_runs)
-    if pair_count >= 3:
+    pair_type, _ = detect_pairs(d)
+    if pair_type >= 3:
         i = FEATURE_BY_LABEL["three_pair"]
         present.add(i)
         raw[i] += 1
         maximal[i] += 1
-    elif pair_count == 2:
+    elif pair_type >= 2:
         i = FEATURE_BY_LABEL["two_pair"]
         present.add(i)
         raw[i] += 1
@@ -434,14 +452,11 @@ def score_digits(d, weights, explain=False):
     if motif_abcabc(d):
         add("ABCABC", "rhythm", "1-6")
 
-    pair_runs = exact_pair_runs(d)
-    pair_count = len(pair_runs)
-    if pair_count >= 2:
-        pair_span = f"{pair_runs[0][0] + 1}-{pair_runs[-1][1]}"
-        if pair_count >= 3:
-            add("three_pair", "pairs", pair_span, "三段恰好长度为2的同号连段")
-        else:
-            add("two_pair", "pairs", pair_span, "两段恰好长度为2的同号连段")
+    pair_type, pair_span = detect_pairs(d)
+    if pair_type >= 3:
+        add("three_pair", "pairs", pair_span, "三段长度为2且中间与两侧不同")
+    elif pair_type >= 2:
+        add("two_pair", "pairs", pair_span, "相邻两段长度≥2且数字不同")
 
     fh_spans = full_house_spans(d)
     if fh_spans:
@@ -675,7 +690,7 @@ def write_report():
     lines.append("4. 全小/全大只在完整 6 位成立：全小为 0-4，全大为 5-9。")
     lines.append("5. 6 位星空飞机：第 2 到第 5 位每一位都必须和左邻或右邻相同。")
     lines.append(
-        "6. 对子：统计恰好长度为 2 的同号连段；两对 / 三对同家族，三对吸收两对。"
+        "6. 对子：两对需相邻两段长度≥2且数字不同（如 000011）；三对需恰好 3 段长度为 2 且中间与两侧不同（两侧可相同）。三对吸收两对。"
     )
     lines.append(
         "7. 葫芦：任意 5 位窗口为 AAABB 或 AABBB；存在即计一次，不因双窗口叠分。"

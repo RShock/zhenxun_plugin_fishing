@@ -1,4 +1,4 @@
-# 维护工具
+﻿# 维护工具
 
 本目录仅存放不参与插件运行时导入的维护工具。
 
@@ -13,5 +13,9 @@
 ```powershell
 python tools/simulations/fishing_simulation.py
 python tools/assets/pixel_grid.py pixel_grid.png --cell-size 16
+python tools/analysis/scan_starry_max_score.py --show-features
+powershell -File tools/analysis/starry_c/build.ps1
+tools/analysis/starry_c/scan_starry_max_score.exe --threads 4
 & .\tools\packaging\pack.ps1
 ```
+
