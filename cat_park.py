@@ -539,7 +539,7 @@ body {{ margin:0; padding:14px; width:720px; box-sizing:border-box; font-family:
 {f"<div class='msg'>{message}</div>" if message else ""}
 <div class='materials'>{material_html}</div>
 {rows_html}
-<div class='hint'>发送「建设猫猫乐园 编号/建筑名」升级建筑<br>编号可紧贴指令，也支持空格分隔，如「建设猫猫乐园4567」「建设猫猫乐园 4 5 6 7」<br>建筑效果仅在猫猫乐园内有效</div>
+<div class='hint'>发送「建设猫猫乐园 编号/建筑名」升级建筑<br>编号可紧贴指令，也支持空格分隔，如「建设猫猫乐园4567」「建设猫猫乐园 4 5 6 7」<br>除第三级猫雕像外，其他建筑效果仅在猫猫乐园有效</div>
 </div></body></html>
 """
     return await render_html(html, 720)
