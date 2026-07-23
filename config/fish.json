@@ -262,43 +262,43 @@
     },
     {
       "id": "沙星魟",
-      "base_price": 253
-    },
-    {
-      "id": "琉璃沙鳗",
-      "base_price": 275
-    },
-    {
-      "id": "星蝎鲶",
-      "base_price": 264
-    },
-    {
-      "id": "金尘鲷",
-      "base_price": 259
-    },
-    {
-      "id": "海市蜃鱼",
-      "base_price": 269
-    },
-    {
-      "id": "云须鲸鱼",
       "base_price": 290
     },
     {
-      "id": "鲸歌鲤",
+      "id": "琉璃沙鳗",
       "base_price": 314
     },
     {
-      "id": "浮庭鲫",
+      "id": "星蝎鲶",
       "base_price": 301
     },
     {
-      "id": "天羽鳐",
+      "id": "金尘鲷",
       "base_price": 296
     },
     {
-      "id": "雾铃鳕",
+      "id": "海市蜃鱼",
       "base_price": 308
+    },
+    {
+      "id": "云须鲸鱼",
+      "base_price": 253
+    },
+    {
+      "id": "鲸歌鲤",
+      "base_price": 275
+    },
+    {
+      "id": "浮庭鲫",
+      "base_price": 264
+    },
+    {
+      "id": "天羽鳐",
+      "base_price": 259
+    },
+    {
+      "id": "雾铃鳕",
+      "base_price": 269
     },
     {
       "id": "极光鳗",
