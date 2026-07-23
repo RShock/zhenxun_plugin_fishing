@@ -422,6 +422,8 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
             scored.reward_pool, display_score=scored.display_score
         )
         pool_color = RARITY_COLORS.get(pool_rarity, RARITY_COLORS.get("N", "#808080"))
+        # 实色背景下需要对比文字色：亮底用深字，暗底用白字
+        pool_text_color = _contrast_text_color(pool_color)
         cards.append(
             {
                 "id": scored.id_text,
@@ -431,6 +433,7 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
                 "digit_text_colors": digit_text_colors,
                 "pool_rarity": pool_rarity,
                 "pool_color": pool_color,
+                "pool_text_color": pool_text_color,
                 "score": round(scored.raw_score, 3),
                 "display_score": scored.display_score,
                 "band": band(scored.display_score),

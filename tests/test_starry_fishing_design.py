@@ -572,6 +572,8 @@ class TestStarWishNumbers:
         assert len(cards) == 1
         assert cards[0]["pool_rarity"] == "R"
         assert cards[0]["pool_color"] == RARITY_COLORS["R"]
+        # 对比文字色必须存在且与背景色搭配（暗底→白字，亮底→深字）
+        assert cards[0]["pool_text_color"] in ("#ffffff", "#1f2937")
 
         # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥15 分 → UTR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
