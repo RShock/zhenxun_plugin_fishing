@@ -22,10 +22,18 @@
         .wo { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; z-index:5; image-rendering:pixelated; opacity:0.7; }
         .nb { position:absolute; top:6px; right:8px; font-size:10px; color:#fff; background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:8px; z-index:20; white-space:nowrap; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; display:flex; flex-direction:column; gap:2px; align-items:flex-end; }
         .pl { position:absolute; left:0; right:0; top:0; bottom:0; }
+        .sfg { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; z-index:400; image-rendering:pixelated; }
         .player { position:absolute; bottom:0; width:80px; transform:translateX(-50%); text-align:center; }
         .psprite { image-rendering:pixelated; display:block; margin:0 auto; }
-        .pname { font-size:8px; color:#fff; -webkit-text-stroke:0.5px #000; paint-order:stroke fill; white-space:nowrap; margin-bottom:1px; line-height:1; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; position:relative; }
-        .player.current .pname { color:#FFD700; font-weight:bold; -webkit-text-stroke:0.5px #000; }
+        .ll-body, .ll-line { position:absolute; transform:translateX(-50%); pointer-events:none; }
+        .ll-body { overflow:hidden; text-align:center; }
+        .ll-body img { display:block; image-rendering:pixelated; margin:0 auto; }
+        .ll-line { bottom:0; overflow:hidden; }
+        .ll-line img { position:absolute; left:0; width:100%; max-width:none; image-rendering:pixelated; pointer-events:none; }
+        .pname-layer { position:absolute; left:0; top:0; width:100%; height:100%; z-index:500; pointer-events:none; }
+        .pname-anchor { position:absolute; transform:translateX(-50%); width:0; height:0; text-align:center; }
+        .pname { font-size:8px; color:#fff; -webkit-text-stroke:0.5px #000; paint-order:stroke fill; white-space:nowrap; margin-bottom:1px; line-height:1; font-family:'HYPixel','Microsoft YaHei','Segoe UI Emoji',sans-serif; position:absolute; left:50%; transform:translateX(-50%); }
+        .pname.cur { color:#FFD700; font-weight:bold; -webkit-text-stroke:0.5px #000; }
         .ib { padding:8px 12px; background:linear-gradient(135deg,#1a5276 0%,#154360 100%); color:#fff; }
         .it { font-size:14px; font-weight:bold; }
         .is { font-size:11px; opacity:0.9; margin-top:2px; }
@@ -65,10 +73,34 @@
     {% endif %}
     <div class="pl">
       {% for player in player_list %}
-      <div class="player{% if player.is_current %} current{% endif %}" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.y_offset }}px);">
-          <div class="pname">{{ player.nickname }}</div>
-          <img src="{{ player.uri }}" class="psprite" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;">
+      {% if player.special == "longline" %}
+      <div class="ll-body" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.line_base }}px);width:{{ player.skin_w }}px;height:{{ player.body_h }}px;">
+          <img src="{{ player.uri }}" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;" alt="">
       </div>
+      <div class="ll-line" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};height:calc({{ player.scene_bottom }}% + {{ player.line_base }}px);width:{{ player.skin_w }}px;">
+          <img src="{{ player.uri }}" style="height:{{ player.line_img_height_pct }}%;top:{{ player.line_img_top_pct }}%;" alt="">
+      </div>
+      {% else %}
+      <div class="player{% if player.is_current %} current{% endif %}" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.y_offset }}px);">
+          <img src="{{ player.uri }}" class="psprite" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;" alt="">
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% if foreground_uri %}
+    <img src="{{ foreground_uri }}" class="sfg" alt="">
+    {% endif %}
+    <div class="pname-layer">
+      {% for player in player_list %}
+      {% if player.special == "longline" %}
+      <div class="pname-anchor" style="left:{{ player.left_pos }}px;bottom:calc({{ player.scene_bottom }}% + {{ player.line_base }}px + {{ player.body_h }}px);">
+          <div class="pname{% if player.is_current %} cur{% endif %}" style="bottom:1px;">{{ player.nickname }}</div>
+      </div>
+      {% else %}
+      <div class="pname-anchor" style="left:{{ player.left_pos }}px;bottom:calc({{ player.scene_bottom }}% + {{ player.y_offset }}px + {{ player.skin_h }}px);">
+          <div class="pname{% if player.is_current %} cur{% endif %}" style="bottom:1px;">{{ player.nickname }}</div>
+      </div>
+      {% endif %}
       {% endfor %}
     </div>
   </div>
@@ -121,17 +153,14 @@ document.fonts.ready.then(function(){
     });
 
     var sprites = [];
-    document.querySelectorAll('.player').forEach(function(player) {
-        var sprite = player.querySelector('.psprite');
-        if (sprite) {
-            var sRect = sprite.getBoundingClientRect();
-            sprites.push({
-                left: sRect.left,
-                right: sRect.right,
-                top: sRect.top,
-                bottom: sRect.bottom
-            });
-        }
+    document.querySelectorAll('.psprite, .ll-body').forEach(function(sprite) {
+        var sRect = sprite.getBoundingClientRect();
+        sprites.push({
+            left: sRect.left,
+            right: sRect.right,
+            top: sRect.top,
+            bottom: sRect.bottom
+        });
     });
 
     function nameBox(item, yOff) {

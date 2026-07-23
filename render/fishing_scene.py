@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import re
 import time
 
 from PIL import Image
@@ -21,6 +22,11 @@ _WEATHER_OVERLAY_MAP = {
 }
 from .fishing_status import _build_buff_timeline
 
+# Scene special render marker S@effect and optional foreground *-fg.png
+_SCENE_FG_SUFFIXES = ("-fg", "_fg")
+_LONGLINE_BODY_RATIO = 0.60
+_LONGLINE_CROP_RATIO = 0.70
+
 
 def _find_weather_overlay(weather_type: str) -> str:
     """根据天气类型查找对应的天气叠加图片，返回 file:// URI 或空字符串"""
@@ -31,6 +37,39 @@ def _find_weather_overlay(weather_type: str) -> str:
         if f.suffix == ".png" and f.stem == overlay_name:
             return f.as_uri()
     return ""
+
+
+def _is_foreground_scene_file(path: Path) -> bool:
+    """Foreground layer files: {id}-{name}-fg.png (not used as background)."""
+    stem = path.stem
+    return any(stem.endswith(suf) for suf in _SCENE_FG_SUFFIXES)
+
+
+def _parse_special_and_layout(suffix: str) -> tuple[list[str], str]:
+    """Parse optional special-render marker S@effects from layout suffix.
+
+    Examples:
+      S@longline_50 -> (["longline"], "50")
+      S@longline_50_60 -> (["longline"], "50_60")
+      S@longline+T@1,2_3,4 -> (["longline"], "T@1,2_3,4")
+      S@longline,foo+T@... -> (["longline", "foo"], "T@...")
+      50 / T@... -> ([], original suffix)
+    """
+    if not suffix.startswith("S@"):
+        return [], suffix
+    body = suffix[2:]
+    plus_t = body.find("+T")
+    if plus_t >= 0:
+        eff_part = body[:plus_t]
+        layout_part = body[plus_t + 1 :]
+        effects = [e.strip() for e in eff_part.split(",") if e.strip()]
+        return effects, layout_part
+    matched = re.match(r"^([A-Za-z][A-Za-z0-9,]*)_(\d[\d_]*)$", body)
+    if matched:
+        effects = [e.strip() for e in matched.group(1).split(",") if e.strip()]
+        return effects, matched.group(2)
+    effects = [e.strip() for e in body.split(",") if e.strip()]
+    return effects, "50"
 
 
 def _parse_scene_heights(stem: str) -> list[int]:
@@ -151,17 +190,25 @@ def _point_on_polyline(
 
 
 def _parse_scene_layout(stem: str) -> dict:
-    """解析场景文件名后缀，兼容旧高度格式与多轨道格式。
+    """解析场景文件名后缀，兼容旧高度、多轨道与特殊渲染标记。
 
     返回::
-        {"mode": "heights", "heights": [int, ...]}
+        {"mode": "heights", "heights": [int, ...], "effects": [str, ...]}
         或
-        {"mode": "tracks", "tracks": [{"points": [(x,y), ...]}, ...]}
+        {"mode": "tracks", "tracks": [{"points": [(x,y), ...]}, ...], "effects": [...]}
     """
-    tracks = _parse_scene_tracks(stem)
+    parts = stem.split("-")
+    suffix = parts[-1] if parts else ""
+    effects, layout_suffix = _parse_special_and_layout(suffix)
+    layout_stem = f"_layout-_-{layout_suffix}"
+    tracks = _parse_scene_tracks(layout_stem)
     if tracks:
-        return {"mode": "tracks", "tracks": tracks}
-    return {"mode": "heights", "heights": _parse_scene_heights(stem)}
+        return {"mode": "tracks", "tracks": tracks, "effects": effects}
+    return {
+        "mode": "heights",
+        "heights": _parse_scene_heights(layout_stem),
+        "effects": effects,
+    }
 
 
 def _track_length(track: dict) -> float:
@@ -251,18 +298,35 @@ def _place_on_heights(
 
 
 def _find_scene_file(location) -> tuple[Path | None, dict]:
-    default_layout = {"mode": "heights", "heights": [50]}
+    default_layout = {"mode": "heights", "heights": [50], "effects": []}
     if not SCENES_IMAGES_PATH.exists():
         return None, default_layout
     for f in SCENES_IMAGES_PATH.iterdir():
-        if f.suffix == ".png":
-            parts = f.stem.split("-")
-            if len(parts) >= 3 and (
-                parts[1] == location.name
-                or parts[0].lower() == str(location.id).lower()
-            ):
-                return f, _parse_scene_layout(f.stem)
+        if f.suffix != ".png" or _is_foreground_scene_file(f):
+            continue
+        parts = f.stem.split("-")
+        if len(parts) >= 3 and (
+            parts[1] == location.name
+            or parts[0].lower() == str(location.id).lower()
+        ):
+            return f, _parse_scene_layout(f.stem)
     return None, default_layout
+
+
+def _find_foreground_file(location) -> Path | None:
+    """Find optional foreground layer: {id}-*-fg.png."""
+    if not SCENES_IMAGES_PATH.exists():
+        return None
+    loc_id = str(location.id).lower()
+    for f in sorted(SCENES_IMAGES_PATH.iterdir(), key=lambda p: p.name.lower()):
+        if f.suffix != ".png" or not _is_foreground_scene_file(f):
+            continue
+        parts = f.stem.split("-")
+        if parts and parts[0].lower() == loc_id:
+            return f
+        if getattr(location, "name", None) and location.name in f.stem:
+            return f
+    return None
 
 
 def _parse_skin_stem(stem: str) -> tuple[str, int]:
@@ -421,20 +485,48 @@ def _actor_view(
     position: tuple[float, float],
     y_offset: int,
     is_current: bool,
+    *,
+    effects: list[str] | None = None,
 ) -> dict:
     left_pos, scene_y = position
     z_base = int(scene_y)
-    return {
+    skin_w, skin_h = size
+    effects = list(effects or [])
+    view = {
         "is_current": is_current,
         "nickname": nickname,
         "uri": image_path.as_uri(),
-        "skin_w": size[0],
-        "skin_h": size[1],
+        "skin_w": skin_w,
+        "skin_h": skin_h,
         "left_pos": left_pos,
         "z_index": (100 if is_current else 1) + z_base,
         "y_offset": y_offset,
         "scene_bottom": round(100 - scene_y, 2),
+        "effects": effects,
+        "special": "",
     }
+    if "longline" in effects:
+        body_h = round(skin_h * _LONGLINE_BODY_RATIO, 2)
+        # Keep the same top as normal rendering; body uses top 60%,
+        # fishing-line band 60%-70% is stretched to the scene bottom.
+        line_base = round(y_offset + skin_h - body_h, 2)
+        band = _LONGLINE_CROP_RATIO - _LONGLINE_BODY_RATIO
+        view.update(
+            {
+                "special": "longline",
+                "body_h": body_h,
+                "line_base": line_base,
+                "line_img_height_pct": (
+                    round(100.0 / band, 4) if band > 1e-9 else 1000.0
+                ),
+                "line_img_top_pct": (
+                    round(-_LONGLINE_BODY_RATIO / band * 100.0, 4)
+                    if band > 1e-9
+                    else -600.0
+                ),
+            }
+        )
+    return view
 
 
 def _build_scene_actors(
@@ -451,6 +543,7 @@ def _build_scene_actors(
     placements = _scene_placements(
         scene_layout, len(players) + len(npcs), max(widths, default=fallback[0]), width
     )
+    effects = list(scene_layout.get("effects") or [])
     actors = []
     for index, player in enumerate(players):
         skin_id = player.get("skin_id", "1")
@@ -466,6 +559,7 @@ def _build_scene_actors(
                 position,
                 offsets.get(skin_id, 0),
                 player["user_id"] == current_user_id,
+                effects=effects,
             )
         )
     for index, npc in enumerate(npcs, start=len(players)):
@@ -478,6 +572,7 @@ def _build_scene_actors(
                 position,
                 npc["y_offset"],
                 False,
+                effects=effects,
             )
         )
     return actors
@@ -580,6 +675,8 @@ async def render_fishing_scene(
         )
 
     scene_uri = scene_file.as_uri()
+    fg_file = _find_foreground_file(location)
+    foreground_uri = fg_file.as_uri() if fg_file and fg_file.exists() else ""
     container_width = 330
     player_list = _build_scene_actors(
         players, current_user_id, weather_info, scene_layout, container_width
@@ -616,6 +713,7 @@ async def render_fishing_scene(
         container_width=container_width,
         y_bottom=y_bottom,
         scene_uri=scene_uri,
+        foreground_uri=foreground_uri,
         badges=badges,
         player_list=player_list,
         location_name=location.name,

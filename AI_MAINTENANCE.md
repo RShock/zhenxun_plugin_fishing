@@ -423,6 +423,15 @@ r:\zhenxun_bot\tests\
 
 网页提供：背包查看、收藏图鉴、商店浏览、钓鱼场景、钓鱼状态、搜索结果等。
 
+**钓鱼场景图约定**（
+esources/images/scenes/ + 
+ender/fishing_scene.py + 	emplates/fishing_scene.html）：
+- 背景文件名：{id}-{名称}-{layout}.png。layout 可为旧高度（50 / 50_60）或多轨道 T@x,y_x,y+T@...。
+- 特殊渲染标记：S@effect 写在 layout 段。例：14-星砂漠-S@longline_50.png、14-星砂漠-S@longline+T@...png。多效果逗号分隔：S@longline,foo+T@...。
+- 当前特效 longline：角色图上半 60% 不拉伸；60%–70% 钓线带拉伸到场景底部；70% 以下丢弃；角色顶部与普通渲染对齐。
+- 前景层（可选）：{id}-{名称}-fg.png（或 _fg）。遮挡角色，不遮挡名字。get_scenes / 背景查找会跳过前景文件。
+- 轨道位置编辑器：/_lab/track-editor/（web/static/_lab/track-editor/）。加载/导出须保留 S@... 特效标记；本地兜底清单 scenes.json。
+
 **流星鱼番型评分约定（强制）**：
 - 不同番型家族彼此独立判定并叠加计分；一个数字序列可同时命中同号连段、滑梯、镜像回文等不同家族，不得因已命中某一家族而排除其他家族。
 - 同一家族内采用最长匹配：长段命中后吸收其覆盖的短段，短段不再重复计分；该吸收规则不得跨家族应用。

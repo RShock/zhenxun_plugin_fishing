@@ -385,6 +385,8 @@ async def get_scenes(request: web.Request) -> web.Response:
     if scenes_dir.exists():
         for f in sorted(scenes_dir.glob("*.png"), key=lambda p: p.name.lower()):
             stem = f.stem
+            if stem.endswith("-fg") or stem.endswith("_fg"):
+                continue
             parts = stem.split("-", 2)
             loc_id = parts[0] if parts else ""
             if not _is_scene_map_id(loc_id):
