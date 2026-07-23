@@ -81,6 +81,33 @@ class TestShopRenderStarryFrame:
         rows = await self._capture_frame_rows(has_starry_ship=False, rod_level=5)
         assert not any(r.get("key") == "starry" for r in rows)
 
+    async def test_rod_section_shows_ship_when_bonus_tops_above_10(self, monkeypatch):
+        """总等级 11（基础 10）未建艇时，鱼店入口仍是建设星空艇。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.render import shop as shop_render
+        from zhenxun.plugins.zhenxun_plugin_fishing.starry import STARRY_SHIP_COST
+
+        captured = {}
+
+        def _capture_template(name, **kwargs):
+            captured.update(kwargs)
+            return "<html>fake</html>"
+
+        monkeypatch.setattr(shop_render, "render_template", _capture_template)
+        await shop_render.render_shop(
+            [],
+            [],
+            rod_level=11,
+            rod_upgrade_price=100,
+            hook_level=1,
+            hook_upgrade_price=50,
+            user_id=USER_ID,
+            has_starry_ship=False,
+            base_rod_level=10,
+        )
+        rod = captured.get("rod_section") or {}
+        assert rod.get("cmd") == "建设星空艇"
+        assert rod.get("price") == STARRY_SHIP_COST
+
 
 class TestUpgradeRod:
     async def test_upgrade_rod_success(self, db):
@@ -125,6 +152,73 @@ class TestUpgradeRod:
         assert ok is True
         user_after = await db.user_get(USER_ID)
         assert user_after.rod_level == 11
+
+    async def test_upgrade_rod_bonus_cannot_bypass_ship_gate(self, db):
+        """雕像把总等级顶到 11 后，基础仍 10，未建艇不能继续商店升竿。"""
+        user = await db.user_get(USER_ID)
+        user.rod_level = 11
+        user.bonus_rod_level = 1
+        user.gold = 999999999
+        ok, msg = await upgrade_rod(USER_ID)
+        assert ok is False
+        assert "星空艇" in msg
+        user_after = await db.user_get(USER_ID)
+        assert user_after.rod_level == 11
+        assert user_after.gold == 999999999
+
+    async def test_upgrade_rod_base_over_10_without_ship_blocked(self, db):
+        """已越界（基础 > 10）未建艇时，继续升级仍被拦住。"""
+        user = await db.user_get(USER_ID)
+        user.rod_level = 12
+        user.bonus_rod_level = 1
+        user.gold = 999999999
+        ok, msg = await upgrade_rod(USER_ID)
+        assert ok is False
+        assert "星空艇" in msg
+        user_after = await db.user_get(USER_ID)
+        assert user_after.rod_level == 12
+
+    async def test_upgrade_rod_price_ignores_bonus_level(self, db):
+        """雕像加成不抬价：总等级 5（基础 4）按 4→5 的价格扣费，而不是 5→6。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.bonus_rod_level = 1  # base = 4
+        expected_price = ConfigManager.get_rod_upgrade_price(4)
+        inflated_price = ConfigManager.get_rod_upgrade_price(5)
+        assert expected_price > 0
+        assert inflated_price != expected_price
+        user.gold = expected_price + 1000
+        gold_before = user.gold
+        ok, msg = await upgrade_rod(USER_ID)
+        assert ok is True, msg
+        user_after = await db.user_get(USER_ID)
+        assert user_after.rod_level == 6
+        assert user_after.bonus_rod_level == 1
+        assert user_after.base_rod_level == 5
+        assert user_after.gold == gold_before - expected_price
+        assert user_after.gold != gold_before - inflated_price
+
+    async def test_upgrade_rod_with_bonus_and_ship_uses_base_price(self, db):
+        """已建艇 + 雕像：基础 10 升到 11，扣的是 10→11 价，不是总等级 11→12 价。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 11
+        user.bonus_rod_level = 1  # base = 10
+        await db.items_add(USER_ID, STARRY_SHIP_ITEM_ID, STARRY_SHIP_ITEM_TYPE, 1)
+        expected_price = ConfigManager.get_rod_upgrade_price(10)
+        wrong_price = ConfigManager.get_rod_upgrade_price(11)
+        user.gold = expected_price + 5000
+        gold_before = user.gold
+        ok, msg = await upgrade_rod(USER_ID)
+        assert ok is True, msg
+        user_after = await db.user_get(USER_ID)
+        assert user_after.rod_level == 12
+        assert user_after.base_rod_level == 11
+        assert user_after.gold == gold_before - expected_price
+        assert user_after.gold != gold_before - wrong_price
 
 
 class TestUpgradeHook:
@@ -596,4 +690,5 @@ class TestRenderShopStarFrames:
         assert captured["kwargs"].get("star_frames") == 6
         assert captured["kwargs"].get("starry_frames") == 1
         assert captured["kwargs"].get("has_starry_ship") is True
+        assert captured["kwargs"].get("base_rod_level") == user.base_rod_level
 

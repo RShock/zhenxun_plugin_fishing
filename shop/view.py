@@ -31,6 +31,7 @@ async def get_shop_image(user_id: str) -> bytes:
         starry_frames=int(user.starry_frames or 0),
         has_starry_ship=await has_starry_ship(user_id),
         star_frames=int(user.star_frames or 0),
+        base_rod_level=user.base_rod_level,
     )
 
 

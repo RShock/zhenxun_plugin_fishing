@@ -17,27 +17,23 @@ async def render_shop(
     starry_frames: int = 0,
     has_starry_ship: bool = False,
     star_frames: int = 0,
+    base_rod_level: int | None = None,
 ) -> bytes:
+    # 未传时按无雕像加成处理；门禁/展示与定价一致，都基于基础等级
+    base_level = rod_level if base_rod_level is None else base_rod_level
     rod_section = {"is_max": rod_level >= 20}
     if rod_level >= 20:
         rod_section["name"] = "🎣 钓竿已满级"
         rod_section["desc"] = "当前等级: 20级 · 奇迹彼岸钓竿"
-    elif rod_level == 10 and user_id:
-        # Lv.10 未建设星空艇时，升级入口替换为星空艇建设入口。
-        # 注意：不可 import has_starry_ship 同名函数，会遮蔽参数布尔值，
-        # 导致下方「星空木框」在未建艇时仍错误显示。
-        from ..starry import STARRY_SHIP_COST, has_starry_ship as check_starry_ship
+    elif base_level >= 10 and not has_starry_ship:
+        # 基础 Lv.10+ 未建艇：入口固定为建艇（雕像把总等级顶到 11+ 也不能绕过）
+        # 注意：此处用参数 has_starry_ship，不可再 import 同名函数遮蔽布尔值
+        from ..starry import STARRY_SHIP_COST
 
-        if not await check_starry_ship(user_id):
-            rod_section["name"] = "🚀 购买星空艇"
-            rod_section["desc"] = "解锁第二部分【星空钓鱼】"
-            rod_section["price"] = STARRY_SHIP_COST
-            rod_section["cmd"] = "建设星空艇"
-        else:
-            rod_section["name"] = "🎣 升级钓竿"
-            rod_section["desc"] = f"当前等级: {rod_level}级 → {rod_level + 1}级"
-            rod_section["price"] = rod_upgrade_price
-            rod_section["cmd"] = "升级钓竿"
+        rod_section["name"] = "🚀 购买星空艇"
+        rod_section["desc"] = "解锁第二部分【星空钓鱼】"
+        rod_section["price"] = STARRY_SHIP_COST
+        rod_section["cmd"] = "建设星空艇"
     else:
         rod_section["name"] = "🎣 升级钓竿"
         rod_section["desc"] = f"当前等级: {rod_level}级 → {rod_level + 1}级"

@@ -20,17 +20,12 @@ async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, s
 
     if equipment_type == "rod":
         current_level = user.rod_level
-        # 商店定价基于基础等级（排除猫猫乐园雕像额外加成）
+        # 定价与升到 11+ 的门禁都只用基础等级：雕像 +1 不抬商店价，也不能跳过建艇锁
         pricing_level = user.base_rod_level
         name = "钓竿"
         max_level = 20
         get_price = ConfigManager.get_rod_upgrade_price
         get_name = ConfigManager.get_rod_name
-        if current_level == 10:
-            from ..starry import has_starry_ship
-
-            if not await has_starry_ship(user_id):
-                return False, "需要先在鱼店购买星空艇，才能继续升级 Lv.11 钓竿。"
     else:
         current_level = user.hook_level
         pricing_level = current_level
@@ -41,6 +36,13 @@ async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, s
 
     if current_level >= max_level:
         return False, f"{name}已达到最高等级！"
+
+    # 满级之后再查建艇锁，避免 Lv.20 未建艇时误报要先建设星空艇
+    if equipment_type == "rod" and pricing_level >= 10:
+        from ..starry import has_starry_ship
+
+        if not await has_starry_ship(user_id):
+            return False, "需要先在鱼店购买星空艇，才能继续升级 Lv.11 钓竿。"
 
     price = get_price(pricing_level)
     if user.gold < price:
