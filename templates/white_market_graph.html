@@ -16,7 +16,7 @@
     <span class="wmg-legend-item"><span style="display:inline-block;width:24px;height:2px;background:#28a745;"></span> 现在可交换</span>
     <span class="wmg-legend-item"><span style="display:inline-block;width:24px;height:0;border-top:2px dashed #d9a400;"></span> 有可能做到</span>
 </div>
-<div id="wmg-graph"></div>
+<div id="wmg-graph" style="text-align:center;"></div>
 <script>
 (function(){
     var nodes = {{ nodes_json|safe }};
@@ -24,9 +24,10 @@
     var rarityColors = {{ rarity_colors_json|safe }};
 
     var NODE_W = 104, NODE_H = 42, NODE_RX = 6;
-    var GAP_X = 16, GAP_Y = 14;
-    var BAND_GAP = 56;     // 不同地图聚类之间的纵向间距
-    var PAD = 28;
+    var GAP_Y = 14;         // 同聚类内节点纵向间距
+    var BAND_GAP = 50;      // 不同聚类之间的纵向间距
+    var CURVE_R = 42;       // 弧线弯曲半径（左右各留此宽度）
+    var PAD = 24;
     var n = nodes.length;
 
     var nodeMap = {};
@@ -34,45 +35,27 @@
 
     // ── 按地图分组 ──
     var locGroups = {};
+    var nodeLoc = {};
     nodes.forEach(function(nd){
         var lid = nd.location_id || '_unknown';
+        nodeLoc[nd.id] = lid;
         if (!locGroups[lid]) locGroups[lid] = [];
         locGroups[lid].push(nd);
     });
     var locIds = Object.keys(locGroups);
-    var numLocs = locIds.length;
 
-    // 画布宽度：适配手机竖屏，按最宽行的节点数确定
-    var maxRowNodes = 0;
-    locIds.forEach(function(lid){
-        if (locGroups[lid].length > maxRowNodes) maxRowNodes = locGroups[lid].length;
-    });
-    var canvasW = Math.min(Math.max(560, maxRowNodes * (NODE_W + GAP_X) + PAD * 2), 700);
-    var maxPerRow = Math.max(2, Math.floor((canvasW - 2 * PAD) / (NODE_W + GAP_X)));
-
-    // ── 确定性纵向带状布局 ──
-    // 每个地图占一条水平带，带内节点从左到右排列，超出 maxPerRow 则换行
+    // ── 纯纵向单列布局 ──
+    // 所有节点在一条垂直线上，按地图分段，段内有 GAP_Y，段间有 BAND_GAP
+    var colX = PAD + CURVE_R + NODE_W / 2;
+    var canvasW = PAD + CURVE_R + NODE_W + CURVE_R + PAD;
     var cursorY = PAD;
-    locIds.forEach(function(lid, locIdx){
+    locIds.forEach(function(lid){
         var group = locGroups[lid];
-        var rows = [];
-        for (var i = 0; i < group.length; i += maxPerRow) {
-            rows.push(group.slice(i, i + maxPerRow));
-        }
-        var bandH = rows.length * NODE_H + (rows.length - 1) * GAP_Y;
-
-        rows.forEach(function(row, ri){
-            var y = cursorY + ri * (NODE_H + GAP_Y) + NODE_H / 2;
-            // 行内居中
-            var rowW = row.length * NODE_W + (row.length - 1) * GAP_X;
-            var startX = (canvasW - rowW) / 2;
-            row.forEach(function(nd, ci){
-                nd.x = startX + ci * (NODE_W + GAP_X) + NODE_W / 2;
-                nd.y = y;
-            });
+        group.forEach(function(nd, i){
+            nd.x = colX;
+            nd.y = cursorY + i * (NODE_H + GAP_Y) + NODE_H / 2;
         });
-
-        cursorY += bandH + BAND_GAP;
+        cursorY += group.length * (NODE_H + GAP_Y) + BAND_GAP;
     });
     var canvasH = cursorY - BAND_GAP + PAD;
 
@@ -104,105 +87,16 @@
         if (edgeSet[rev]) bidirKeys[e.source + '\x00' + e.target] = true;
     });
 
-    // ── 轻量力导向微调 ──
-    // 确定性布局已给出良好初始位置，此处仅做少量迭代减少边交叉和节点拥挤
-    var ITERS = 120;
-    var K_REPEL = 3000;
-    var K_SPRING = 0.015;
-    var IDEAL_DIST = 130;
-    var K_BAND = 0.08;     // 强纵向带约束：拉回原始 y
-    var DAMPING = 0.7;
-
-    // 记录初始 y（带中心）用于 band 约束
-    nodes.forEach(function(nd){ nd._initY = nd.y; nd._initX = nd.x; nd.vx = 0; nd.vy = 0; });
-
-    for (var iter = 0; iter < ITERS; iter++) {
-        var cool = 1 - iter / ITERS;
-        for (var i = 0; i < n; i++) { nodes[i].fx = 0; nodes[i].fy = 0; }
-
-        // 斥力
-        for (var i = 0; i < n; i++) {
-            for (var j = i + 1; j < n; j++) {
-                var dx = nodes[i].x - nodes[j].x;
-                var dy = nodes[i].y - nodes[j].y;
-                var d2 = dx * dx + dy * dy;
-                if (d2 < 1) { d2 = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5; }
-                var d = Math.sqrt(d2);
-                var f = K_REPEL / d2;
-                var fx = (dx / d) * f, fy = (dy / d) * f;
-                nodes[i].fx += fx; nodes[i].fy += fy;
-                nodes[j].fx -= fx; nodes[j].fy -= fy;
-            }
+    // ── 判断两节点间是否有其他节点阻挡 ──
+    function hasNodeBetween(s, t){
+        var minY = Math.min(s.y, t.y);
+        var maxY = Math.max(s.y, t.y);
+        for (var k = 0; k < n; k++){
+            if (nodes[k] === s || nodes[k] === t) continue;
+            if (nodes[k].y > minY + NODE_H / 2 + 2 && nodes[k].y < maxY - NODE_H / 2 - 2) return true;
         }
-
-        // 弹簧力
-        uniqueEdges.forEach(function(e){
-            var s = nodeMap[e.source], t = nodeMap[e.target];
-            if (!s || !t) return;
-            var dx = t.x - s.x, dy = t.y - s.y;
-            var d = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-            var f = K_SPRING * (d - IDEAL_DIST);
-            var fx = (dx / d) * f, fy = (dy / d) * f;
-            s.fx += fx; s.fy += fy;
-            t.fx -= fx; t.fy -= fy;
-        });
-
-        // 带约束：纵向拉回初始位置，横向允许微调
-        nodes.forEach(function(nd){
-            nd.fy += (nd._initY - nd.y) * K_BAND;
-            nd.fx += (nd._initX - nd.x) * 0.02;
-        });
-
-        // 更新位置
-        nodes.forEach(function(nd){
-            nd.vx = (nd.vx + nd.fx) * DAMPING * cool;
-            nd.vy = (nd.vy + nd.fy) * DAMPING * cool;
-            nd.x += nd.vx;
-            nd.y += nd.vy;
-        });
+        return false;
     }
-
-    // ── 后处理：消解节点重叠 ──
-    var RESOLVE_ITERS = 80;
-    var minDW = NODE_W + 4, minDH = NODE_H + 4;
-    for (var ri = 0; ri < RESOLVE_ITERS; ri++) {
-        var moved = false;
-        for (var i = 0; i < n; i++) {
-            for (var j = i + 1; j < n; j++) {
-                var dx = nodes[j].x - nodes[i].x;
-                var dy = nodes[j].y - nodes[i].y;
-                var ox = minDW - Math.abs(dx);
-                var oy = minDH - Math.abs(dy);
-                if (ox > 0 && oy > 0) {
-                    moved = true;
-                    if (ox < oy) {
-                        var push = ox / 2;
-                        var s = dx >= 0 ? 1 : -1;
-                        nodes[i].x -= s * push;
-                        nodes[j].x += s * push;
-                    } else {
-                        var push = oy / 2;
-                        var s = dy >= 0 ? 1 : -1;
-                        nodes[i].y -= s * push;
-                        nodes[j].y += s * push;
-                    }
-                }
-            }
-        }
-        if (!moved) break;
-    }
-
-    // 计算包围盒
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    nodes.forEach(function(nd){
-        minX = Math.min(minX, nd.x - NODE_W / 2);
-        minY = Math.min(minY, nd.y - NODE_H / 2);
-        maxX = Math.max(maxX, nd.x + NODE_W / 2);
-        maxY = Math.max(maxY, nd.y + NODE_H / 2);
-    });
-    var svgW = Math.ceil(maxX - minX + PAD * 2);
-    var svgH = Math.ceil(maxY - minY + PAD * 2);
-    var ox = PAD - minX, oy = PAD - minY;
 
     // ── 工具函数 ──
     function contrastText(bg){
@@ -224,56 +118,69 @@
 
     // ── 构建 SVG ──
     var p = [];
-    p.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + svgW + '" height="' + svgH + '" style="display:block;">');
+    p.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + canvasW + '" height="' + Math.ceil(canvasH) + '" style="display:block;margin:0 auto;">');
 
-    // 箭头标记定义
+    // 箭头标记
     p.push('<defs>');
     p.push('<marker id="arrN" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,8 L8,4 z" fill="#28a745"/></marker>');
     p.push('<marker id="arrP" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,8 L8,4 z" fill="#d9a400"/></marker>');
     p.push('</defs>');
 
-    // 先画边（在节点下方）
+    // ── 画边 ──
     uniqueEdges.forEach(function(e){
         var s = nodeMap[e.source], t = nodeMap[e.target];
         if (!s || !t) return;
-        var sx = s.x + ox, sy = s.y + oy;
-        var tx = t.x + ox, ty = t.y + oy;
-        var dx = tx - sx, dy = ty - sy;
-        var dist = Math.max(Math.sqrt(dx*dx + dy*dy), 1);
-        var cos = dx / dist, sin = dy / dist;
-        var hw = NODE_W / 2 + 3, hh = NODE_H / 2 + 3;
-        var trim = Math.min(
-            Math.abs(cos) > 0.01 ? hw / Math.abs(cos) : 1e9,
-            Math.abs(sin) > 0.01 ? hh / Math.abs(sin) : 1e9
-        );
-        var x1 = sx + cos * trim, y1 = sy + sin * trim;
-        var x2 = tx - cos * trim, y2 = ty - sin * trim;
+        var sx = s.x, sy = s.y;
+        var tx = t.x, ty = t.y;
+        var goingDown = ty > sy;
+        var blocked = hasNodeBetween(s, t);
+        var isBidir = bidirKeys[e.source + '\x00' + e.target];
 
         var isNow = e.category === 'now';
         var color = isNow ? '#28a745' : '#d9a400';
         var marker = isNow ? 'arrN' : 'arrP';
-
-        // 虚线模式：dash 和 gap 等长，短边也清晰可辨
         var dashAttr = isNow ? '' : 'stroke-dasharray="6,5"';
 
-        // 双向边弯曲偏移：加大偏移量避免两条线视觉重叠
-        var isBidir = bidirKeys[e.source + '\x00' + e.target];
-        var d;
-        if (isBidir) {
-            var dir = e.source < e.target ? 1 : -1;
-            var perpX = -sin * 22 * dir, perpY = cos * 22 * dir;
-            var mx = (x1 + x2) / 2 + perpX, my = (y1 + y2) / 2 + perpY;
-            d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' Q ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
-        } else {
+        var x1, y1, x2, y2, d;
+
+        if (!blocked) {
+            // 无阻挡：直线，从节点上/下边缘出发
+            if (goingDown) {
+                x1 = sx; y1 = sy + NODE_H / 2 + 2;
+                x2 = tx; y2 = ty - NODE_H / 2 - 2;
+            } else {
+                x1 = sx; y1 = sy - NODE_H / 2 - 2;
+                x2 = tx; y2 = ty + NODE_H / 2 + 2;
+            }
             d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' L ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+        } else {
+            // 有阻挡：从节点右(或左)边缘出发，三次贝塞尔弧线绕过中间节点
+            // 双向边：source<target 走右侧，source>target 走左侧，避免重叠
+            var side = 1; // 1=右, -1=左
+            if (isBidir) {
+                side = e.source < e.target ? 1 : -1;
+            }
+            x1 = sx + side * (NODE_W / 2 + 2);
+            y1 = sy;
+            x2 = tx + side * (NODE_W / 2 + 2);
+            y2 = ty;
+            // 控制点在两节点之间，向外偏移
+            var cx1 = x1 + side * CURVE_R;
+            var cy1 = y1;
+            var cx2 = x2 + side * CURVE_R;
+            var cy2 = y2;
+            d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) +
+                ' C ' + cx1.toFixed(1) + ' ' + cy1.toFixed(1) +
+                ' ' + cx2.toFixed(1) + ' ' + cy2.toFixed(1) +
+                ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
         }
         p.push('<path d="' + d + '" stroke="' + color + '" stroke-width="1.8" fill="none" marker-end="url(#' + marker + ')" ' + dashAttr + '/>');
     });
 
-    // 画节点
+    // ── 画节点 ──
     nodes.forEach(function(nd){
-        var x = nd.x + ox - NODE_W / 2;
-        var y = nd.y + oy - NODE_H / 2;
+        var x = nd.x - NODE_W / 2;
+        var y = nd.y - NODE_H / 2;
         var bg = rarityColors[nd.rarity] || '#808080';
         var tc = contrastText(bg);
         var name = truncate(esc(nd.name), 14);
