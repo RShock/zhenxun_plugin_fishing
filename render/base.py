@@ -194,8 +194,14 @@ def _find_fish_image_path(fish_name: str, location_id: str = None) -> Path | Non
             _fish_image_cache[cache_key] = str(path)
             return path
 
-    for i in range(1, 11):
-        path = FISH_IMAGES_PATH / f"{i}-{fish_name}.png"
+    # 兜底：无 location_id 时按钓场 id 前缀遍历所有数字钓场查找图片。
+    # 图片命名为 {location_id}-{鱼名}.png（如 11-奶冠鲤.png）。
+    # 早期仅遍历 1-10，导致 11 图及以后的星空钓场鱼在背包/展示框中
+    # 因找不到图片而退化为 🐟 占位符。
+    for loc in locations:
+        if not str(loc.id).isdigit():
+            continue
+        path = FISH_IMAGES_PATH / f"{loc.id}-{fish_name}.png"
         if path.exists():
             _fish_image_cache[cache_key] = str(path)
             return path
