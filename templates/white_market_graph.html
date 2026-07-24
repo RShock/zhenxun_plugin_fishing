@@ -86,7 +86,7 @@
         });
         cursorY += NODE_H + GAP_Y;
     });
-    var canvasH = cursorY - GAP_Y + PAD_TOP;
+    // canvasH 延迟到弧线通道分配后计算（需为同行弧线预留空间）
 
     // ── 去重边 ──
     var edgeSet = {};
@@ -114,6 +114,81 @@
     uniqueEdges.forEach(function(e){
         var rev = e.target + '\x00' + e.source;
         if (edgeSet[rev]) bidirKeys[e.source + '\x00' + e.target] = true;
+    });
+
+    // ── 同行边弧线通道分配 ──
+    // 同一行的直连边会水平重叠，改为弧线并用区间调度分配独立通道
+    function sameRow(s, t){ return Math.abs(s.y - t.y) < NODE_H * 0.5; }
+
+    var rowEdgeGroups = {};  // rowKey -> [edge indices in uniqueEdges]
+    uniqueEdges.forEach(function(e, i){
+        var s = nodeMap[e.source], t = nodeMap[e.target];
+        if (!s || !t) return;
+        if (sameRow(s, t)) {
+            var rk = 'r' + Math.round(s.y);
+            if (!rowEdgeGroups[rk]) rowEdgeGroups[rk] = [];
+            rowEdgeGroups[rk].push(i);
+        }
+    });
+
+    var maxArcLayer = 0;
+    Object.keys(rowEdgeGroups).forEach(function(rk){
+        var indices = rowEdgeGroups[rk];
+        // 按水平跨度排序：短边优先获得低层通道
+        indices.sort(function(a, b){
+            var sa = nodeMap[uniqueEdges[a].source], ta = nodeMap[uniqueEdges[a].target];
+            var sb = nodeMap[uniqueEdges[b].source], tb = nodeMap[uniqueEdges[b].target];
+            return Math.abs(ta.x - sa.x) - Math.abs(tb.x - sb.x);
+        });
+        // 贪心区间调度：同通道内边的水平区间不重叠，避免弧线交叉
+        var chans = [];
+        indices.forEach(function(idx){
+            var s = nodeMap[uniqueEdges[idx].source], t = nodeMap[uniqueEdges[idx].target];
+            var st = Math.min(s.x, t.x), en = Math.max(s.x, t.x);
+            var ch = 0;
+            while (chans[ch]) {
+                var hit = false;
+                for (var j = 0; j < chans[ch].length; j++) {
+                    if (st < chans[ch][j].en + NODE_W * 0.4 && en > chans[ch][j].st - NODE_W * 0.4) { hit = true; break; }
+                }
+                if (!hit) break;
+                ch++;
+            }
+            if (!chans[ch]) chans[ch] = [];
+            chans[ch].push({ st: st, en: en });
+            uniqueEdges[idx]._arcDir = (ch % 2 === 0) ? -1 : 1;  // 偶数通道向上，奇数向下
+            uniqueEdges[idx]._arcLayer = Math.floor(ch / 2);
+            if (uniqueEdges[idx]._arcLayer > maxArcLayer) maxArcLayer = uniqueEdges[idx]._arcLayer;
+        });
+    });
+
+    // 为弧线预留顶部和底部空间，然后将所有节点下移
+    var arcExtraH = maxArcLayer > 0 ? (maxArcLayer + 1) * 24 + 8 : 0;
+    if (arcExtraH > 0) nodes.forEach(function(nd){ nd.y += arcExtraH; });
+    var canvasH = cursorY - GAP_Y + PAD_TOP + 2 * arcExtraH;
+
+    // ── 同行边连接点分散：同一节点同方向多条弧线从不同位置出发 ──
+    var arcAttach = {};  // nodeId -> { upOut:0, upIn:0, downOut:0, downIn:0 }
+    var arcAttachCount = {};  // nodeId -> { upOut:N, upIn:N, downOut:N, downIn:N }
+    uniqueEdges.forEach(function(e){
+        var s = nodeMap[e.source], t = nodeMap[e.target];
+        if (!s || !t || !sameRow(s, t)) return;
+        var dk = e._arcDir < 0 ? 'up' : 'down';
+        if (!arcAttachCount[e.source]) arcAttachCount[e.source] = {upOut:0,upIn:0,downOut:0,downIn:0};
+        if (!arcAttachCount[e.target]) arcAttachCount[e.target] = {upOut:0,upIn:0,downOut:0,downIn:0};
+        arcAttachCount[e.source][dk + 'Out']++;
+        arcAttachCount[e.target][dk + 'In']++;
+        if (!arcAttach[e.source]) arcAttach[e.source] = {upOut:0,upIn:0,downOut:0,downIn:0};
+        if (!arcAttach[e.target]) arcAttach[e.target] = {upOut:0,upIn:0,downOut:0,downIn:0};
+    });
+    uniqueEdges.forEach(function(e){
+        var s = nodeMap[e.source], t = nodeMap[e.target];
+        if (!s || !t || !sameRow(s, t)) return;
+        var dk = e._arcDir < 0 ? 'up' : 'down';
+        e._sOffIdx = arcAttach[e.source][dk + 'Out']++;
+        e._sOffTot = arcAttachCount[e.source][dk + 'Out'];
+        e._tOffIdx = arcAttach[e.target][dk + 'In']++;
+        e._tOffTot = arcAttachCount[e.target][dk + 'In'];
     });
 
     // ── 线段与矩形相交检测（判断是否被中间节点阻挡） ──
@@ -196,7 +271,28 @@
         var blocked = isBlocked(s, t);
         var d;
 
-        if (!blocked) {
+        if (sameRow(s, t)) {
+            // ── 同行边：弧线，通道分配避免重叠，连接点分散 ──
+            var dir = e._arcDir || -1;
+            var layer = e._arcLayer || 0;
+            var dist = Math.abs(t.x - s.x);
+            var arcH = Math.max(NODE_H * 0.7 + layer * 24, dist * 0.18);
+
+            // 在节点上/下边缘分散连接点，避免多条弧线从同一点出发
+            var sTot = e._sOffTot || 1, sIdx = e._sOffIdx || 0;
+            var tTot = e._tOffTot || 1, tIdx = e._tOffIdx || 0;
+            var sOff = sTot > 1 ? (sIdx / (sTot - 1) - 0.5) * NODE_W * 0.6 : 0;
+            var tOff = tTot > 1 ? (tIdx / (tTot - 1) - 0.5) * NODE_W * 0.6 : 0;
+
+            var x1 = s.x + sOff, y1 = s.y + dir * (NODE_H / 2 + 2);
+            var x2 = t.x + tOff, y2 = t.y + dir * (NODE_H / 2 + 2);
+            var midX = (x1 + x2) / 2;
+            var midY = (y1 + y2) / 2 + dir * arcH;
+
+            d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) +
+                ' Q ' + midX.toFixed(1) + ' ' + midY.toFixed(1) +
+                ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+        } else if (!blocked) {
             // 无阻挡：直线，裁剪到边缘
             var tr = trimToEdge(s.x, s.y, t.x, t.y);
             d = 'M ' + tr.x1.toFixed(1) + ' ' + tr.y1.toFixed(1) + ' L ' + tr.x2.toFixed(1) + ' ' + tr.y2.toFixed(1);

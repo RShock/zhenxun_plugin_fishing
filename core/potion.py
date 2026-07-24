@@ -186,12 +186,6 @@ async def use_time_potion_settle(
     existing_bait_consumed = status_dict.get("bait_consumed", 0)
     total_bait_consumed_num = existing_bait_consumed + sum(all_bait_usage.values())
 
-    # 累计鱼饵消耗明细（bait_id → 数量），供回档药水退还
-    existing_bait_usage = status_dict.get("bait_usage", {})
-    total_bait_usage = dict(existing_bait_usage)
-    for k, v in all_bait_usage.items():
-        total_bait_usage[k] = total_bait_usage.get(k, 0) + v
-
     existing_cat_eaten = deserialize_fish_caught(status_dict.get("cat_eaten_fish", []))
     total_cat_eaten = existing_cat_eaten + all_cat_eaten
 
@@ -212,7 +206,6 @@ async def use_time_potion_settle(
         cat_eaten_fish=total_cat_eaten,
         cat_gifts=merged_cat_gifts_result,
         meteor_fish_numbers=all_meteor if all_meteor else None,
-        bait_usage=total_bait_usage,
     )
     if potion_count > 0:
         updated_status["time_potions_used"] = (

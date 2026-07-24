@@ -89,26 +89,12 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     original_start_time = status_dict["start_time"]
     time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
-
-    # 退还本段钓鱼期间已从背包扣除的鱼饵，避免重新结算时重复扣除
-    old_bait_usage = status_dict.get("bait_usage", {})
-    refunded_bait_count = 0
-    for bait_id_str, consumed in old_bait_usage.items():
-        if consumed > 0:
-            await FishingUser.add_item(user_id, bait_id_str, "bait", consumed)
-            refunded_bait_count += consumed
-    if refunded_bait_count:
-        logger.info(
-            f"用户 {user_id} 回档药水退还鱼饵 {refunded_bait_count} 个"
-        )
-
     reset_status = {
         "location_id": status_dict["location_id"],
         "start_time": original_start_time,
         "last_settle_time": original_start_time,
         "fish_caught": [],
         "bait_consumed": 0,
-        "bait_usage": {},
         "frame_pity": user.frame_pity_counter,
         "cat_frame_pity": user.cat_frame_pity_counter,
         "utr_pity": user.utr_pity_counter,

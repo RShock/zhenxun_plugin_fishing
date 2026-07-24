@@ -14,17 +14,12 @@ def build_settlement_status(
     cat_eaten_fish: list,
     cat_gifts: dict,
     meteor_fish_numbers: list[int] | None = None,
-    bait_usage: dict[str, int] | None = None,
 ) -> dict:
     existing_meteor = status_dict.get("meteor_fish_numbers", [])
     if meteor_fish_numbers:
         existing_meteor = existing_meteor + meteor_fish_numbers
     # 保留影子场景、药水计数等会话元数据；结算只覆盖它负责推进的字段。
     updated_status = dict(status_dict)
-    # bait_usage 记录本段钓鱼期间各鱼饵的实际消耗明细（bait_id → 数量），
-    # 供回档药水退还已扣除的鱼饵使用；未传入时保留已有值。
-    if bait_usage is not None:
-        updated_status["bait_usage"] = bait_usage
     updated_status.update(
         {
             "location_id": status_dict["location_id"],

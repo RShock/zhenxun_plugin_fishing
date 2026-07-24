@@ -5,7 +5,6 @@ from pathlib import Path
 from zhenxun.plugins.zhenxun_plugin_fishing.constants import RARITY_COLORS
 from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
     gradient_bg,
-    render_html,
     render_template,
 )
 
@@ -28,6 +27,12 @@ MOCK_NODES = [
     {"id": "小鲫鱼_N", "name": "小鲫鱼", "rarity": "N", "location_name": "浅水区", "location_id": "1"},
     {"id": "热带鱼_R", "name": "热带鱼", "rarity": "R", "location_name": "珊瑚区", "location_id": "5"},
     {"id": "小丑鱼_SR", "name": "小丑鱼", "rarity": "SR", "location_name": "珊瑚区", "location_id": "5"},
+    # 同行多边测试节点
+    {"id": "鲮鱼_N", "name": "鲮鱼", "rarity": "N", "location_name": "浅水区", "location_id": "1"},
+    {"id": "白鲢_N", "name": "白鲢", "rarity": "N", "location_name": "浅水区", "location_id": "1"},
+    {"id": "鳙鱼_N", "name": "鳙鱼", "rarity": "N", "location_name": "浅水区", "location_id": "1"},
+    {"id": "罗非_SSR", "name": "罗非", "rarity": "SSR", "location_name": "深水区", "location_id": "2"},
+    {"id": "鲥鱼_SSR", "name": "鲥鱼", "rarity": "SSR", "location_name": "深水区", "location_id": "2"},
 ]
 
 MOCK_EDGES = [
@@ -44,6 +49,18 @@ MOCK_EDGES = [
     {"source": "小鲫鱼_UR", "target": "小鲫鱼_N", "category": "possible"},
     {"source": "热带鱼_R", "target": "小丑鱼_SR", "category": "now"},
     {"source": "小丑鱼_SR", "target": "海龟_SSR", "category": "possible"},
+    # 同行多边：浅水区 N 行有5个节点，多条同行边
+    {"source": "鲤鱼_N", "target": "小鲫鱼_N", "category": "now"},
+    {"source": "小鲫鱼_N", "target": "鲤鱼_N", "category": "possible"},
+    {"source": "鲤鱼_N", "target": "鲮鱼_N", "category": "now"},
+    {"source": "鲮鱼_N", "target": "白鲢_N", "category": "now"},
+    {"source": "白鲢_N", "target": "鳙鱼_N", "category": "now"},
+    {"source": "鲤鱼_N", "target": "鳙鱼_N", "category": "possible"},
+    {"source": "鲮鱼_N", "target": "鳙鱼_N", "category": "now"},
+    # 同行多边：深水区 SSR 行
+    {"source": "金鱼_SSR", "target": "罗非_SSR", "category": "now"},
+    {"source": "罗非_SSR", "target": "鲥鱼_SSR", "category": "now"},
+    {"source": "金鱼_SSR", "target": "鲥鱼_SSR", "category": "possible"},
 ]
 
 
@@ -79,3 +96,5 @@ class TestGraphRender:
         )
         assert "wmg-empty" in html
         assert "暂无交换记录" in html
+
+
