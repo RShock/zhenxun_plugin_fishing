@@ -206,6 +206,7 @@ async def use_time_potion_settle(
         cat_eaten_fish=total_cat_eaten,
         cat_gifts=merged_cat_gifts_result,
         meteor_fish_numbers=all_meteor if all_meteor else None,
+        bait_usage=all_bait_usage,
     )
     if potion_count > 0:
         updated_status["time_potions_used"] = (

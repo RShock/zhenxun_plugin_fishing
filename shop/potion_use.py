@@ -87,6 +87,17 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     await FishingUser.remove_item(user_id, "回档药水", "potion", 1)
 
+    # 退还本轮钓鱼已消耗的鱼饵：回档会重置 last_settle_time 并重新结算整段
+    # 时间，重新结算时 consume_bait_incremental 会再次扣饵。若不先退还，
+    # 鱼饵就被扣除两次（正常钓鱼扣一次 + 重新结算扣一次）。
+    bait_usage_log = status_dict.get("bait_usage_log", {})
+    refunded_bait = 0
+    for bait_id, count in bait_usage_log.items():
+        count = int(count)
+        if count > 0:
+            await FishingUser.add_item(user_id, str(bait_id), "bait", count)
+            refunded_bait += count
+
     original_start_time = status_dict["start_time"]
     time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
     reset_status = {
@@ -101,6 +112,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "cat_eaten_fish": [],
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
         "time_potions_used": 0,
+        "bait_usage_log": {},
     }
     if status_dict.get("shadow_scene"):
         reset_status["shadow_scene"] = True
@@ -117,7 +129,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     logger.info(
         f"用户 {user_id} 使用回档药水，重置钓鱼进度，"
-        f"退还时光药水 {time_potions_used} 瓶"
+        f"退还时光药水 {time_potions_used} 瓶，退还鱼饵 {refunded_bait} 个"
     )
     return True, image
 

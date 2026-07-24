@@ -59,6 +59,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     user.utr_pity_counter = 13
     await user.save()
     await FishingUser.add_item(user_id, "回档药水", "potion", 1)
+    await FishingUser.add_item(user_id, "1", "bait", 10)
 
     original_start = (datetime.now() - timedelta(hours=3)).isoformat()
     await FishingUser.update_fishing_status(
@@ -69,6 +70,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
             "last_settle_time": (datetime.now() - timedelta(minutes=5)).isoformat(),
             "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 9}],
             "bait_consumed": 9,
+            "bait_usage_log": {"1": 9},
             "frame_pity": 99,
             "cat_frame_pity": 98,
             "utr_pity": 97,
@@ -119,6 +121,11 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert observed_status["cat_eaten_fish"] == []
     assert observed_status["time_potions_used"] == 0
     assert observed_status["shadow_scene"] is True
+    assert observed_status["bait_usage_log"] == {}
+    # 回档应按 bait_usage_log 退还鱼饵，避免重新结算时重复扣除
+    bait_item = await FishingUser.get_item(user_id, "1", "bait")
+    assert bait_item is not None
+    assert bait_item["count"] == 19  # 10 原有 + 9 退还
     assert await FishingUser.get_item(user_id, "回档药水", "potion") is None
     refunded = await FishingUser.get_item(user_id, "time_potion", "potion")
     assert refunded == {"item_id": "time_potion", "item_type": "potion", "count": 3}
