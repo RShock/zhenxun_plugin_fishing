@@ -182,7 +182,7 @@ class PlayerState:
     def update_display(self, caught_fish: list[tuple[FishData, str, int]]):
         displayed_keys = {(s.fish_name, s.rarity) for s in self.display}
         for fish, rarity, price in caught_fish:
-            if fish.id == "展示木框":
+            if fish.id == "木框":
                 continue
             key = (fish.id, rarity)
             if key in displayed_keys:
@@ -286,7 +286,7 @@ class FishingSimulation:
     ) -> tuple[FishData, str, int]:
         player.frame_pity_counter += 1
         if random.random() < FRAME_DROP_RATE or player.frame_pity_counter >= FRAME_PITY:
-            frame_fish = FishData(id="展示木框", base_price=0)
+            frame_fish = FishData(id="木框", base_price=0)
             player.frame_pity_counter = 0
             return frame_fish, "UTR", 0
 
@@ -446,7 +446,7 @@ class FishingSimulation:
                 player.bait_id = 0
 
             fish, rarity, price = self.catch_fish(player, location)
-            if fish.id == "展示木框":
+            if fish.id == "木框":
                 player.display_frames += 1
                 caught.append((fish, rarity, price))
             else:
@@ -675,13 +675,13 @@ class FishingSimulation:
         print(f"  展示收益: {player.display_gold:,}")
         print(f"  成就奖励: {player.achievement_gold:,}")
         print(
-            f"  展示栏位: {player.display_slots_count}格, 日收益{player.get_display_income()}"
+            f"  展示框: {player.display_slots_count}格, 日收益{player.get_display_income()}"
         )
         print(
             f"  图鉴收集: {len(player.collection)}/{sum(len(loc.fish_pool) for loc in self.locations) * 4}"
         )
         print(f"  成就完成: {len(player.completed_achievements)}个")
-        print(f"  展示木框: {player.display_frames}个")
+        print(f"  木框: {player.display_frames}个")
         print(f"  总钓鱼时间: {player.fishing_hours:.0f}小时")
 
         print("\n【升级历史】")
