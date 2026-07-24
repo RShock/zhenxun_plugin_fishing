@@ -244,6 +244,10 @@ def _patch_models(db, monkeypatch):
         db.exchange_find_active_reverse,
     )
     monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingExchangeRecord.find_active_by_source_numeric_id",
+        db.exchange_find_active_by_source_numeric_id,
+    )
+    monkeypatch.setattr(
         f"{FISHING_PKG}.models.FishingExchangeRecord.invalidate_record",
         db.exchange_invalidate_record,
     )

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+.wm-title { font-size: 18px; font-weight: bold; color: #333; text-align: center; margin-bottom: 8px; }
+.wm-tip { color: #666; font-size: 12px; line-height: 1.5; margin-bottom: 10px; padding: 8px 10px; background: #f6fbff; border-left: 3px solid #4facfe; border-radius: 6px; }
+.wm-section { margin-bottom: 16px; }
+.wm-section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; padding: 6px 10px; border-radius: 6px; }
+.wm-section-now .wm-section-title { background: #e8f5e9; color: #2e7d32; border-left: 3px solid #28a745; }
+.wm-section-possible .wm-section-title { background: #fff8e1; color: #e65100; border-left: 3px solid #d9a400; }
+.wm-item { display: flex; align-items: stretch; gap: 0; margin-bottom: 6px; border-radius: 6px; overflow: hidden; border: 1px solid #e0e0e0; }
+.wm-side { padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 1; min-width: 0; }
+.wm-arrow { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 18px; font-weight: bold; color: #888; background: #f5f5f5; min-width: 36px; }
+.wm-section-now .wm-arrow { color: #28a745; background: #e8f5e9; }
+.wm-section-possible .wm-arrow { color: #d9a400; background: #fff8e1; }
+.wm-fish { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wm-fish-sub { font-size: 10px; opacity: 0.8; font-weight: normal; }
+.wm-pay-label { font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+.wm-empty { text-align: center; color: #999; padding: 40px; font-size: 14px; }
+.wm-count { font-size: 10px; color: #999; font-weight: normal; }
+{% endblock %}
+
+{% block content %}
+<div class="wm-title">白商交换列表</div>
+<div class="wm-tip">箭头从支付鱼指向获得鱼。支付鱼只需与黑商目标同地图同稀有度即可。交换后对应黑商记录失效。</div>
+{% if has_data %}
+<script>
+(function(){
+    var nowItems = {{ now_items_json|safe }};
+    var possibleItems = {{ possible_items_json|safe }};
+    var rarityColors = {{ rarity_colors_json|safe }};
+
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function fishChip(fish, showLocation){
+        var bg = rarityColors[fish.rarity] || '#808080';
+        var name = esc(fish.name);
+        var sub = fish.rarity;
+        if (showLocation && fish.location_name) sub += ' ' + esc(fish.location_name);
+        return '<span class="wm-fish" style="background:' + bg + ';color:#fff;">' + name +
+            '<span class="wm-fish-sub"> ' + sub + '</span></span>';
+    }
+
+    function fishListChips(fishList, showLocation){
+        return fishList.map(function(f){ return fishChip(f, showLocation); }).join(' ');
+    }
+
+    function renderItem(item, isNow){
+        var leftHtml, rightHtml;
+        if (isNow){
+            // 可以交换：左边显示背包中具体的鱼
+            leftHtml = fishListChips(item.pay_fish, true);
+            rightHtml = fishListChips(item.get_fish, true);
+        } else {
+            // 有可能交换：左边显示泛化标签
+            var bg = rarityColors[item.pay_rarity] || '#808080';
+            leftHtml = '<span class="wm-pay-label" style="background:' + bg + ';color:#fff;">' +
+                esc(item.pay_label) + '</span>';
+            rightHtml = fishListChips(item.get_fish, true);
+        }
+        return '<div class="wm-item">' +
+            '<div class="wm-side">' + leftHtml + '</div>' +
+            '<div class="wm-arrow">&rarr;</div>' +
+            '<div class="wm-side">' + rightHtml + '</div>' +
+            '</div>';
+    }
+
+    var p = [];
+    if (nowItems.length > 0){
+        p.push('<div class="wm-section wm-section-now">');
+        p.push('<div class="wm-section-title">可以交换 (' + nowItems.length + ')</div>');
+        nowItems.forEach(function(item){ p.push(renderItem(item, true)); });
+        p.push('</div>');
+    }
+    if (possibleItems.length > 0){
+        p.push('<div class="wm-section wm-section-possible">');
+        p.push('<div class="wm-section-title">有可能交换 (' + possibleItems.length + ')</div>');
+        possibleItems.forEach(function(item){ p.push(renderItem(item, false)); });
+        p.push('</div>');
+    }
+    document.write(p.join(''));
+})();
+</script>
+{% else %}
+<div class="wm-empty">暂无交换记录，或所有可获鱼均已解锁。</div>
+{% endif %}
+{% endblock %}

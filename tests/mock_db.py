@@ -1051,6 +1051,17 @@ class MockDB:
         records.sort(key=lambda r: r.id)
         return records[0] if records else None
 
+    async def exchange_find_active_by_source_numeric_id(
+        self, source_numeric_id: str
+    ):
+        return [
+            r
+            for r in self._exchange_records
+            if r.is_active
+            and r.source_numeric_id == str(source_numeric_id)
+            and r.source_numeric_id != r.target_numeric_id
+        ]
+
     async def exchange_invalidate_record(
         self, record_id: int, reversed_by_user_id: str
     ):

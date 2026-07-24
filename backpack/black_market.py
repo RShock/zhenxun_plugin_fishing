@@ -284,46 +284,43 @@ async def _is_location_unlocked(user, location_id: str, rarity: str) -> bool:
 
 
 async def render_white_market_records(user_id: str) -> bytes:
-    """渲染白商交换列表为有向图图片。
+    """渲染白商交换列表为简单箭头列表图片。
 
-    所有交换关系以有向图方式展示：
-    - 相同名字+稀有度的鱼共节点，最大程度压缩
-    - 节点显示鱼名、稀有度、所在地图，背景色与背包稀有度一致
-    - 相同地图的鱼通过力导向聚类力靠近显示
-    - 绿色实线箭头=现在可交换，琥珀色虚线=有可能做到
+    白商新逻辑：支付鱼只需与黑商target同地图同稀有度即可，
+    获得鱼是黑商source指定的鱼。不再要求精确逆映射。
+
+    分两个区域显示：
+    - 可以交换：玩家背包中有与黑商target同地图同稀有度的鱼，
+      左边显示背包中具体的鱼，右边显示获得鱼
+    - 有可能交换：玩家暂无合适的鱼但已解锁对应地图+稀有度，
+      左边显示泛化标签（地图+稀有度），右边合并显示同target的多个获得鱼
     """
     records = await FishingExchangeRecord.list_active_records()
-    if not records:
-        from ..render.base import gradient_bg, render_html, render_template
 
+    from ..render.base import gradient_bg, render_html, render_template
+
+    if not records:
         html = render_template(
-            "white_market_graph.html",
+            "white_market_list.html",
             body_bg=gradient_bg("blue"),
             width=700,
-            nodes_json="[]",
-            edges_json="[]",
-            rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
             has_data=False,
+            now_items_json="[]",
+            possible_items_json="[]",
+            rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
         )
         return await render_html(html, 700)
 
     collected_cache: dict[tuple[str, str], bool] = {}
-    backpack_cache: dict[str, bool] = {}
     unlock_cache: dict[str, bool] = {}
-    shown_reverse_keys: set[tuple[int, int]] = set()
-
     user = await FishingUser.get_user(user_id)
+    user_fish = await FishingUser.get_user_fish(user_id)
 
-    # 图数据：节点按 name_rarity 去重，边为 pay→get 有向连线
-    nodes_map: dict[str, dict] = {}
-    edges: list[dict] = []
-
+    # 按黑商target的numeric_id分组：同target的多条记录合并显示
+    # 每组记录的source可能不同（不同的获得鱼）
+    target_groups: dict[str, dict] = {}
     for record in records:
-        reverse_key = (record.target_numeric_id, record.source_numeric_id)
-        if reverse_key in shown_reverse_keys:
-            continue
-
-        # 图鉴过滤：已收集获得鱼（黑商交出的鱼）则隐藏
+        # 图鉴过滤：已收集获得鱼（黑商source）则隐藏该记录
         key = (record.source_name, record.source_rarity)
         if key not in collected_cache:
             collected_cache[key] = await FishingUser.is_collected(
@@ -332,70 +329,77 @@ async def render_white_market_records(user_id: str) -> bytes:
         if collected_cache[key]:
             continue
 
-        # 白商逆交换：支付=黑商target，获得=黑商source
-        cache_key = record.target_numeric_id
-        if cache_key not in backpack_cache:
-            fish = await FishingUser.get_fish_by_numeric_id(
-                user_id, record.target_numeric_id
-            )
-            backpack_cache[cache_key] = fish is not None and fish.get("count", 0) > 0
+        tk = record.target_numeric_id
+        if tk not in target_groups:
+            target_groups[tk] = {
+                "target_name": record.target_name,
+                "target_rarity": record.target_rarity,
+                "target_location_id": record.target_location_id,
+                "target_location_name": record.target_location_name,
+                "sources": [],
+            }
+        target_groups[tk]["sources"].append({
+            "name": record.source_name,
+            "rarity": record.source_rarity,
+            "location_name": record.source_location_name,
+            "numeric_id": record.source_numeric_id,
+        })
 
-        if backpack_cache[cache_key]:
-            category = "now"
+    now_items: list[dict] = []
+    possible_items: list[dict] = []
+
+    for tk, group in target_groups.items():
+        loc_id = group["target_location_id"]
+        rarity = group["target_rarity"]
+        loc_name = group["target_location_name"]
+
+        # 查找玩家背包中与target同地图同稀有度的鱼
+        # numeric_id前缀编码了location信息，但更可靠的方式是
+        # 通过find_fish_target获取location_id，这里用get_user_fish遍历
+        backpack_fish = []
+        for f in user_fish:
+            if f.get("rarity") != rarity or f.get("count", 0) < 1:
+                continue
+            # 通过find_fish_target获取location_id判断是否同地图
+            f_target = find_fish_target(f["fish_name"], f["rarity"])
+            if f_target and f_target.location_id == loc_id:
+                backpack_fish.append({
+                    "name": f["fish_name"],
+                    "rarity": f["rarity"],
+                    "location_name": loc_name,
+                })
+
+        if backpack_fish:
+            # 可以交换：左边显示背包中具体的鱼，右边显示获得鱼
+            # 背包鱼按(地图,稀有度)分组——它们本来就是同地图同稀有度
+            now_items.append({
+                "pay_fish": backpack_fish,
+                "get_fish": group["sources"],
+            })
         else:
-            unlock_key = f"{record.target_location_id}|{record.target_rarity}"
+            # 有可能交换：检查是否已解锁
+            unlock_key = f"{loc_id}|{rarity}"
             if unlock_key not in unlock_cache:
                 unlock_cache[unlock_key] = await _is_location_unlocked(
-                    user, record.target_location_id, record.target_rarity
+                    user, loc_id, rarity
                 )
             if not unlock_cache[unlock_key]:
                 continue
-            category = "possible"
-
-        shown_reverse_keys.add(reverse_key)
-
-        # 支付鱼节点（黑商 target）
-        pay_key = f"{record.target_name}_{record.target_rarity}"
-        if pay_key not in nodes_map:
-            nodes_map[pay_key] = {
-                "id": pay_key,
-                "name": record.target_name,
-                "rarity": record.target_rarity,
-                "location_name": record.target_location_name,
-                "location_id": record.target_location_id,
-            }
-
-        # 获得鱼节点（黑商 source）
-        get_key = f"{record.source_name}_{record.source_rarity}"
-        if get_key not in nodes_map:
-            nodes_map[get_key] = {
-                "id": get_key,
-                "name": record.source_name,
-                "rarity": record.source_rarity,
-                "location_name": record.source_location_name,
-                "location_id": record.source_location_id,
-            }
-
-        # 有向边：支付鱼 → 获得鱼
-        if pay_key != get_key:
-            edges.append({
-                "source": pay_key,
-                "target": get_key,
-                "category": category,
+            # 左边显示泛化标签
+            possible_items.append({
+                "pay_label": f"{loc_name} {rarity}",
+                "pay_rarity": rarity,
+                "get_fish": group["sources"],
             })
 
-    nodes = list(nodes_map.values())
-
-    from ..render.base import gradient_bg, render_html, render_template
-
     html = render_template(
-        "white_market_graph.html",
+        "white_market_list.html",
         body_bg=gradient_bg("blue"),
         width=700,
-        nodes_json=json.dumps(nodes, ensure_ascii=False),
-        edges_json=json.dumps(edges, ensure_ascii=False),
+        has_data=len(now_items) > 0 or len(possible_items) > 0,
+        now_items_json=json.dumps(now_items, ensure_ascii=False),
+        possible_items_json=json.dumps(possible_items, ensure_ascii=False),
         rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
-        has_data=len(nodes) > 0,
     )
     return await render_html(html, 700)
 
@@ -538,46 +542,65 @@ async def white_market_exchange(
     if not target:
         return False, f"未找到鱼：{dst_name}({dst_rarity})", True
 
-    fish = await FishingUser.get_fish_by_numeric_id(user_id, source.numeric_id)
-    target_fish = await FishingUser.get_fish_by_numeric_id(user_id, target.numeric_id)
-    if (
-        (not fish or fish.get("count", 0) < 1)
-        and target_fish
-        and target_fish.get("count", 0) >= 1
-    ):
-        source, target = target, source
-        fish = target_fish
+    # 白商新逻辑：玩家用"支付鱼"交换"获得鱼"。
+    # 获得鱼=黑商source（指定鱼），支付鱼只需与黑商target同地图同稀有度。
+    # 尝试两个方向：source→target 或 target→source
+    pay_fish, get_fish = source, target
+    fish = await FishingUser.get_fish_by_numeric_id(user_id, pay_fish.numeric_id)
     if not fish or fish.get("count", 0) < 1:
-        return False, f"背包里没有 {source.name}({source.rarity})", True
+        # 尝试反方向
+        pay_fish, get_fish = target, source
+        fish = await FishingUser.get_fish_by_numeric_id(user_id, pay_fish.numeric_id)
+        if not fish or fish.get("count", 0) < 1:
+            return False, f"背包里没有 {source.name}({source.rarity}) 或 {target.name}({target.rarity})", True
 
-    record = await FishingExchangeRecord.find_active_reverse(source, target)
-    if not record:
-        return False, "没有找到对应的有效黑商逆交换记录。", True
+    # 查找黑商source=获得鱼的有效记录
+    records = await FishingExchangeRecord.find_active_by_source_numeric_id(
+        get_fish.numeric_id
+    )
+    if not records:
+        return False, f"没有找到能获得 {get_fish.name}({get_fish.rarity}) 的有效黑商记录。", True
+
+    # 从记录中找一条 target 与支付鱼同地图同稀有度的
+    matched_record = None
+    for rec in records:
+        if (
+            rec.target_location_id == pay_fish.location_id
+            and rec.target_rarity == pay_fish.rarity
+        ):
+            matched_record = rec
+            break
+
+    if not matched_record:
+        return (
+            False,
+            f"没有找到匹配的交换记录：{pay_fish.name}({pay_fish.rarity}) "
+            f"与 {get_fish.name}({get_fish.rarity}) 不在同一地图/稀有度。",
+            True,
+        )
 
     gift_count = await FishingUser.get_gift_count(user_id)
     if gift_count >= DAILY_GIFT_LIMIT:
         return False, "今天已经不能再赠送了，无法使用白商交换。", True
 
-    await FishingUser.remove_fish_by_numeric_id(user_id, source.numeric_id, 1)
+    await FishingUser.remove_fish_by_numeric_id(user_id, pay_fish.numeric_id, 1)
     await FishingUser.increment_gift_count(user_id)
     result = await add_fish_to_user(
         user_id,
-        [(target.name, target.rarity, target.numeric_id, 1)],
+        [(get_fish.name, get_fish.rarity, get_fish.numeric_id, 1)],
     )
-    await FishingExchangeRecord.invalidate_record(record.id, user_id)
+    await FishingExchangeRecord.invalidate_record(matched_record.id, user_id)
 
     messages = list(result["messages"])
     messages.extend(result["achievement_messages"])
-    # 取消白商「自己记录特例」后，白商主要用于交换他人记录；
-    # 但手动输入仍可逆交换自己的记录，此时不显示帮助者昵称。
-    if str(record.user_id) == str(user_id):
+    if str(matched_record.user_id) == str(user_id):
         helper_line = "对应黑商记录已失效。"
     else:
-        helper_nickname = await _get_nickname(record.user_id)
+        helper_nickname = await _get_nickname(matched_record.user_id)
         helper_line = f"{helper_nickname} 帮助了你，对应黑商记录已失效。"
     msg = (
-        f"白商交换成功：消耗 {source.name}({source.rarity}) "
-        f"→ 获得 {target.name}({target.rarity})\n"
+        f"白商交换成功：消耗 {pay_fish.name}({pay_fish.rarity}) "
+        f"→ 获得 {get_fish.name}({get_fish.rarity})\n"
         f"{helper_line}"
     )
     if messages:

@@ -119,6 +119,21 @@ class FishingExchangeRecord(Model):
         ).order_by("id").first()
 
     @classmethod
+    async def find_active_by_source_numeric_id(
+        cls, source_numeric_id: str
+    ) -> list["FishingExchangeRecord"]:
+        """查找黑商source是指定鱼的所有有效记录。
+
+        白商新逻辑：玩家获得鱼=黑商source（指定鱼），
+        支付鱼只需与黑商target同地图同稀有度即可，不再要求精确逆映射。
+        返回所有匹配记录，由调用方进一步筛选target的location+rarity。
+        """
+        return await cls.filter(
+            is_active=True,
+            source_numeric_id=str(source_numeric_id),
+        ).exclude(source_numeric_id=F("target_numeric_id")).order_by("id")
+
+    @classmethod
     async def invalidate_record(cls, record_id: int, reversed_by_user_id: str) -> None:
         record = await cls.get(id=record_id)
         record.is_active = False

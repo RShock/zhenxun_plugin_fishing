@@ -746,10 +746,12 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(USER_ID)
 
-        # 已收集的鱼不再显示，图中应无节点
+        # 已收集的鱼不再显示，列表应无数据
         assert captured["has_data"] is False
-        nodes = json.loads(captured["nodes_json"])
-        assert len(nodes) == 0
+        now_items = json.loads(captured["now_items_json"])
+        possible_items = json.loads(captured["possible_items_json"])
+        assert len(now_items) == 0
+        assert len(possible_items) == 0
 
     async def test_white_market_reverse_own_black_record(self, db):
         """允许玩家用白商逆交换自己的黑商记录。"""
@@ -805,23 +807,17 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(TARGET_ID)
 
-        # 图数据：应有节点和 "now" 类型的边
+        # 列表数据：应有 "now" 类型的可交换项
         assert captured["has_data"] is True
-        nodes = json.loads(captured["nodes_json"])
-        edges = json.loads(captured["edges_json"])
-        assert len(nodes) >= 2
-        # 找到 category="now" 的边
-        now_edges = [e for e in edges if e["category"] == "now"]
-        assert len(now_edges) == 1
-        edge = now_edges[0]
-        # pay = 白商支付鱼（黑商 target），get = 白商获得鱼（黑商 source）
-        node_map = {nd["id"]: nd for nd in nodes}
-        pay_node = node_map[edge["source"]]
-        get_node = node_map[edge["target"]]
-        assert pay_node["name"] == black_target.name
-        assert pay_node["rarity"] == black_target.rarity
-        assert get_node["name"] == black_source.name
-        assert get_node["rarity"] == black_source.rarity
+        now_items = json.loads(captured["now_items_json"])
+        assert len(now_items) >= 1
+        item = now_items[0]
+        # pay_fish = 白商支付鱼（与黑商 target 同地图同稀有度）
+        # get_fish = 白商获得鱼（黑商 source 指定鱼）
+        pay_names = [f["name"] for f in item["pay_fish"]]
+        get_names = [f["name"] for f in item["get_fish"]]
+        assert black_target.name in pay_names
+        assert black_source.name in get_names
 
 
 class TestBlackMarketRevoke:
