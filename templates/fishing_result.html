@@ -202,14 +202,14 @@
     margin-top: 6px;
     padding: 4px 8px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(251, 191, 36, 0.28);
     color: #111827;
     font-size: 12px;
     font-weight: 700;
     text-align: center;
 }
 .starry-card-reward.muted {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgba(148, 163, 184, 0.22);
     color: #334155;
     font-weight: 500;
 }
@@ -347,12 +347,12 @@
     {% if starry_cards %}
     <div class="starry-result-grid">
         {% for card in starry_cards %}
-        <div class="starry-result-card" style="background: {{ card.pool_color }}; border: 2px solid {{ card.pool_color }};">
+        <div class="starry-result-card" style="background: #ffffff; border: 2px solid {{ card.pool_color }};">
             <div class="starry-result-top">
                 <div class="starry-id">
                     {% for digit in card.digits %}<span class="starry-digit{% if card.digit_matched and card.digit_matched[loop.index0] %} matched{% endif %}"{% if card.digit_colors and card.digit_colors[loop.index0] %} style="background: {{ card.digit_colors[loop.index0] }}; color: {{ card.digit_text_colors[loop.index0] }}; box-shadow: 0 0 0 1px {{ card.digit_colors[loop.index0] }};"{% endif %}>{{ digit }}</span>{% endfor %}
                 </div>
-                <div class="starry-score" style="color: {{ card.pool_text_color }};">{{ card.display_score }}分</div>
+                <div class="starry-score">{{ card.display_score }}分</div>
             </div>
             <div class="starry-meta">
                 <span class="starry-chip">{{ card.band }}</span>
@@ -360,9 +360,9 @@
                 <span class="starry-chip">{{ card.feature_summary }}</span>
             </div>
             {% if card.reward_text %}
-            <div class="starry-card-reward" style="color: {{ card.pool_text_color }};">🎁 抽中 {{ card.reward_text }}</div>
+            <div class="starry-card-reward">🎁 抽中 {{ card.reward_text }}</div>
             {% elif card.reward_pool and card.reward_pool != '无奖励' %}
-            <div class="starry-card-reward muted" style="color: {{ card.pool_text_color }};">可抽奖 · {{ card.reward_pool }}</div>
+            <div class="starry-card-reward muted">可抽奖 · {{ card.reward_pool }}</div>
             {% endif %}
         </div>
         {% endfor %}
