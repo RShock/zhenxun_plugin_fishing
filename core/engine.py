@@ -682,7 +682,6 @@ def _catch_fish_at_interval(
     collected_set: set[tuple[str, str]] | None = None,
     cat_gifts: dict | None = None,
     bait_id: str = "",
-    dragon_boat_buffs: list | None = None,
     meteor_fish_numbers: list[int] | None = None,
     catch_time: datetime | None = None,
 ) -> tuple[int, int]:
@@ -727,20 +726,6 @@ def _catch_fish_at_interval(
                 f"fish_caught长度: {len(fish_caught)}，结束本次间隔"
             )
             break
-        # 端午活动：2%概率额外获得流星鱼（仅在buff时间区间内）
-        if (
-            dragon_boat_buffs
-            and meteor_fish_numbers is not None
-            and fish
-            and rarity
-            and catch_time
-            and any(
-                _make_naive(b.start_time) <= catch_time <= _make_naive(b.end_time)
-                for b in dragon_boat_buffs
-            )
-        ):
-            if random.random() < 0.02:
-                meteor_fish_numbers.append(random.randint(10000000, 99999999))
 
     drop_bonus = effects.get("drop_bonus", 0)
     if drop_bonus > 0 and random.random() < drop_bonus * 0.05:
@@ -814,7 +799,6 @@ def _try_catch_in_remaining_time(
     collected_set: set[tuple[str, str]] | None = None,
     cat_gifts: dict | None = None,
     bait_id: str = "",
-    dragon_boat_buffs: list | None = None,
     meteor_fish_numbers: list[int] | None = None,
     catch_time: datetime | None = None,
 ) -> tuple[int, int, bool, int, int]:
@@ -839,7 +823,6 @@ def _try_catch_in_remaining_time(
         collected_set=collected_set,
         cat_gifts=cat_gifts,
         bait_id=bait_id,
-        dragon_boat_buffs=dragon_boat_buffs,
         meteor_fish_numbers=meteor_fish_numbers,
         catch_time=catch_time,
     )
@@ -868,7 +851,6 @@ class _SimulationState:
     available_baits: dict[str, dict] = field(default_factory=dict)
     collected_fish_names: set[str] = field(default_factory=set)
     collected_set: set[tuple[str, str]] = field(default_factory=set)
-    dragon_boat_buffs: list = field(default_factory=list)
     cat_gifts: dict = field(default_factory=dict)
     no_bait_mode: bool = False
 
@@ -933,9 +915,6 @@ async def _initialize_simulation_state(
         available_baits=available_baits,
         collected_fish_names=collected_fish_names,
         collected_set=collected_set,
-        dragon_boat_buffs=[
-            b for b in ctx.buffs if b.buff_type == BuffEffect.BUFF_TYPE_DRAGON_BOAT
-        ],
         cat_gifts={
             "gold": 0,
             "corn": 0,
@@ -1158,7 +1137,6 @@ async def simulate_fishing_loop(
                     collected_set=state.collected_set,
                     cat_gifts=state.cat_gifts,
                     bait_id=str(state.bait.id) if state.bait else "",
-                    dragon_boat_buffs=state.dragon_boat_buffs,
                     meteor_fish_numbers=state.meteor_fish_numbers,
                     catch_time=state.current_time,
                 )
@@ -1201,7 +1179,6 @@ async def simulate_fishing_loop(
             collected_set=state.collected_set,
             cat_gifts=state.cat_gifts,
             bait_id=str(state.bait.id) if state.bait else "",
-            dragon_boat_buffs=state.dragon_boat_buffs,
             meteor_fish_numbers=state.meteor_fish_numbers,
             catch_time=state.current_time,
         )

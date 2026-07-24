@@ -149,21 +149,6 @@ async def _migrate_frame_buffs():
         await buff.save(
             update_fields=["buff_type", "target_type", "target_id", "description"]
         )
-    logger.info(
-        f"[迁移] 已修复 {len(old_buffs)} 条旧版展示木框 buff（NEST→FRAME, LOCATION→GLOBAL）"
-    )
-
-
-@get_driver().on_startup
-async def _init_dragon_boat_buff():
-    """端午活动：启动时检查并创建全局Buff（6.19 00:00 ~ 6.22 00:00）。"""
-    from .models import BuffEffect
-
-    existing = await FishingBuff.check_dragon_boat_buff()
-    if not existing:
-        await FishingBuff.create_dragon_boat_buff()
-        logger.info("[端午活动] 已创建端午全局Buff（6.19 00:00 ~ 6.22 00:00）")
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 【临时迁移代码结束】

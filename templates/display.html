@@ -8,6 +8,8 @@
 .fish-img-starry-disp-silhouette { position: absolute; top: 0; left: 0; width: 68px; height: 68px; object-fit: contain; filter: brightness(0); border-radius: 4px; }
 .fish-img-starry-disp-sky { position: absolute; top: 0; left: 0; width: 68px; height: 68px; background-size: cover; mix-blend-mode: screen; border-radius: 4px; }
 .frame-img { width: 80px; height: 80px; object-fit: fill; position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+.frame-img-cat { width: 100px; height: 100px; object-fit: fill; position: absolute; top: -10px; left: -10px; z-index: 1; pointer-events: none; }
+.frame-img-starry { width: 100px; height: 100px; object-fit: fill; position: absolute; top: -10px; left: -10px; z-index: 1; pointer-events: none; }
 .fish-rarity { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; margin-right: 10px; }
 .fish-name { flex: 1; font-weight: bold; color: #333; }
 .empty { text-align: center; color: #999; padding: 40px; }
@@ -39,7 +41,7 @@
                 {% endif %}
                 {% endif %}
                 {% if d.frame_src %}
-                <img src="{{ d.frame_src }}" class="frame-img" />
+                <img src="{{ d.frame_src }}" class="{% if d.frame_tier == 'starry' %}frame-img-starry{% elif d.is_upgraded or d.frame_tier == 'cat' %}frame-img-cat{% else %}frame-img{% endif %}" />
                 {% endif %}
             </div>
     <div class="fish-rarity" style="background: {{ d.color }};">{{ d.rarity_name }}</div>

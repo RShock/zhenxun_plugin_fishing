@@ -46,7 +46,6 @@ class BuffEffect:
     BUFF_TYPE_WEATHER_LOST_WIND = "weather_lost_wind"
     BUFF_TYPE_WEATHER_CAT = "weather_cat"
     BUFF_TYPE_LUCKY_BOOST = "lucky_double"
-    BUFF_TYPE_DRAGON_BOAT = "dragon_boat"
     BUFF_TYPE_STARRY_BONUS = "starry_bonus"
     # ── 流星鱼/星空祈愿天气 buff ──
     BUFF_TYPE_WEATHER_SOLAR_WIND = "weather_solar_wind"
@@ -77,7 +76,6 @@ class BuffEffect:
         BUFF_TYPE_WEATHER_LOST_WIND: BuffMeta(BUFF_TYPE_WEATHER_LOST_WIND, "迷途风", "#E040FB", "🌀"),
         BUFF_TYPE_WEATHER_CAT: BuffMeta(BUFF_TYPE_WEATHER_CAT, "猫天气", "#FF9800", "🐱"),
         BUFF_TYPE_LUCKY_BOOST: BuffMeta(BUFF_TYPE_LUCKY_BOOST, "幸运药水", "#FFD54F", "🎲"),
-        BUFF_TYPE_DRAGON_BOAT: BuffMeta(BUFF_TYPE_DRAGON_BOAT, "端午活动", "#8BC34A", "🐲"),
         BUFF_TYPE_STARRY_BONUS: BuffMeta(BUFF_TYPE_STARRY_BONUS, "星空艇", "#7C4DFF", "🚀"),
         # ── 流星鱼/星空祈愿天气 buff ──
         BUFF_TYPE_WEATHER_SOLAR_WIND: BuffMeta(
@@ -406,30 +404,6 @@ class FishingBuff(Model):
                 created_count += 1
 
         return created_count
-
-    @classmethod
-    async def check_dragon_boat_buff(cls) -> "FishingBuff | None":
-        """检查端午活动buff是否已存在（2026-06-19 00:00 ~ 2026-06-22 00:00）。"""
-        start = datetime(2026, 6, 19, 0, 0, 0)
-        return await cls.filter(
-            target_type=BuffEffect.TARGET_TYPE_GLOBAL,
-            buff_type=BuffEffect.BUFF_TYPE_DRAGON_BOAT,
-            start_time=start,
-        ).first()
-
-    @classmethod
-    async def create_dragon_boat_buff(cls) -> "FishingBuff":
-        """创建端午活动全局buff（2026-06-19 00:00 ~ 2026-06-22 00:00）。"""
-        start = datetime(2026, 6, 19, 0, 0, 0)
-        end = datetime(2026, 6, 22, 0, 0, 0)
-        return await cls.add_global_buff(
-            buff_type=BuffEffect.BUFF_TYPE_DRAGON_BOAT,
-            start_time=start,
-            end_time=end,
-            value=1,
-            description="端午活动：2%概率额外获得流星鱼",
-        )
-
 
 class FishingBuffCalculator:
     BUFF_EFFECTS = {
