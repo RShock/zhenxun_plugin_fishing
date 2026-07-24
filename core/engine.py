@@ -172,7 +172,7 @@ def _single_random_roll(
     不涉及保底判定和保底计数器更新——纯随机结算。
 
     能生成的掉落类型：
-    - 展示木框（is_frame_hit=True）
+    - 木框（is_frame_hit=True）
     - 迷途风UTR鱼（is_lost_wind_utr_hit=True）
     - 猫猫乐园材料（is_material=True）
     - 普通鱼
@@ -191,7 +191,7 @@ def _single_random_roll(
     # 木框随机概率拦截（0.7%，非星空图）
     if not is_starry and random.random() < 0.007:
         return (
-            FishData(id="展示木框", base_price=0),
+            FishData(id="木框", base_price=0),
             "UTR",
             True,
             False,
@@ -390,7 +390,7 @@ def _catch_fish_with_buffs(
     utr_special_active = weather_lost_wind
 
     def _next_frame_pity(*, delta: int = 0, reset: bool = False) -> int:
-        """11-20 星空图不掉展示木框，保底计数完全冻结。"""
+        """11-20 星空图不掉木框，保底计数完全冻结。"""
         if is_starry:
             return frame_pity
         if reset:
@@ -400,12 +400,12 @@ def _catch_fish_with_buffs(
     # ──────────────────────────────────────────────────────────────
     # Part 1: 保底阈值检查
     # ──────────────────────────────────────────────────────────────
-    # 展示木框保底（非星空图）
+    # 木框保底（非星空图）
     if not is_starry and (frame_pity + 1) >= FRAME_PITY_THRESHOLD:
-        frame_fish = FishData(id="展示木框", base_price=0)
+        frame_fish = FishData(id="木框", base_price=0)
         new_frame_pity = _next_frame_pity(reset=True)
         new_utr_pity = utr_pity + 1 if utr_special_active else utr_pity
-        # 展示木框是非鱼类道具，不受多多药水/猫乐园双倍影响
+        # 木框是非鱼类道具，不受多多药水/猫乐园双倍影响
         return frame_fish, "UTR", 1, new_frame_pity, new_utr_pity
 
     # UTR 保底（真实迷途风或已觉醒的乱纪元）
@@ -488,10 +488,10 @@ def _catch_fish_with_buffs(
         # 材料是非鱼类，不受多多药水数量翻倍影响
         return fish, rarity, 1, new_frame_pity, new_utr_pity
     if is_frame:
-        # 展示木框：frame_pity 清零，若迷途风天气则 utr_pity +1
+        # 木框：frame_pity 清零，若迷途风天气则 utr_pity +1
         new_frame_pity = _next_frame_pity(reset=True)
         new_utr_pity = utr_pity + 1 if utr_special_active else utr_pity
-        # 展示木框是非鱼类道具，不受多多药水数量翻倍影响
+        # 木框是非鱼类道具，不受多多药水数量翻倍影响
         return fish, rarity, 1, new_frame_pity, new_utr_pity
     elif is_lost_wind_utr:
         # 迷途风UTR：utr_pity 清零，frame_pity +duoduo_mult（翻倍鱼提供翻倍保底）
@@ -644,7 +644,7 @@ def _append_fish(
         elif (
             effects
             and effects.get("weather_cat_eat", False)
-            and fish.id != "展示木框"
+            and fish.id not in ("展示木框", "木框")
             and not fish.id.startswith("cat_park_material:")
         ):
             eaten_count = 0
@@ -1192,7 +1192,7 @@ async def simulate_fishing_loop(
             )
             ctx.buff_messages.append(msg)
         if frame_was_guaranteed and state.frame_pity == 0:
-            ctx.buff_messages.append("🖼️ 展示木框保底触发！必出展示木框！")
+            ctx.buff_messages.append("🖼️ 木框保底触发！必出木框！")
         if time_credit_minutes is None:
             state.current_time = window_value
 

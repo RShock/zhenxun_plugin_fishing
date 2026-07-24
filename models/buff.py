@@ -69,7 +69,7 @@ class BuffEffect:
         BUFF_TYPE_ROD_BONUS: BuffMeta(BUFF_TYPE_ROD_BONUS, "鱼力加成", "#00BCD4", "🎣"),
         BUFF_TYPE_WISH: BuffMeta(BUFF_TYPE_WISH, "许愿药水", "#FFC107", "🌟"),
         BUFF_TYPE_DUODUO: BuffMeta(BUFF_TYPE_DUODUO, "真多多药水", "#FF5722", "🐟"),
-        BUFF_TYPE_FRAME: BuffMeta(BUFF_TYPE_FRAME, "展示木框", "#8D6E63", "🖼️"),
+        BUFF_TYPE_FRAME: BuffMeta(BUFF_TYPE_FRAME, "木框", "#8D6E63", "🖼️"),
         BUFF_TYPE_WEATHER_RAIN: BuffMeta(BUFF_TYPE_WEATHER_RAIN, "雨天", "#42A5F5", "🌧️"),
         BUFF_TYPE_WEATHER_METEOR: BuffMeta(BUFF_TYPE_WEATHER_METEOR, "流星雨", "#AB47BC", "☄️"),
         BUFF_TYPE_WEATHER_STORM: BuffMeta(BUFF_TYPE_WEATHER_STORM, "暴雨", "#78909C", "⛈️"),
@@ -274,7 +274,7 @@ class FishingBuff(Model):
             buffs = [
                 b for b in buffs if b.buff_type != BuffEffect.BUFF_TYPE_STARRY_BONUS
             ]
-        # 展示木框打窝加成仅作用于普通地图（1-10）和 S1，不作用于星空地图（11-20）
+        # 木框打窝加成仅作用于普通地图（1-10）和 S1，不作用于星空地图（11-20）
         if is_starry_location(location_id):
             buffs = [b for b in buffs if b.buff_type != BuffEffect.BUFF_TYPE_FRAME]
         return buffs

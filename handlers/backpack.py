@@ -8,8 +8,10 @@ from nonebot.params import RegexGroup
 from zhenxun.services.log import logger
 
 from ..backpack import (
-    extract_market_exchange_input,
+    BLACK_MARKET_REVOKE_USAGE,
     black_market_exchange,
+    black_market_revoke,
+    extract_market_exchange_input,
     gift_fish,
     get_backpack_image,
     get_collection_image,
@@ -27,6 +29,7 @@ from ..core.bait import set_preferred_bait
 from ..matchers import (
     backpack_matcher,
     black_market_matcher,
+    black_market_revoke_matcher,
     collection_matcher,
     gift_fish_matcher,
     lock_fish_matcher,
@@ -133,6 +136,15 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     target_id = str(at_list[0])
     success, message = await gift_fish(user_id, target_id, fish_id)
     await _send_text(matcher, message, user_id)
+
+
+@black_market_revoke_matcher.handle()
+async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    user_id, _ = await _ensure_user(event)
+    is_private = _is_private_chat(event)
+    selection = group[0] if group and group[0] else ""
+    success, message, should_reply = await black_market_revoke(user_id, selection)
+    await _send_text(matcher, message, user_id, is_private=is_private)
 
 
 @black_market_matcher.handle()

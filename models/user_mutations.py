@@ -549,7 +549,7 @@ def apply_try_claim_miracles(
 ) -> list[dict]:
     claims: list[dict] = []
     # 每次领取至少消耗一条流星鱼；默认上限由当前背包大小自然约束，
-    # 仅用于防止异常数据造成无界循环，不限制星辰木框库存。
+    # 仅用于防止异常数据造成无界循环，不限制星空框库存。
     limit = max_claims if max_claims is not None else len(_ensure_list(user.starry_fish))
     for _ in range(max(0, int(limit))):
         info = apply_try_claim_miracle(user, dirty)

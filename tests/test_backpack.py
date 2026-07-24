@@ -9,6 +9,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.config import (
 
 from zhenxun.plugins.zhenxun_plugin_fishing.backpack import (
     black_market_exchange,
+    black_market_revoke,
     gift_fish,
     render_white_market_records,
     lock_fish,
@@ -710,10 +711,10 @@ class TestBlackMarketExchange:
         image = await render_white_market_records(TARGET_ID)
         assert isinstance(image, bytes)
 
-    async def test_white_market_shows_own_record_even_if_collected(
+    async def test_white_market_hides_own_record_when_collected(
         self, db, monkeypatch
     ):
-        """自己的黑商记录即使已解锁可换回鱼，仍应显示在白商列表中。"""
+        """取消特例后：自己的黑商记录若已收集可换回鱼，同样隐藏。"""
         black_source = find_fish_target("小鲫鱼", "UR")
         black_target = find_fish_target("小鲫鱼", "N")
         assert black_source is not None and black_target is not None
@@ -743,11 +744,9 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(USER_ID)
 
-        now_groups = captured["categories"][0]["groups"]
-        assert len(now_groups) == 1
-        assert now_groups[0]["source_name"] == black_target.name
-        targets = now_groups[0]["target_groups"][0]["targets"]
-        assert targets[0]["name"] == black_source.name
+        # 已收集的鱼不再显示，两个分类都应为空
+        for cat in captured["categories"]:
+            assert cat["empty"] is True
 
     async def test_white_market_reverse_own_black_record(self, db):
         """允许玩家用白商逆交换自己的黑商记录。"""
@@ -770,7 +769,7 @@ class TestBlackMarketExchange:
 
         assert ok is True
         assert should_reply is True
-        assert "自己的黑商记录" in msg
+        assert "对应黑商记录已失效" in msg
         records = await db.exchange_list_active_records()
         assert records == []
 
@@ -803,12 +802,148 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(TARGET_ID)
 
-        now_groups = captured["categories"][0]["groups"]
-        possible_groups = captured["categories"][1]["groups"]
-        assert len(now_groups) == 1
-        assert possible_groups == []
-        assert now_groups[0]["source_name"] == black_target.name
-        assert now_groups[0]["source_rarity"] == black_target.rarity
-        targets = now_groups[0]["target_groups"][0]["targets"]
-        assert targets[0]["name"] == black_source.name
-        assert targets[0]["rarity"] == black_source.rarity
+        # 新结构：categories → maps → entries
+        now_cat = captured["categories"][0]  # "现在可交换"
+        possible_cat = captured["categories"][1]  # "有可能做到"
+        assert now_cat["empty"] is False
+        assert possible_cat["empty"] is True
+        # 找到包含交换条目的地图
+        now_maps = now_cat["maps"]
+        assert len(now_maps) >= 1
+        all_entries = []
+        for m in now_maps:
+            all_entries.extend(m["entries"])
+        assert len(all_entries) == 1
+        entry = all_entries[0]
+        # pay = 白商支付鱼（黑商 target），get = 白商获得鱼（黑商 source）
+        assert entry["pay_name"] == black_target.name
+        assert entry["pay_rarity"] == black_target.rarity
+        assert entry["get_name"] == black_source.name
+        assert entry["get_rarity"] == black_source.rarity
+
+
+class TestBlackMarketRevoke:
+    """黑商撤回功能测试。"""
+
+    async def test_revoke_no_records(self, db):
+        """没有当天记录时提示无可撤回。"""
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+        assert ok is False
+        assert should_reply is True
+        assert "没有可撤回" in msg
+
+    async def test_revoke_single_record_directly(self, db):
+        """仅 1 条记录时直接撤回，无需指定序号。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        # 玩家需持有黑商获得的目标鱼才能撤回
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=1
+        )
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+
+        assert ok is True
+        assert should_reply is True
+        assert "撤回成功" in msg
+        # 验证目标鱼已退还（从背包移除）
+        target_fish = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
+        assert target_fish is None
+        # 验证来源鱼已返还（可能在背包或被自动展示）
+        source_fish = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
+        displays = await db.display_get_user_displays(USER_ID)
+        in_display = any(d["numeric_id"] == source.numeric_id for d in displays)
+        assert source_fish is not None or in_display
+        # 验证记录已失效
+        records = await db.exchange_list_active_records()
+        assert records == []
+
+    async def test_revoke_multiple_records_lists_selection(self, db):
+        """多条记录时列出序号供选择。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=2
+        )
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+
+        assert ok is False
+        assert should_reply is True
+        assert "1." in msg
+        assert "2." in msg
+
+    async def test_revoke_by_index(self, db):
+        """通过序号撤回指定记录。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=2
+        )
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "1")
+
+        assert ok is True
+        assert should_reply is True
+        assert "撤回成功" in msg
+        # 应还有 1 条有效记录
+        records = await db.exchange_list_active_records()
+        assert len(records) == 1
+
+    async def test_revoke_invalid_index(self, db):
+        """序号超出范围时提示错误。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=1
+        )
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "99")
+
+        assert ok is False
+        assert should_reply is True
+        assert "超出范围" in msg
+
+    async def test_revoke_without_target_fish_fails(self, db):
+        """背包中没有黑商获得的目标鱼时无法撤回。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        # 不添加目标鱼到背包
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+
+        assert ok is False
+        assert should_reply is True
+        assert "无法撤回" in msg
+
+    async def test_revoke_decrements_black_market_count(self, db):
+        """撤回后回退当日黑商交换计数。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=1
+        )
+        # 模拟已使用 1 次黑商
+        user = await db.user_get(USER_ID)
+        from datetime import date as _date
+        user._set_daily_counter("black_market", 1, _date.today().isoformat())
+
+        await black_market_revoke(USER_ID, "")
+
+        user = await db.user_get(USER_ID)
+        count, _ = user._get_daily_counter("black_market")
+        assert count == 0

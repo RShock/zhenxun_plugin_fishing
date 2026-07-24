@@ -1,5 +1,5 @@
 """
-药水系统 — 时光药水、回档药水、幸运药水、闪光药水、展示木框加速、UTR自选券。
+药水系统 — 时光药水、回档药水、幸运药水、闪光药水、木框加速、UTR自选券。
 """
 
 from datetime import datetime, timedelta
@@ -249,7 +249,7 @@ async def use_display_frame_buff(
     )
     total_layers = current_frame_buffs
     if total_layers >= MAX_FRAME_BUFF_LAYERS:
-        return False, f"全图展示木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
+        return False, f"全图木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
 
     layers_to_add = min(count, MAX_FRAME_BUFF_LAYERS - total_layers)
     actual_frames = layers_to_add
@@ -263,20 +263,20 @@ async def use_display_frame_buff(
             start_time=datetime.now(),
             end_time=datetime.now() + timedelta(hours=duration_hours),
             value=5,
-            description=f"展示木框效果，1-10图与S1钓鱼速度+5%",
+            description=f"木框效果，1-10图与S1钓鱼速度+5%",
         )
 
     new_total = total_layers + layers_to_add
 
     added_pct = layers_to_add * 5
     total_pct = new_total * 5
-    msg = f"使用展示木框成功，1-10图与S1速度+{added_pct}%，持续{duration_hours}小时"
+    msg = f"使用木框成功，1-10图与S1速度+{added_pct}%，持续{duration_hours}小时"
     if new_total > layers_to_add:
         msg += f"（全图累计+{total_pct}%）"
     if actual_frames < count:
         msg += f"\n已达到{MAX_FRAME_BUFF_LAYERS * 5}%上限，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
 
-    logger.info(f"用户 {user_id} 使用展示木框{layers_to_add}层，当前全图{new_total}层")
+    logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，当前全图{new_total}层")
     return True, msg
 
 

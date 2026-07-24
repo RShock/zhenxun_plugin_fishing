@@ -701,7 +701,7 @@ code, .ic {
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫猫框给当前地点打窝加速。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>设定鱼饵 鱼饵名</code></td><td>设置优先使用的鱼饵。<code>取消/0/自动/清除</code> 恢复自动选择。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>卖出鱼饵 鱼饵名</code></td><td>卖出指定鱼饵，按购买价回收。</td></tr>
-          <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>白商</code></td><td>鱼获交换与逆交换，详见黑商白商专页。</td></tr>
+          <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>黑商撤回</code> / <code>白商</code></td><td>鱼获交换、撤回与逆交换，详见黑商白商专页。</td></tr>
           <tr><td><span class="tag t-basic">设置</span></td><td><code>自动卖鱼 [开启/关闭/稀有度]</code></td><td>收杆后自动卖出指定稀有度及以下未锁定鱼。</td></tr>
           <tr><td><span class="tag t-basic">设置</span></td><td><code>自动锁鱼 [开启/关闭/通配符]</code></td><td>收杆后自动锁定匹配的鱼，优先级高于自动卖鱼。</td></tr>
           <tr><td><span class="tag t-basic">设置</span></td><td><code>钓鱼改名 名字</code> / <code>更换皮肤 ID</code></td><td>修改钓鱼昵称或切换已有皮肤。</td></tr>
@@ -969,6 +969,10 @@ code, .ic {
         <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。每天 1 次。</p>
       </div>
       <div class="cmd-card">
+        <span class="cmd-name">黑商撤回</span>
+        <p class="cmd-desc">撤回当天的黑商交换，退还获得的鱼并返还消耗的鱼。仅限当天操作。</p>
+      </div>
+      <div class="cmd-card">
         <span class="cmd-name">白商 / 白商交换 来源鱼 目标鱼</span>
         <p class="cmd-desc">查看并执行黑商记录的反向交换。用列表左边的鱼换右边的鱼，100% 成功。消耗赠送次数。</p>
       </div>
@@ -979,12 +983,13 @@ code, .ic {
       <li>锁定鱼也允许被交换消耗</li>
       <li>S1 猫猫乐园视为 7 级图</li>
       <li>交换失败后记录仍保留，白商列表中可看到反向交换选项</li>
+      <li>误操作后可用「黑商撤回」撤回当天交换，退还鱼获并回退次数/保底/券</li>
     </ul>
     <div class="sec-h" style="margin-top:14px">白商规则细节</div>
     <ul class="clean">
       <li>白商列表分两类：<strong>现在可交换</strong>（背包已有来源鱼）和<strong>有可能做到</strong>（鱼力足够但暂无来源鱼）</li>
       <li>未解锁地图、鱼力不足、或缺少 UTR 成就的记录不显示</li>
-      <li>相同来源鱼按场景合并显示，相同反向交换只显示排序靠前的第一条</li>
+      <li>列表按获得鱼所在地图分组，以紧凑网格排列，不再显示鱼图片</li>
       <li>白商交换成功后，对应黑商记录失效</li>
     </ul>
   </div>
@@ -1034,7 +1039,8 @@ code, .ic {
         <tbody>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
-          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可逆交换列表（按可执行度分区）。</td></tr>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。多条记录时需指定序号。</td></tr>
+          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可逆交换列表（按地图分组的紧凑网格，无图片）。</td></tr>
           <tr><td><span class="tag t-utr">白商</span></td><td><code>白商交换 来源鱼 目标鱼</code></td><td>按列表方向执行逆交换：用左侧鱼换右侧鱼。</td></tr>
         </tbody>
       </table>
@@ -1095,12 +1101,30 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">去重与失效</span>
-        <p class="cmd-desc">相同逆交换方向只显示一条；别人的记录里你已收集过「可换回那条鱼」的会隐藏，但<strong>自己的黑商记录始终可见</strong>，可逆交换拿回曾交出的鱼。交换成功后记录失效，他人不可再用。</p>
+        <p class="cmd-desc">相同逆交换方向只显示一条；已收集过「可换回那条鱼」的记录会隐藏。误操作的黑商交换可使用「黑商撤回」撤回。交换成功后记录失效，他人不可再用。</p>
       </div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>显示压缩：</strong>白商图会把左侧相同来源鱼合并，并按场景进一步折叠右侧目标，方便快速扫图。
+      <strong>网格布局：</strong>白商列表按获得鱼所在地图分组，每个地图内以紧凑文字网格排列交换条目，不再显示鱼图片，方便快速扫图。
     </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-h">黑商撤回</div>
+    <div class="grid-2">
+      <div class="cmd-card">
+        <span class="cmd-name">撤回条件</span>
+        <p class="cmd-desc">仅可撤回<strong>当天</strong>的黑商交换。撤回时需仍持有黑商当时获得的目标鱼，否则无法退还。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">撤回效果</span>
+        <p class="cmd-desc">退还获得的鱼、返还消耗的来源鱼、回退当日交换次数、回退保底计数（仅随机替换的失败交换）、返还额外券（若消耗过）。</p>
+      </div>
+    </div>
+    <ul class="clean" style="margin-top:8px">
+      <li>仅 1 条记录时直接撤回；多条记录时输入「黑商撤回 序号」选择撤回哪一条。</li>
+      <li>撤回后对应黑商记录失效，白商列表不再显示该条逆交换。</li>
+    </ul>
   </div>
 
   <div class="card">
@@ -1109,8 +1133,9 @@ code, .ic {
       <li><strong>补图鉴：</strong>用重复的高场景/高稀有度鱼，换本图缺失的低稀有度或指定目标。</li>
       <li><strong>规避 70% 风险：</strong>尽量用更高稀有度换低一档，避免同稀有度被随机改写。</li>
       <li><strong>利用保底：</strong>若必须同稀有度硬换，可连续失败 4 次后用第 5 次保底锁定目标。</li>
-      <li><strong>白商捡漏：</strong>别人黑商成功/随机后留下的记录，可能是你缺的图鉴捷径；自己的黑商记录也可逆交换拿回交出的鱼。先 <code>白商</code> 看「现在可交换」。</li>
+      <li><strong>白商捡漏：</strong>别人黑商成功/随机后留下的记录，可能是你缺的图鉴捷径。先 <code>白商</code> 看「现在可交换」。</li>
       <li><strong>次数规划：</strong>黑商每天 1 次很宝贵；白商会占赠送次数，注意与送鱼共享额度。</li>
+      <li><strong>及时撤回：</strong>黑商误操作后当天可用「黑商撤回」无损恢复，跨日则无法撤回。</li>
     </ul>
   </div>
 
@@ -1127,11 +1152,11 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">白商列表没有想要的记录</span>
-        <p class="cmd-desc">可能已被逆交换、别人记录里你已收集目标鱼、或鱼力/地图未解锁导致隐藏。自己的黑商记录不受「已收集」隐藏限制。</p>
+        <p class="cmd-desc">可能已被逆交换、已收集目标鱼、或鱼力/地图未解锁导致隐藏。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">拿到的不是指定目标</span>
-        <p class="cmd-desc">同稀有度 70% 随机改写。记录仍会写入白商，别人或你自己可按实际结果逆交换。</p>
+        <p class="cmd-desc">同稀有度 70% 随机改写。记录仍会写入白商，别人可按实际结果逆交换。当天可用「黑商撤回」撤回。</p>
       </div>
     </div>
   </div>

@@ -282,11 +282,10 @@ async def _is_location_unlocked(user, location_id: str, rarity: str) -> bool:
 
 
 async def render_white_market_records(user_id: str) -> bytes:
-    """渲染白商交换列表为图片，按可交换性分区，左侧鱼二重分组压缩显示。
+    """渲染白商交换列表为图片，按获得鱼所在地图分组，纯文字网格显示。
 
-    二重分组结构：
-    - 第一重：左侧相同的鱼合并，只显示一次左侧鱼
-    - 第二重：右侧相同场景的鱼合并，只显示一次场景名
+    取消了「自己记录特例」：所有记录统一按图鉴已收集则隐藏。
+    列表按获得鱼（右侧）所在地图分组，每个地图内网格排列交换条目，不再显示鱼图片。
     """
     records = await FishingExchangeRecord.list_active_records()
     if not records:
@@ -295,14 +294,12 @@ async def render_white_market_records(user_id: str) -> bytes:
         html = render_template(
             "white_market.html",
             body_bg=gradient_bg("blue"),
-            width=560,
+            width=520,
             categories=[],
         )
-        return await render_html(html, 560)
+        return await render_html(html, 520)
 
-    from ..render.base import get_fish_image_src
-
-    # 批量获取图鉴状态
+    # 批量缓存，避免逐条查询
     collected_cache: dict[tuple[str, str], bool] = {}
     backpack_cache: dict[str, bool] = {}
     unlock_cache: dict[str, bool] = {}
@@ -310,7 +307,7 @@ async def render_white_market_records(user_id: str) -> bytes:
 
     user = await FishingUser.get_user(user_id)
 
-    # 临时收集每个分类下的记录条目，稍后二重分组
+    # 临时收集每个分类下的记录条目，稍后按地图分组
     cat_entries: dict[str, list[dict]] = {
         "现在可交换": [],
         "有可能做到": [],
@@ -321,19 +318,18 @@ async def render_white_market_records(user_id: str) -> bytes:
         if reverse_key in shown_reverse_keys:
             continue
 
-        # 默认只显示图鉴未解锁的可换回鱼；自己的黑商记录例外，允许逆交换拿回曾交出的鱼。
+        # 图鉴过滤：已收集获得鱼（黑商交出的鱼）则隐藏。
+        # 已取消「自己记录特例」——所有人的记录统一按图鉴过滤。
         key = (record.source_name, record.source_rarity)
-        is_own_record = str(record.user_id) == str(user_id)
-        if not is_own_record:
-            if key not in collected_cache:
-                collected_cache[key] = await FishingUser.is_collected(
-                    user_id, record.source_name, record.source_rarity
-                )
-            if collected_cache[key]:
-                continue
+        if key not in collected_cache:
+            collected_cache[key] = await FishingUser.is_collected(
+                user_id, record.source_name, record.source_rarity
+            )
+        if collected_cache[key]:
+            continue
 
         # 白商执行黑商的逆交换：支付黑商目标鱼，获得黑商来源鱼。
-        # 因此“现在可交换”应检查用户是否持有黑商目标鱼。
+        # 「现在可交换」检查用户是否持有黑商目标鱼（支付鱼）。
         cache_key = record.target_numeric_id
         if cache_key not in backpack_cache:
             fish = await FishingUser.get_fish_by_numeric_id(
@@ -357,107 +353,60 @@ async def render_white_market_records(user_id: str) -> bytes:
 
         cat_entries[cat].append(
             {
-                # 页面左侧是白商支付鱼（黑商 target），右侧是白商获得鱼（黑商 source）。
-                "source_name": record.target_name,
-                "source_rarity": record.target_rarity,
-                "source_rarity_idx": RARITY_INDEX.get(record.target_rarity, 0),
-                "source_location": record.target_location_name,
-                "source_location_id": record.target_location_id,
-                "source_scene_level": record.target_scene_level,
-                "source_numeric_id": record.target_numeric_id,
-                "source_img": get_fish_image_src(
-                    record.target_name, record.target_location_id
-                ),
-                "target_name": record.source_name,
-                "target_rarity": record.source_rarity,
-                "target_rarity_idx": RARITY_INDEX.get(record.source_rarity, 0),
-                "target_location": record.source_location_name,
-                "target_location_id": record.source_location_id,
-                "target_scene_level": record.source_scene_level,
-                "target_img": get_fish_image_src(
-                    record.source_name, record.source_location_id
-                ),
+                # pay = 白商支付鱼（黑商 target），get = 白商获得鱼（黑商 source）
+                "pay_name": record.target_name,
+                "pay_rarity": record.target_rarity,
+                "pay_rarity_idx": RARITY_INDEX.get(record.target_rarity, 0),
+                "get_name": record.source_name,
+                "get_rarity": record.source_rarity,
+                "get_rarity_idx": RARITY_INDEX.get(record.source_rarity, 0),
+                "get_location_name": record.source_location_name,
+                "get_location_id": record.source_location_id,
+                "get_scene_level": record.source_scene_level,
             }
         )
 
-    # 对每个分类进行二重分组
+    # 按获得鱼所在地图分组
     categories: dict[str, list[dict]] = {}
     for cat_name in ["现在可交换", "有可能做到"]:
         entries = cat_entries[cat_name]
-        # 第一重：按左侧鱼（source_numeric_id）分组
-        source_map: dict[str, dict] = {}
+        map_map: dict[str, dict] = {}
         for entry in entries:
-            sid = entry["source_numeric_id"]
-            if sid not in source_map:
-                source_map[sid] = {
-                    "source_name": entry["source_name"],
-                    "source_rarity": entry["source_rarity"],
-                    "source_location": entry["source_location"],
-                    "source_img": entry["source_img"],
-                    "_source_rarity_idx": entry["source_rarity_idx"],
-                    "_source_scene_level": entry["source_scene_level"],
-                    "_target_map": {},  # target_location_id -> group
+            lid = entry["get_location_id"]
+            if lid not in map_map:
+                map_map[lid] = {
+                    "location_name": entry["get_location_name"],
+                    "_scene_level": entry["get_scene_level"],
+                    "entries": [],
                 }
-            sg = source_map[sid]
-            # 第二重：按右侧场景（target_location_id）分组
-            tid = entry["target_location_id"]
-            if tid not in sg["_target_map"]:
-                sg["_target_map"][tid] = {
-                    "location": entry["target_location"],
-                    "_target_scene_level": entry["target_scene_level"],
-                    "targets": [],
-                }
-            sg["_target_map"][tid]["targets"].append(
-                {
-                    "name": entry["target_name"],
-                    "rarity": entry["target_rarity"],
-                    "_rarity_idx": entry["target_rarity_idx"],
-                    "img": entry["target_img"],
-                }
-            )
+            map_map[lid]["entries"].append(entry)
 
-        # 转为列表并排序
-        source_list = list(source_map.values())
-        # 左侧鱼排序：稀有度降序 → 场景等级升序 → 名称
-        source_list.sort(
-            key=lambda s: (
-                -s["_source_rarity_idx"],
-                s["_source_scene_level"],
-                s["source_name"],
+        map_list = list(map_map.values())
+        # 地图排序：场景等级升序 → 地图名
+        map_list.sort(key=lambda m: (m["_scene_level"], m["location_name"]))
+        for m in map_list:
+            # 条目排序：获得鱼稀有度降序 → 支付鱼名
+            m["entries"].sort(
+                key=lambda e: (-e["get_rarity_idx"], e["pay_name"])
             )
-        )
-        for sg in source_list:
-            groups = list(sg["_target_map"].values())
-            # 右侧场景排序：场景等级升序 → 场景名
-            groups.sort(key=lambda g: (g["_target_scene_level"], g["location"]))
-            for g in groups:
-                # 右侧鱼排序：稀有度降序 → 名称
-                g["targets"].sort(key=lambda t: (-t["_rarity_idx"], t["name"]))
-                del g["_target_scene_level"]
-            sg["target_groups"] = groups
-            del sg["_target_map"]
-            del sg["_source_rarity_idx"]
-            del sg["_source_scene_level"]
-
-        categories[cat_name] = source_list
+            del m["_scene_level"]
+        categories[cat_name] = map_list
 
     # 构建最终分区列表
     category_list: list[dict] = []
     for name in ["现在可交换", "有可能做到"]:
-        groups = categories[name]
-        category_list.append(
-            {"name": name, "groups": groups, "empty": len(groups) == 0}
-        )
+        maps = categories[name]
+        category_list.append({"name": name, "maps": maps, "empty": len(maps) == 0})
 
     from ..render.base import gradient_bg, render_html, render_template
 
     html = render_template(
         "white_market.html",
         body_bg=gradient_bg("blue"),
-        width=420,
+        width=520,
         categories=category_list,
     )
-    return await render_html(html, 420)
+    return await render_html(html, 520)
 
 
 async def black_market_exchange(
@@ -552,7 +501,13 @@ async def black_market_exchange(
         lock_inherited = await FishingUser.toggle_lock_by_numeric_id(
             user_id, actual_target.numeric_id, True
         )
-    await FishingExchangeRecord.create_black_record(user_id, source, actual_target)
+    await FishingExchangeRecord.create_black_record(
+        user_id,
+        source,
+        actual_target,
+        is_randomized=randomized,
+        used_extra_ticket=used_extra_ticket,
+    )
 
     messages = list(result["messages"])
     if used_extra_ticket:
@@ -622,8 +577,10 @@ async def white_market_exchange(
 
     messages = list(result["messages"])
     messages.extend(result["achievement_messages"])
+    # 取消白商「自己记录特例」后，白商主要用于交换他人记录；
+    # 但手动输入仍可逆交换自己的记录，此时不显示帮助者昵称。
     if str(record.user_id) == str(user_id):
-        helper_line = "已逆交换自己的黑商记录，对应记录已失效。"
+        helper_line = "对应黑商记录已失效。"
     else:
         helper_nickname = await _get_nickname(record.user_id)
         helper_line = f"{helper_nickname} 帮助了你，对应黑商记录已失效。"
@@ -635,3 +592,89 @@ async def white_market_exchange(
     if messages:
         msg += "\n" + "\n".join(messages)
     return True, msg, True
+
+
+BLACK_MARKET_REVOKE_USAGE = (
+    "黑商撤回用法：黑商撤回（查看当天可撤回记录）/ 黑商撤回 序号\n"
+    "仅可撤回当天的黑商交换，撤回后退还获得的鱼并返还消耗的鱼。"
+)
+
+
+async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
+    """执行单条黑商撤回：退目标鱼、返来源鱼、失效记录、回退次数/保底/券。"""
+    # 撤回前提：玩家仍持有黑商当时获得的目标鱼
+    target_fish = await FishingUser.get_fish_by_numeric_id(
+        user_id, record.target_numeric_id
+    )
+    if not target_fish or target_fish.get("count", 0) < 1:
+        return (
+            False,
+            f"背包中没有 {record.target_name}({record.target_rarity})，无法撤回。",
+            True,
+        )
+
+    # 退还目标鱼（黑商获得的），返还来源鱼（黑商消耗的）
+    await FishingUser.remove_fish_by_numeric_id(user_id, record.target_numeric_id, 1)
+    result = await add_fish_to_user(
+        user_id,
+        [(record.source_name, record.source_rarity, record.source_numeric_id, 1)],
+    )
+    await FishingExchangeRecord.revoke_record(record.id, user_id)
+    # 回退当日黑商交换计数
+    await FishingUser.decrement_black_market_count(user_id)
+    # 回退保底计数器：只有被随机替换的失败交换曾令保底 +1，撤回时对应 -1
+    if record.is_randomized:
+        user = await FishingUser.get_user(user_id)
+        if user:
+            user.black_market_pity_counter = max(
+                0, user.black_market_pity_counter - 1
+            )
+            await user.save(update_fields=["black_market_pity_counter"])
+    # 返还额外券
+    ticket_hint = ""
+    if record.used_extra_ticket:
+        await FishingUser.add_item(user_id, "black_market_extra_ticket", "ticket", 1)
+        ticket_hint = "，已返还 1 张黑商额外兑换券"
+
+    messages = list(result["messages"])
+    messages.extend(result["achievement_messages"])
+    msg = (
+        f"黑商撤回成功：退还 {record.target_name}({record.target_rarity}) "
+        f"→ 取回 {record.source_name}({record.source_rarity}){ticket_hint}"
+    )
+    if messages:
+        msg += "\n" + "\n".join(messages)
+    return True, msg, True
+
+
+async def black_market_revoke(
+    user_id: str, selection: str
+) -> tuple[bool, str, bool]:
+    """撤回当天黑商交换。
+
+    selection 为空时：仅 1 条记录直接撤回，多条则列出序号供选择。
+    selection 为数字时：撤回对应序号的记录。
+    """
+    records = await FishingExchangeRecord.list_today_records_by_user(user_id)
+    if not records:
+        return False, "今天没有可撤回的黑商交换记录。", True
+
+    sel = (selection or "").strip()
+    if not sel:
+        if len(records) == 1:
+            return await _do_revoke(user_id, records[0])
+        lines = ["今天有以下可撤回的黑商交换，回复「黑商撤回 序号」撤回："]
+        for i, r in enumerate(records, 1):
+            lines.append(
+                f"{i}. 退还 {r.target_name}({r.target_rarity}) "
+                f"→ 取回 {r.source_name}({r.source_rarity})"
+            )
+        return False, "\n".join(lines), True
+
+    try:
+        idx = int(sel)
+    except ValueError:
+        return False, "请输入正确的序号，例如：黑商撤回 1", True
+    if not (1 <= idx <= len(records)):
+        return False, f"序号超出范围，请输入 1~{len(records)} 之间的数字。", True
+    return await _do_revoke(user_id, records[idx - 1])

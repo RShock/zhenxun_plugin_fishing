@@ -201,13 +201,13 @@ class FishingUser(Model):
     gold = fields.IntField(default=0, description="钓鱼币")
     corn = fields.IntField(default=0, description="香甜玉米(打窝材料)")
     last_sign_date = fields.DateField(null=True, description="上次签到日期")
-    display_frames = fields.IntField(default=0, description="展示木框数量")
-    cat_frames = fields.IntField(default=0, description="猫猫框数量")
+    display_frames = fields.IntField(default=0, description="木框数量")
+    cat_frames = fields.IntField(default=0, description="猫框数量")
     upgraded_display_count = fields.IntField(
         default=0, description="已强化展示栏位数量"
     )
-    frame_pity_counter = fields.IntField(default=0, description="展示木框保底计数器")
-    cat_frame_pity_counter = fields.IntField(default=0, description="猫猫框保底计数器")
+    frame_pity_counter = fields.IntField(default=0, description="木框保底计数器")
+    cat_frame_pity_counter = fields.IntField(default=0, description="猫框保底计数器")
     utr_pity_counter = fields.IntField(default=0, description="迷途风UTR保底计数器")
     black_market_pity_counter = fields.IntField(
         default=0, description="黑商秘密保底计数器(连续失败次数)"
@@ -217,8 +217,8 @@ class FishingUser(Model):
     starry_score_accumulated = fields.FloatField(
         default=0.0, description="流星鱼累计分数(星空祈愿努力值)"
     )
-    star_frames = fields.IntField(default=0, description="星辰木框数量(奇迹奖励)")
-    starry_frames = fields.IntField(default=0, description="星空木框数量(星辰木框升级)")
+    star_frames = fields.IntField(default=0, description="星空框数量(奇迹奖励)")
+    starry_frames = fields.IntField(default=0, description="星空展示框数量(星空框升级)")
     s2_ticket_claimed = fields.BooleanField(
         default=False, description="是否已领取S2入场券"
     )
@@ -569,6 +569,19 @@ class FishingUser(Model):
     @classmethod
     async def get_black_market_count(cls, user_id: str) -> int:
         return await cls._get_daily_count(user_id, "black_market")
+
+    @classmethod
+    async def decrement_black_market_count(cls, user_id: str) -> int:
+        """黑商撤回时回退当日交换计数（不低于 0），返回回退后的值。"""
+        user = await cls.get_user(user_id)
+        today_str = date.today().isoformat()
+        current_count, current_date = user._get_daily_counter("black_market")
+        if current_date != today_str:
+            current_count = 0
+        new_count = max(0, current_count - 1)
+        user._set_daily_counter("black_market", new_count, today_str)
+        await user.save(update_fields=["daily_counters"])
+        return new_count
 
     @classmethod
     async def increment_status_count(cls, user_id: str) -> tuple[int, bool]:
@@ -926,12 +939,12 @@ class FishingUser(Model):
 
     @classmethod
     async def try_claim_miracle(cls, user_id: str) -> dict | None:
-        """尝试用背包流星鱼凑一次奇迹，成功则消耗子集并 +1 星辰木框。
+        """尝试用背包流星鱼凑一次奇迹，成功则消耗子集并 +1 星空框。
 
         规则：
         - 仅 `starry_fish` 背包参与；`starry_exhibition` 展馆鱼不参与、不消耗
         - 搜索：对编号最大的至多 26 条做 MITM 精确子集和
-        - 星辰木框库存不设持有上限
+        - 星空框库存不设持有上限
         """
         user = await cls.get_user(user_id)
         dirty: set[str] = set()
@@ -945,7 +958,7 @@ class FishingUser(Model):
     ) -> list[dict]:
         """连续尝试奇迹结算，直到无法再凑出符合条件的子集。
 
-        每次成功消耗一组 `starry_fish` 并 +1 星辰木框。
+        每次成功消耗一组 `starry_fish` 并 +1 星空框。
         """
         user = await cls.get_user(user_id)
         dirty: set[str] = set()

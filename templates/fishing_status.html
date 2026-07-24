@@ -54,7 +54,7 @@
 {% if bait_info %}
 <div class="info-line">{{ bait_info }}{% if bait_remaining is not none %} · <span class="{% if bait_remaining == 0 %}bait-empty{% endif %}">剩余 {{ bait_remaining }} 个</span>{% endif %}</div>
 {% endif %}
-<div class="info-line">🖼️ 展示木框保底：{{ frame_pity }}/{{ frame_pity_threshold }} · 🐱 猫猫框保底：{{ cat_frame_pity }}/{{ cat_frame_pity_threshold }} · 🌀 迷途风UTR保底：{{ utr_pity }}/{{ utr_pity_threshold }}</div>
+<div class="info-line">🖼️ 木框保底：{{ frame_pity }}/{{ frame_pity_threshold }} · 🐱 猫框保底：{{ cat_frame_pity }}/{{ cat_frame_pity_threshold }} · 🌀 迷途风UTR保底：{{ utr_pity }}/{{ utr_pity_threshold }}</div>
 
 {% if timeline_data %}
 <div class="section">
@@ -84,7 +84,7 @@
     <div class="cat-gift-item">🪱 {{ cat_gifts_data.bait_count }} 个{{ cat_gifts_data.bait_name }}</div>
     {% endif %}
     {% if cat_gifts_data.cat_frames > 0 %}
-    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫猫框</div>
+    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫框</div>
     {% endif %}
     {% for gift in cat_gifts_data.fish_gifts %}
     <div class="cat-gift-item">🐟 {{ gift.fish_name }} ({{ gift.fish_rarity }})</div>

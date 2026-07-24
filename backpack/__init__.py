@@ -10,7 +10,9 @@ backpack/ — 背包、卖鱼、卖鱼饵、赠送、锁定、图鉴子包。
 """
 
 from .black_market import (
+    BLACK_MARKET_REVOKE_USAGE,
     black_market_exchange,
+    black_market_revoke,
     extract_market_exchange_input,
     render_white_market_records,
     white_market_exchange,
@@ -30,6 +32,8 @@ __all__ = [
     "sell_fish",
     "gift_fish",
     "black_market_exchange",
+    "black_market_revoke",
+    "BLACK_MARKET_REVOKE_USAGE",
     "extract_market_exchange_input",
     "render_white_market_records",
     "white_market_exchange",

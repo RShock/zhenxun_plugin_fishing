@@ -96,13 +96,11 @@ async def _buy_bait(user_id: str, user, item, count: int) -> tuple[bool, str]:
 
 async def buy_item(user_id: str, name_or_id: str, count: int = 1) -> tuple[bool, str]:
     if name_or_id.strip() in [
-        "增加展示栏位",
-        "展示栏位",
-        "展示栏",
-        "升级展示栏",
+        "增加展示栏位", "展示栏位", "展示栏",
+        "升级展示栏", "升级展示位", "扩展展示栏", "扩充展示栏",
         "强化展示栏位",
-        "升级星空木框",
-        "星空木框",
+        "升级星空木框", "星空木框",
+        "展示框", "猫猫展示框", "星空展示框",
     ]:
         return await upgrade_display_slots(user_id)
 
@@ -124,11 +122,11 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
     """万能升级展示框：兼容增加/强化展示栏位、升级星空木框等全部指令。
 
     规则：
-    1. 展示栏位（木框）、猫猫框强化、星空木框 未满 10 的加入校验列表
-       （星空木框仅建设星空艇后参与）
+    1. 展示框（木框）、猫框强化、星空展示框 未满 10 的加入校验列表
+       （星空展示框仅建设星空艇后参与）
     2. 校验列表中凡材料足够的全部升级并扣框
     3. 若一个都升不了，报告校验列表里各自缺多少
-    4. 星空木框消耗星辰木框（star_frames）
+    4. 星空展示框消耗星空框（star_frames）
     """
     user = await get_or_create_user(user_id)
     from ..starry import has_starry_ship
@@ -139,7 +137,7 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
     checked_any = False
     dirty_fields: set[str] = set()
 
-    # ── 1. 增加展示栏位（展示木框）────────────────────────────────────────
+    # ── 1. 增加展示栏位（木框）────────────────────────────────────────
     if user.display_slots < 10:
         checked_any = True
         next_slot = user.display_slots + 1
@@ -156,19 +154,19 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
                 auto_fill_msg = f"，已自动将{filled}展示到新栏位！"
 
             logger.info(
-                f"用户 {user_id} 用{frames_needed}个展示木框购买了第 {next_slot} 个展示栏"
+                f"用户 {user_id} 用{frames_needed}个木框购买了第 {next_slot} 个展示栏"
             )
             success_messages.append(
-                f"✅ 增加展示栏位：第 {next_slot} 个，消耗{frames_needed}个展示木框"
+                f"✅ 增加展示框：第 {next_slot} 个，消耗{frames_needed}个木框"
                 f"{auto_fill_msg}"
             )
         else:
             shortage_messages.append(
-                f"❌ 增加展示栏位：展示木框不足，需要{frames_needed}个"
+                f"❌ 增加展示框：木框不足，需要{frames_needed}个"
                 f"（当前{owned}个），还差{frames_needed - owned}个"
             )
 
-    # ── 2. 强化展示栏位（猫猫框）──────────────────────────────────────────
+    # ── 2. 强化展示框（猫框）──────────────────────────────────────────
     # 栏位扩充后可能立刻可强化，因此放在展示栏升级之后再判断
     if (
         user.display_slots > 0
@@ -185,19 +183,19 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
             dirty_fields.update(["cat_frames", "upgraded_display_count"])
 
             logger.info(
-                f"用户 {user_id} 用{frames_needed}个猫猫框强化了第 {next_upgrade} 个展示栏"
+                f"用户 {user_id} 用{frames_needed}个猫框强化了第 {next_upgrade} 个展示栏"
             )
             success_messages.append(
-                f"✅ 强化展示栏位：第 {next_upgrade} 个，消耗{frames_needed}个猫猫框\n"
+                f"✅ 强化展示框：第 {next_upgrade} 个，消耗{frames_needed}个猫框\n"
                 f"展示收益最高的鱼将获得3倍收益！"
             )
         else:
             shortage_messages.append(
-                f"❌ 强化展示栏位：猫猫框不足，需要{frames_needed}个"
+                f"❌ 强化展示框：猫框不足，需要{frames_needed}个"
                 f"（当前{owned}个），还差{frames_needed - owned}个"
             )
 
-    # ── 3. 升级星空木框（星辰木框）────────────────────────────────────────
+    # ── 3. 升级星空展示框（星空框）────────────────────────────────────────
     current_starry = int(user.starry_frames or 0)
     if has_ship and current_starry < STARRY_FRAMES_MAX:
         checked_any = True
@@ -210,15 +208,15 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
             dirty_fields.update(["star_frames", "starry_frames"])
 
             logger.info(
-                f"用户 {user_id} 用{frames_needed}个星辰木框升级星空木框至 {next_level}"
+                f"用户 {user_id} 用{frames_needed}个星空框升级星空展示框至 {next_level}"
             )
             success_messages.append(
-                f"✅ 升级星空木框：第 {next_level} 个，消耗{frames_needed}个星辰木框\n"
+                f"✅ 升级星空展示框：第 {next_level} 个，消耗{frames_needed}个星空框\n"
                 f"最贵的鱼展示收益提升至 4 倍！（{next_level}/{STARRY_FRAMES_MAX}）"
             )
         else:
             shortage_messages.append(
-                f"❌ 升级星空木框：星辰木框不足，需要{frames_needed}个"
+                f"❌ 升级星空展示框：星空框不足，需要{frames_needed}个"
                 f"（当前{owned}个），还差{frames_needed - owned}个"
             )
 

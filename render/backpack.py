@@ -22,15 +22,15 @@ def _get_frame_src(tier: str) -> str:
     """tier: starry | cat | normal
 
     starry 框使用专属星空框素材；cat 与 normal 各自对应独立素材。
-    （早期星空框缺素材时曾复用猫猫框.png + CSS hue-rotate 变色作为临时方案，
+    （早期星空框缺素材时曾复用猫框.png + CSS hue-rotate 变色作为临时方案，
      现已替换为正式星空框.png。）
     """
     frame_map = {
         "starry": "星空框.png",
-        "cat": "猫猫框.png",
-        "normal": "展示木框.png",
+        "cat": "猫框.png",
+        "normal": "木框.png",
     }
-    frame_path = _ITEMS_DIR / frame_map.get(tier, "展示木框.png")
+    frame_path = _ITEMS_DIR / frame_map.get(tier, "木框.png")
     if frame_path.exists():
         return str(frame_path)
     return ""

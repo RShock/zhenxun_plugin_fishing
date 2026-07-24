@@ -247,6 +247,14 @@ def _patch_models(db, monkeypatch):
         f"{FISHING_PKG}.models.FishingExchangeRecord.invalidate_record",
         db.exchange_invalidate_record,
     )
+    monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingExchangeRecord.list_today_records_by_user",
+        db.exchange_list_today_records_by_user,
+    )
+    monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingExchangeRecord.revoke_record",
+        db.exchange_revoke_record,
+    )
     monkeypatch.setattr(f"{FISHING_PKG}.models.FishingUser.add_skin", db.user_add_skin)
     monkeypatch.setattr(
         f"{FISHING_PKG}.models.FishingUser.reduce_display_frames",

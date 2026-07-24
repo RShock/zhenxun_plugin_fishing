@@ -61,7 +61,7 @@ async def render_shop(
 
     frame_rows: list[dict] = []
 
-    # 1) 展示木框 → 增加展示栏位
+    # 1) 木框 → 增加展示框
     if display_slots < 10:
         next_slot = display_slots + 1
         display_slot_costs = {4: 1, 5: 2, 6: 3, 7: 5, 8: 8, 9: 13, 10: 21}
@@ -71,9 +71,9 @@ async def render_shop(
             {
                 "key": "wood",
                 "icon": "🖼️",
-                "name": "展示木框",
+                "name": "木框",
                 "level_text": f"{display_slots} → {next_slot}",
-                "material": f"需要 {frames_needed} 个展示木框",
+                "material": f"需要 {frames_needed} 个木框",
                 "owned_text": f"拥有 {display_frames}",
                 "enough": enough,
                 "is_max": False,
@@ -84,7 +84,7 @@ async def render_shop(
             {
                 "key": "wood",
                 "icon": "🖼️",
-                "name": "展示木框",
+                "name": "木框",
                 "level_text": f"{display_slots}/10",
                 "material": "已满级",
                 "owned_text": f"拥有 {display_frames}",
@@ -93,15 +93,15 @@ async def render_shop(
             }
         )
 
-    # 2) 猫猫框 → 强化展示栏位
+    # 2) 猫框 → 强化展示框
     if display_slots <= 0:
         frame_rows.append(
             {
                 "key": "cat",
                 "icon": "🐱",
-                "name": "猫猫框",
+                "name": "猫框",
                 "level_text": "0/10",
-                "material": "需先拥有展示栏位",
+                "material": "需先拥有展示框",
                 "owned_text": f"拥有 {cat_frames}",
                 "enough": False,
                 "is_max": True,
@@ -115,9 +115,9 @@ async def render_shop(
             {
                 "key": "cat",
                 "icon": "🐱",
-                "name": "猫猫框",
+                "name": "猫框",
                 "level_text": f"{upgraded_display_count} → {next_upgrade}",
-                "material": f"需要 {frames_needed} 个猫猫框",
+                "material": f"需要 {frames_needed} 个猫框",
                 "owned_text": f"拥有 {cat_frames}",
                 "enough": enough,
                 "is_max": False,
@@ -129,16 +129,16 @@ async def render_shop(
             {
                 "key": "cat",
                 "icon": "🐱",
-                "name": "猫猫框",
+                "name": "猫框",
                 "level_text": f"{upgraded_display_count}/{level_cap}",
-                "material": "已满级" if upgraded_display_count >= 10 else "已强化全部栏位",
+                "material": "已满级" if upgraded_display_count >= 10 else "已强化全部展示框",
                 "owned_text": f"拥有 {cat_frames}",
                 "enough": True,
                 "is_max": True,
             }
         )
 
-    # 3) 星空木框 → 消耗星辰木框（仅已建星空艇）
+    # 3) 星空展示框 → 消耗星空框（仅已建星空艇）
     if has_starry_ship:
         if starry_frames < STARRY_FRAMES_MAX:
             next_level = starry_frames + 1
@@ -148,9 +148,9 @@ async def render_shop(
                 {
                     "key": "starry",
                     "icon": "✨",
-                    "name": "星空木框",
+                    "name": "星空展示框",
                     "level_text": f"{starry_frames} → {next_level}",
-                    "material": f"需要 {frames_needed} 个星辰木框",
+                    "material": f"需要 {frames_needed} 个星空框",
                     "owned_text": f"拥有 {star_frames}",
                     "enough": enough,
                     "is_max": False,
@@ -161,7 +161,7 @@ async def render_shop(
                 {
                     "key": "starry",
                     "icon": "✨",
-                    "name": "星空木框",
+                    "name": "星空展示框",
                     "level_text": f"{starry_frames}/{STARRY_FRAMES_MAX}",
                     "material": "已满级",
                     "owned_text": f"拥有 {star_frames}",

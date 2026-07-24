@@ -286,7 +286,7 @@ def _probability_rows(probabilities: dict[str, float]) -> list[dict]:
         )
     mechanic_labels = {
         "material_rate": ("材料", "材料率"),
-        "frame_rate": ("木框", "展示木框率"),
+        "frame_rate": ("木框", "木框率"),
         "meteor_fish_rate": ("流星鱼", "流星鱼率"),
     }
     for key, value in getattr(probabilities, "independent_mechanics", {}).items():

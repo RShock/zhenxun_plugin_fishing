@@ -718,7 +718,7 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
         subtitle = f"消耗 {consumed} 条流星鱼达成奇迹"
     else:
         subtitle = f"连续达成 {claim_count} 次奇迹，共消耗 {consumed} 条流星鱼"
-    subtitle += "；星辰木框可用于升级星空木框"
+    subtitle += "；星空框可用于升级星空展示框"
     plan.miracle_info = {
         "claim_count": claim_count,
         "frames_gained": claim_count,

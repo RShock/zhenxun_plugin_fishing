@@ -150,8 +150,8 @@ class TestPityHints:
             cat_frames=10,
             effects_now=None,
         )
-        assert any("展示木框保底" in h for h in hints)
-        assert any("猫猫框保底" in h for h in hints)
+        assert any("木框保底" in h for h in hints)
+        assert any("猫框保底" in h for h in hints)
 
     @pytest.mark.parametrize("weather_lost_wind", [True, False])
     def test_utr_pity_hint_around_lost_wind(self, weather_lost_wind):

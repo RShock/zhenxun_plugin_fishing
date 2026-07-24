@@ -112,13 +112,13 @@ async def do_nest(
 async def do_cat_frame_nest(
     user_id: str, frame_count: int = 1, is_private: bool = False, **kwargs
 ) -> tuple[bool, str]:
-    """猫猫框打窝 — 仅可在 11-20 星空图使用，地点级速度加成。"""
+    """猫框打窝 — 仅可在 11-20 星空图使用，地点级速度加成。"""
     if frame_count < 1:
         return False, "数量必须大于0"
 
     status = await FishingUser.get_status(user_id)
     if not status:
-        return False, "你还没有在钓鱼，无法使用猫猫框打窝！请先【钓鱼 地点编号】开始钓鱼"
+        return False, "你还没有在钓鱼，无法使用猫框打窝！请先【钓鱼 地点编号】开始钓鱼"
 
     location_id = status["location_id"]
     scene_instance_id = get_scene_instance_id(status, location_id)
@@ -129,7 +129,7 @@ async def do_cat_frame_nest(
     from ..starry import is_starry_location
 
     if not is_starry_location(location_id):
-        return False, "猫猫框打窝只能在 11-20 星空图使用"
+        return False, "猫框打窝只能在 11-20 星空图使用"
 
     if not is_private:
         nest_count = await FishingUser.get_nest_count(user_id)
@@ -138,7 +138,7 @@ async def do_cat_frame_nest(
 
     user = await get_or_create_user(user_id)
     if user.cat_frames <= 0:
-        return False, "猫猫框不足，当前没有猫猫框，无法打窝"
+        return False, "猫框不足，当前没有猫框，无法打窝"
 
     original_request = frame_count
     frame_adjusted = False
@@ -168,7 +168,7 @@ async def do_cat_frame_nest(
             buff_type=BuffEffect.BUFF_TYPE_NEST,
             duration_hours=duration_hours,
             value=5,
-            description=f"猫猫框打窝效果，{location.name}钓鱼速度+5%",
+            description=f"猫框打窝效果，{location.name}钓鱼速度+5%",
             source_user_id=user_id,
         )
 
@@ -181,25 +181,25 @@ async def do_cat_frame_nest(
     added_pct = layers_to_add * 5
     total_pct = new_total * 5
     msg = (
-        f"在【{location.name}】使用猫猫框打窝成功，速度+{added_pct}%，"
+        f"在【{location.name}】使用猫框打窝成功，速度+{added_pct}%，"
         f"持续{duration_hours}小时"
     )
     if new_total > layers_to_add:
         msg += f"（该地点累计+{total_pct}%）"
     if actual_frames < frame_count:
         msg += (
-            f"\n已达到{MAX_NEST_LAYERS * 5}%上限，仅消耗{actual_frames}个猫猫框，"
+            f"\n已达到{MAX_NEST_LAYERS * 5}%上限，仅消耗{actual_frames}个猫框，"
             f"{frame_count - actual_frames}个未消耗"
         )
     if frame_adjusted:
         msg += (
-            f"\n猫猫框不足请求的{original_request}个，"
-            f"已使用全部剩余{frame_count}个猫猫框打窝"
+            f"\n猫框不足请求的{original_request}个，"
+            f"已使用全部剩余{frame_count}个猫框打窝"
         )
     if not is_private and is_last:
         msg += "\n今天已经不能再打窝"
 
     logger.info(
-        f"用户 {user_id} 在{location.name}使用猫猫框打窝{layers_to_add}层，当前{new_total}层"
+        f"用户 {user_id} 在{location.name}使用猫框打窝{layers_to_add}层，当前{new_total}层"
     )
     return True, msg

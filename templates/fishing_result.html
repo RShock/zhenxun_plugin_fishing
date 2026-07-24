@@ -310,10 +310,10 @@
     <div class="miracle-subtitle">{{ miracle.subtitle or miracle.hint }}</div>
     {% endif %}
     <div class="miracle-summary">
-        获得星辰木框 +{{ miracle.frames_gained or miracle.claim_count or 1 }}
+        获得星空框 +{{ miracle.frames_gained or miracle.claim_count or 1 }}
         （当前持有 {{ miracle.star_frames }}）
         · 消耗 {{ miracle.subset_count }} 条流星鱼
-        {% if miracle.can_upgrade_starry_frame %}· 已可用于升级星空木框{% endif %}
+        {% if miracle.can_upgrade_starry_frame %}· 已可用于升级星空展示框{% endif %}
     </div>
     {% if miracle.consumed_groups and miracle.claim_count and miracle.claim_count > 1 %}
     {% for group in miracle.consumed_groups %}
@@ -397,7 +397,7 @@
     <div class="cat-gift-item">🪱 {{ cat_gifts_data.bait_count }} 个{{ cat_gifts_data.bait_name }}</div>
     {% endif %}
     {% if cat_gifts_data.cat_frames > 0 %}
-    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫猫框</div>
+    <div class="cat-gift-item">🖼️ {{ cat_gifts_data.cat_frames }} 个猫框</div>
     {% endif %}
     {% for gift in cat_gifts_data.fish_gifts %}
     <div class="cat-gift-item">🐟 {{ gift.fish_name }} ({{ gift.fish_rarity }})</div>

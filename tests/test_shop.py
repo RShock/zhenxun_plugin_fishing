@@ -23,7 +23,7 @@ USER_ID = "test_user_001"
 
 
 class TestShopRenderStarryFrame:
-    """鱼店渲染：星空木框升级仅在已建星空艇后展示。"""
+    """鱼店渲染：星空展示框升级仅在已建星空艇后展示。"""
 
     async def _capture_frame_rows(self, **kwargs):
         captured = {}
@@ -77,7 +77,7 @@ class TestShopRenderStarryFrame:
         assert any(r.get("key") == "starry" for r in rows)
 
     async def test_starry_frame_hidden_before_ship_low_rod(self):
-        # 低竿等级同样不应展示星空木框
+        # 低竿等级同样不应展示星空展示框
         rows = await self._capture_frame_rows(has_starry_ship=False, rod_level=5)
         assert not any(r.get("key") == "starry" for r in rows)
 
@@ -359,8 +359,8 @@ class TestUniversalDisplayUpgrade:
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "星空木框" in msg
-        assert "星辰木框" in msg
+        assert "星空展示框" in msg
+        assert "星空框" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.starry_frames == 1
         assert user_after.star_frames == 4
@@ -368,7 +368,7 @@ class TestUniversalDisplayUpgrade:
         assert user_after.display_slots == 10
 
     async def test_starry_does_not_consume_cat_frames(self, db):
-        """旧 bug：星空木框误扣猫猫框；现应只扣星辰木框。"""
+        """旧 bug：星空展示框误扣猫框；现应只扣星空框。"""
         user = await db.user_get(USER_ID)
         user.display_slots = 10
         user.cat_frames = 99
@@ -395,7 +395,7 @@ class TestUniversalDisplayUpgrade:
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "星辰木框不足" in msg
+        assert "星空框不足" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.starry_frames == 0
         assert user_after.cat_frames == 99
@@ -409,8 +409,8 @@ class TestUniversalDisplayUpgrade:
         user.starry_frames = 0
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "增加展示栏位" in msg
-        assert "升级星空木框" not in msg
+        assert "增加展示框" in msg
+        assert "升级星空展示框" not in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.display_slots == 4
         assert user_after.starry_frames == 0
@@ -420,10 +420,15 @@ class TestUniversalDisplayUpgrade:
         aliases = [
             "升级展示栏",
             "增加展示栏位",
+            "增加展示框",
             "强化展示栏位",
+            "猫猫展示框",
             "升级星空木框",
+            "升级星空展示框",
             "星空木框",
+            "星空展示框",
             "展示栏位",
+            "展示框",
             "展示栏",
         ]
         for alias in aliases:
@@ -456,9 +461,9 @@ class TestUniversalDisplayUpgrade:
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "展示木框不足" in msg
-        assert "猫猫框不足" in msg
-        assert "星辰木框不足" in msg
+        assert "木框不足" in msg
+        assert "猫框不足" in msg
+        assert "星空框不足" in msg
         assert "还差" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.display_slots == 3
@@ -479,7 +484,7 @@ class TestUniversalDisplayUpgrade:
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
         assert "✅" in msg
-        assert "增加展示栏位" in msg
+        assert "增加展示框" in msg
         assert "不足" not in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.display_slots == 4
@@ -498,9 +503,9 @@ class TestUniversalDisplayUpgrade:
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "增加展示栏位" in msg
-        assert "强化展示栏位" in msg
-        assert "升级星空木框" in msg
+        assert "增加展示框" in msg
+        assert "猫猫展示框" in msg
+        assert "升级星空展示框" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.display_slots == 4
         assert user_after.upgraded_display_count == 1
@@ -519,14 +524,14 @@ class TestUniversalDisplayUpgrade:
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "强化展示栏位" in msg
+        assert "猫猫展示框" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.upgraded_display_count == 3
         assert user_after.cat_frames == 0
         assert user_after.display_slots == 5
 
     async def test_starry_cost_progression(self, db):
-        """第 n 次升级消耗 n 个星辰木框。"""
+        """第 n 次升级消耗 n 个星空框。"""
         user = await db.user_get(USER_ID)
         user.display_slots = 10
         user.upgraded_display_count = 10
@@ -560,15 +565,15 @@ class TestUniversalDisplayUpgrade:
         """扩栏后同一指令可立刻强化新栏位。"""
         user = await db.user_get(USER_ID)
         user.display_slots = 3
-        user.display_frames = 1  # 第4栏需要1个展示木框
+        user.display_frames = 1  # 第4栏需要1个木框
         user.cat_frames = 1  # 强化第1个需要1个猫框
         user.upgraded_display_count = 0
         user.star_frames = 0
 
         ok, msg = await upgrade_display_slots(USER_ID)
         assert ok is True
-        assert "增加展示栏位" in msg
-        assert "强化展示栏位" in msg
+        assert "增加展示框" in msg
+        assert "猫猫展示框" in msg
         user_after = await db.user_get(USER_ID)
         assert user_after.display_slots == 4
         assert user_after.upgraded_display_count == 1
@@ -632,9 +637,9 @@ class TestRenderShopStarFrames:
         assert fu["cmd"] == "升级展示栏"
         keys = [r["key"] for r in fu["rows"]]
         assert keys == ["wood", "cat", "starry"]
-        assert any("展示木框" in r["material"] or r["is_max"] for r in fu["rows"])
+        assert any("木框" in r["material"] or r["is_max"] for r in fu["rows"])
         starry = next(r for r in fu["rows"] if r["key"] == "starry")
-        assert "星辰木框" in starry["material"]
+        assert "星空框" in starry["material"]
         assert starry["owned_text"] == "拥有 7"
 
     async def test_frame_upgrade_without_ship_hides_starry(self, db, monkeypatch):

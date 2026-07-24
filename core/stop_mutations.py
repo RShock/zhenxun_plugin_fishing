@@ -138,7 +138,7 @@ def apply_auto_display_on_user(
     numeric_id: str,
     dirty: set[str],
 ) -> str | None:
-    if fish_name == "展示木框":
+    if fish_name in ("展示木框", "木框"):
         return None
     fish_data = ConfigManager.get_fish_by_name(fish_name)
     if not fish_data:
@@ -584,7 +584,7 @@ def apply_process_fish_results_on_user(
                 cat_park_materials.get(material_name, 0) + count
             )
             continue
-        if fish.id == "展示木框":
+        if fish.id in ("展示木框", "木框"):
             frame_count += count
             continue
         fish_index = 0
@@ -609,7 +609,7 @@ def apply_process_fish_results_on_user(
 
     if frame_count > 0:
         mut.apply_add_display_frames(user, frame_count, dirty)
-        buff_messages.append(f"🖼️ 获得{frame_count}个展示木框！")
+        buff_messages.append(f"🖼️ 获得{frame_count}个木框！")
 
     buff_messages.extend(result["messages"])
 
@@ -618,7 +618,7 @@ def apply_process_fish_results_on_user(
         next_slot = user.display_slots + 1
         frames_needed = DISPLAY_SLOT_COSTS.get(next_slot, next_slot - 3)
         if user.display_frames >= frames_needed:
-            buff_messages.append("💡 展示木框充足，输入【增加展示栏位】可升级展示数量")
+            buff_messages.append("💡 木框充足，输入【升级展示栏】可增加展示框")
 
     user.frame_pity_counter = frame_pity
     user.utr_pity_counter = utr_pity

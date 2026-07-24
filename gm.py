@@ -113,9 +113,10 @@ async def gm_add_skin(user_id: str, skin_id: str) -> tuple[bool, str]:
 # kind: cat_frame / display_frame / corn / potion / ticket / fragment
 # 须覆盖：不在 shop.json 的道具、中文别名、以及会误触稀有度后缀的名字
 _SPECIAL_ITEM_ALIASES: dict[str, tuple[str, str]] = {
+    "猫框": ("cat_frame", "cat_frame"),
     "猫猫框": ("cat_frame", "cat_frame"),
-    "展示木框": ("display_frame", "display_frame"),
     "木框": ("display_frame", "display_frame"),
+    "展示木框": ("display_frame", "display_frame"),
     "香甜玉米": ("corn", "corn"),
     "玉米": ("corn", "corn"),
     # 药水（含 shop 外道具与别名；item_id 与使用/入库一致）
@@ -147,8 +148,8 @@ _SPECIAL_ITEM_ALIASES: dict[str, tuple[str, str]] = {
 }
 
 _ITEM_DISPLAY_NAMES: dict[str, str] = {
-    "cat_frame": "猫猫框",
-    "display_frame": "展示木框",
+    "cat_frame": "猫框",
+    "display_frame": "木框",
     "corn": "香甜玉米",
     "time_potion": "时光药水",
     "闪光药水": "闪光药水",
@@ -443,7 +444,7 @@ _GmItemHandler = Callable[[str, _GmItemSpec, int], Awaitable[tuple[bool, str]]]
 _UNKNOWN_ITEM_MESSAGE = (
     "未识别的物品或未指定稀有度！\n"
     "道具：时光/回档/幸运/闪光/真多多/许愿药水、UTR自选券、"
-    "黑商额外兑换券、抽奖碎片、玉米、猫猫框、展示木框、鱼饵…\n"
+    "黑商额外兑换券、抽奖碎片、玉米、猫框、木框、鱼饵…\n"
     "鱼：物品名+稀有度（如：小鲫鱼sr）"
 )
 

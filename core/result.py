@@ -117,7 +117,7 @@ async def save_fish_to_backpack(
     effective_difficulty: int,
     buff_messages: list[str],
 ) -> tuple[int, list[tuple[str, str, str]], list[str]]:
-    """将鱼获保存到用户背包，处理 UTR 自动消耗、展示木框、成就检查。"""
+    """将鱼获保存到用户背包，处理 UTR 自动消耗、木框、成就检查。"""
     frame_count = 0
     fish_entries: list[tuple[str, str, str, int]] = []
     cat_park_materials: dict[str, int] = {}
@@ -129,7 +129,7 @@ async def save_fish_to_backpack(
             material_name = fish.id.split(":", 1)[1]
             cat_park_materials[material_name] = cat_park_materials.get(material_name, 0) + count
             continue
-        if fish.id == "展示木框":
+        if fish.id in ("展示木框", "木框"):
             frame_count += count
             continue
         fish_index = 0
@@ -148,7 +148,7 @@ async def save_fish_to_backpack(
 
     if frame_count > 0:
         await FishingUser.add_display_frames(user_id, frame_count)
-        buff_messages.append(f"🖼️ 获得{frame_count}个展示木框！")
+        buff_messages.append(f"🖼️ 获得{frame_count}个木框！")
 
     buff_messages.extend(result["messages"])
     return result["fish_coins"], result["displayable_fish"], result["achievement_messages"]
@@ -205,7 +205,7 @@ async def process_fish_results(
         next_slot = user.display_slots + 1
         frames_needed = DISPLAY_SLOT_COSTS.get(next_slot, next_slot - 3)
         if user.display_frames >= frames_needed:
-            buff_messages.append("💡 展示木框充足，输入【增加展示栏位】可升级展示数量")
+            buff_messages.append("💡 木框充足，输入【升级展示栏】可增加展示框")
 
     user.frame_pity_counter = frame_pity
     user.utr_pity_counter = utr_pity

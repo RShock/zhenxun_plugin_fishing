@@ -42,7 +42,7 @@ STARRY_REWARD_POOL_ITEMS: dict[str, tuple[dict[str, object], ...]] = {
         {"key": "duoduo_potion", "name": "真多多药水", "count": 1},
         {"key": "lucky_potion", "name": "幸运药水", "count": 1},
         {"key": "reset_potion", "name": "回档药水", "count": 1},
-        {"key": "cat_frame", "name": "猫猫框", "count": 3},
+        {"key": "cat_frame", "name": "猫框", "count": 3},
         {"key": "lottery_fragment_mid", "name": "高级抽奖碎片", "count": 1},
     ),
     "high": (
@@ -87,7 +87,7 @@ MIRACLE_MOD_BASE = 10_000_000
 # 奇迹精确搜索最多取编号最大的 N 条做 MITM（默认 26）
 MIRACLE_MAX_EXACT_N = 26
 S2_TICKET_SCORE_THRESHOLD = 1200.0
-# 星辰木框是升级星空木框所需的库存，不设持有上限。
+# 星空框是升级星空展示框所需的库存，不设持有上限。
 EXHIBITION_MIN_SCORE = 4
 EXHIBITION_LIMIT = 10
 

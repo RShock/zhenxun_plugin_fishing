@@ -65,7 +65,8 @@ class InMemoryUser:
 
 
 class InMemoryExchangeRecord:
-    def __init__(self, record_id: int, user_id: str, source, target):
+    def __init__(self, record_id: int, user_id: str, source, target,
+                 is_randomized: bool = False, used_extra_ticket: bool = False):
         self.id = record_id
         self.user_id = user_id
         self.source_name = source.name
@@ -82,6 +83,10 @@ class InMemoryExchangeRecord:
         self.target_scene_level = target.scene_level
         self.is_active = True
         self.reversed_by_user_id = None
+        self.is_randomized = is_randomized
+        self.used_extra_ticket = used_extra_ticket
+        self.create_time = datetime.now()
+        self.update_time = datetime.now()
 
     async def save(self, update_fields=None):
         pass
@@ -965,8 +970,15 @@ class MockDB:
         return u.auto_lock_pattern or ""
 
     # --- FishingExchangeRecord ---
-    async def exchange_create_black_record(self, user_id: str, source, target):
-        record = InMemoryExchangeRecord(self._gen_id(), user_id, source, target)
+    async def exchange_create_black_record(
+        self, user_id: str, source, target,
+        is_randomized: bool = False, used_extra_ticket: bool = False,
+    ):
+        record = InMemoryExchangeRecord(
+            self._gen_id(), user_id, source, target,
+            is_randomized=is_randomized,
+            used_extra_ticket=used_extra_ticket,
+        )
         self._exchange_records.append(record)
         return record
 
@@ -1008,3 +1020,25 @@ class MockDB:
                 record.reversed_by_user_id = reversed_by_user_id
                 return
         raise ValueError(f"record {record_id} not found")
+
+    async def exchange_list_today_records_by_user(self, user_id: str):
+        today = date.today()
+        result = [
+            r
+            for r in self._exchange_records
+            if r.user_id == user_id
+            and r.is_active
+            and r.source_numeric_id != r.target_numeric_id
+            and r.create_time.date() == today
+        ]
+        result.sort(key=lambda r: -r.id)
+        return result
+
+    async def exchange_revoke_record(self, record_id: int, user_id: str):
+        for record in self._exchange_records:
+            if record.id == record_id and record.user_id == user_id and record.is_active:
+                record.is_active = False
+                record.reversed_by_user_id = user_id
+                record.update_time = datetime.now()
+                return record
+        return None

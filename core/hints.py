@@ -24,14 +24,14 @@ def build_pity_hints(
 ) -> list[str]:
     hints: list[str] = []
 
-    has_frame = any(fish.id == "展示木框" for fish, _, _ in total_fish)
+    has_frame = any(fish.id in ("展示木框", "木框") for fish, _, _ in total_fish)
     if not skip_frame_pity and not has_frame:
         # 当前这一杆尚未结算，提示的是“再钓多少次会触发”，需包含即将进行的一次。
         remaining = FRAME_PITY_THRESHOLD - frame_pity
-        hints.append(f"🖼️ 距离下次展示木框保底还有{remaining}次")
+        hints.append(f"🖼️ 距离下次木框保底还有{remaining}次")
     if cat_frame_pity > 0:
         cat_remaining = CAT_FRAME_PITY_THRESHOLD - cat_frame_pity
-        hints.append(f"🐱 距离下次猫猫框保底还有{cat_remaining}次")
+        hints.append(f"🐱 距离下次猫框保底还有{cat_remaining}次")
     if utr_pity > 0:
         # 玩家口径“X次后必出”包含触发保底的下一次。
         utr_remaining = max(0, UTR_PITY_THRESHOLD - utr_pity)
@@ -52,7 +52,7 @@ def build_pity_hints(
         frames_needed = UPGRADE_DISPLAY_COSTS.get(next_upgrade, next_upgrade)
         if cat_frames >= frames_needed:
             hints.append(
-                f"🐱 猫猫框足够！输入【升级展示栏】可强化展示栏位（需要{frames_needed}个，当前{cat_frames}个）"
+                f"🐱 猫框足够！输入【升级展示栏】可强化展示框（需要{frames_needed}个，当前{cat_frames}个）"
             )
 
     return hints

@@ -145,7 +145,7 @@ async def _migrate_frame_buffs():
         buff.buff_type = BuffEffect.BUFF_TYPE_FRAME
         buff.target_type = BuffEffect.TARGET_TYPE_GLOBAL
         buff.target_id = ""
-        buff.description = "展示木框效果，1-10图与S1钓鱼速度+5%"
+        buff.description = "木框效果，1-10图与S1钓鱼速度+5%"
         await buff.save(
             update_fields=["buff_type", "target_type", "target_id", "description"]
         )

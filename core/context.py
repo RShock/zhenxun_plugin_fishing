@@ -81,8 +81,8 @@ def deserialize_fish_caught(
     for entry in fish_caught_raw:
         fish_id = entry["fish_id"]
         fish = ConfigManager.get_fish(fish_id)
-        if not fish and fish_id == "展示木框":
-            fish = FishData(id="展示木框", base_price=0)
+        if not fish and fish_id in ("展示木框", "木框"):
+            fish = FishData(id="木框", base_price=0)
         if not fish and fish_id.startswith("cat_park_material:"):
             fish = FishData(id=fish_id, base_price=0)
         if fish:

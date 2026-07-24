@@ -28,7 +28,12 @@ class FishingExchangeRecord(Model):
     target_location_name = fields.CharField(255, description="黑商获得鱼场景名")
     target_scene_level = fields.IntField(description="黑商获得鱼场景等级")
     is_active = fields.BooleanField(default=True, description="是否仍可白商逆交换", index=True)
-    reversed_by_user_id = fields.CharField(255, null=True, description="白商逆交换者")
+    reversed_by_user_id = fields.CharField(255, null=True, description="白商逆交换/黑商撤回操作者")
+    # is_randomized: 该次黑商交换是否被同稀有度随机替换了目标鱼。
+    # 撤回时据此回退保底计数器（失败 +1 的逆操作）。
+    is_randomized = fields.BooleanField(default=False, description="黑商交换是否被随机替换目标")
+    # used_extra_ticket: 该次交换是否消耗了黑商额外券，撤回时需返还。
+    used_extra_ticket = fields.BooleanField(default=False, description="是否消耗了黑商额外券")
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     update_time = fields.DatetimeField(auto_now=True, description="更新时间")
 
@@ -59,10 +64,20 @@ class FishingExchangeRecord(Model):
             "create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
             "update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
             ");",
+            # 增量字段：老库补列，新库已含则 SQLite 忽略报错
+            "ALTER TABLE fishing_exchange_record ADD COLUMN is_randomized BOOLEAN NOT NULL DEFAULT 0;",
+            "ALTER TABLE fishing_exchange_record ADD COLUMN used_extra_ticket BOOLEAN NOT NULL DEFAULT 0;",
         ]
 
     @classmethod
-    async def create_black_record(cls, user_id: str, source, target) -> "FishingExchangeRecord":
+    async def create_black_record(
+        cls,
+        user_id: str,
+        source,
+        target,
+        is_randomized: bool = False,
+        used_extra_ticket: bool = False,
+    ) -> "FishingExchangeRecord":
         return await cls.create(
             user_id=user_id,
             source_name=source.name,
@@ -77,6 +92,8 @@ class FishingExchangeRecord(Model):
             target_location_id=target.location_id,
             target_location_name=target.location_name,
             target_scene_level=target.scene_level,
+            is_randomized=is_randomized,
+            used_extra_ticket=used_extra_ticket,
         )
 
     @classmethod
@@ -108,3 +125,45 @@ class FishingExchangeRecord(Model):
         record.reversed_by_user_id = reversed_by_user_id
         record.update_time = datetime.now()
         await record.save(update_fields=["is_active", "reversed_by_user_id", "update_time"])
+
+    @classmethod
+    async def list_today_records_by_user(
+        cls, user_id: str
+    ) -> list["FishingExchangeRecord"]:
+        """查询某用户当天创建、仍有效的黑商记录，按 id 降序（最近在前）。
+
+        黑商撤回仅限当天，用 create_time 过滤；排除 source==target 的无效记录。
+        """
+        from datetime import date
+
+        start = datetime.combine(date.today(), datetime.min.time())
+        end = datetime.combine(date.today(), datetime.max.time())
+        return (
+            await cls.filter(
+                user_id=user_id,
+                is_active=True,
+                create_time__gte=start,
+                create_time__lte=end,
+            )
+            .exclude(source_numeric_id=F("target_numeric_id"))
+            .order_by("-id")
+        )
+
+    @classmethod
+    async def revoke_record(cls, record_id: int, user_id: str) -> "FishingExchangeRecord | None":
+        """撤回指定记录：标记失效并记录操作者，返回更新后的记录。
+
+        仅当记录属于该用户且仍有效时才撤回；否则返回 None。
+        """
+        record = await cls.filter(
+            id=record_id, user_id=user_id, is_active=True
+        ).first()
+        if not record:
+            return None
+        record.is_active = False
+        record.reversed_by_user_id = user_id
+        record.update_time = datetime.now()
+        await record.save(
+            update_fields=["is_active", "reversed_by_user_id", "update_time"]
+        )
+        return record

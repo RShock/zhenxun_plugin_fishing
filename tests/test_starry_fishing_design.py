@@ -801,7 +801,7 @@ class TestUtrSelectNormalize:
 
 class TestStarryFramePityFreeze:
     def test_starry_map_freezes_frame_pity(self):
-        """11-20 星空图不累计展示木框保底。"""
+        """11-20 星空图不累计木框保底。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
         from zhenxun.plugins.zhenxun_plugin_fishing.core.engine import (
             _catch_fish_with_buffs,
@@ -845,7 +845,7 @@ class TestStarryFramePityFreeze:
             frame_pity=10,
             location=loc,
         )
-        if fish is not None and getattr(fish, "id", None) == "展示木框":
+        if fish is not None and getattr(fish, "id", None) in ("展示木框", "木框"):
             assert new_frame == 0
         else:
             assert new_frame > 10
@@ -925,7 +925,7 @@ class TestStarryUtrPityAndWeather:
             location=loc,
         )
         assert new_utr == 20
-        assert rarity != "UTR" or getattr(fish, "id", None) == "展示木框"
+        assert rarity != "UTR" or getattr(fish, "id", None) in ("展示木框", "木框")
 
     def test_normal_map_utr_pity_requires_lost_wind(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.core.engine import (
@@ -1166,4 +1166,4 @@ class TestPityHintsSkipFrame:
             effects_now=None,
             skip_frame_pity=True,
         )
-        assert not any("展示木框保底" in h for h in hints)
+        assert not any("木框保底" in h for h in hints)
