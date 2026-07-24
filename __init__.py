@@ -133,14 +133,13 @@ from .models import FishingBuff, FishingUser
 async def _migrate_frame_buffs():
     from .models import BuffEffect
 
+    # 木框 buff 从 BUFF_TYPE_NEST 迁移到 BUFF_TYPE_FRAME（全局）
     old_buffs = await FishingBuff.filter(
         buff_type=BuffEffect.BUFF_TYPE_NEST,
         target_type=BuffEffect.TARGET_TYPE_LOCATION,
         description__contains="展示木框",
         end_time__gt=datetime.now(),
     ).all()
-    if not old_buffs:
-        return
     for buff in old_buffs:
         buff.buff_type = BuffEffect.BUFF_TYPE_FRAME
         buff.target_type = BuffEffect.TARGET_TYPE_GLOBAL
@@ -151,6 +150,7 @@ async def _migrate_frame_buffs():
         )
 
     # 猫框打窝从 BUFF_TYPE_NEST 迁移到独立的 BUFF_TYPE_CAT_NEST
+    # 注意：此处不能受上面木框迁移结果影响提前 return，否则猫框迁移永远不执行
     old_cat_buffs = await FishingBuff.filter(
         buff_type=BuffEffect.BUFF_TYPE_NEST,
         target_type=BuffEffect.TARGET_TYPE_LOCATION,

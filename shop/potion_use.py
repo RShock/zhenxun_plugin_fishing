@@ -252,6 +252,11 @@ async def use_display_frame_buff(
     user = await get_or_create_user(user_id)
     if user.display_frames <= 0:
         return False, "木框不足，当前没有木框"
+    # 硬上限：不管用户请求多少个，最多使用 MAX_FRAME_BUFF_LAYERS 个
+    capped = False
+    if count > MAX_FRAME_BUFF_LAYERS:
+        capped = True
+        count = MAX_FRAME_BUFF_LAYERS
     # 宽容机制：请求数量超出库存时，使用全部剩余木框
     if user.display_frames < count:
         count = user.display_frames
@@ -311,6 +316,8 @@ async def use_display_frame_buff(
         msg += f"\n已满{MAX_FRAME_BUFF_LAYERS * 5}%上限，延长了{extended_count}次已有木框buff（每次+{duration_hours}小时）"
     if actual_frames < count:
         msg += f"\n无已有木框buff可延长，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
+    if capped:
+        msg += f"\n木框使用上限为{MAX_FRAME_BUFF_LAYERS}个，已自动调整使用数量"
 
     logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}次，当前全图{new_total}层")
     return True, msg

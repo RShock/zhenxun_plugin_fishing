@@ -801,7 +801,7 @@ class TestNestBuffExtension:
             assert old_buffs[i].end_time == original_end_times[i]
 
     async def test_nest_more_corn_than_extendable(self, db, monkeypatch):
-        """已有10个buff、请求15个玉米：循环延长，全部消耗。"""
+        """已有10个buff、请求15个玉米：cap到10个，10个buff各延长1次。"""
         user = await db.user_get(USER_ID)
         user.corn = 20
         await start_fishing(USER_ID, "1")
@@ -827,10 +827,11 @@ class TestNestBuffExtension:
         ok, msg = await do_nest(USER_ID, corn_count=15, is_private=True)
         assert ok is True
         assert "延长" in msg
+        assert "上限" in msg  # cap 提示
 
-        # 循环延长：15个全部消耗（10个buff各延长1次，前5个再延长1次）
+        # cap 到 10：只消耗 10 个玉米
         user_after = await db.user_get(USER_ID)
-        assert user_after.corn == 5  # 20 - 15 = 5
+        assert user_after.corn == 10  # 20 - 10 = 10
 
         # buff 总数不变（仍为 10）
         nest_buffs = [
@@ -838,11 +839,8 @@ class TestNestBuffExtension:
         ]
         assert len(nest_buffs) == 10
 
-        # 前5个 buff 被延长 2 次（+16h），后5个被延长 1 次（+8h）
-        for i in range(5):
-            expected = original_end_times[i] + timedelta(hours=16)
-            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
-        for i in range(5, 10):
+        # 10 个 buff 各延长 1 次（+8h）
+        for i in range(10):
             expected = original_end_times[i] + timedelta(hours=8)
             assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
 
@@ -969,7 +967,7 @@ class TestCatFrameNestExtension:
             assert old_buffs[i].end_time == original_end_times[i]
 
     async def test_cat_nest_more_than_extendable(self, db, monkeypatch):
-        """已有10个cat_nest buff、请求15个猫框：循环延长，全部消耗。"""
+        """已有10个cat_nest buff、请求15个猫框：cap到10个，10个buff各延长1次。"""
         await self._setup_starry_fishing(db, monkeypatch)
         user = await db.user_get(USER_ID)
         user.cat_frames = 20
@@ -995,21 +993,19 @@ class TestCatFrameNestExtension:
         ok, msg = await do_cat_frame_nest(USER_ID, frame_count=15, is_private=True)
         assert ok is True
         assert "延长" in msg
+        assert "上限" in msg  # cap 提示
 
-        # 循环延长：15个全部消耗
+        # cap 到 10：只消耗 10 个猫框
         user_after = await db.user_get(USER_ID)
-        assert user_after.cat_frames == 5  # 20 - 15 = 5
+        assert user_after.cat_frames == 10  # 20 - 10 = 10
 
         cat_nest_buffs = [
             b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_CAT_NEST
         ]
         assert len(cat_nest_buffs) == 10  # 总数不变
 
-        # 前5个延长2次(+16h)，后5个延长1次(+8h)
-        for i in range(5):
-            expected = original_end_times[i] + timedelta(hours=16)
-            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
-        for i in range(5, 10):
+        # 10 个 buff 各延长 1 次（+8h）
+        for i in range(10):
             expected = original_end_times[i] + timedelta(hours=8)
             assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
 
@@ -1106,7 +1102,7 @@ class TestFrameBuffExtension:
             assert old_buffs[i].end_time == original_end_times[i]
 
     async def test_frame_more_than_extendable(self, db, monkeypatch):
-        """已有10个frame buff、请求15个木框：循环延长，全部消耗。"""
+        """已有10个frame buff、请求15个木框：cap到10个，10个buff各延长1次。"""
         user = await db.user_get(USER_ID)
         user.display_frames = 20
         await start_fishing(USER_ID, "1")
@@ -1132,10 +1128,11 @@ class TestFrameBuffExtension:
         ok, msg = await use_display_frame_buff(USER_ID, count=15, is_private=True)
         assert ok is True
         assert "延长" in msg
+        assert "上限" in msg  # cap 提示
 
-        # 循环延长：15个全部消耗（10个buff各延长1次，前5个再延长1次）
+        # cap 到 10：只消耗 10 个木框
         user_after = await db.user_get(USER_ID)
-        assert user_after.display_frames == 5  # 20 - 15 = 5
+        assert user_after.display_frames == 10  # 20 - 10 = 10
 
         # buff 总数不变（仍为 10）
         frame_buffs = [
@@ -1143,11 +1140,8 @@ class TestFrameBuffExtension:
         ]
         assert len(frame_buffs) == 10
 
-        # 前5个 buff 被延长 2 次（+16h），后5个被延长 1 次（+8h）
-        for i in range(5):
-            expected = original_end_times[i] + timedelta(hours=16)
-            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
-        for i in range(5, 10):
+        # 10 个 buff 各延长 1 次（+8h）
+        for i in range(10):
             expected = original_end_times[i] + timedelta(hours=8)
             assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
 

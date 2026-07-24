@@ -33,6 +33,11 @@ async def do_nest(
     user = await get_or_create_user(user_id)
     if user.corn <= 0:
         return False, "香甜玉米不足，当前没有玉米，无法打窝"
+    # 硬上限：不管用户请求多少个，最多使用 MAX_NEST_LAYERS 个
+    capped = False
+    if corn_count > MAX_NEST_LAYERS:
+        capped = True
+        corn_count = MAX_NEST_LAYERS
     # 宽容机制：请求数量超出库存时，使用全部剩余玉米
     original_request = corn_count
     corn_adjusted = False
@@ -122,6 +127,8 @@ async def do_nest(
         msg += f"\n无已有打窝buff可延长，仅消耗{actual_corn}个玉米，{corn_count - actual_corn}个玉米未消耗"
     if corn_adjusted:
         msg += f"\n玉米不足请求的{original_request}个，已使用全部剩余{corn_count}个玉米打窝"
+    if capped:
+        msg += f"\n打窝上限为{MAX_NEST_LAYERS}个，已自动调整使用数量"
     if not is_private and is_last:
         msg += "\n今天已经不能再打窝"
 
@@ -161,6 +168,12 @@ async def do_cat_frame_nest(
     user = await get_or_create_user(user_id)
     if user.cat_frames <= 0:
         return False, "猫框不足，当前没有猫框，无法打窝"
+
+    # 硬上限：不管用户请求多少个，最多使用 MAX_NEST_LAYERS 个
+    capped = False
+    if frame_count > MAX_NEST_LAYERS:
+        capped = True
+        frame_count = MAX_NEST_LAYERS
 
     original_request = frame_count
     frame_adjusted = False
@@ -244,6 +257,8 @@ async def do_cat_frame_nest(
             f"\n猫框不足请求的{original_request}个，"
             f"已使用全部剩余{frame_count}个猫框打窝"
         )
+    if capped:
+        msg += f"\n猫框打窝上限为{MAX_NEST_LAYERS}个，已自动调整使用数量"
     if not is_private and is_last:
         msg += "\n今天已经不能再打窝"
 
