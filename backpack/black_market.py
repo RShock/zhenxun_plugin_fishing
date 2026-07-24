@@ -353,16 +353,36 @@ async def render_white_market_records(user_id: str) -> bytes:
         rarity = group["target_rarity"]
         loc_name = group["target_location_name"]
 
+        # 右侧获得鱼：按 numeric_id 去重，再按(场景,稀有度)分组合并为单行
+        seen_ids: set[str] = set()
+        get_groups: list[dict] = []
+        group_index: dict[tuple[str, str], int] = {}
+        for s in group["sources"]:
+            if s["numeric_id"] in seen_ids:
+                continue
+            seen_ids.add(s["numeric_id"])
+            gk = (s["location_name"], s["rarity"])
+            if gk not in group_index:
+                group_index[gk] = len(get_groups)
+                get_groups.append({
+                    "rarity": s["rarity"],
+                    "location_name": s["location_name"],
+                    "names": [],
+                })
+            get_groups[group_index[gk]]["names"].append(s["name"])
+
         # 查找玩家背包中与target同地图同稀有度的鱼
-        # numeric_id前缀编码了location信息，但更可靠的方式是
-        # 通过find_fish_target获取location_id，这里用get_user_fish遍历
         backpack_fish = []
+        seen_bp_names: set[str] = set()
         for f in user_fish:
             if f.get("rarity") != rarity or f.get("count", 0) < 1:
+                continue
+            if f["fish_name"] in seen_bp_names:
                 continue
             # 通过find_fish_target获取location_id判断是否同地图
             f_target = find_fish_target(f["fish_name"], f["rarity"])
             if f_target and f_target.location_id == loc_id:
+                seen_bp_names.add(f["fish_name"])
                 backpack_fish.append({
                     "name": f["fish_name"],
                     "rarity": f["rarity"],
@@ -370,11 +390,10 @@ async def render_white_market_records(user_id: str) -> bytes:
                 })
 
         if backpack_fish:
-            # 可以交换：左边显示背包中具体的鱼，右边显示获得鱼
-            # 背包鱼按(地图,稀有度)分组——它们本来就是同地图同稀有度
+            # 可以交换：左边显示背包中具体的鱼，右边显示获得鱼分组
             now_items.append({
                 "pay_fish": backpack_fish,
-                "get_fish": group["sources"],
+                "get_groups": get_groups,
             })
         else:
             # 有可能交换：检查是否已解锁
@@ -389,7 +408,7 @@ async def render_white_market_records(user_id: str) -> bytes:
             possible_items.append({
                 "pay_label": f"{loc_name} {rarity}",
                 "pay_rarity": rarity,
-                "get_fish": group["sources"],
+                "get_groups": get_groups,
             })
 
     html = render_template(

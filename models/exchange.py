@@ -4,12 +4,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from tortoise import fields
 from tortoise.expressions import F
 
 from zhenxun.services.db_context import Model
+
+# 白商列表只展示最近30天内未使用的黑商记录，过期记录不再显示
+_WHITE_MARKET_MAX_AGE_DAYS = 30
 
 
 class FishingExchangeRecord(Model):
@@ -98,7 +101,11 @@ class FishingExchangeRecord(Model):
 
     @classmethod
     async def list_active_records(cls) -> list["FishingExchangeRecord"]:
-        return await cls.filter(is_active=True).exclude(
+        """列出白商可用的有效记录，仅返回最近30天内创建的。"""
+        cutoff = datetime.now() - timedelta(days=_WHITE_MARKET_MAX_AGE_DAYS)
+        return await cls.filter(
+            is_active=True, create_time__gte=cutoff
+        ).exclude(
             source_numeric_id=F("target_numeric_id")
         ).order_by(
             "target_scene_level",
@@ -122,15 +129,17 @@ class FishingExchangeRecord(Model):
     async def find_active_by_source_numeric_id(
         cls, source_numeric_id: str
     ) -> list["FishingExchangeRecord"]:
-        """查找黑商source是指定鱼的所有有效记录。
+        """查找黑商source是指定鱼的所有有效记录（仅最近30天）。
 
         白商新逻辑：玩家获得鱼=黑商source（指定鱼），
         支付鱼只需与黑商target同地图同稀有度即可，不再要求精确逆映射。
         返回所有匹配记录，由调用方进一步筛选target的location+rarity。
         """
+        cutoff = datetime.now() - timedelta(days=_WHITE_MARKET_MAX_AGE_DAYS)
         return await cls.filter(
             is_active=True,
             source_numeric_id=str(source_numeric_id),
+            create_time__gte=cutoff,
         ).exclude(source_numeric_id=F("target_numeric_id")).order_by("id")
 
     @classmethod

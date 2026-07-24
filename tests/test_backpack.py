@@ -813,9 +813,11 @@ class TestBlackMarketExchange:
         assert len(now_items) >= 1
         item = now_items[0]
         # pay_fish = 白商支付鱼（与黑商 target 同地图同稀有度）
-        # get_fish = 白商获得鱼（黑商 source 指定鱼）
+        # get_groups = 白商获得鱼分组（黑商 source 指定鱼，按场景+稀有度分组合并）
         pay_names = [f["name"] for f in item["pay_fish"]]
-        get_names = [f["name"] for f in item["get_fish"]]
+        get_names = []
+        for g in item["get_groups"]:
+            get_names.extend(g["names"])
         assert black_target.name in pay_names
         assert black_source.name in get_names
 

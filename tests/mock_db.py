@@ -1039,11 +1039,14 @@ class MockDB:
         return record
 
     async def exchange_list_active_records(self):
+        cutoff = datetime.now() - timedelta(days=30)
         return sorted(
             [
                 r
                 for r in self._exchange_records
-                if r.is_active and r.source_numeric_id != r.target_numeric_id
+                if r.is_active
+                and r.source_numeric_id != r.target_numeric_id
+                and r.create_time >= cutoff
             ],
             key=lambda r: (
                 r.target_scene_level,
@@ -1070,12 +1073,14 @@ class MockDB:
     async def exchange_find_active_by_source_numeric_id(
         self, source_numeric_id: str
     ):
+        cutoff = datetime.now() - timedelta(days=30)
         return [
             r
             for r in self._exchange_records
             if r.is_active
             and r.source_numeric_id == str(source_numeric_id)
             and r.source_numeric_id != r.target_numeric_id
+            and r.create_time >= cutoff
         ]
 
     async def exchange_invalidate_record(

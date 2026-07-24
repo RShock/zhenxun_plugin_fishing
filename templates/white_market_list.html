@@ -12,11 +12,17 @@
 .wm-arrow { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 18px; font-weight: bold; color: #888; background: #f5f5f5; min-width: 36px; }
 .wm-section-now .wm-arrow { color: #28a745; background: #e8f5e9; }
 .wm-section-possible .wm-arrow { color: #d9a400; background: #fff8e1; }
-.wm-fish { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin: 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 左侧背包鱼：水平排列，自动换行 */
+.wm-pay-row { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+/* 右侧获得鱼分组：每组一行，组内鱼名水平排列 */
+.wm-get-row { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.wm-fish { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap; }
 .wm-fish-sub { font-size: 10px; opacity: 0.8; font-weight: normal; }
+.wm-get-group { display: inline-flex; flex-wrap: wrap; gap: 2px; align-items: center; padding: 2px 6px; border-radius: 4px; }
+.wm-get-group-names { font-size: 12px; font-weight: bold; }
+.wm-get-group-sub { font-size: 10px; opacity: 0.8; font-weight: normal; }
 .wm-pay-label { font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; }
 .wm-empty { text-align: center; color: #999; padding: 40px; font-size: 14px; }
-.wm-count { font-size: 10px; color: #999; font-weight: normal; }
 {% endblock %}
 
 {% block content %}
@@ -40,23 +46,36 @@
             '<span class="wm-fish-sub"> ' + sub + '</span></span>';
     }
 
-    function fishListChips(fishList, showLocation){
-        return fishList.map(function(f){ return fishChip(f, showLocation); }).join(' ');
+    function payFishHtml(payFish){
+        return '<div class="wm-pay-row">' +
+            payFish.map(function(f){ return fishChip(f, false); }).join('') +
+            '</div>';
+    }
+
+    // 右侧获得鱼分组：同一场景同一稀有度的鱼合并为一行
+    function getGroupsHtml(getGroups){
+        var rows = getGroups.map(function(g){
+            var bg = rarityColors[g.rarity] || '#808080';
+            var namesHtml = g.names.map(function(n){ return esc(n); }).join(' / ');
+            var sub = g.rarity;
+            if (g.location_name) sub += ' ' + esc(g.location_name);
+            return '<span class="wm-get-group" style="background:' + bg + ';color:#fff;">' +
+                '<span class="wm-get-group-names">' + namesHtml + '</span>' +
+                '<span class="wm-get-group-sub"> ' + sub + '</span></span>';
+        });
+        return '<div class="wm-get-row">' + rows.join('') + '</div>';
     }
 
     function renderItem(item, isNow){
         var leftHtml, rightHtml;
         if (isNow){
-            // 可以交换：左边显示背包中具体的鱼
-            leftHtml = fishListChips(item.pay_fish, true);
-            rightHtml = fishListChips(item.get_fish, true);
+            leftHtml = payFishHtml(item.pay_fish);
         } else {
-            // 有可能交换：左边显示泛化标签
             var bg = rarityColors[item.pay_rarity] || '#808080';
             leftHtml = '<span class="wm-pay-label" style="background:' + bg + ';color:#fff;">' +
                 esc(item.pay_label) + '</span>';
-            rightHtml = fishListChips(item.get_fish, true);
         }
+        rightHtml = getGroupsHtml(item.get_groups);
         return '<div class="wm-item">' +
             '<div class="wm-side">' + leftHtml + '</div>' +
             '<div class="wm-arrow">&rarr;</div>' +
