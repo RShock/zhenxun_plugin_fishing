@@ -202,203 +202,203 @@
     },
     {
       "id": "月乳鲫",
-      "base_price": 169
+      "base_price": 160
     },
     {
       "id": "银匙鳐",
-      "base_price": 183
+      "base_price": 190
     },
     {
       "id": "星沫鳗",
-      "base_price": 175
+      "base_price": 180
     },
     {
       "id": "奶冠鲤",
-      "base_price": 172
+      "base_price": 160
     },
     {
       "id": "银河灯鱼",
-      "base_price": 179
+      "base_price": 190
     },
     {
       "id": "月壳蟹鱼",
-      "base_price": 194
-    },
-    {
-      "id": "潮汐银鲈",
       "base_price": 210
     },
     {
+      "id": "潮汐银鲈",
+      "base_price": 250
+    },
+    {
       "id": "环月飞鱼",
-      "base_price": 200
-    },
-    {
-      "id": "玉兔灯鲷",
-      "base_price": 198
-    },
-    {
-      "id": "灰晶鳕",
-      "base_price": 206
-    },
-    {
-      "id": "彗尾鲑",
-      "base_price": 221
-    },
-    {
-      "id": "焰尘鳟",
-      "base_price": 239
-    },
-    {
-      "id": "长尾星鳅",
       "base_price": 230
     },
     {
+      "id": "玉兔灯鲷",
+      "base_price": 210
+    },
+    {
+      "id": "灰晶鳕",
+      "base_price": 240
+    },
+    {
+      "id": "彗尾鲑",
+      "base_price": 270
+    },
+    {
+      "id": "焰尘鳟",
+      "base_price": 330
+    },
+    {
+      "id": "长尾星鳅",
+      "base_price": 300
+    },
+    {
       "id": "白火鲢",
-      "base_price": 226
+      "base_price": 280
     },
     {
       "id": "碎冰虹鱼",
-      "base_price": 235
+      "base_price": 310
     },
     {
       "id": "沙星魟",
-      "base_price": 290
+      "base_price": 470
     },
     {
       "id": "琉璃沙鳗",
-      "base_price": 314
+      "base_price": 580
     },
     {
       "id": "星蝎鲶",
-      "base_price": 301
+      "base_price": 530
     },
     {
       "id": "金尘鲷",
-      "base_price": 296
+      "base_price": 490
     },
     {
       "id": "海市蜃鱼",
-      "base_price": 308
+      "base_price": 560
     },
     {
       "id": "云须鲸鱼",
-      "base_price": 253
+      "base_price": 370
     },
     {
       "id": "鲸歌鲤",
-      "base_price": 275
+      "base_price": 440
     },
     {
       "id": "浮庭鲫",
-      "base_price": 264
+      "base_price": 400
     },
     {
       "id": "天羽鳐",
-      "base_price": 259
+      "base_price": 380
     },
     {
       "id": "雾铃鳕",
-      "base_price": 269
+      "base_price": 430
     },
     {
       "id": "极光鳗",
-      "base_price": 332
+      "base_price": 620
     },
     {
       "id": "虹幕鲑",
-      "base_price": 360
+      "base_price": 750
     },
     {
       "id": "井心灯鱼",
-      "base_price": 346
+      "base_price": 680
     },
     {
       "id": "绿辉鲈",
-      "base_price": 339
+      "base_price": 640
     },
     {
       "id": "磁光鳟",
-      "base_price": 353
+      "base_price": 730
     },
     {
       "id": "引力鲶",
-      "base_price": 381
+      "base_price": 820
     },
     {
       "id": "暗环魟",
-      "base_price": 412
+      "base_price": 1000
     },
     {
       "id": "奇点鳕",
-      "base_price": 396
+      "base_price": 920
     },
     {
       "id": "坠星鳗",
-      "base_price": 389
+      "base_price": 860
     },
     {
       "id": "潮汐黑鲤",
-      "base_price": 405
+      "base_price": 970
     },
     {
       "id": "晶冠鲷",
-      "base_price": 435
+      "base_price": 1100
     },
     {
       "id": "棱镜鲫",
-      "base_price": 472
+      "base_price": 1300
     },
     {
       "id": "星核金鱼",
-      "base_price": 453
+      "base_price": 1200
     },
     {
       "id": "蓝晶鳟",
-      "base_price": 445
+      "base_price": 1100
     },
     {
       "id": "冠冕灯鲈",
-      "base_price": 463
+      "base_price": 1300
     },
     {
       "id": "秒针鲑",
-      "base_price": 498
+      "base_price": 1400
     },
     {
       "id": "回环鳗",
-      "base_price": 540
+      "base_price": 1700
     },
     {
       "id": "逆刻鲤",
-      "base_price": 519
+      "base_price": 1600
     },
     {
       "id": "钟摆鲈",
-      "base_price": 509
+      "base_price": 1500
     },
     {
       "id": "永昼银鱼",
-      "base_price": 529
+      "base_price": 1600
     },
     {
       "id": "奇迹锦鲤",
-      "base_price": 570
+      "base_price": 1900
     },
     {
       "id": "终星鳐",
-      "base_price": 618
+      "base_price": 2300
     },
     {
       "id": "愿核灯鱼",
-      "base_price": 594
+      "base_price": 2100
     },
     {
       "id": "彼岸银鲑",
-      "base_price": 582
+      "base_price": 1900
     },
     {
       "id": "九曜梦鱼",
-      "base_price": 606
+      "base_price": 2200
     },
     {
       "id": "橘座鲫鱼",
