@@ -974,7 +974,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">白商 / 白商交换 来源鱼 目标鱼</span>
-        <p class="cmd-desc">查看并执行黑商记录的反向交换。用列表左边的鱼换右边的鱼，100% 成功。消耗赠送次数。</p>
+        <p class="cmd-desc">查看并执行黑商记录的反向交换。用箭头起点的鱼换终点的鱼，100% 成功。消耗赠送次数。</p>
       </div>
     </div>
     <div class="sec-h" style="margin-top:14px">黑商规则细节</div>
@@ -987,9 +987,9 @@ code, .ic {
     </ul>
     <div class="sec-h" style="margin-top:14px">白商规则细节</div>
     <ul class="clean">
-      <li>白商列表分两类：<strong>现在可交换</strong>（背包已有来源鱼）和<strong>有可能做到</strong>（鱼力足够但暂无来源鱼）</li>
+      <li>白商列表分两类：<strong>现在可交换</strong>（绿色实线箭头，背包已有支付鱼）和<strong>有可能做到</strong>（琥珀色虚线箭头，鱼力足够但暂无支付鱼）</li>
       <li>未解锁地图、鱼力不足、或缺少 UTR 成就的记录不显示</li>
-      <li>列表按获得鱼所在地图分组，以紧凑网格排列，不再显示鱼图片</li>
+      <li>以有向图展示：相同名字+稀有度的鱼共节点，箭头从支付鱼指向获得鱼，同地图鱼聚类靠近</li>
       <li>白商交换成功后，对应黑商记录失效</li>
     </ul>
   </div>
@@ -1040,8 +1040,8 @@ code, .ic {
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。多条记录时需指定序号。</td></tr>
-          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可逆交换列表（按地图分组的紧凑网格，无图片）。</td></tr>
-          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商交换 来源鱼 目标鱼</code></td><td>按列表方向执行逆交换：用左侧鱼换右侧鱼。</td></tr>
+          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可逆交换列表（有向图展示，节点为鱼，箭头为交换方向）。</td></tr>
+          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商交换 来源鱼 目标鱼</code></td><td>按箭头方向执行逆交换：用支付鱼换获得鱼。</td></tr>
         </tbody>
       </table>
     </div>
@@ -1096,16 +1096,16 @@ code, .ic {
         <p class="cmd-desc">白商交换成功会消耗 1 次当日赠送次数。赠送次数用尽时无法再白商交换。</p>
       </div>
       <div class="cmd-card">
-        <span class="cmd-name">列表分区</span>
-        <p class="cmd-desc"><strong>现在可交换</strong>：背包已有来源鱼；<strong>有可能做到</strong>：鱼力/地图已满足但暂无来源鱼。未解锁地图、鱼力不足、缺 UTR 成就的记录不显示。</p>
+        <span class="cmd-name">有向图展示</span>
+        <p class="cmd-desc"><strong>现在可交换</strong>（绿色实线箭头）：背包已有支付鱼；<strong>有可能做到</strong>（琥珀色虚线箭头）：鱼力/地图已满足但暂无支付鱼。未解锁地图、鱼力不足、缺 UTR 成就的记录不显示。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">去重与失效</span>
-        <p class="cmd-desc">相同逆交换方向只显示一条；已收集过「可换回那条鱼」的记录会隐藏。误操作的黑商交换可使用「黑商撤回」撤回。交换成功后记录失效，他人不可再用。</p>
+        <p class="cmd-desc">相同名字+稀有度的鱼共享同一个节点，最大程度压缩显示。已收集过的鱼不显示。误操作的黑商交换可使用「黑商撤回」撤回。交换成功后记录失效，他人不可再用。</p>
       </div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>网格布局：</strong>白商列表按获得鱼所在地图分组，每个地图内以紧凑文字网格排列交换条目，不再显示鱼图片，方便快速扫图。
+      <strong>图谱布局：</strong>白商列表以有向图展示所有交换关系。节点背景色对应稀有度，箭头从支付鱼指向获得鱼。相同地图的鱼通过力导向聚类靠近显示，跨地图交换一目了然。
     </div>
   </div>
 
