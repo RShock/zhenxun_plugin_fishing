@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
 
 class InMemoryUser:
@@ -113,6 +114,9 @@ class InMemoryBuff:
         self.value = value
         self.description = description
         self.source_user_id = source_user_id
+
+    async def save(self, update_fields=None):
+        pass
 
 
 def _normalize_fish_numeric_id(numeric_id: str | int | None) -> str:
@@ -291,6 +295,13 @@ class MockDB:
         if u.display_frames < count:
             return False
         u.display_frames -= count
+        return True
+
+    async def user_reduce_cat_frames(self, user_id: str, count: int = 1) -> bool:
+        u = await self.user_get(user_id)
+        if u.cat_frames < count:
+            return False
+        u.cat_frames -= count
         return True
 
     async def user_increment_nest_count(self, user_id: str):
@@ -940,6 +951,35 @@ class MockDB:
     async def buff_clear_expired(self):
         cutoff = datetime.now() - timedelta(hours=24)
         self._buffs = [b for b in self._buffs if b.end_time >= cutoff]
+
+    def make_buff_filter_mock(self):
+        """创建一个真正查询 self._buffs 的 filter mock，用于测试 buff 延长逻辑。"""
+
+        def _filter_fn(**kwargs):
+            filtered = list(self._buffs)
+            for key, val in kwargs.items():
+                if key == "target_type":
+                    filtered = [b for b in filtered if b.target_type == val]
+                elif key == "target_id":
+                    filtered = [b for b in filtered if b.target_id == val]
+                elif key == "buff_type":
+                    filtered = [b for b in filtered if b.buff_type == val]
+                elif key == "end_time__gt":
+                    filtered = [b for b in filtered if b.end_time > val]
+                elif key == "start_time__lte":
+                    filtered = [b for b in filtered if b.start_time <= val]
+
+            sorted_filtered = sorted(filtered, key=lambda b: b.end_time)
+            chain = MagicMock()
+            chain.order_by = MagicMock(return_value=chain)
+            chain.all = AsyncMock(return_value=sorted_filtered)
+            chain.first = AsyncMock(
+                return_value=sorted_filtered[0] if sorted_filtered else None
+            )
+            chain.filter = MagicMock(return_value=chain)
+            return chain
+
+        return MagicMock(side_effect=_filter_fn)
 
     async def has_unlocked_lost_wind(self, user_id: str, location_id: str) -> bool:
         return (user_id, location_id) in self._unlocked_lost_winds

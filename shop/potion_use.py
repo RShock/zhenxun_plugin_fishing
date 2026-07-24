@@ -89,12 +89,26 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     original_start_time = status_dict["start_time"]
     time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
+
+    # 退还本段钓鱼期间已从背包扣除的鱼饵，避免重新结算时重复扣除
+    old_bait_usage = status_dict.get("bait_usage", {})
+    refunded_bait_count = 0
+    for bait_id_str, consumed in old_bait_usage.items():
+        if consumed > 0:
+            await FishingUser.add_item(user_id, bait_id_str, "bait", consumed)
+            refunded_bait_count += consumed
+    if refunded_bait_count:
+        logger.info(
+            f"用户 {user_id} 回档药水退还鱼饵 {refunded_bait_count} 个"
+        )
+
     reset_status = {
         "location_id": status_dict["location_id"],
         "start_time": original_start_time,
         "last_settle_time": original_start_time,
         "fish_caught": [],
         "bait_consumed": 0,
+        "bait_usage": {},
         "frame_pity": user.frame_pity_counter,
         "cat_frame_pity": user.cat_frame_pity_counter,
         "utr_pity": user.utr_pity_counter,
@@ -244,19 +258,36 @@ async def use_display_frame_buff(
     if user.display_frames < count:
         count = user.display_frames
 
-    current_frame_buffs = await FishingBuff.get_global_buff_count(
-        BuffEffect.BUFF_TYPE_FRAME
-    )
-    total_layers = current_frame_buffs
-    if total_layers >= MAX_FRAME_BUFF_LAYERS:
-        return False, f"全图木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
+    now = datetime.now()
+    # 查询已有 frame buff，按 end_time 升序排列（最旧的优先延长）
+    current_frame_buffs = await FishingBuff.filter(
+        target_type=BuffEffect.TARGET_TYPE_GLOBAL,
+        buff_type=BuffEffect.BUFF_TYPE_FRAME,
+        end_time__gt=now,
+    ).order_by("end_time").all()
+    total_layers = len(current_frame_buffs)
 
-    layers_to_add = min(count, MAX_FRAME_BUFF_LAYERS - total_layers)
-    actual_frames = layers_to_add
+    duration_hours = ConfigManager.get_nest_duration_hours()
+
+    # 第一阶段：填满到上限（新增 buff 记录）
+    layers_to_add = min(count, max(0, MAX_FRAME_BUFF_LAYERS - total_layers))
+    # 第二阶段：剩余木框延长已有 buff（上限最多 MAX_FRAME_BUFF_LAYERS 个）
+    remaining = count - layers_to_add
+    extended_count = 0
+    if remaining > 0 and current_frame_buffs:
+        extendable = min(remaining, len(current_frame_buffs), MAX_FRAME_BUFF_LAYERS)
+        extended_count = extendable
+        extension_delta = timedelta(hours=duration_hours)
+        for buff in current_frame_buffs[:extendable]:
+            buff.end_time = _make_naive(buff.end_time) + extension_delta
+            await buff.save(update_fields=["end_time"])
+
+    actual_frames = layers_to_add + extended_count
+    if actual_frames == 0:
+        return False, f"全图木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
 
     await FishingUser.reduce_display_frames(user_id, actual_frames)
 
-    duration_hours = ConfigManager.get_nest_duration_hours()
     for _ in range(layers_to_add):
         await FishingBuff.add_global_buff(
             buff_type=BuffEffect.BUFF_TYPE_FRAME,
@@ -270,13 +301,20 @@ async def use_display_frame_buff(
 
     added_pct = layers_to_add * 5
     total_pct = new_total * 5
-    msg = f"使用木框成功，1-10图与S1速度+{added_pct}%，持续{duration_hours}小时"
-    if new_total > layers_to_add:
-        msg += f"（全图累计+{total_pct}%）"
-    if actual_frames < count:
-        msg += f"\n已达到{MAX_FRAME_BUFF_LAYERS * 5}%上限，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
 
-    logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，当前全图{new_total}层")
+    if layers_to_add > 0:
+        msg = f"使用木框成功，1-10图与S1速度+{added_pct}%，持续{duration_hours}小时"
+        if new_total > layers_to_add:
+            msg += f"（全图累计+{total_pct}%）"
+    else:
+        msg = f"木框效果已满，延长了{extended_count}个已有buff（每个+{duration_hours}小时）（全图累计+{total_pct}%）"
+
+    if layers_to_add > 0 and extended_count > 0:
+        msg += f"\n已满{MAX_FRAME_BUFF_LAYERS * 5}%上限，延长了{extended_count}个已有木框buff（每个+{duration_hours}小时）"
+    if actual_frames < count:
+        msg += f"\n已达到延长上限（最多{MAX_FRAME_BUFF_LAYERS}个），仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
+
+    logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}个buff，当前全图{new_total}层")
     return True, msg
 
 

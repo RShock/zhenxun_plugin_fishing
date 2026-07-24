@@ -715,8 +715,8 @@ code, .ic {
   <div class="card">
     <div class="sec-h">物品与经济</div>
     <div class="grid-2">
-      <div class="cmd-card"><span class="cmd-name">香甜玉米 / 打窝</span><p class="cmd-desc">地点级速度加成，上限 10 层，每层 +5%，每日打窝 2 次。与星空艇加成共享 50% 上限（仅 1-10 图和 S1）。</p></div>
-      <div class="cmd-card"><span class="cmd-name">木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。也可用于升级展示框。不可出售。</p></div>
+      <div class="cmd-card"><span class="cmd-name">香甜玉米 / 打窝</span><p class="cmd-desc">地点级速度加成，上限 10 层，每层 +5%，每日打窝 2 次。与星空艇加成共享 50% 上限（仅 1-10 图和 S1）。打窝满后继续使用玉米会延长已有 buff（每个+8h），最多延长 10 个。</p></div>
+      <div class="cmd-card"><span class="cmd-name">木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。满后继续使用木框会延长已有 buff（每个+8h），最多延长 10 个。也可用于升级展示框。不可出售。</p></div>
       <div class="cmd-card"><span class="cmd-name">猫框</span><p class="cmd-desc">用于猫猫展示框（3 倍签到收益），也可在 11-20 星空图打窝加速。不可出售。</p></div>
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水、闪光药水互斥。</p></div>
@@ -739,9 +739,9 @@ code, .ic {
         <tbody>
           <tr><td>鱼钩</td><td>所有地图</td><td>无</td><td>独立乘区</td></tr>
           <tr><td>鱼饵</td><td>所有地图</td><td>+120%</td><td>与打窝/展示框/星空艇同乘区累加</td></tr>
-          <tr><td>玉米打窝</td><td>1-20 图 + S1</td><td>10 层 (50%)</td><td>1-10 图+S1 与星空艇共享 50% 上限</td></tr>
-          <tr><td>木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享</td></tr>
-          <tr><td>猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>与玉米打窝同乘区叠加，地点级 buff</td></tr>
+          <tr><td>玉米打窝</td><td>1-20 图 + S1</td><td>10 层 (50%)</td><td>1-10 图+S1 与星空艇共享 50% 上限；满后可延长已有 buff</td></tr>
+          <tr><td>木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享；满后可延长已有 buff</td></tr>
+          <tr><td>猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>与玉米打窝同乘区叠加，地点级 buff；满后可延长已有 buff</td></tr>
           <tr><td>星空艇</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>全服共享，与玉米打窝共享上限</td></tr>
           <tr><td>天气</td><td>所有地图</td><td>—</td><td>独立乘区（雨天等）</td></tr>
           <tr><td>猫猫乐园</td><td>仅 S1</td><td>—</td><td>独立乘区</td></tr>
@@ -1350,7 +1350,7 @@ code, .ic {
       <li>全服 10 名玩家建设星空艇后，加成达到上限 +50%</li>
       <li class="warn">此时 1-10 图的晴天全部被迷途风替换，S1 也不再出现晴天</li>
       <li>11-20 图不受星空艇满层影响（星空图本身不产生晴天）</li>
-      <li>玉米打窝达到上限后无法继续叠加，可卖出多余玉米回收钓鱼币</li>
+      <li>玉米打窝达到上限后可继续使用玉米延长已有 buff（每个+8h，最多延长 10 个），不再拒绝</li>
       <li>每次新玩家建设时全服广播，第 10 次建设额外公告迷途风替换机制</li>
     </ul>
   </div>
@@ -1487,7 +1487,7 @@ code, .ic {
     </p>
     <div class="grid-2" style="margin-top:10px">
       <div class="cmd-card"><span class="cmd-name">用途一：展示栏强化</span><p class="cmd-desc">通过【升级展示栏】消耗猫框强化展示框，强化后的展示位每天 3 倍签到收益。</p></div>
-      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。满后可继续使用猫框延长已有 buff（每个+8h，最多延长 10 个）。</p></div>
       <div class="cmd-card"><span class="cmd-name">打窝规则</span><p class="cmd-desc">与玉米打窝共享地点 buff 层数上限；群聊每日打窝合计 2 次；私聊不计入次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">自动回收</span><p class="cmd-desc">传奇猫雕像 Lv3 建成后，背包和新钓的猫猫乐园材料自动回收（每个 80 金币）。</p></div>
     </div>

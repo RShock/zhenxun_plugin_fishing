@@ -284,6 +284,12 @@ async def _compute_settle_step(
     total_fish = merge_fish(existing_fish, simulation.fish_caught)
     total_bait_consumed = existing_bait_consumed + new_bait_consumed
 
+    # 累计鱼饵消耗明细（bait_id → 数量），供回档药水退还
+    existing_bait_usage = status_dict.get("bait_usage", {})
+    total_bait_usage = dict(existing_bait_usage)
+    for k, v in simulation.bait_usage.items():
+        total_bait_usage[k] = total_bait_usage.get(k, 0) + v
+
     existing_cat_eaten = deserialize_fish_caught(status_dict.get("cat_eaten_fish", []))
     total_cat_eaten = existing_cat_eaten + simulation.cat_eaten_fish
 
@@ -303,6 +309,7 @@ async def _compute_settle_step(
         cat_eaten_fish=total_cat_eaten,
         cat_gifts=merged_cat_gifts,
         meteor_fish_numbers=simulation.meteor_fish_numbers,
+        bait_usage=total_bait_usage,
     )
 
     step = StepResult(

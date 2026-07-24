@@ -261,6 +261,10 @@ def _patch_models(db, monkeypatch):
         db.user_reduce_display_frames,
     )
     monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingUser.reduce_cat_frames",
+        db.user_reduce_cat_frames,
+    )
+    monkeypatch.setattr(
         f"{FISHING_PKG}.models.FishingUser.has_unlocked_lost_wind",
         db.has_unlocked_lost_wind,
     )

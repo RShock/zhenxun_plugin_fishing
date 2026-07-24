@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 from zhenxun.plugins.zhenxun_plugin_fishing.starry import (
@@ -11,11 +12,12 @@ from zhenxun.plugins.zhenxun_plugin_fishing.shop import (
     buy_item,
     upgrade_display_slots,
     do_nest,
+    use_display_frame_buff,
     check_sign,
     exchange_to_gold,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
-from zhenxun.plugins.zhenxun_plugin_fishing.models import BuffEffect
+from zhenxun.plugins.zhenxun_plugin_fishing.models import BuffEffect, FishingBuff
 from zhenxun.plugins.zhenxun_plugin_fishing.render.shop import render_shop
 
 
@@ -696,4 +698,246 @@ class TestRenderShopStarFrames:
         assert captured["kwargs"].get("starry_frames") == 1
         assert captured["kwargs"].get("has_starry_ship") is True
         assert captured["kwargs"].get("base_rod_level") == user.base_rod_level
+
+
+class TestNestBuffExtension:
+    """玉米打窝满后延长已有 buff 的行为验证。"""
+
+    async def test_nest_full_then_extend_oldest(self, db, monkeypatch):
+        """已有5个buff、请求10个玉米：立刻用5个填满，再延长最旧的5个。"""
+        user = await db.user_get(USER_ID)
+        user.corn = 20
+        await start_fishing(USER_ID, "1")
+
+        # 预先创建 5 个 nest buff（end_time 递增，模拟不同时间打的窝）
+        now = datetime.now()
+        for i in range(5):
+            await db.buff_add_location_buff(
+                location_id="1",
+                buff_type=BuffEffect.BUFF_TYPE_NEST,
+                duration_hours=8,
+                value=5,
+                description=f"打窝效果",
+                source_user_id=USER_ID,
+            )
+
+        # 记录最旧 5 个 buff 的原始 end_time
+        old_buffs = sorted(
+            [b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_NEST],
+            key=lambda b: b.end_time,
+        )
+        original_end_times = [b.end_time for b in old_buffs[:5]]
+
+        # 用真正的 filter mock 替换默认的空返回 mock
+        monkeypatch.setattr(
+            FishingBuff, "filter", db.make_buff_filter_mock()
+        )
+
+        ok, msg = await do_nest(USER_ID, corn_count=10, is_private=True)
+        assert ok is True
+        assert "延长" in msg
+
+        # 验证：总消耗 10 个玉米
+        user_after = await db.user_get(USER_ID)
+        assert user_after.corn == 10
+
+        # 验证：新增 5 个 buff（总 10 个），最旧 5 个的 end_time 被延长
+        nest_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_NEST
+        ]
+        assert len(nest_buffs) == 10
+
+        # 最旧 5 个 buff 的 end_time 应该各延长了 8 小时
+        for i, buff in enumerate(old_buffs[:5]):
+            expected = original_end_times[i] + timedelta(hours=8)
+            # 允许微小时间差（mock 的 save 是 no-op，end_time 直接在对象上修改）
+            assert abs((buff.end_time - expected).total_seconds()) < 1
+
+    async def test_nest_already_full_extend_only(self, db, monkeypatch):
+        """已有10个buff（已满）、请求5个玉米：不新增，仅延长最旧5个。"""
+        user = await db.user_get(USER_ID)
+        user.corn = 10
+        await start_fishing(USER_ID, "1")
+
+        for i in range(10):
+            await db.buff_add_location_buff(
+                location_id="1",
+                buff_type=BuffEffect.BUFF_TYPE_NEST,
+                duration_hours=8,
+                value=5,
+                description="打窝效果",
+                source_user_id=USER_ID,
+            )
+
+        old_buffs = sorted(
+            [b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_NEST],
+            key=lambda b: b.end_time,
+        )
+        original_end_times = [b.end_time for b in old_buffs]
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await do_nest(USER_ID, corn_count=5, is_private=True)
+        assert ok is True
+        assert "延长" in msg
+        assert "打窝成功" not in msg
+
+        # 消耗 5 个玉米
+        user_after = await db.user_get(USER_ID)
+        assert user_after.corn == 5
+
+        # buff 总数不变（仍为 10）
+        nest_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_NEST
+        ]
+        assert len(nest_buffs) == 10
+
+        # 最旧 5 个被延长 8h，最新 5 个不变
+        for i in range(5):
+            expected = original_end_times[i] + timedelta(hours=8)
+            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+        for i in range(5, 10):
+            assert old_buffs[i].end_time == original_end_times[i]
+
+    async def test_nest_more_corn_than_extendable(self, db, monkeypatch):
+        """已有10个buff、请求15个玉米：仅延长10个，5个玉米未消耗。"""
+        user = await db.user_get(USER_ID)
+        user.corn = 20
+        await start_fishing(USER_ID, "1")
+
+        for i in range(10):
+            await db.buff_add_location_buff(
+                location_id="1",
+                buff_type=BuffEffect.BUFF_TYPE_NEST,
+                duration_hours=8,
+                value=5,
+                description="打窝效果",
+                source_user_id=USER_ID,
+            )
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await do_nest(USER_ID, corn_count=15, is_private=True)
+        assert ok is True
+        assert "未消耗" in msg
+
+        user_after = await db.user_get(USER_ID)
+        assert user_after.corn == 10  # 仅消耗 10 个
+
+
+class TestFrameBuffExtension:
+    """木框满后延长已有 buff 的行为验证。"""
+
+    async def test_frame_full_then_extend_oldest(self, db, monkeypatch):
+        """已有7个frame buff、请求8个木框：3个填满，5个延长最旧buff。"""
+        user = await db.user_get(USER_ID)
+        user.display_frames = 10
+        await start_fishing(USER_ID, "1")
+
+        now = datetime.now()
+        for i in range(7):
+            await db.buff_add_global_buff(
+                buff_type=BuffEffect.BUFF_TYPE_FRAME,
+                start_time=now,
+                end_time=now + timedelta(hours=8),
+                value=5,
+                description="木框效果",
+            )
+
+        old_buffs = sorted(
+            [b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME],
+            key=lambda b: b.end_time,
+        )
+        original_end_times = [b.end_time for b in old_buffs]
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await use_display_frame_buff(USER_ID, count=8, is_private=True)
+        assert ok is True
+        assert "延长" in msg
+
+        # 消耗 8 个木框（3新增 + 5延长）
+        user_after = await db.user_get(USER_ID)
+        assert user_after.display_frames == 2
+
+        # 总 buff 数 = 7 + 3 = 10
+        frame_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME
+        ]
+        assert len(frame_buffs) == 10
+
+        # 最旧 5 个被延长 8h
+        for i in range(5):
+            expected = original_end_times[i] + timedelta(hours=8)
+            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+
+    async def test_frame_already_full_extend_only(self, db, monkeypatch):
+        """已有10个frame buff（已满）、请求5个木框：仅延长，不新增。"""
+        user = await db.user_get(USER_ID)
+        user.display_frames = 5
+        await start_fishing(USER_ID, "1")
+
+        now = datetime.now()
+        for i in range(10):
+            await db.buff_add_global_buff(
+                buff_type=BuffEffect.BUFF_TYPE_FRAME,
+                start_time=now,
+                end_time=now + timedelta(hours=8),
+                value=5,
+                description="木框效果",
+            )
+
+        old_buffs = sorted(
+            [b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME],
+            key=lambda b: b.end_time,
+        )
+        original_end_times = [b.end_time for b in old_buffs]
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await use_display_frame_buff(USER_ID, count=5, is_private=True)
+        assert ok is True
+        assert "延长" in msg
+
+        # 消耗 5 个木框
+        user_after = await db.user_get(USER_ID)
+        assert user_after.display_frames == 0
+
+        # buff 总数不变
+        frame_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME
+        ]
+        assert len(frame_buffs) == 10
+
+        # 最旧 5 个被延长，最新 5 个不变
+        for i in range(5):
+            expected = original_end_times[i] + timedelta(hours=8)
+            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+        for i in range(5, 10):
+            assert old_buffs[i].end_time == original_end_times[i]
+
+    async def test_frame_more_than_extendable(self, db, monkeypatch):
+        """已有10个frame buff、请求15个木框：仅延长10个，5个未消耗。"""
+        user = await db.user_get(USER_ID)
+        user.display_frames = 20
+        await start_fishing(USER_ID, "1")
+
+        now = datetime.now()
+        for i in range(10):
+            await db.buff_add_global_buff(
+                buff_type=BuffEffect.BUFF_TYPE_FRAME,
+                start_time=now,
+                end_time=now + timedelta(hours=8),
+                value=5,
+                description="木框效果",
+            )
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await use_display_frame_buff(USER_ID, count=15, is_private=True)
+        assert ok is True
+        assert "未消耗" in msg
+
+        user_after = await db.user_get(USER_ID)
+        assert user_after.display_frames == 10  # 仅消耗 10 个
 
