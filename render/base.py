@@ -243,7 +243,7 @@ def build_fish_item_data(
         count_text = f"x{count}(+{new_count})" if count_text else f"(+{new_count})"
     is_utr = rarity == "UTR"
     utr_starry_src = ""
-    if is_utr and fish_name != "展示木框" and not is_cat_eaten and show_utr_starry:
+    if is_utr and fish_name not in ("展示木框", "木框") and not is_cat_eaten and show_utr_starry:
         utr_starry_src = _get_utr_starry_src()
     return {
         "name": fish_name,

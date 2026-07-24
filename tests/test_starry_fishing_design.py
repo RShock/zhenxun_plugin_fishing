@@ -958,7 +958,7 @@ class TestStarryUtrPityAndWeather:
         if (
             rarity == "UTR"
             and fish is not None
-            and getattr(fish, "id", None) != "展示木框"
+            and getattr(fish, "id", None) not in ("展示木框", "木框")
         ):
             assert new_utr_on == 0
         else:
