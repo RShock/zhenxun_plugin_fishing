@@ -197,7 +197,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     rest = group[1].strip() if group and len(group) > 1 and group[1] else ""
 
     available = (
-        "时光药水、回档药水、幸运药水、闪光药水、UTR自选券、香甜玉米、木框"
+        "时光药水、回档药水、幸运药水、闪光药水、UTR自选券、香甜玉米、木框、猫框"
     )
     if not item_name:
         await _send_text(

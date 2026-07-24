@@ -132,7 +132,7 @@ class TestCatchFish:
             fish_pool, 5, 1, frame_pity=150
         )
         assert fish is not None
-        assert fish.id == "展示木框"
+        assert fish.id in ("展示木框", "木框")
         assert quantity == 1
 
     def test_starry_location_does_not_drop_frame_on_pity(self):

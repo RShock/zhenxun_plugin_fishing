@@ -2,12 +2,14 @@
 黑商/白商交换 — 用更高级的鱼交换同级或更低级目标鱼，并支持历史逆交换。
 """
 
+import json
 import random
 import re
 from dataclasses import dataclass
 
 from ..config import (
     DAILY_GIFT_LIMIT,
+    RARITY_COLORS,
     RARITY_INDEX,
     ConfigManager,
     generate_fish_numeric_id,
@@ -282,24 +284,29 @@ async def _is_location_unlocked(user, location_id: str, rarity: str) -> bool:
 
 
 async def render_white_market_records(user_id: str) -> bytes:
-    """渲染白商交换列表为图片，按获得鱼所在地图分组，纯文字网格显示。
+    """渲染白商交换列表为有向图图片。
 
-    取消了「自己记录特例」：所有记录统一按图鉴已收集则隐藏。
-    列表按获得鱼（右侧）所在地图分组，每个地图内网格排列交换条目，不再显示鱼图片。
+    所有交换关系以有向图方式展示：
+    - 相同名字+稀有度的鱼共节点，最大程度压缩
+    - 节点显示鱼名、稀有度、所在地图，背景色与背包稀有度一致
+    - 相同地图的鱼通过力导向聚类力靠近显示
+    - 绿色实线箭头=现在可交换，琥珀色虚线=有可能做到
     """
     records = await FishingExchangeRecord.list_active_records()
     if not records:
         from ..render.base import gradient_bg, render_html, render_template
 
         html = render_template(
-            "white_market.html",
+            "white_market_graph.html",
             body_bg=gradient_bg("blue"),
-            width=520,
-            categories=[],
+            width=700,
+            nodes_json="[]",
+            edges_json="[]",
+            rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
+            has_data=False,
         )
-        return await render_html(html, 520)
+        return await render_html(html, 700)
 
-    # 批量缓存，避免逐条查询
     collected_cache: dict[tuple[str, str], bool] = {}
     backpack_cache: dict[str, bool] = {}
     unlock_cache: dict[str, bool] = {}
@@ -307,19 +314,16 @@ async def render_white_market_records(user_id: str) -> bytes:
 
     user = await FishingUser.get_user(user_id)
 
-    # 临时收集每个分类下的记录条目，稍后按地图分组
-    cat_entries: dict[str, list[dict]] = {
-        "现在可交换": [],
-        "有可能做到": [],
-    }
+    # 图数据：节点按 name_rarity 去重，边为 pay→get 有向连线
+    nodes_map: dict[str, dict] = {}
+    edges: list[dict] = []
 
     for record in records:
         reverse_key = (record.target_numeric_id, record.source_numeric_id)
         if reverse_key in shown_reverse_keys:
             continue
 
-        # 图鉴过滤：已收集获得鱼（黑商交出的鱼）则隐藏。
-        # 已取消「自己记录特例」——所有人的记录统一按图鉴过滤。
+        # 图鉴过滤：已收集获得鱼（黑商交出的鱼）则隐藏
         key = (record.source_name, record.source_rarity)
         if key not in collected_cache:
             collected_cache[key] = await FishingUser.is_collected(
@@ -328,8 +332,7 @@ async def render_white_market_records(user_id: str) -> bytes:
         if collected_cache[key]:
             continue
 
-        # 白商执行黑商的逆交换：支付黑商目标鱼，获得黑商来源鱼。
-        # 「现在可交换」检查用户是否持有黑商目标鱼（支付鱼）。
+        # 白商逆交换：支付=黑商target，获得=黑商source
         cache_key = record.target_numeric_id
         if cache_key not in backpack_cache:
             fish = await FishingUser.get_fish_by_numeric_id(
@@ -338,7 +341,7 @@ async def render_white_market_records(user_id: str) -> bytes:
             backpack_cache[cache_key] = fish is not None and fish.get("count", 0) > 0
 
         if backpack_cache[cache_key]:
-            cat = "现在可交换"
+            category = "now"
         else:
             unlock_key = f"{record.target_location_id}|{record.target_rarity}"
             if unlock_key not in unlock_cache:
@@ -347,66 +350,54 @@ async def render_white_market_records(user_id: str) -> bytes:
                 )
             if not unlock_cache[unlock_key]:
                 continue
-            cat = "有可能做到"
+            category = "possible"
 
         shown_reverse_keys.add(reverse_key)
 
-        cat_entries[cat].append(
-            {
-                # pay = 白商支付鱼（黑商 target），get = 白商获得鱼（黑商 source）
-                "pay_name": record.target_name,
-                "pay_rarity": record.target_rarity,
-                "pay_rarity_idx": RARITY_INDEX.get(record.target_rarity, 0),
-                "get_name": record.source_name,
-                "get_rarity": record.source_rarity,
-                "get_rarity_idx": RARITY_INDEX.get(record.source_rarity, 0),
-                "get_location_name": record.source_location_name,
-                "get_location_id": record.source_location_id,
-                "get_scene_level": record.source_scene_level,
+        # 支付鱼节点（黑商 target）
+        pay_key = f"{record.target_name}_{record.target_rarity}"
+        if pay_key not in nodes_map:
+            nodes_map[pay_key] = {
+                "id": pay_key,
+                "name": record.target_name,
+                "rarity": record.target_rarity,
+                "location_name": record.target_location_name,
+                "location_id": record.target_location_id,
             }
-        )
 
-    # 按获得鱼所在地图分组
-    categories: dict[str, list[dict]] = {}
-    for cat_name in ["现在可交换", "有可能做到"]:
-        entries = cat_entries[cat_name]
-        map_map: dict[str, dict] = {}
-        for entry in entries:
-            lid = entry["get_location_id"]
-            if lid not in map_map:
-                map_map[lid] = {
-                    "location_name": entry["get_location_name"],
-                    "_scene_level": entry["get_scene_level"],
-                    "entries": [],
-                }
-            map_map[lid]["entries"].append(entry)
+        # 获得鱼节点（黑商 source）
+        get_key = f"{record.source_name}_{record.source_rarity}"
+        if get_key not in nodes_map:
+            nodes_map[get_key] = {
+                "id": get_key,
+                "name": record.source_name,
+                "rarity": record.source_rarity,
+                "location_name": record.source_location_name,
+                "location_id": record.source_location_id,
+            }
 
-        map_list = list(map_map.values())
-        # 地图排序：场景等级升序 → 地图名
-        map_list.sort(key=lambda m: (m["_scene_level"], m["location_name"]))
-        for m in map_list:
-            # 条目排序：获得鱼稀有度降序 → 支付鱼名
-            m["entries"].sort(
-                key=lambda e: (-e["get_rarity_idx"], e["pay_name"])
-            )
-            del m["_scene_level"]
-        categories[cat_name] = map_list
+        # 有向边：支付鱼 → 获得鱼
+        if pay_key != get_key:
+            edges.append({
+                "source": pay_key,
+                "target": get_key,
+                "category": category,
+            })
 
-    # 构建最终分区列表
-    category_list: list[dict] = []
-    for name in ["现在可交换", "有可能做到"]:
-        maps = categories[name]
-        category_list.append({"name": name, "maps": maps, "empty": len(maps) == 0})
+    nodes = list(nodes_map.values())
 
     from ..render.base import gradient_bg, render_html, render_template
 
     html = render_template(
-        "white_market.html",
+        "white_market_graph.html",
         body_bg=gradient_bg("blue"),
-        width=520,
-        categories=category_list,
+        width=700,
+        nodes_json=json.dumps(nodes, ensure_ascii=False),
+        edges_json=json.dumps(edges, ensure_ascii=False),
+        rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
+        has_data=len(nodes) > 0,
     )
-    return await render_html(html, 520)
+    return await render_html(html, 700)
 
 
 async def black_market_exchange(

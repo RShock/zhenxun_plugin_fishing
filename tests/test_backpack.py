@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.config import (
@@ -744,9 +746,10 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(USER_ID)
 
-        # 已收集的鱼不再显示，两个分类都应为空
-        for cat in captured["categories"]:
-            assert cat["empty"] is True
+        # 已收集的鱼不再显示，图中应无节点
+        assert captured["has_data"] is False
+        nodes = json.loads(captured["nodes_json"])
+        assert len(nodes) == 0
 
     async def test_white_market_reverse_own_black_record(self, db):
         """允许玩家用白商逆交换自己的黑商记录。"""
@@ -802,24 +805,23 @@ class TestBlackMarketExchange:
 
         await render_white_market_records(TARGET_ID)
 
-        # 新结构：categories → maps → entries
-        now_cat = captured["categories"][0]  # "现在可交换"
-        possible_cat = captured["categories"][1]  # "有可能做到"
-        assert now_cat["empty"] is False
-        assert possible_cat["empty"] is True
-        # 找到包含交换条目的地图
-        now_maps = now_cat["maps"]
-        assert len(now_maps) >= 1
-        all_entries = []
-        for m in now_maps:
-            all_entries.extend(m["entries"])
-        assert len(all_entries) == 1
-        entry = all_entries[0]
+        # 图数据：应有节点和 "now" 类型的边
+        assert captured["has_data"] is True
+        nodes = json.loads(captured["nodes_json"])
+        edges = json.loads(captured["edges_json"])
+        assert len(nodes) >= 2
+        # 找到 category="now" 的边
+        now_edges = [e for e in edges if e["category"] == "now"]
+        assert len(now_edges) == 1
+        edge = now_edges[0]
         # pay = 白商支付鱼（黑商 target），get = 白商获得鱼（黑商 source）
-        assert entry["pay_name"] == black_target.name
-        assert entry["pay_rarity"] == black_target.rarity
-        assert entry["get_name"] == black_source.name
-        assert entry["get_rarity"] == black_source.rarity
+        node_map = {nd["id"]: nd for nd in nodes}
+        pay_node = node_map[edge["source"]]
+        get_node = node_map[edge["target"]]
+        assert pay_node["name"] == black_target.name
+        assert pay_node["rarity"] == black_target.rarity
+        assert get_node["name"] == black_source.name
+        assert get_node["rarity"] == black_source.rarity
 
 
 class TestBlackMarketRevoke:

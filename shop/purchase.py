@@ -100,7 +100,8 @@ async def buy_item(user_id: str, name_or_id: str, count: int = 1) -> tuple[bool,
         "升级展示栏", "升级展示位", "扩展展示栏", "扩充展示栏",
         "强化展示栏位",
         "升级星空木框", "星空木框",
-        "展示框", "猫猫展示框", "星空展示框",
+        "展示框", "增加展示框", "猫猫展示框",
+        "星空展示框", "升级星空展示框",
     ]:
         return await upgrade_display_slots(user_id)
 
@@ -186,12 +187,12 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
                 f"用户 {user_id} 用{frames_needed}个猫框强化了第 {next_upgrade} 个展示栏"
             )
             success_messages.append(
-                f"✅ 强化展示框：第 {next_upgrade} 个，消耗{frames_needed}个猫框\n"
+                f"✅ 猫猫展示框：第 {next_upgrade} 个，消耗{frames_needed}个猫框\n"
                 f"展示收益最高的鱼将获得3倍收益！"
             )
         else:
             shortage_messages.append(
-                f"❌ 强化展示框：猫框不足，需要{frames_needed}个"
+                f"❌ 猫猫展示框：猫框不足，需要{frames_needed}个"
                 f"（当前{owned}个），还差{frames_needed - owned}个"
             )
 
