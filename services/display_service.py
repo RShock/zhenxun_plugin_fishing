@@ -22,7 +22,7 @@ async def calculate_display_income(user_id: str) -> int:
     total_income = 0
     for i, price in enumerate(display_values):
         if i < starry_count:
-            # 星空木框：最贵的鱼 4 倍展示收益
+            # 星空展示框：最贵的鱼 4 倍展示收益
             total_income += price * 4
         elif i < upgraded_count:
             total_income += price * 3
@@ -41,7 +41,7 @@ async def auto_display_fish(
 async def auto_display_fish_with_msg(
     user_id: str, fish_name: str, rarity: str, numeric_id: str
 ) -> str | None:
-    if fish_name == "展示木框":
+    if fish_name in ("展示木框", "木框"):
         return None
 
     fish_data = ConfigManager.get_fish_by_name(fish_name)
@@ -93,9 +93,9 @@ async def auto_display_fish_with_msg(
                 user_id, min_slot, fish_name, rarity, numeric_id
             )
             logger.info(
-                f"用户 {user_id} 自动替换展示栏位{min_slot}为 {fish_name}({rarity})"
+                f"用户 {user_id} 自动替换展示框{min_slot}为 {fish_name}({rarity})"
             )
-            return f"{fish_name}({rarity})替换了栏位{min_slot}（每天获得展示收益）"
+            return f"{fish_name}({rarity})替换了展示框{min_slot}（每天获得展示收益）"
 
     return None
 
@@ -113,7 +113,7 @@ async def auto_fill_new_display_slot(user_id: str, slot: int) -> str | None:
     best_numeric_id = None
     best_rarity = None
     for fish in fish_list:
-        if fish["fish_name"] == "展示木框":
+        if fish["fish_name"] in ("展示木框", "木框"):
             continue
         if (fish["fish_name"], fish["rarity"]) in displayed_keys:
             continue
@@ -136,7 +136,7 @@ async def auto_fill_new_display_slot(user_id: str, slot: int) -> str | None:
                 user_id, slot, best_fish["fish_name"], best_rarity, best_numeric_id
             )
             logger.info(
-                f"用户 {user_id} 自动填充新展示栏位{slot}为 {best_fish['fish_name']}({best_rarity})"
+                f"用户 {user_id} 自动填充新展示框{slot}为 {best_fish['fish_name']}({best_rarity})"
             )
             return f"{best_fish['fish_name']}({best_rarity})"
 

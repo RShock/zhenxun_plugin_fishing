@@ -538,7 +538,7 @@ button { -webkit-tap-highlight-color: transparent; }
       <div class="subtitle">{{ wsOpen ? '实时连接中' : '连接已断开' }} · 金币 {{ fmtNumber(player.gold) }} · 鱼数 {{ backpack.total_fish_count }} · 🖼️{{ player.frame_pity }}/150 · 🐱{{ player.cat_frame_pity }}/15 · 🌀{{ player.utr_pity }}/150</div>
     </div>
     <div class="right">
-      <span class="pity-badge compact-hide" title="展示木框保底 / 猫猫框保底 / 迷途风UTR保底">🖼️{{ player.frame_pity }}/150 · 🐱{{ player.cat_frame_pity }}/15 · 🌀{{ player.utr_pity }}/150</span>
+      <span class="pity-badge compact-hide" title="木框保底 / 猫框保底 / 迷途风UTR保底">🖼️{{ player.frame_pity }}/150 · 🐱{{ player.cat_frame_pity }}/15 · 🌀{{ player.utr_pity }}/150</span>
       <button class="mobile-toggle" @click="toggleLeftDrawer">背包</button>
       <button class="mobile-toggle" @click="toggleRightDrawer">状态</button>
       <button class="compact-hide" onclick="window.open('/help.html', '_blank', 'noopener')">帮助</button>

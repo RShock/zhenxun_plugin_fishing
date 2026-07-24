@@ -1,5 +1,5 @@
 """
-打窝系统 — 玉米打窝、猫猫框打窝。
+打窝系统 — 玉米打窝、猫框打窝。
 """
 
 from datetime import datetime

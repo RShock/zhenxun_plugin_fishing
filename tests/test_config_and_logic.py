@@ -146,7 +146,7 @@ class TestCatchFish:
             location=location,
         )
         assert fish is not None
-        assert fish.id != "展示木框"
+        assert fish.id not in ("展示木框", "木框")
         assert quantity == 1
 
     def test_starry_location_appends_meteor_fish_at_one_percent(self, monkeypatch):
@@ -269,34 +269,34 @@ class TestCatchFish:
         assert _cap_rarity(7, "UR") == "UR"
 
     def test_pity_frame_not_doubled_by_duoduo(self):
-        """保底展示木框不应被多多药水翻倍。"""
+        """保底木框不应被多多药水翻倍。"""
         fish_pool = ["小鲫鱼", "麦穗鱼", "白条鱼"]
         fish, rarity, quantity, frame_pity, utr_pity = _catch_fish_with_buffs(
             fish_pool, 5, 1, frame_pity=150, duoduo_count=2
         )
         assert fish is not None
-        assert fish.id == "展示木框"
+        assert fish.id in ("展示木框", "木框")
         assert quantity == 1
 
     def test_pity_frame_not_doubled_by_cat_park_double(self):
-        """保底展示木框不应被猫乐园双倍概率翻倍。"""
+        """保底木框不应被猫乐园双倍概率翻倍。"""
         fish_pool = ["小鲫鱼", "麦穗鱼", "白条鱼"]
         fish, rarity, quantity, frame_pity, utr_pity = _catch_fish_with_buffs(
             fish_pool, 5, 1, frame_pity=150, cat_park_double_rate=0.10
         )
         assert fish is not None
-        assert fish.id == "展示木框"
+        assert fish.id in ("展示木框", "木框")
         assert quantity == 1
 
     def test_pity_frame_not_doubled_by_both(self):
-        """保底展示木框不应被多多+猫乐园双倍联合翻倍。"""
+        """保底木框不应被多多+猫乐园双倍联合翻倍。"""
         fish_pool = ["小鲫鱼", "麦穗鱼", "白条鱼"]
         fish, rarity, quantity, frame_pity, utr_pity = _catch_fish_with_buffs(
             fish_pool, 5, 1, frame_pity=150,
             duoduo_count=1, cat_park_double_rate=0.10,
         )
         assert fish is not None
-        assert fish.id == "展示木框"
+        assert fish.id in ("展示木框", "木框")
         assert quantity == 1
 
 

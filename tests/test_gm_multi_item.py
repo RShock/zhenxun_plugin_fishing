@@ -77,6 +77,7 @@ class TestParseItemInputSpecials:
 
     def test_frames(self):
         assert _parse_item_input("猫猫框") == ("cat_frame", "cat_frame")
+        assert _parse_item_input("猫框") == ("cat_frame", "cat_frame")
         assert _parse_item_input("展示木框") == ("display_frame", "display_frame")
         assert _parse_item_input("木框") == ("display_frame", "display_frame")
 
@@ -137,8 +138,8 @@ class TestGmAddItemIntegration:
     @pytest.mark.parametrize(
         ("item", "count", "method", "message"),
         [
-            ("猫猫框", 5, "add_cat_frames", "已给用户 10001 添加 5 个猫猫框！"),
-            ("展示木框", 4, "add_display_frames", "已给用户 10001 添加 4 个展示木框！"),
+            ("猫框", 5, "add_cat_frames", "已给用户 10001 添加 5 个猫框！"),
+            ("木框", 4, "add_display_frames", "已给用户 10001 添加 4 个木框！"),
             ("玉米", 6, "add_corn", "已给用户 10001 添加 6 个香甜玉米！"),
         ],
     )
@@ -341,8 +342,8 @@ class TestGmAddItemIntegration:
         assert specs == [("时光药水", 2), ("幸运药水", 5)]
 
     def test_chinese_comma(self):
-        specs = parse_gm_item_specs("猫猫框，展示木框", default_count=2)
-        assert specs == [("猫猫框", 2), ("展示木框", 2)]
+        specs = parse_gm_item_specs("猫框，木框", default_count=2)
+        assert specs == [("猫框", 2), ("木框", 2)]
 
     def test_single(self):
         assert parse_gm_item_specs("时光药水", 1) == [("时光药水", 1)]
@@ -388,8 +389,8 @@ class TestParseGmAddBody:
         assert target == ""
 
     def test_batch_qq(self):
-        specs, target = parse_gm_add_body("猫猫框 5 1922570420,3404193303")
-        assert specs == [("猫猫框", 5)]
+        specs, target = parse_gm_add_body("猫框 5 1922570420,3404193303")
+        assert specs == [("猫框", 5)]
         assert "1922570420" in target
         assert "3404193303" in target
 

@@ -601,7 +601,7 @@ CAT_PARK_FERRIS_WHEEL_REWARDS = [
     ("真多多药水", "potion", "真多多药水", 12.5),
     ("time_potion", "potion", "时光药水", 12.5),
     ("幸运药水", "potion", "幸运药水", 12.5),
-    ("cat_frame", None, "猫猫框", 12.5),
+    ("cat_frame", None, "猫框", 12.5),
     ("corn", None, "玉米", 50.0),
 ]
 
@@ -613,7 +613,7 @@ async def claim_ferris_wheel_rewards(
 
     抽数 = 摩天轮建筑等级（0~3）× 累计天数（days_missed + 1），每日签到时调用。
     与展示收益一致，未登录的天数累计合并到下次签到一并结算。
-    奖池加权随机：玉米 50% / 真多多药水 / 时光药水 / 幸运药水 / 猫猫框 各 12.5%。
+    奖池加权随机：玉米 50% / 真多多药水 / 时光药水 / 幸运药水 / 猫框 各 12.5%。
     返回奖励消息列表（未建摩天轮或非新签到日返回空列表）。
     """
     state = await get_cat_park_state(user_id)

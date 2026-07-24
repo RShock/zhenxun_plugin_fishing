@@ -197,14 +197,14 @@ class FishingUser(Model):
     skin_id = fields.CharField(50, default="1", description="当前皮肤ID")
     owned_skins = fields.JSONField(default=["1"], description="拥有的皮肤列表")
     nickname = fields.CharField(255, default="", description="角色昵称")
-    display_slots = fields.IntField(default=3, description="展示栏位数")
+    display_slots = fields.IntField(default=3, description="展示框数")
     gold = fields.IntField(default=0, description="钓鱼币")
     corn = fields.IntField(default=0, description="香甜玉米(打窝材料)")
     last_sign_date = fields.DateField(null=True, description="上次签到日期")
     display_frames = fields.IntField(default=0, description="木框数量")
     cat_frames = fields.IntField(default=0, description="猫框数量")
     upgraded_display_count = fields.IntField(
-        default=0, description="已强化展示栏位数量"
+        default=0, description="猫猫展示框数量"
     )
     frame_pity_counter = fields.IntField(default=0, description="木框保底计数器")
     cat_frame_pity_counter = fields.IntField(default=0, description="猫框保底计数器")

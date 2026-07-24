@@ -233,13 +233,13 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
 async def use_display_frame_buff(
     user_id: str, count: int = 1, is_private: bool = False, **kwargs
 ) -> tuple[bool, str]:
-    """展示木框 — 普通地图与 S1 速度加成。"""
+    """木框 — 普通地图与 S1 速度加成。"""
     if count < 1:
         return False, "数量必须大于0"
 
     user = await get_or_create_user(user_id)
     if user.display_frames <= 0:
-        return False, "展示木框不足，当前没有展示木框"
+        return False, "木框不足，当前没有木框"
     # 宽容机制：请求数量超出库存时，使用全部剩余木框
     if user.display_frames < count:
         count = user.display_frames

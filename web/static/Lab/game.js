@@ -21,7 +21,7 @@
     corn:["玉米","普通补给品","◒"],black_market_extra_ticket:["黑商额外兑换券","可突破黑商兑换次数","券"],
     lottery_fragment_low:["中级抽奖碎片","5 个自动兑换中级奖励","碎"],wish_score:["0.5 积分","愿望积分奖励","✦"],
     duoduo_potion:["真多多药水","复制最终生成的星空鱼，持续 12 竿","∞"],lucky_potion:["幸运药水","额外生成一组并择优，持续 24 竿","☘"],
-    reset_potion:["回档药水","恢复今天全部垂钓次数","↶"],cat_frame:["猫框","用于升级星空木框","猫"],
+    reset_potion:["回档药水","恢复今天全部垂钓次数","↶"],cat_frame:["猫框","用于升级星空展示框","猫"],
     lottery_fragment_mid:["高级抽奖碎片","5 个自动兑换高级奖励","碎"],flash_potion:["闪光药水","三种星空天气合一，持续 8 竿","ϟ"],
     time_potion:["时光药水","立即完整模拟并进入次日","时"],utr_select_ticket:["UTR 自选券","解锁后可自选同地图 UTR 鱼","UTR"],
     lottery_fragment_high:["究极抽奖碎片","5 个自动兑换究极奖励","碎"]
@@ -157,7 +157,7 @@
   }
   function checkMiracle(){
     const bag=bagFish();if(bag.length<8)return;const indices=subsetIndices(bag);if(!indices)return;const used=indices.map(i=>bag[i]),uids=new Set(used.map(f=>f.uid));state.allFish=state.allFish.filter(f=>!uids.has(f.uid));state.starFrames++;state.totalMiracles++;queued.miracles++;
-    log(`奇迹命中 7777777：消耗 ${used.length} 条星空鱼，获得星辰木框 ×1`,"reward");$("miracleText").textContent=`${used.length} 条背包星空鱼的编号之和命中七个 7，已转化为第 ${state.starFrames} 个星辰木框。`;if(!quiet)showModal("miracleModal");
+    log(`奇迹命中 7777777：消耗 ${used.length} 条星空鱼，获得星空框 ×1`,"reward");$("miracleText").textContent=`${used.length} 条背包星空鱼的编号之和命中七个 7，已转化为第 ${state.starFrames} 个星空框。`;if(!quiet)showModal("miracleModal");
   }
 
   const NORMAL_FISH=["银鳞鱼","月光鳐","奶油鲤","星砂鳗","玻璃水母","彗尾鲫"];
@@ -191,7 +191,7 @@
     else if(key==="time_potion"){state.items[key]--;advanceDay({simulateRemaining:true,silent:true});toast("时光流转，已进入次日")}
     else return toast("该道具在实验室中为展示用途");log(`使用道具：${ITEM_INFO[key][0]}`,"reward");render();save();
   }
-  function upgradeFrame(type){const isStarry=type==="starry",level=isStarry?state.starryFrameLevel:state.celestialFrameLevel,cost=level+1;if(level>=10)return toast("该木框已经满级");const owned=isStarry?(state.items.cat_frame||0):state.starFrames;if(owned<cost)return toast(`需要 ${cost} 个${isStarry?"猫框":"星辰木框"}`);if(isStarry){state.items.cat_frame-=cost;state.starryFrameLevel++}else{state.starFrames-=cost;state.celestialFrameLevel++}log(`${isStarry?"星空木框":"星辰展示栏"}强化至 ${level+1} 级`,"reward");render();save();toast("强化成功")}
+  function upgradeFrame(type){const isStarry=type==="starry",level=isStarry?state.starryFrameLevel:state.celestialFrameLevel,cost=level+1;if(level>=10)return toast("该木框已经满级");const owned=isStarry?(state.items.cat_frame||0):state.starFrames;if(owned<cost)return toast(`需要 ${cost} 个${isStarry?"猫框":"星空框"}`);if(isStarry){state.items.cat_frame-=cost;state.starryFrameLevel++}else{state.starFrames-=cost;state.celestialFrameLevel++}log(`${isStarry?"星空展示框":"星辰展示栏"}强化至 ${level+1} 级`,"reward");render();save();toast("强化成功")}
 
   function showModal(id){const el=$(id);el.classList.add("open");el.setAttribute("aria-hidden","false")}
   function hideModal(id){const el=$(id);el.classList.remove("open");el.setAttribute("aria-hidden","true")}
@@ -210,7 +210,7 @@
     const bag=bagFish().sort((a,b)=>b.day-a.day||b.displayScore-a.displayScore);$("bagCapacity").textContent=`${bag.length} 条`;
     $("fishInventory").innerHTML=bag.length?`<div class="fish-grid">${bag.slice(0,MAX_FISH_RENDER).map(f=>`<article class="fish-tile pool-${f.pool}"><i class="pool-dot"></i><div class="id">${f.idText}</div><div class="meta"><span>D${f.day} · ${f.location}图</span><b>${f.displayScore} 分</b></div><div class="traits">${esc(f.features.slice(0,2).map(x=>x.name).join(" + ")||"无显著番型")}</div></article>`).join("")}</div>${bag.length>MAX_FISH_RENDER?`<div class="timeline-empty">仅展示最新 ${MAX_FISH_RENDER} 条，共 ${bag.length} 条</div>`:""}`:`<div class="empty-panel"><b>背包空空如也</b>高分鱼会进入展馆，其余星空鱼留在这里参与奇迹。</div>`;
     const keys=Object.keys(ITEM_INFO);$("itemInventory").innerHTML=`<div class="item-list">${keys.map(k=>{const n=state.items[k]||0,usable=["lucky_potion","flash_potion","duoduo_potion","reset_potion","time_potion"].includes(k);return`<article class="item-row"><div class="item-icon">${ITEM_INFO[k][2]}</div><div class="item-info"><b>${ITEM_INFO[k][0]}</b><small>${ITEM_INFO[k][1]}</small></div><strong>×${n}</strong>${usable?`<button class="frame-upgrade" style="width:46px" data-use-item="${k}" ${n?"":"disabled"}>使用</button>`:""}</article>`}).join("")}</div>`;
-    const cat=state.items.cat_frame||0,starCost=state.starryFrameLevel+1,celCost=state.celestialFrameLevel+1;$("frameInventory").innerHTML=`<div class="item-list"><article class="item-row"><div class="item-icon">✧</div><div class="item-info"><b>星空木框 · Lv.${state.starryFrameLevel}/10</b><small>展示最贵的鱼，签到奖励 ×4 · 持有猫框 ${cat}</small><button class="frame-upgrade" data-upgrade="starry" ${state.starryFrameLevel>=10||cat<starCost?"disabled":""}>消耗 ${starCost} 猫框强化</button></div></article><article class="item-row"><div class="item-icon">✦</div><div class="item-info"><b>星辰展示栏 · Lv.${state.celestialFrameLevel}/10</b><small>奇迹产物 · 持有星辰木框 ${state.starFrames}</small><button class="frame-upgrade" data-upgrade="celestial" ${state.celestialFrameLevel>=10||state.starFrames<celCost?"disabled":""}>消耗 ${celCost} 星辰木框强化</button></div></article></div>`;
+    const cat=state.items.cat_frame||0,starCost=state.starryFrameLevel+1,celCost=state.celestialFrameLevel+1;$("frameInventory").innerHTML=`<div class="item-list"><article class="item-row"><div class="item-icon">✧</div><div class="item-info"><b>星空展示框 · Lv.${state.starryFrameLevel}/10</b><small>展示最贵的鱼，签到奖励 ×4 · 持有猫框 ${cat}</small><button class="frame-upgrade" data-upgrade="starry" ${state.starryFrameLevel>=10||cat<starCost?"disabled":""}>消耗 ${starCost} 猫框强化</button></div></article><article class="item-row"><div class="item-icon">✦</div><div class="item-info"><b>星辰展示栏 · Lv.${state.celestialFrameLevel}/10</b><small>奇迹产物 · 持有星空框 ${state.starFrames}</small><button class="frame-upgrade" data-upgrade="celestial" ${state.celestialFrameLevel>=10||state.starFrames<celCost?"disabled":""}>消耗 ${celCost} 星空框强化</button></div></article></div>`;
   }
   function renderGallery(){const list=galleryFish();$("galleryList").innerHTML=list.length?list.map((f,i)=>`<article class="gallery-entry"><div class="rank">${String(i+1).padStart(2,"0")}</div><div><div class="gid">${f.idText}</div><small>${esc(f.features.slice(0,3).map(x=>x.name).join(" + ")||"无显著番型")} · D${f.day}</small></div><strong>${f.displayScore}</strong></article>`).join(""):`<div class="empty-panel"><b>展馆尚未点亮</b>获得至少 4 分的星空鱼后，它会自动陈列于此。</div>`}
   function renderDebug(){

@@ -119,7 +119,7 @@ async def buy_item(user_id: str, name_or_id: str, count: int = 1) -> tuple[bool,
 
 
 async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
-    """万能升级展示框：兼容增加/强化展示栏位、升级星空木框等全部指令。
+    """万能升级展示框：兼容增加/强化展示框、升级星空展示框等全部指令。
 
     规则：
     1. 展示框（木框）、猫框强化、星空展示框 未满 10 的加入校验列表
@@ -137,7 +137,7 @@ async def upgrade_display_slots(user_id: str) -> tuple[bool, str]:
     checked_any = False
     dirty_fields: set[str] = set()
 
-    # ── 1. 增加展示栏位（木框）────────────────────────────────────────
+    # ── 1. 增加展示框（木框）────────────────────────────────────────
     if user.display_slots < 10:
         checked_any = True
         next_slot = user.display_slots + 1

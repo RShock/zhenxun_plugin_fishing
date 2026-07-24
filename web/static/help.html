@@ -691,14 +691,14 @@ code, .ic {
           <tr><td><span class="tag t-basic">背包</span></td><td><code>锁鱼 筛选</code> / <code>解锁 筛选</code></td><td>保护或解除保护鱼。支持鱼 ID、稀有度（SR/UTR）、位置通配符（<code>S1**</code>）、全部。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>赠送 鱼ID @用户</code></td><td>赠送鱼给其他用户（需平台真实 @）。</td></tr>
           <tr><td><span class="tag t-basic">图鉴</span></td><td><code>图鉴</code> / <code>图鉴1</code> / <code>图鉴2</code></td><td>图鉴1 为普通地图和 S1，图鉴2 为星空地图。</td></tr>
-          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店</code></td><td>查看鱼饵、升级、展示栏等可购买项目。</td></tr>
+          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店</code></td><td>查看鱼饵、升级、展示框等可购买项目。</td></tr>
           <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店购买 物品名 [数量]</code></td><td>购买鱼饵或商店物品（药水不在鱼店出售）。</td></tr>
           <tr><td><span class="tag t-basic">成长</span></td><td><code>升级鱼竿</code> / <code>升级鱼钩</code></td><td>提升地图进入能力或钓鱼速度。</td></tr>
-          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级展示栏</code></td><td>万能升级：未满 10 的木框/猫框/星空框一并校验；材料够的全部升级扣框，否则报告各自还差多少。星空木框消耗星辰木框（最贵鱼 4 倍收益）。</td></tr>
+          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级展示栏</code></td><td>万能升级：未满 10 的木框/猫框/星空框一并校验；材料够的全部升级扣框，否则报告各自还差多少。星空展示框消耗星空框（最贵鱼 4 倍收益）。</td></tr>
           <tr><td><span class="tag t-basic">成长</span></td><td><code>钓鱼币兑换 [数量]</code></td><td>进行钓鱼币相关兑换。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>打窝 [层数]</code></td><td>消耗玉米给当前地点增加速度，每日 2 次。</td></tr>
-          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 物品名 [数量]</code></td><td>使用药水、展示木框、猫猫框等道具。数量超出库存自动使用全部剩余。</td></tr>
-          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫猫框给当前地点打窝加速。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 物品名 [数量]</code></td><td>使用药水、木框、猫框等道具。数量超出库存自动使用全部剩余。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫框给当前地点打窝加速。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>设定鱼饵 鱼饵名</code></td><td>设置优先使用的鱼饵。<code>取消/0/自动/清除</code> 恢复自动选择。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>卖出鱼饵 鱼饵名</code></td><td>卖出指定鱼饵，按购买价回收。</td></tr>
           <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>黑商撤回</code> / <code>白商</code></td><td>鱼获交换、撤回与逆交换，详见黑商白商专页。</td></tr>
@@ -716,11 +716,11 @@ code, .ic {
     <div class="sec-h">物品与经济</div>
     <div class="grid-2">
       <div class="cmd-card"><span class="cmd-name">香甜玉米 / 打窝</span><p class="cmd-desc">地点级速度加成，上限 10 层，每层 +5%，每日打窝 2 次。与星空艇加成共享 50% 上限（仅 1-10 图和 S1）。</p></div>
-      <div class="cmd-card"><span class="cmd-name">展示木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。也可用于升级展示栏位。不可出售。</p></div>
-      <div class="cmd-card"><span class="cmd-name">猫猫框</span><p class="cmd-desc">用于强化展示栏位（3 倍签到收益），也可在 11-20 星空图打窝加速。不可出售。</p></div>
+      <div class="cmd-card"><span class="cmd-name">木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。也可用于升级展示框。不可出售。</p></div>
+      <div class="cmd-card"><span class="cmd-name">猫框</span><p class="cmd-desc">用于猫猫展示框（3 倍签到收益），也可在 11-20 星空图打窝加速。不可出售。</p></div>
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水、闪光药水互斥。</p></div>
-      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、展示木框、猫猫框也有效。与真多多药水、闪光药水互斥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、木框、猫框也有效。与真多多药水、闪光药水互斥。</p></div>
       <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">清空当前钓鱼结果，并从本次开钓时间起重新结算全部已钓时段；本轮已使用的时光药水会等量退回。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
     </div>
@@ -740,8 +740,8 @@ code, .ic {
           <tr><td>鱼钩</td><td>所有地图</td><td>无</td><td>独立乘区</td></tr>
           <tr><td>鱼饵</td><td>所有地图</td><td>+120%</td><td>与打窝/展示框/星空艇同乘区累加</td></tr>
           <tr><td>玉米打窝</td><td>1-20 图 + S1</td><td>10 层 (50%)</td><td>1-10 图+S1 与星空艇共享 50% 上限</td></tr>
-          <tr><td>展示木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享</td></tr>
-          <tr><td>猫猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>与玉米打窝同乘区叠加，地点级 buff</td></tr>
+          <tr><td>木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享</td></tr>
+          <tr><td>猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>与玉米打窝同乘区叠加，地点级 buff</td></tr>
           <tr><td>星空艇</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>全服共享，与玉米打窝共享上限</td></tr>
           <tr><td>天气</td><td>所有地图</td><td>—</td><td>独立乘区（雨天等）</td></tr>
           <tr><td>猫猫乐园</td><td>仅 S1</td><td>—</td><td>独立乘区</td></tr>
@@ -749,7 +749,7 @@ code, .ic {
       </table>
     </div>
     <div class="callout warn" style="margin-top:10px">
-      <strong>11-20 图限制：</strong>星空图 11-20 中，展示木框和星空艇加成均不生效；可用鱼钩、鱼饵、玉米打窝，以及<strong>猫猫框打窝</strong>（<code>钓鱼使用 猫猫框</code>）。
+      <strong>11-20 图限制：</strong>星空图 11-20 中，木框和星空艇加成均不生效；可用鱼钩、鱼饵、玉米打窝，以及<strong>猫框打窝</strong>（<code>钓鱼使用 猫框</code>）。
     </div>
   </div>
 
@@ -1002,8 +1002,8 @@ code, .ic {
         <thead><tr><th>保底类型</th><th>阈值</th><th>计数条件</th><th>获取后</th></tr></thead>
         <tbody>
           <tr><td>UTR 保底</td><td>150 次</td><td>1-10/S1：仅已解锁的迷途风天气 +1；11-20：仅集齐该图全部 UR 后的乱纪元 +1</td><td>计数器归零</td></tr>
-          <tr><td>展示木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零</td></tr>
-          <tr><td>猫猫框保底</td><td>15 次</td><td>每次被猫吃掉鱼但是未掉落框时 +1</td><td>计数器归零</td></tr>
+          <tr><td>木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零</td></tr>
+          <tr><td>猫框保底</td><td>15 次</td><td>每次被猫吃掉鱼但是未掉落框时 +1</td><td>计数器归零</td></tr>
         </tbody>
       </table>
     </div>
@@ -1255,7 +1255,7 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
       <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">12.5% 概率获得</p></div>
-      <div class="cmd-card"><span class="cmd-name">猫猫框</span><p class="cmd-desc">12.5% 概率获得</p></div>
+      <div class="cmd-card"><span class="cmd-name">猫框</span><p class="cmd-desc">12.5% 概率获得</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
       <strong>累计式结算：</strong>未登录的天数会累计合并到下次签到。抽数 = 建筑等级 ×（错过天数 + 1）。
@@ -1334,8 +1334,8 @@ code, .ic {
           <tr><td>鱼钩</td><td>✓</td><td>✓</td></tr>
           <tr><td>鱼饵</td><td>✓</td><td>✓</td></tr>
           <tr><td>玉米打窝</td><td>✓（与星空艇共享 50%）</td><td>✓（独立 50% 上限）</td></tr>
-          <tr><td>展示木框</td><td>✓（独立 50%）</td><td>✗ 不生效</td></tr>
-          <tr><td>猫猫框打窝</td><td>✗ 仅星空图</td><td>✓（与玉米打窝同乘区，50% 上限）</td></tr>
+          <tr><td>木框</td><td>✓（独立 50%）</td><td>✗ 不生效</td></tr>
+          <tr><td>猫框打窝</td><td>✗ 仅星空图</td><td>✓（与玉米打窝同乘区，50% 上限）</td></tr>
           <tr><td>星空艇加成</td><td>✓（与打窝共享 50%）</td><td>✗ 不生效</td></tr>
           <tr><td>猫猫乐园速度</td><td>仅 S1</td><td>✗</td></tr>
         </tbody>
@@ -1362,9 +1362,9 @@ code, .ic {
       <li>新获得并进入背包的鱼会尝试自动放入空位，或在价值更高时替换低价值鱼；同名同稀有度不会重复展示，历史背包不会在收杆时重新扫描</li>
       <li>【升级展示栏】为万能升级：木框/猫框/星空框未满 10 的全部校验</li>
       <li>材料足够则一并升级扣框；全部不足则报告各自还差多少</li>
-      <li>星空木框提供 4 倍展示收益，最多 10 个</li>
-      <li>星空木框消耗<strong>星辰木框</strong>升级；星辰木框通过奇迹获得，持有数量不设上限</li>
-      <li>建设星空艇后才可升级星空木框</li>
+      <li>星空展示框提供 4 倍展示收益，最多 10 个</li>
+      <li>星空展示框消耗<strong>星空框</strong>升级；星空框通过奇迹获得，持有数量不设上限</li>
+      <li>建设星空艇后才可升级星空展示框</li>
     </ul>
   </div>
 
@@ -1475,24 +1475,24 @@ code, .ic {
       <li>猫猫过山车建筑等级提升天气增幅效果（Lv1: +3% / Lv2: +6% / Lv3: +10%），仅对猫猫乐园内生效</li>
     </ul>
     <div class="callout tip" style="margin-top:10px">
-      <strong>猫礼物：</strong>猫礼物可能是鱼或猫猫框。猫猫框有独立保底（15 次必出）。猫礼物即时发放到背包，不需要收杆。
+      <strong>猫礼物：</strong>猫礼物可能是鱼或猫框。猫框有独立保底（15 次必出）。猫礼物即时发放到背包，不需要收杆。
     </div>
   </div>
 
-  <!-- 猫猫框 -->
+  <!-- 猫框 -->
   <div class="card">
-    <div class="sec-h">猫猫框</div>
+    <div class="sec-h">猫框</div>
     <p style="font-size:14px; line-height:1.7;">
-      猫猫框主要通过<strong>猫天气的猫礼物</strong>获得（保底 15 次）。用于强化展示栏位（3 倍签到收益），也可在 11-20 星空图打窝加速。展示木框与猫猫框均<strong>不可出售</strong>。
+      猫框主要通过<strong>猫天气的猫礼物</strong>获得（保底 15 次）。用于猫猫展示框（3 倍签到收益），也可在 11-20 星空图打窝加速。木框与猫框均<strong>不可出售</strong>。
     </p>
     <div class="grid-2" style="margin-top:10px">
-      <div class="cmd-card"><span class="cmd-name">用途一：展示栏强化</span><p class="cmd-desc">通过【升级展示栏】消耗猫猫框强化展示栏位，强化后的展示位每天 3 倍签到收益。</p></div>
-      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">用途一：展示栏强化</span><p class="cmd-desc">通过【升级展示栏】消耗猫框强化展示框，强化后的展示位每天 3 倍签到收益。</p></div>
+      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。</p></div>
       <div class="cmd-card"><span class="cmd-name">打窝规则</span><p class="cmd-desc">与玉米打窝共享地点 buff 层数上限；群聊每日打窝合计 2 次；私聊不计入次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">自动回收</span><p class="cmd-desc">传奇猫雕像 Lv3 建成后，背包和新钓的猫猫乐园材料自动回收（每个 80 金币）。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>星空木框升级：</strong>解锁星空艇后，消耗通过奇迹获得的星辰木框升级星空木框（4 倍展示收益，最多 10 个）。星辰木框持有数量不设上限；【升级展示栏】会一并校验。
+      <strong>星空展示框升级：</strong>解锁星空艇后，消耗通过奇迹获得的星空框升级星空展示框（4 倍展示收益，最多 10 个）。星空框持有数量不设上限；【升级展示栏】会一并校验。
     </div>
   </div>
 </div>
@@ -1884,28 +1884,28 @@ code, .ic {
     <div class="steps" style="margin-top:10px">
       <div class="step"><div class="step-num">1</div><div class="step-text">收集足够数量的流星鱼，使背包内鱼 ID 之和满足尾号条件</div></div>
       <div class="step"><div class="step-num">2</div><div class="step-text">触发后消耗对应的<strong>背包</strong>流星鱼子集（展馆鱼不参与、不消耗）</div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-text">获得 <strong>星辰木框</strong>；收杆页用小字列出本次消耗的流星鱼编号（要因）</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">获得 <strong>星空框</strong>；收杆页用小字列出本次消耗的流星鱼编号（要因）</div></div>
     </div>
     <div class="callout info" style="margin-top:10px">
       计分只累计、不消耗流星鱼；仅奇迹会消耗背包中的对应子集。≥4 分进入展馆的鱼不在背包显示，也不参加奇迹运算。
     </div>
   </div>
 
-  <!-- 星辰木框与星空木框 -->
+  <!-- 星空框与星空展示框 -->
   <div class="card">
-    <div class="sec-h">星辰木框与星空木框</div>
+    <div class="sec-h">星空框与星空展示框</div>
     <div class="grid-2">
       <div class="bldg-card">
-        <div class="bldg-name">星辰木框</div>
-        <div class="bldg-desc">通过奇迹功能获得，用于升级星空木框；持有数量不设上限。升满 10 个星空木框共需 55 个。</div>
+        <div class="bldg-name">星空框</div>
+        <div class="bldg-desc">通过奇迹功能获得，用于升级星空展示框；持有数量不设上限。升满 10 个星空展示框共需 55 个。</div>
       </div>
       <div class="bldg-card">
-        <div class="bldg-name">星空木框</div>
-        <div class="bldg-desc">消耗星辰木框升级。提供 <strong>4 倍展示收益</strong>，最多 10 个。需已建设星空艇。</div>
+        <div class="bldg-name">星空展示框</div>
+        <div class="bldg-desc">消耗星空框升级。提供 <strong>4 倍展示收益</strong>，最多 10 个。需已建设星空艇。</div>
       </div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>升级规则：</strong>星空木框消耗星辰木框升级（奇迹获得），展示最贵的鱼，提供 4 倍展示收益。可用【升级展示栏】万能指令一并校验。未建设星空艇前，鱼店不会展示星空木框升级项。
+      <strong>升级规则：</strong>星空展示框消耗星空框升级（奇迹获得），展示最贵的鱼，提供 4 倍展示收益。可用【升级展示栏】万能指令一并校验。未建设星空艇前，鱼店不会展示星空展示框升级项。
     </div>
   </div>
 
@@ -1915,8 +1915,8 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果并使流星鱼最终掉落概率翻倍；与真多多/幸运药水互斥。</p></div>
       <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR）。</p></div>
-      <div class="cmd-card"><span class="cmd-name">星辰木框</span><p class="cmd-desc">通过奇迹获得，用于升级星空木框；持有数量不设上限，升满共需 55 个。</p></div>
-      <div class="cmd-card"><span class="cmd-name">星空木框</span><p class="cmd-desc">消耗星辰木框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>
+      <div class="cmd-card"><span class="cmd-name">星空框</span><p class="cmd-desc">通过奇迹获得，用于升级星空展示框；持有数量不设上限，升满共需 55 个。</p></div>
+      <div class="cmd-card"><span class="cmd-name">星空展示框</span><p class="cmd-desc">消耗星空框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>
     </div>
   </div>
 

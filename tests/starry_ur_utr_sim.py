@@ -232,8 +232,8 @@ print(f"{'=' * 90}")
 # 解锁后 max_rarity = UTR
 
 print(f"\nUTR来源分析(星空图, 无天气):")
-print(f"  1. 展示木框保底: ✗ 星空图不触发")
-print(f"  2. 展示木框随机0.7%: ✗ 星空图不触发")
+print(f"  1. 木框保底: ✗ 星空图不触发")
+print(f"  2. 木框随机0.7%: ✗ 星空图不触发")
 print(f"  3. 迷途风UTR随机: ✗ 需要迷途风天气")
 print(f"  4. 迷途风UTR保底: ✗ 需要迷途风天气")
 print(f"  5. 稀有度表UTR: ✓ 需max_rarity=UTR(集齐全UR后解锁) + d>=9")

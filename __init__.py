@@ -48,7 +48,7 @@ __plugin_meta__ = PluginMetadata(
         升级鱼钩                   升级鱼钩
         升级展示栏               扩充展示位/强化展示位
         打窝 [次数]                使用玉米打窝
-        钓鱼使用 猫猫框 [数量]     在11-20图使用猫猫框打窝
+        钓鱼使用 猫框 [数量]     在11-20图使用猫框打窝
         钓鱼图鉴/图鉴/图鉴2       查看图鉴
         钓鱼币兑换 [数量]          兑换钓鱼币
         钓鱼改名 [名称]            修改钓鱼昵称
@@ -68,7 +68,7 @@ __plugin_meta__ = PluginMetadata(
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 【临时迁移代码 — 确认旧数据修复后删除此段】
-# 修复旧版展示木框 buff：将 BUFF_TYPE_NEST + TARGET_TYPE_LOCATION 中
+# 修复旧版木框 buff：将 BUFF_TYPE_NEST + TARGET_TYPE_LOCATION 中
 # description 包含"展示木框"的记录转换为 BUFF_TYPE_FRAME + TARGET_TYPE_GLOBAL
 # ═══════════════════════════════════════════════════════════════════════════════
 from datetime import datetime
