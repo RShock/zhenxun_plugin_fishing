@@ -316,9 +316,10 @@ async def render_white_market_records(user_id: str) -> bytes:
     user = await FishingUser.get_user(user_id)
     user_fish = await FishingUser.get_user_fish(user_id)
 
-    # 按黑商target的numeric_id分组：同target的多条记录合并显示
-    # 每组记录的source可能不同（不同的获得鱼）
-    target_groups: dict[str, dict] = {}
+    # 按(target_location_id, target_rarity)分组：同一地图同一稀有度的
+    # 所有黑商记录合并为一条显示，避免同一支付鱼重复出现多行。
+    # 组内收集所有 source（获得鱼），按 numeric_id 去重后再按(场景,稀有度)分组合并。
+    loc_rarity_groups: dict[tuple[str, str], dict] = {}
     for record in records:
         # 图鉴过滤：已收集获得鱼（黑商source）则隐藏该记录
         key = (record.source_name, record.source_rarity)
@@ -329,16 +330,15 @@ async def render_white_market_records(user_id: str) -> bytes:
         if collected_cache[key]:
             continue
 
-        tk = record.target_numeric_id
-        if tk not in target_groups:
-            target_groups[tk] = {
-                "target_name": record.target_name,
-                "target_rarity": record.target_rarity,
+        gk = (record.target_location_id, record.target_rarity)
+        if gk not in loc_rarity_groups:
+            loc_rarity_groups[gk] = {
                 "target_location_id": record.target_location_id,
+                "target_rarity": record.target_rarity,
                 "target_location_name": record.target_location_name,
                 "sources": [],
             }
-        target_groups[tk]["sources"].append({
+        loc_rarity_groups[gk]["sources"].append({
             "name": record.source_name,
             "rarity": record.source_rarity,
             "location_name": record.source_location_name,
@@ -348,7 +348,7 @@ async def render_white_market_records(user_id: str) -> bytes:
     now_items: list[dict] = []
     possible_items: list[dict] = []
 
-    for tk, group in target_groups.items():
+    for gk, group in loc_rarity_groups.items():
         loc_id = group["target_location_id"]
         rarity = group["target_rarity"]
         loc_name = group["target_location_name"]
@@ -361,15 +361,15 @@ async def render_white_market_records(user_id: str) -> bytes:
             if s["numeric_id"] in seen_ids:
                 continue
             seen_ids.add(s["numeric_id"])
-            gk = (s["location_name"], s["rarity"])
-            if gk not in group_index:
-                group_index[gk] = len(get_groups)
+            sgk = (s["location_name"], s["rarity"])
+            if sgk not in group_index:
+                group_index[sgk] = len(get_groups)
                 get_groups.append({
                     "rarity": s["rarity"],
                     "location_name": s["location_name"],
                     "names": [],
                 })
-            get_groups[group_index[gk]]["names"].append(s["name"])
+            get_groups[group_index[sgk]]["names"].append(s["name"])
 
         # 查找玩家背包中与target同地图同稀有度的鱼
         backpack_fish = []
