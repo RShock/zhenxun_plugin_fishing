@@ -24,41 +24,59 @@
     var rarityColors = {{ rarity_colors_json|safe }};
 
     var NODE_W = 104, NODE_H = 42, NODE_RX = 6;
+    var GAP_X = 16, GAP_Y = 14;
+    var BAND_GAP = 56;     // 不同地图聚类之间的纵向间距
+    var PAD = 28;
     var n = nodes.length;
-
-    // 画布尺寸：随节点数自适应，保证足够展开空间
-    var canvasW = Math.min(Math.max(640, Math.ceil(Math.sqrt(n)) * 160), 1800);
-    var canvasH = Math.min(Math.max(520, Math.ceil(Math.sqrt(n)) * 130), 2800);
-    var cx = canvasW / 2, cy = canvasH / 2;
 
     var nodeMap = {};
     nodes.forEach(function(nd){ nodeMap[nd.id] = nd; });
 
-    // 按地图分组，用于初始扇形布局和聚类力
+    // ── 按地图分组 ──
     var locGroups = {};
     nodes.forEach(function(nd){
         var lid = nd.location_id || '_unknown';
         if (!locGroups[lid]) locGroups[lid] = [];
         locGroups[lid].push(nd);
     });
-
-    // 初始位置：每个地图占一个扇区，扇区内节点沿弧线排布
     var locIds = Object.keys(locGroups);
     var numLocs = locIds.length;
+
+    // 画布宽度：适配手机竖屏，按最宽行的节点数确定
+    var maxRowNodes = 0;
+    locIds.forEach(function(lid){
+        if (locGroups[lid].length > maxRowNodes) maxRowNodes = locGroups[lid].length;
+    });
+    var canvasW = Math.min(Math.max(560, maxRowNodes * (NODE_W + GAP_X) + PAD * 2), 700);
+    var maxPerRow = Math.max(2, Math.floor((canvasW - 2 * PAD) / (NODE_W + GAP_X)));
+
+    // ── 确定性纵向带状布局 ──
+    // 每个地图占一条水平带，带内节点从左到右排列，超出 maxPerRow 则换行
+    var cursorY = PAD;
     locIds.forEach(function(lid, locIdx){
         var group = locGroups[lid];
-        var baseAngle = (Math.PI * 2 / numLocs) * locIdx - Math.PI / 2;
-        var baseR = Math.min(canvasW, canvasH) * 0.32;
-        group.forEach(function(nd, i){
-            var aOff = (i - group.length / 2) * 0.12;
-            var r = baseR * (0.75 + (i % 3) * 0.12);
-            nd.x = cx + Math.cos(baseAngle + aOff) * r;
-            nd.y = cy + Math.sin(baseAngle + aOff) * r;
-            nd.vx = 0; nd.vy = 0;
-        });
-    });
+        var rows = [];
+        for (var i = 0; i < group.length; i += maxPerRow) {
+            rows.push(group.slice(i, i + maxPerRow));
+        }
+        var bandH = rows.length * NODE_H + (rows.length - 1) * GAP_Y;
 
-    // 去重边：相同 source→target 只保留一条，优先 "now"
+        rows.forEach(function(row, ri){
+            var y = cursorY + ri * (NODE_H + GAP_Y) + NODE_H / 2;
+            // 行内居中
+            var rowW = row.length * NODE_W + (row.length - 1) * GAP_X;
+            var startX = (canvasW - rowW) / 2;
+            row.forEach(function(nd, ci){
+                nd.x = startX + ci * (NODE_W + GAP_X) + NODE_W / 2;
+                nd.y = y;
+            });
+        });
+
+        cursorY += bandH + BAND_GAP;
+    });
+    var canvasH = cursorY - BAND_GAP + PAD;
+
+    // ── 去重边 ──
     var edgeSet = {};
     var uniqueEdges = [];
     edges.forEach(function(e){
@@ -79,25 +97,24 @@
         }
     });
 
-    // 检测双向边（两个方向都存在），渲染时需弯曲偏移避免重叠
+    // 检测双向边
     var bidirKeys = {};
     uniqueEdges.forEach(function(e){
         var rev = e.target + '\x00' + e.source;
         if (edgeSet[rev]) bidirKeys[e.source + '\x00' + e.target] = true;
     });
 
-    // ── 力导向仿真 ──
-    // 斥力（库仑）：所有节点对之间排斥
-    // 弹簧力（胡克）：边的两端吸引，趋向理想长度
-    // 聚类力：同地图节点向质心吸引
-    // 中心力：整体向画布中心收拢
-    var ITERS = 600;
-    var K_REPEL = 6500;
-    var K_SPRING = 0.034;
-    var IDEAL_DIST = 150;
-    var K_CLUSTER = 0.011;
-    var K_CENTER = 0.002;
-    var DAMPING = 0.85;
+    // ── 轻量力导向微调 ──
+    // 确定性布局已给出良好初始位置，此处仅做少量迭代减少边交叉和节点拥挤
+    var ITERS = 120;
+    var K_REPEL = 3000;
+    var K_SPRING = 0.015;
+    var IDEAL_DIST = 130;
+    var K_BAND = 0.08;     // 强纵向带约束：拉回原始 y
+    var DAMPING = 0.7;
+
+    // 记录初始 y（带中心）用于 band 约束
+    nodes.forEach(function(nd){ nd._initY = nd.y; nd._initX = nd.x; nd.vx = 0; nd.vy = 0; });
 
     for (var iter = 0; iter < ITERS; iter++) {
         var cool = 1 - iter / ITERS;
@@ -130,26 +147,13 @@
             t.fx -= fx; t.fy -= fy;
         });
 
-        // 聚类力
-        Object.keys(locGroups).forEach(function(lid){
-            var group = locGroups[lid];
-            if (group.length < 2) return;
-            var gx = 0, gy = 0;
-            group.forEach(function(nd){ gx += nd.x; gy += nd.y; });
-            gx /= group.length; gy /= group.length;
-            group.forEach(function(nd){
-                nd.fx += (gx - nd.x) * K_CLUSTER;
-                nd.fy += (gy - nd.y) * K_CLUSTER;
-            });
-        });
-
-        // 中心力
+        // 带约束：纵向拉回初始位置，横向允许微调
         nodes.forEach(function(nd){
-            nd.fx += (cx - nd.x) * K_CENTER;
-            nd.fy += (cy - nd.y) * K_CENTER;
+            nd.fy += (nd._initY - nd.y) * K_BAND;
+            nd.fx += (nd._initX - nd.x) * 0.02;
         });
 
-        // 更新位置（带冷却和阻尼）
+        // 更新位置
         nodes.forEach(function(nd){
             nd.vx = (nd.vx + nd.fx) * DAMPING * cool;
             nd.vy = (nd.vy + nd.fy) * DAMPING * cool;
@@ -159,10 +163,8 @@
     }
 
     // ── 后处理：消解节点重叠 ──
-    // 力导向可能留下少量重叠，此处做确定性分离
     var RESOLVE_ITERS = 80;
-    var GAP = 6; // 节点间最小间距
-    var minDW = NODE_W + GAP, minDH = NODE_H + GAP;
+    var minDW = NODE_W + 4, minDH = NODE_H + 4;
     for (var ri = 0; ri < RESOLVE_ITERS; ri++) {
         var moved = false;
         for (var i = 0; i < n; i++) {
@@ -173,7 +175,6 @@
                 var oy = minDH - Math.abs(dy);
                 if (ox > 0 && oy > 0) {
                     moved = true;
-                    // 沿重叠较小的轴分离
                     if (ox < oy) {
                         var push = ox / 2;
                         var s = dx >= 0 ? 1 : -1;
@@ -191,7 +192,7 @@
         if (!moved) break;
     }
 
-    // 计算包围盒，确定 SVG 尺寸
+    // 计算包围盒
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     nodes.forEach(function(nd){
         minX = Math.min(minX, nd.x - NODE_W / 2);
@@ -199,7 +200,6 @@
         maxX = Math.max(maxX, nd.x + NODE_W / 2);
         maxY = Math.max(maxY, nd.y + NODE_H / 2);
     });
-    var PAD = 28;
     var svgW = Math.ceil(maxX - minX + PAD * 2);
     var svgH = Math.ceil(maxY - minY + PAD * 2);
     var ox = PAD - minX, oy = PAD - minY;
@@ -212,7 +212,6 @@
         return lum > 0.62 ? '#1f2937' : '#ffffff';
     }
     function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    // 截断：中文字符算2宽度单位，拉丁字符算1
     function truncate(s, maxLen){
         var len = 0, result = '';
         for (var i = 0; i < s.length; i++){
@@ -229,8 +228,8 @@
 
     // 箭头标记定义
     p.push('<defs>');
-    p.push('<marker id="arrN" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L7,3 z" fill="#28a745"/></marker>');
-    p.push('<marker id="arrP" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L7,3 z" fill="#d9a400"/></marker>');
+    p.push('<marker id="arrN" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,8 L8,4 z" fill="#28a745"/></marker>');
+    p.push('<marker id="arrP" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,8 L8,4 z" fill="#d9a400"/></marker>');
     p.push('</defs>');
 
     // 先画边（在节点下方）
@@ -242,7 +241,6 @@
         var dx = tx - sx, dy = ty - sy;
         var dist = Math.max(Math.sqrt(dx*dx + dy*dy), 1);
         var cos = dx / dist, sin = dy / dist;
-        // 裁剪到节点矩形边缘
         var hw = NODE_W / 2 + 3, hh = NODE_H / 2 + 3;
         var trim = Math.min(
             Math.abs(cos) > 0.01 ? hw / Math.abs(cos) : 1e9,
@@ -254,20 +252,22 @@
         var isNow = e.category === 'now';
         var color = isNow ? '#28a745' : '#d9a400';
         var marker = isNow ? 'arrN' : 'arrP';
-        var dash = isNow ? '' : '4,3';
 
-        // 双向边弯曲偏移：两条弧分别向两侧偏移
+        // 虚线模式：dash 和 gap 等长，短边也清晰可辨
+        var dashAttr = isNow ? '' : 'stroke-dasharray="6,5"';
+
+        // 双向边弯曲偏移：加大偏移量避免两条线视觉重叠
         var isBidir = bidirKeys[e.source + '\x00' + e.target];
         var d;
         if (isBidir) {
             var dir = e.source < e.target ? 1 : -1;
-            var perpX = -sin * 12 * dir, perpY = cos * 12 * dir;
+            var perpX = -sin * 22 * dir, perpY = cos * 22 * dir;
             var mx = (x1 + x2) / 2 + perpX, my = (y1 + y2) / 2 + perpY;
             d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' Q ' + mx.toFixed(1) + ' ' + my.toFixed(1) + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
         } else {
             d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' L ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
         }
-        p.push('<path d="' + d + '" stroke="' + color + '" stroke-width="1.5" fill="none" marker-end="url(#' + marker + ')" stroke-dasharray="' + dash + '"/>');
+        p.push('<path d="' + d + '" stroke="' + color + '" stroke-width="1.8" fill="none" marker-end="url(#' + marker + ')" ' + dashAttr + '/>');
     });
 
     // 画节点
