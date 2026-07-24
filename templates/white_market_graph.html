@@ -25,8 +25,8 @@
 
     var NODE_W = 104, NODE_H = 42, NODE_RX = 6;
     var GAP_X = 14;          // 同行内节点水平间距
-    var GAP_Y = 12;          // 同地图内不同稀有度行的垂直间距
-    var BAND_GAP = 44;       // 不同地图之间的垂直间距
+    var GAP_Y = 28;          // 同地图内不同稀有度行的垂直间距
+    var BAND_GAP = 70;       // 不同地图之间的垂直间距
     var MARGIN = 30;         // 左右留白（含弧线空间）
     var CURVE_OFFSET = 38;   // 绕行弧线偏移量
     var PAD_TOP = 24;
@@ -162,8 +162,8 @@
         });
     });
 
-    // 为弧线预留顶部和底部空间，然后将所有节点下移
-    var arcExtraH = maxArcLayer > 0 ? (maxArcLayer + 1) * 24 + 8 : 0;
+    // 为三折直线通道预留顶部和底部空间，然后将所有节点下移
+    var arcExtraH = maxArcLayer > 0 ? (maxArcLayer + 1) * 16 + 12 : 0;
     if (arcExtraH > 0) nodes.forEach(function(nd){ nd.y += arcExtraH; });
     var canvasH = cursorY - GAP_Y + PAD_TOP + 2 * arcExtraH;
 
@@ -272,13 +272,12 @@
         var d;
 
         if (sameRow(s, t)) {
-            // ── 同行边：弧线，通道分配避免重叠，连接点分散 ──
+            // ── 同行边：三折直线，通道分配避免重叠，连接点分散 ──
             var dir = e._arcDir || -1;
             var layer = e._arcLayer || 0;
-            var dist = Math.abs(t.x - s.x);
-            var arcH = Math.max(NODE_H * 0.7 + layer * 24, dist * 0.18);
+            var laneY = s.y + dir * (NODE_H / 2 + 8 + layer * 16);
 
-            // 在节点上/下边缘分散连接点，避免多条弧线从同一点出发
+            // 在节点上/下边缘分散连接点
             var sTot = e._sOffTot || 1, sIdx = e._sOffIdx || 0;
             var tTot = e._tOffTot || 1, tIdx = e._tOffIdx || 0;
             var sOff = sTot > 1 ? (sIdx / (sTot - 1) - 0.5) * NODE_W * 0.6 : 0;
@@ -286,12 +285,12 @@
 
             var x1 = s.x + sOff, y1 = s.y + dir * (NODE_H / 2 + 2);
             var x2 = t.x + tOff, y2 = t.y + dir * (NODE_H / 2 + 2);
-            var midX = (x1 + x2) / 2;
-            var midY = (y1 + y2) / 2 + dir * arcH;
 
+            // 三折：垂直→水平→垂直
             d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) +
-                ' Q ' + midX.toFixed(1) + ' ' + midY.toFixed(1) +
-                ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+                ' V ' + laneY.toFixed(1) +
+                ' H ' + x2.toFixed(1) +
+                ' V ' + y2.toFixed(1);
         } else if (!blocked) {
             // 无阻挡：直线，裁剪到边缘
             var tr = trimToEdge(s.x, s.y, t.x, t.y);
