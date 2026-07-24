@@ -150,6 +150,17 @@ async def _migrate_frame_buffs():
             update_fields=["buff_type", "target_type", "target_id", "description"]
         )
 
+    # 猫框打窝从 BUFF_TYPE_NEST 迁移到独立的 BUFF_TYPE_CAT_NEST
+    old_cat_buffs = await FishingBuff.filter(
+        buff_type=BuffEffect.BUFF_TYPE_NEST,
+        target_type=BuffEffect.TARGET_TYPE_LOCATION,
+        description__contains="猫框打窝",
+        end_time__gt=datetime.now(),
+    ).all()
+    for buff in old_cat_buffs:
+        buff.buff_type = BuffEffect.BUFF_TYPE_CAT_NEST
+        await buff.save(update_fields=["buff_type"])
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 【临时迁移代码结束】
 # ═══════════════════════════════════════════════════════════════════════════════

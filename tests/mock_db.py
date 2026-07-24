@@ -914,6 +914,20 @@ class MockDB:
             and b.end_time > now
         )
 
+    async def buff_get_cat_nest_buff_count_for_location(
+        self, location_id: str
+    ) -> int:
+        now = datetime.now()
+        return sum(
+            1
+            for b in self._buffs
+            if b.target_type == "location"
+            and b.target_id == location_id
+            and b.buff_type == "cat_nest"
+            and b.start_time <= now
+            and b.end_time > now
+        )
+
     async def buff_add_global_buff(
         self,
         buff_type,
@@ -964,6 +978,8 @@ class MockDB:
                     filtered = [b for b in filtered if b.target_id == val]
                 elif key == "buff_type":
                     filtered = [b for b in filtered if b.buff_type == val]
+                elif key == "buff_type__in":
+                    filtered = [b for b in filtered if b.buff_type in val]
                 elif key == "end_time__gt":
                     filtered = [b for b in filtered if b.end_time > val]
                 elif key == "start_time__lte":

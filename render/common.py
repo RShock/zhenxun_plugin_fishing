@@ -39,6 +39,13 @@ async def render_location_select(
         frame_count = await FishingBuff.get_frame_buff_count_for_location(loc.id)
         frame_bonus_by_loc[loc.id] = frame_count * 5
 
+    # 猫框打窝仅星空图(11-20)有，独立50%进度条
+    cat_nest_bonus_by_loc = {}
+    for loc in locations:
+        cat_nest_count = await FishingBuff.get_cat_nest_buff_count_for_location(loc.id)
+        if cat_nest_count > 0:
+            cat_nest_bonus_by_loc[loc.id] = cat_nest_count * 5
+
     all_weathers = await get_all_location_weathers(user_id)
     t1c = time.perf_counter()
 
@@ -70,7 +77,8 @@ async def render_location_select(
         fisher_count = fisher_counts.get(loc.id, 0)
         nest_count = nest_counts.get(loc.id, 0)
         nest_bonus = nest_count * 5
-        total_speed_bonus = nest_bonus + frame_bonus_by_loc.get(loc.id, 0)
+        cat_nest_bonus = cat_nest_bonus_by_loc.get(loc.id, 0)
+        total_speed_bonus = nest_bonus + frame_bonus_by_loc.get(loc.id, 0) + cat_nest_bonus
 
         w = all_weathers.get(loc.id)
         if w:
@@ -284,6 +292,13 @@ async def render_weather_forecast(
         frame_count = await FishingBuff.get_frame_buff_count_for_location(loc.id)
         frame_bonus_by_loc[loc.id] = frame_count * 5
 
+    # 猫框打窝仅星空图(11-20)有，独立50%进度条
+    cat_nest_bonus_by_loc = {}
+    for loc in locations:
+        cat_nest_count = await FishingBuff.get_cat_nest_buff_count_for_location(loc.id)
+        if cat_nest_count > 0:
+            cat_nest_bonus_by_loc[loc.id] = cat_nest_count * 5
+
     loc_data = []
     for i, loc in enumerate(locations, 1):
         w = all_weathers.get(loc.id)
@@ -323,6 +338,7 @@ async def render_weather_forecast(
         nest_count = nest_counts.get(loc.id, 0)
         nest_bonus = nest_count * 5
         frame_bonus = frame_bonus_by_loc.get(loc.id, 0)
+        cat_nest_bonus = cat_nest_bonus_by_loc.get(loc.id, 0)
 
         loc_data.append(
             {
@@ -339,6 +355,7 @@ async def render_weather_forecast(
                 "fisher_count": fisher_count,
                 "nest_bonus": nest_bonus,
                 "frame_bonus": frame_bonus,
+                "cat_nest_bonus": cat_nest_bonus,
             }
         )
 

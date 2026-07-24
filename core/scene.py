@@ -100,7 +100,11 @@ async def render_scene(
     frame_speed_bonus = await FishingBuff.get_frame_buff_count_for_location(location.id)
     frame_speed_bonus = frame_speed_bonus * 5
 
-    total_speed_bonus = nest_speed_bonus + frame_speed_bonus
+    # 猫框打窝独立50%进度条，仅星空图(11-20)有
+    cat_nest_speed_bonus = await FishingBuff.get_cat_nest_buff_count_for_location(scene_instance_id)
+    cat_nest_speed_bonus = cat_nest_speed_bonus * 5
+
+    total_speed_bonus = nest_speed_bonus + frame_speed_bonus + cat_nest_speed_bonus
 
     now = datetime.now()
     weekend_buff = await FishingBuff.filter(

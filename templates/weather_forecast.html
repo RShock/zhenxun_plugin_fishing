@@ -91,7 +91,7 @@
         {% if loc.weather_time and not loc.is_active %}
         <div class="forecast-inactive">{% if loc.weather_status == 'ended' %}已结束{% else %}未开始{% endif %}</div>
         {% endif %}
-        <div class="forecast-extra">👥{{ loc.fisher_count }}人{% if loc.nest_bonus > 0 or loc.frame_bonus > 0 %} ⚡{% if loc.nest_bonus > 0 %}打窝+{{ loc.nest_bonus }}%{% endif %}{% if loc.frame_bonus > 0 %}{% if loc.nest_bonus > 0 %} {% endif %}木框+{{ loc.frame_bonus }}%{% endif %}{% endif %}</div>
+        <div class="forecast-extra">👥{{ loc.fisher_count }}人{% if loc.nest_bonus > 0 or loc.frame_bonus > 0 or loc.cat_nest_bonus > 0 %} ⚡{% if loc.nest_bonus > 0 %}打窝+{{ loc.nest_bonus }}%{% endif %}{% if loc.cat_nest_bonus > 0 %}{% if loc.nest_bonus > 0 %} {% endif %}猫框+{{ loc.cat_nest_bonus }}%{% endif %}{% if loc.frame_bonus > 0 %}{% if loc.nest_bonus > 0 or loc.cat_nest_bonus > 0 %} {% endif %}木框+{{ loc.frame_bonus }}%{% endif %}{% endif %}</div>
     </div>
 </div>
 {% endfor %}

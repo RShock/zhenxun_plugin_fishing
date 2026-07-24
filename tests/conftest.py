@@ -310,6 +310,10 @@ def _patch_models(db, monkeypatch):
         db.buff_get_global_buff_count,
     )
     monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingBuff.get_cat_nest_buff_count_for_location",
+        db.buff_get_cat_nest_buff_count_for_location,
+    )
+    monkeypatch.setattr(
         f"{FISHING_PKG}.models.FishingBuff.add_global_buff",
         db.buff_add_global_buff,
     )

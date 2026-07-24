@@ -40,6 +40,8 @@ class BuffEffect:
     BUFF_TYPE_WISH = "wish"
     BUFF_TYPE_DUODUO = "duoduo"
     BUFF_TYPE_FRAME = "frame"
+    # 猫框打窝：星空图(11-20)专用，独立于玉米打窝的50%进度条
+    BUFF_TYPE_CAT_NEST = "cat_nest"
     BUFF_TYPE_WEATHER_RAIN = "weather_rain"
     BUFF_TYPE_WEATHER_METEOR = "weather_meteor"
     BUFF_TYPE_WEATHER_STORM = "weather_storm"
@@ -70,6 +72,7 @@ class BuffEffect:
         BUFF_TYPE_WISH: BuffMeta(BUFF_TYPE_WISH, "许愿药水", "#FFC107", "🌟"),
         BUFF_TYPE_DUODUO: BuffMeta(BUFF_TYPE_DUODUO, "真多多药水", "#FF5722", "🐟"),
         BUFF_TYPE_FRAME: BuffMeta(BUFF_TYPE_FRAME, "木框", "#8D6E63", "🖼️"),
+        BUFF_TYPE_CAT_NEST: BuffMeta(BUFF_TYPE_CAT_NEST, "猫框打窝", "#FF7043", "🐱"),
         BUFF_TYPE_WEATHER_RAIN: BuffMeta(BUFF_TYPE_WEATHER_RAIN, "雨天", "#42A5F5", "🌧️"),
         BUFF_TYPE_WEATHER_METEOR: BuffMeta(BUFF_TYPE_WEATHER_METEOR, "流星雨", "#AB47BC", "☄️"),
         BUFF_TYPE_WEATHER_STORM: BuffMeta(BUFF_TYPE_WEATHER_STORM, "暴雨", "#78909C", "⛈️"),
@@ -242,15 +245,25 @@ class FishingBuff(Model):
                 target_type == BuffEffect.TARGET_TYPE_LOCATION
                 and scene_target_id != location_id
             ):
+                # 玉米打窝和猫框打窝均绑定 scene_instance_id，需从 location 维度剔除后单独查询
                 user_buffs = [
-                    b for b in user_buffs if b.buff_type != BuffEffect.BUFF_TYPE_NEST
+                    b
+                    for b in user_buffs
+                    if b.buff_type
+                    not in (
+                        BuffEffect.BUFF_TYPE_NEST,
+                        BuffEffect.BUFF_TYPE_CAT_NEST,
+                    )
                 ]
             buffs.extend(user_buffs)
         if scene_target_id != location_id:
             scene_nest_buffs = await cls.filter(
                 target_type=BuffEffect.TARGET_TYPE_LOCATION,
                 target_id=scene_target_id,
-                buff_type=BuffEffect.BUFF_TYPE_NEST,
+                buff_type__in=(
+                    BuffEffect.BUFF_TYPE_NEST,
+                    BuffEffect.BUFF_TYPE_CAT_NEST,
+                ),
                 start_time__lt=end_time,
                 end_time__gt=start_time,
             ).all()
@@ -286,6 +299,18 @@ class FishingBuff(Model):
         if is_starry_location(location_id):
             return 0
         return await cls.get_global_buff_count(BuffEffect.BUFF_TYPE_FRAME)
+
+    @classmethod
+    async def get_cat_nest_buff_count_for_location(cls, location_id: str) -> int:
+        """猫框打窝层数 — 仅星空图(11-20)有此类 buff。"""
+        now = datetime.now()
+        return await cls.filter(
+            target_type=BuffEffect.TARGET_TYPE_LOCATION,
+            target_id=location_id,
+            buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
+            start_time__lte=now,
+            end_time__gt=now,
+        ).count()
 
     @classmethod
     async def get_active_user_buff(
@@ -408,6 +433,7 @@ class FishingBuff(Model):
 class FishingBuffCalculator:
     BUFF_EFFECTS = {
         BuffEffect.BUFF_TYPE_NEST: lambda v, r: ("speed_bonus", v),
+        BuffEffect.BUFF_TYPE_CAT_NEST: lambda v, r: ("speed_bonus", v),
         BuffEffect.BUFF_TYPE_SPEED_BOOST: lambda v, r: ("speed_bonus", v),
         BuffEffect.BUFF_TYPE_FRAME: lambda v, r: ("speed_bonus", v),
         BuffEffect.BUFF_TYPE_STARRY_BONUS: lambda v, r: ("speed_bonus", v),

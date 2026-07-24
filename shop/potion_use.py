@@ -269,14 +269,14 @@ async def use_display_frame_buff(
 
     # 第一阶段：填满到上限（新增 buff 记录）
     layers_to_add = min(count, max(0, MAX_FRAME_BUFF_LAYERS - total_layers))
-    # 第二阶段：剩余木框延长已有 buff（上限最多 MAX_FRAME_BUFF_LAYERS 个）
+    # 第二阶段：剩余木框循环延长已有 buff（同一 buff 可被多次延长）
     remaining = count - layers_to_add
     extended_count = 0
     if remaining > 0 and current_frame_buffs:
-        extendable = min(remaining, len(current_frame_buffs), MAX_FRAME_BUFF_LAYERS)
-        extended_count = extendable
+        extended_count = remaining
         extension_delta = timedelta(hours=duration_hours)
-        for buff in current_frame_buffs[:extendable]:
+        for i in range(remaining):
+            buff = current_frame_buffs[i % len(current_frame_buffs)]
             buff.end_time = _make_naive(buff.end_time) + extension_delta
             await buff.save(update_fields=["end_time"])
 
@@ -305,14 +305,14 @@ async def use_display_frame_buff(
         if new_total > layers_to_add:
             msg += f"（全图累计+{total_pct}%）"
     else:
-        msg = f"木框效果已满，延长了{extended_count}个已有buff（每个+{duration_hours}小时）（全图累计+{total_pct}%）"
+        msg = f"木框效果已满，延长了{extended_count}次已有buff（每次+{duration_hours}小时）（全图累计+{total_pct}%）"
 
     if layers_to_add > 0 and extended_count > 0:
-        msg += f"\n已满{MAX_FRAME_BUFF_LAYERS * 5}%上限，延长了{extended_count}个已有木框buff（每个+{duration_hours}小时）"
+        msg += f"\n已满{MAX_FRAME_BUFF_LAYERS * 5}%上限，延长了{extended_count}次已有木框buff（每次+{duration_hours}小时）"
     if actual_frames < count:
-        msg += f"\n已达到延长上限（最多{MAX_FRAME_BUFF_LAYERS}个），仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
+        msg += f"\n无已有木框buff可延长，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
 
-    logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}个buff，当前全图{new_total}层")
+    logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}次，当前全图{new_total}层")
     return True, msg
 
 

@@ -19,12 +19,15 @@ def generate_buff_message(
         remaining = (buff_end - now).total_seconds()
         if buff.buff_type == BuffEffect.BUFF_TYPE_NEST:
             time_info = f"(剩余{remaining / 3600:.1f}小时)"
+        elif buff.buff_type == BuffEffect.BUFF_TYPE_CAT_NEST:
+            time_info = f"(剩余{remaining / 3600:.1f}小时)"
         else:
             time_info = f"(剩余{remaining / 60:.0f}分钟)"
 
     # 自定义格式（有特殊数值展示的 buff）
     custom = {
         BuffEffect.BUFF_TYPE_NEST: f"速度+{buff.value}%",
+        BuffEffect.BUFF_TYPE_CAT_NEST: f"星空图速度+{buff.value}%",
         BuffEffect.BUFF_TYPE_SPEED_BOOST: f"速度+{buff.value}%",
         BuffEffect.BUFF_TYPE_DOUBLE_CATCH: "每次钓2条",
         BuffEffect.BUFF_TYPE_WEEKEND_BONUS: f"额外速度×{1 + buff.value / 100:.1f}",
