@@ -4,7 +4,7 @@
 
 from ..config import ConfigManager, calculate_fish_price, generate_fish_numeric_id
 from ..models import FishingUser
-from ..render import render_backpack, render_collection, render_starry_exhibition
+from ..render import render_backpack, render_collection, render_starry_exhibition, render_starry_ranking
 from ..services import get_or_create_user
 
 
@@ -348,3 +348,8 @@ async def get_collection_image(user_id: str, page: int = 1) -> bytes:
 async def get_starry_exhibition_image(user_id: str) -> bytes:
     user = await get_or_create_user(user_id)
     return await render_starry_exhibition(user_id, user)
+
+
+async def get_starry_ranking_image() -> bytes:
+    entries = await FishingUser.get_all_starry_exhibition_entries()
+    return await render_starry_ranking(entries)

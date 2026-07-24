@@ -909,6 +909,22 @@ class FishingUser(Model):
         return list(_ensure_list(user.starry_exhibition))
 
     @classmethod
+    async def get_all_starry_exhibition_entries(cls) -> list[tuple[str, str, list[dict]]]:
+        """返回所有拥有展馆藏品的 (user_id, nickname, exhibition_records) 列表。
+
+        仅供星空排行使用：遍历全表，在 Python 层过滤空展馆，
+        避免依赖 JSONField 的 DB 端过滤差异（SQLite/PostgreSQL 行为不同）。
+        """
+        users = await cls.all().only("user_id", "nickname", "starry_exhibition")
+        result: list[tuple[str, str, list[dict]]] = []
+        for user in users:
+            exhibition = _ensure_list(user.starry_exhibition)
+            if exhibition:
+                name = user.nickname or user.user_id
+                result.append((user.user_id, name, exhibition))
+        return result
+
+    @classmethod
     async def try_claim_miracle(cls, user_id: str) -> dict | None:
         """尝试用背包流星鱼凑一次奇迹，成功则消耗子集并 +1 星辰木框。
 

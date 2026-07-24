@@ -38,6 +38,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"(?:钓鱼打窝|打窝)(?:\s+(\d+))?", "打窝", "nest_matcher", ("打窝",)),
     CommandDef(r"(?:钓鱼图鉴|图鉴|查看图鉴)([12]?)", "图鉴", "collection_matcher", ("钓鱼图鉴", "图鉴", "查看图鉴")),
     CommandDef(r"(?:流星鱼展馆|星空祈愿展馆|星空起源展馆|星空鱼展馆|星空展馆|星鱼展馆)", "星空鱼展馆", "starry_exhibition_matcher", ("流星鱼展馆",)),
+    CommandDef(r"(?:星空排行|星空排名|星空排行榜)", "星空排行", "starry_ranking_matcher", ("星空排行",)),
     CommandDef(r"钓鱼币兑换(?:\s*(\d+))?", "兑换", "exchange_matcher", ("钓鱼币兑换",)),
     CommandDef(r"(?:黑商|黑市)(?:交换)?(?:\s*(.*))?", "黑商交换", "black_market_matcher", ("黑商交换",)),
     CommandDef(r"(?:白商|白市)", "白商", "white_market_matcher", ("白商",)),

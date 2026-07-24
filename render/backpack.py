@@ -5,6 +5,7 @@ from .base import (
     RARITY_COLORS,
     RARITY_NAMES,
     _get_utr_starry_src,
+    _starry_feature_digit_styles,
     build_fish_item_data,
     build_starry_fish_cards,
     get_fish_image_src,
@@ -18,11 +19,18 @@ _ITEMS_DIR = _RESOURCES_DIR / "images" / "items"
 
 
 def _get_frame_src(tier: str) -> str:
-    """tier: starry | cat | normal"""
-    if tier in ("starry", "cat"):
-        frame_path = _ITEMS_DIR / "猫猫框.png"
-    else:
-        frame_path = _ITEMS_DIR / "展示木框.png"
+    """tier: starry | cat | normal
+
+    starry 框使用专属星空框素材；cat 与 normal 各自对应独立素材。
+    （早期星空框缺素材时曾复用猫猫框.png + CSS hue-rotate 变色作为临时方案，
+     现已替换为正式星空框.png。）
+    """
+    frame_map = {
+        "starry": "星空框.png",
+        "cat": "猫猫框.png",
+        "normal": "展示木框.png",
+    }
+    frame_path = _ITEMS_DIR / frame_map.get(tier, "展示木框.png")
     if frame_path.exists():
         return str(frame_path)
     return ""
@@ -209,5 +217,67 @@ async def render_starry_exhibition(user_id: str, user) -> bytes:
         total_score=round(float(user.starry_score_accumulated or 0), 3),
         total_count=total_count,
         exhibition_count=len(cards),
+    )
+    return await render_html(html, 560)
+
+
+async def render_starry_ranking(
+    entries: list[tuple[str, str, list[dict]]],
+    top_n: int = 20,
+) -> bytes:
+    """渲染全服星空排行榜图片。
+
+    entries: (user_id, nickname, exhibition_records) 列表，来自全表扫描。
+    展馆记录保存的是入馆时分数快照，这里按当前规则重算以确保排行一致性。
+    """
+    from ..core.starry_system import REWARD_POOL_NAMES, band, score_starry_fish
+
+    flat: list[dict] = []
+    for user_id, nickname, records in entries:
+        for record in records:
+            fish_id = str(record.get("id", "0")).zfill(6)
+            scored = score_starry_fish(fish_id)
+            digit_matched, digit_colors, digit_text_colors = (
+                _starry_feature_digit_styles(
+                    scored.features,
+                    scored.id_text,
+                    reward_pool=scored.reward_pool,
+                    display_score=scored.display_score,
+                )
+            )
+            flat.append(
+                {
+                    "player": nickname or user_id,
+                    "id": scored.id_text,
+                    "digits": list(scored.id_text),
+                    "digit_colors": digit_colors,
+                    "digit_text_colors": digit_text_colors,
+                    "score": round(scored.raw_score, 3),
+                    "display_score": scored.display_score,
+                    "band": band(scored.display_score),
+                    "reward_pool": REWARD_POOL_NAMES.get(
+                        scored.reward_pool, scored.reward_pool
+                    ),
+                    "features": [
+                        f.display_name for f in scored.features[:4]
+                    ],
+                }
+            )
+
+    # 按分数降序、编号降序排序后取 top_n
+    flat.sort(key=lambda item: (item["score"], int(item["id"])), reverse=True)
+    flat = flat[:top_n]
+
+    for index, item in enumerate(flat):
+        item["rank"] = index + 1
+
+    html = render_template(
+        "starry_ranking.html",
+        body_bg=(
+            "linear-gradient(135deg, #172033 0%, #314f6f 55%, #7a6e96 100%)"
+        ),
+        width=560,
+        entries=flat,
+        top_n=top_n,
     )
     return await render_html(html, 560)

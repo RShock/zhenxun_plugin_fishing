@@ -1,4 +1,4 @@
-from .backpack import render_backpack, render_display, render_starry_exhibition
+from .backpack import render_backpack, render_display, render_starry_exhibition, render_starry_ranking
 from .base import (
     FISH_IMAGES_PATH,
     FONT_FACE_CSS,
@@ -84,6 +84,7 @@ __all__ = [
     "render_sign_result",
     "render_skin_list",
     "render_starry_exhibition",
+    "render_starry_ranking",
     "render_template",
     "render_upgrade_result",
     "render_user_status",

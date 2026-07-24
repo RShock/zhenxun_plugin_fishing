@@ -14,6 +14,7 @@ from ..backpack import (
     get_backpack_image,
     get_collection_image,
     get_starry_exhibition_image,
+    get_starry_ranking_image,
     is_likely_misfire,
     lock_fish,
     render_white_market_records,
@@ -33,6 +34,7 @@ from ..matchers import (
     sell_fish_matcher,
     set_bait_matcher,
     starry_exhibition_matcher,
+    starry_ranking_matcher,
     unlock_fish_matcher,
     white_market_exchange_matcher,
     white_market_matcher,
@@ -192,6 +194,14 @@ async def _(event: Event, matcher: Matcher):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
     image = await get_starry_exhibition_image(user_id)
+    await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+
+
+@starry_ranking_matcher.handle()
+async def _(event: Event, matcher: Matcher):
+    user_id, _ = await _ensure_user(event)
+    is_private = _is_private_chat(event)
+    image = await get_starry_ranking_image()
     await _send_image(matcher, image, user_id=user_id, is_private=is_private)
 
 
