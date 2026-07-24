@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="wmg-title">白商交换图谱</div>
-<div class="wmg-tip">箭头从支付鱼指向获得鱼。相同鱼共点，同地图聚类。背景色代表稀有度。</div>
+<div class="wmg-tip">箭头从支付鱼指向获得鱼。相同鱼共点，同地图同稀有度同行。背景色代表稀有度。</div>
 {% if has_data %}
 <div class="wmg-legend">
     <span class="wmg-legend-item"><span style="display:inline-block;width:24px;height:2px;background:#28a745;"></span> 现在可交换</span>
@@ -24,40 +24,69 @@
     var rarityColors = {{ rarity_colors_json|safe }};
 
     var NODE_W = 104, NODE_H = 42, NODE_RX = 6;
-    var GAP_Y = 14;         // 同聚类内节点纵向间距
-    var BAND_GAP = 50;      // 不同聚类之间的纵向间距
-    var CURVE_R = 42;       // 弧线弯曲半径（左右各留此宽度）
-    var PAD = 24;
+    var GAP_X = 14;          // 同行内节点水平间距
+    var GAP_Y = 12;          // 同地图内不同稀有度行的垂直间距
+    var BAND_GAP = 44;       // 不同地图之间的垂直间距
+    var MARGIN = 30;         // 左右留白（含弧线空间）
+    var CURVE_OFFSET = 38;   // 绕行弧线偏移量
+    var PAD_TOP = 24;
     var n = nodes.length;
 
     var nodeMap = {};
     nodes.forEach(function(nd){ nodeMap[nd.id] = nd; });
 
-    // ── 按地图分组 ──
+    // ── 稀有度排序（高级在前） ──
+    var RARITY_ORDER = ['UTR','UR','SSR','SR','R','N'];
+    function rarityRank(r){ var i = RARITY_ORDER.indexOf(r); return i < 0 ? 99 : i; }
+
+    // ── 按 (地图, 稀有度) 分行 ──
     var locGroups = {};
-    var nodeLoc = {};
     nodes.forEach(function(nd){
         var lid = nd.location_id || '_unknown';
-        nodeLoc[nd.id] = lid;
-        if (!locGroups[lid]) locGroups[lid] = [];
-        locGroups[lid].push(nd);
+        if (!locGroups[lid]) locGroups[lid] = {};
+        var r = nd.rarity || 'N';
+        if (!locGroups[lid][r]) locGroups[lid][r] = [];
+        locGroups[lid][r].push(nd);
     });
-    var locIds = Object.keys(locGroups);
 
-    // ── 纯纵向单列布局 ──
-    // 所有节点在一条垂直线上，按地图分段，段内有 GAP_Y，段间有 BAND_GAP
-    var colX = PAD + CURVE_R + NODE_W / 2;
-    var canvasW = PAD + CURVE_R + NODE_W + CURVE_R + PAD;
-    var cursorY = PAD;
-    locIds.forEach(function(lid){
-        var group = locGroups[lid];
-        group.forEach(function(nd, i){
-            nd.x = colX;
-            nd.y = cursorY + i * (NODE_H + GAP_Y) + NODE_H / 2;
+    // 收集所有行：(location_id, rarity, [nodes])，按地图 → 稀有度排序
+    var rows = [];
+    Object.keys(locGroups).forEach(function(lid){
+        var rarities = Object.keys(locGroups[lid]);
+        rarities.sort(function(a, b){ return rarityRank(a) - rarityRank(b); });
+        rarities.forEach(function(r){
+            rows.push({ locId: lid, rarity: r, items: locGroups[lid][r] });
         });
-        cursorY += group.length * (NODE_H + GAP_Y) + BAND_GAP;
     });
-    var canvasH = cursorY - BAND_GAP + PAD;
+
+    // ── 计算每行宽度，确定画布宽度 ──
+    var maxRowW = 0;
+    rows.forEach(function(row){
+        var w = row.items.length * NODE_W + (row.items.length - 1) * GAP_X;
+        if (w > maxRowW) maxRowW = w;
+    });
+    var canvasW = Math.max(maxRowW + MARGIN * 2, 420);
+    var colX = canvasW / 2;  // 行中心 x
+
+    // ── 布局：逐行放置节点 ──
+    var cursorY = PAD_TOP;
+    var prevLocId = null;
+    rows.forEach(function(row){
+        // 换地图时额外加间距
+        if (prevLocId !== null && row.locId !== prevLocId) {
+            cursorY += BAND_GAP - GAP_Y;
+        }
+        prevLocId = row.locId;
+
+        var rowW = row.items.length * NODE_W + (row.items.length - 1) * GAP_X;
+        var startX = colX - rowW / 2;
+        row.items.forEach(function(nd, i){
+            nd.x = startX + i * (NODE_W + GAP_X) + NODE_W / 2;
+            nd.y = cursorY + NODE_H / 2;
+        });
+        cursorY += NODE_H + GAP_Y;
+    });
+    var canvasH = cursorY - GAP_Y + PAD_TOP;
 
     // ── 去重边 ──
     var edgeSet = {};
@@ -87,13 +116,29 @@
         if (edgeSet[rev]) bidirKeys[e.source + '\x00' + e.target] = true;
     });
 
-    // ── 判断两节点间是否有其他节点阻挡 ──
-    function hasNodeBetween(s, t){
-        var minY = Math.min(s.y, t.y);
-        var maxY = Math.max(s.y, t.y);
+    // ── 线段与矩形相交检测（判断是否被中间节点阻挡） ──
+    function segIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh, pad){
+        var minX = rx - pad, maxX = rx + rw + pad;
+        var minY = ry - pad, maxY = ry + rh + pad;
+        // 快速排除：线段包围盒与矩形不相交
+        if (Math.max(x1,x2) < minX || Math.min(x1,x2) > maxX) return false;
+        if (Math.max(y1,y2) < minY || Math.min(y1,y2) > maxY) return false;
+        // 检查线段是否穿过矩形内部（用参数方程采样）
+        var steps = 20;
+        for (var i = 1; i < steps; i++){
+            var t = i / steps;
+            var px = x1 + (x2 - x1) * t;
+            var py = y1 + (y2 - y1) * t;
+            if (px > minX && px < maxX && py > minY && py < maxY) return true;
+        }
+        return false;
+    }
+
+    function isBlocked(s, t){
         for (var k = 0; k < n; k++){
             if (nodes[k] === s || nodes[k] === t) continue;
-            if (nodes[k].y > minY + NODE_H / 2 + 2 && nodes[k].y < maxY - NODE_H / 2 - 2) return true;
+            var nx = nodes[k].x - NODE_W/2, ny = nodes[k].y - NODE_H/2;
+            if (segIntersectsRect(s.x, s.y, t.x, t.y, nx, ny, NODE_W, NODE_H, 3)) return true;
         }
         return false;
     }
@@ -116,6 +161,19 @@
         return result;
     }
 
+    // ── 裁剪线段端点到节点矩形边缘 ──
+    function trimToEdge(sx, sy, tx, ty){
+        var dx = tx - sx, dy = ty - sy;
+        var dist = Math.max(Math.sqrt(dx*dx + dy*dy), 1);
+        var cos = dx / dist, sin = dy / dist;
+        var hw = NODE_W / 2 + 2, hh = NODE_H / 2 + 2;
+        var trim = Math.min(
+            Math.abs(cos) > 0.01 ? hw / Math.abs(cos) : 1e9,
+            Math.abs(sin) > 0.01 ? hh / Math.abs(sin) : 1e9
+        );
+        return { x1: sx + cos * trim, y1: sy + sin * trim, x2: tx - cos * trim, y2: ty - sin * trim };
+    }
+
     // ── 构建 SVG ──
     var p = [];
     p.push('<svg xmlns="http://www.w3.org/2000/svg" width="' + canvasW + '" height="' + Math.ceil(canvasH) + '" style="display:block;margin:0 auto;">');
@@ -130,45 +188,37 @@
     uniqueEdges.forEach(function(e){
         var s = nodeMap[e.source], t = nodeMap[e.target];
         if (!s || !t) return;
-        var sx = s.x, sy = s.y;
-        var tx = t.x, ty = t.y;
-        var goingDown = ty > sy;
-        var blocked = hasNodeBetween(s, t);
-        var isBidir = bidirKeys[e.source + '\x00' + e.target];
-
         var isNow = e.category === 'now';
         var color = isNow ? '#28a745' : '#d9a400';
         var marker = isNow ? 'arrN' : 'arrP';
         var dashAttr = isNow ? '' : 'stroke-dasharray="6,5"';
-
-        var x1, y1, x2, y2, d;
+        var isBidir = bidirKeys[e.source + '\x00' + e.target];
+        var blocked = isBlocked(s, t);
+        var d;
 
         if (!blocked) {
-            // 无阻挡：直线，从节点上/下边缘出发
-            if (goingDown) {
-                x1 = sx; y1 = sy + NODE_H / 2 + 2;
-                x2 = tx; y2 = ty - NODE_H / 2 - 2;
-            } else {
-                x1 = sx; y1 = sy - NODE_H / 2 - 2;
-                x2 = tx; y2 = ty + NODE_H / 2 + 2;
-            }
-            d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' L ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+            // 无阻挡：直线，裁剪到边缘
+            var tr = trimToEdge(s.x, s.y, t.x, t.y);
+            d = 'M ' + tr.x1.toFixed(1) + ' ' + tr.y1.toFixed(1) + ' L ' + tr.x2.toFixed(1) + ' ' + tr.y2.toFixed(1);
         } else {
-            // 有阻挡：从节点右(或左)边缘出发，三次贝塞尔弧线绕过中间节点
-            // 双向边：source<target 走右侧，source>target 走左侧，避免重叠
-            var side = 1; // 1=右, -1=左
-            if (isBidir) {
-                side = e.source < e.target ? 1 : -1;
-            }
-            x1 = sx + side * (NODE_W / 2 + 2);
-            y1 = sy;
-            x2 = tx + side * (NODE_W / 2 + 2);
-            y2 = ty;
-            // 控制点在两节点之间，向外偏移
-            var cx1 = x1 + side * CURVE_R;
-            var cy1 = y1;
-            var cx2 = x2 + side * CURVE_R;
-            var cy2 = y2;
+            // 有阻挡：弧线绕行
+            // 判断绕行方向：优先右侧；双向边按 source<target 分左右
+            var side = 1;
+            if (isBidir) side = e.source < e.target ? 1 : -1;
+
+            // 起点/终点从节点侧边出发
+            var x1 = s.x + side * (NODE_W / 2 + 2);
+            var y1 = s.y;
+            var x2 = t.x + side * (NODE_W / 2 + 2);
+            var y2 = t.y;
+
+            // 三次贝塞尔：控制点向外偏移
+            var midY = (y1 + y2) / 2;
+            var cx1 = x1 + side * CURVE_OFFSET;
+            var cy1 = y1 + (midY - y1) * 0.3;
+            var cx2 = x2 + side * CURVE_OFFSET;
+            var cy2 = y2 - (y2 - midY) * 0.3;
+
             d = 'M ' + x1.toFixed(1) + ' ' + y1.toFixed(1) +
                 ' C ' + cx1.toFixed(1) + ' ' + cy1.toFixed(1) +
                 ' ' + cx2.toFixed(1) + ' ' + cy2.toFixed(1) +
