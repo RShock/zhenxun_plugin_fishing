@@ -161,6 +161,18 @@ async def _migrate_frame_buffs():
         buff.buff_type = BuffEffect.BUFF_TYPE_CAT_NEST
         await buff.save(update_fields=["buff_type"])
 
+    # 猫框打窝从地点级迁移到全局（类比木框），使其对 11-20 所有星空图生效
+    location_cat_buffs = await FishingBuff.filter(
+        buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
+        target_type=BuffEffect.TARGET_TYPE_LOCATION,
+        end_time__gt=datetime.now(),
+    ).all()
+    for buff in location_cat_buffs:
+        buff.target_type = BuffEffect.TARGET_TYPE_GLOBAL
+        buff.target_id = ""
+        buff.description = "猫框打窝效果，11-20星空图钓鱼速度+5%"
+        await buff.save(update_fields=["target_type", "target_id", "description"])
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 【临时迁移代码结束】
 # ═══════════════════════════════════════════════════════════════════════════════

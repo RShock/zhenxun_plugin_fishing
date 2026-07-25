@@ -698,7 +698,7 @@ code, .ic {
           <tr><td><span class="tag t-basic">成长</span></td><td><code>钓鱼币兑换 [数量]</code></td><td>进行钓鱼币相关兑换。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>打窝 [层数]</code></td><td>消耗玉米给当前地点增加速度，每日 2 次。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 物品名 [数量]</code></td><td>使用药水、木框、猫框等道具。数量超出库存自动使用全部剩余。</td></tr>
-          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫框给当前地点打窝加速。</td></tr>
+          <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫框对全部星空图全局打窝加速。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>设定鱼饵 鱼饵名</code></td><td>设置优先使用的鱼饵。<code>取消/0/自动/清除</code> 恢复自动选择。</td></tr>
           <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>卖出鱼饵 鱼饵名</code></td><td>卖出指定鱼饵，按购买价回收。</td></tr>
           <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>黑商撤回</code> / <code>白商</code></td><td>鱼获交换、撤回与逆交换，详见黑商白商专页。</td></tr>
@@ -741,7 +741,7 @@ code, .ic {
           <tr><td>鱼饵</td><td>所有地图</td><td>+120%</td><td>与打窝/展示框/星空艇同乘区累加</td></tr>
           <tr><td>玉米打窝</td><td>1-20 图 + S1</td><td>10 层 (50%)</td><td>1-10 图+S1 与星空艇共享 50% 上限；满后可循环延长已有 buff</td></tr>
           <tr><td>木框</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>独立上限，不与打窝/星空艇共享；满后可循环延长已有 buff</td></tr>
-          <tr><td>猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>独立 50% 上限，不与玉米打窝共享；地点级 buff；满后可循环延长已有 buff</td></tr>
+          <tr><td>猫框打窝</td><td>仅 11-20 星空图</td><td>10 层 (50%)</td><td>全局 buff，对 11-20 所有星空图生效；独立 50% 上限，不与玉米打窝共享；满后可循环延长已有 buff</td></tr>
           <tr><td>星空艇</td><td>1-10 图 + S1</td><td>10 层 (50%)</td><td>全服共享，与玉米打窝共享上限</td></tr>
           <tr><td>天气</td><td>所有地图</td><td>—</td><td>独立乘区（雨天等）</td></tr>
           <tr><td>猫猫乐园</td><td>仅 S1</td><td>—</td><td>独立乘区</td></tr>
@@ -1483,7 +1483,7 @@ code, .ic {
     </p>
     <div class="grid-2" style="margin-top:10px">
       <div class="cmd-card"><span class="cmd-name">用途一：展示栏强化</span><p class="cmd-desc">通过【升级展示栏】消耗猫框强化展示框，强化后的展示位每天 3 倍签到收益。</p></div>
-      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫框 [数量]</code> 给当前地点打窝，每层 +5%，最多 10 层（50%）。拥有独立 50% 进度条，不与玉米打窝共用。满后可继续使用猫框循环延长已有 buff（每个+8h），每次最多使用 10 个。</p></div>
+      <div class="cmd-card"><span class="cmd-name">用途二：星空图打窝</span><p class="cmd-desc">在 11-20 图钓鱼时，使用 <code>钓鱼使用 猫框 [数量]</code> 对全部星空图全局打窝，每层 +5%，最多 10 层（50%）。拥有独立 50% 进度条，不与玉米打窝共用。满后可继续使用猫框循环延长已有 buff（每个+8h），每次最多使用 10 个。</p></div>
       <div class="cmd-card"><span class="cmd-name">打窝规则</span><p class="cmd-desc">独立 50% 进度条，不与玉米打窝共享层数上限；群聊每日打窝合计 2 次；私聊不计入次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">自动回收</span><p class="cmd-desc">传奇猫雕像 Lv3 建成后，背包和新钓的猫猫乐园材料自动回收（每个 80 金币）。</p></div>
     </div>

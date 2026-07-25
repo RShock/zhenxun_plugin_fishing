@@ -182,8 +182,7 @@ async def do_cat_frame_nest(
         frame_adjusted = True
 
     current_cat_buffs = await FishingBuff.filter(
-        target_type=BuffEffect.TARGET_TYPE_LOCATION,
-        target_id=scene_instance_id,
+        target_type=BuffEffect.TARGET_TYPE_GLOBAL,
         buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
         end_time__gt=datetime.now(),
     ).order_by("end_time").all()
@@ -206,18 +205,17 @@ async def do_cat_frame_nest(
 
     actual_frames = layers_to_add + extended_count
     if actual_frames == 0:
-        return False, f"当前地点猫框打窝效果已满{MAX_NEST_LAYERS * 5}%，无法继续打窝"
+        return False, f"猫框打窝效果已满{MAX_NEST_LAYERS * 5}%，无法继续打窝"
 
     await FishingUser.reduce_cat_frames(user_id, actual_frames)
 
     for _ in range(layers_to_add):
-        await FishingBuff.add_location_buff(
-            location_id=scene_instance_id,
+        await FishingBuff.add_global_buff(
             buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-            duration_hours=duration_hours,
+            start_time=datetime.now(),
+            end_time=datetime.now() + timedelta(hours=duration_hours),
             value=5,
-            description=f"猫框打窝效果，{location.name}钓鱼速度+5%",
-            source_user_id=user_id,
+            description=f"猫框打窝效果，11-20星空图钓鱼速度+5%",
         )
 
     new_total = total_layers + layers_to_add
@@ -231,14 +229,14 @@ async def do_cat_frame_nest(
 
     if layers_to_add > 0:
         msg = (
-            f"在【{location.name}】使用猫框打窝成功，速度+{added_pct}%，"
+            f"在【{location.name}】使用猫框打窝成功，11-20星空图速度+{added_pct}%，"
             f"持续{duration_hours}小时"
         )
         if new_total > layers_to_add:
             msg += f"（猫框累计+{total_pct}%）"
     else:
         msg = (
-            f"在【{location.name}】猫框打窝buff已满，延长了{extended_count}次已有buff"
+            f"猫框打窝buff已满，延长了{extended_count}次已有buff"
             f"（每次+{duration_hours}小时）（猫框累计+{total_pct}%）"
         )
 

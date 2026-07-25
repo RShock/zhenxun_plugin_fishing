@@ -872,6 +872,8 @@ class TestCatFrameNestExtension:
             b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_CAT_NEST
         ]
         assert len(cat_nest_buffs) == 3
+        # 验证是全局 buff，不是地点级
+        assert all(b.target_type == "global" for b in cat_nest_buffs)
 
         nest_buffs = [
             b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_NEST
@@ -888,13 +890,12 @@ class TestCatFrameNestExtension:
         user.cat_frames = 20
 
         for i in range(5):
-            await db.buff_add_location_buff(
-                location_id="11",
+            await db.buff_add_global_buff(
                 buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-                duration_hours=8,
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(hours=8),
                 value=5,
                 description="猫框打窝效果",
-                source_user_id=USER_ID,
             )
 
         old_buffs = sorted(
@@ -929,13 +930,12 @@ class TestCatFrameNestExtension:
         user.cat_frames = 10
 
         for i in range(10):
-            await db.buff_add_location_buff(
-                location_id="11",
+            await db.buff_add_global_buff(
                 buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-                duration_hours=8,
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(hours=8),
                 value=5,
                 description="猫框打窝效果",
-                source_user_id=USER_ID,
             )
 
         old_buffs = sorted(
@@ -973,13 +973,12 @@ class TestCatFrameNestExtension:
         user.cat_frames = 20
 
         for i in range(10):
-            await db.buff_add_location_buff(
-                location_id="11",
+            await db.buff_add_global_buff(
                 buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-                duration_hours=8,
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(hours=8),
                 value=5,
                 description="猫框打窝效果",
-                source_user_id=USER_ID,
             )
 
         old_buffs = sorted(

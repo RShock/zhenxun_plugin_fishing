@@ -290,6 +290,9 @@ class FishingBuff(Model):
         # 木框打窝加成仅作用于普通地图（1-10）和 S1，不作用于星空地图（11-20）
         if is_starry_location(location_id):
             buffs = [b for b in buffs if b.buff_type != BuffEffect.BUFF_TYPE_FRAME]
+        # 猫框打窝加成仅作用于星空地图（11-20），不作用于普通地图（1-10）和 S1
+        if not is_starry_location(location_id):
+            buffs = [b for b in buffs if b.buff_type != BuffEffect.BUFF_TYPE_CAT_NEST]
         return buffs
 
     @classmethod
@@ -302,15 +305,12 @@ class FishingBuff(Model):
 
     @classmethod
     async def get_cat_nest_buff_count_for_location(cls, location_id: str) -> int:
-        """猫框打窝层数 — 仅星空图(11-20)有此类 buff。"""
-        now = datetime.now()
-        return await cls.filter(
-            target_type=BuffEffect.TARGET_TYPE_LOCATION,
-            target_id=location_id,
-            buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-            start_time__lte=now,
-            end_time__gt=now,
-        ).count()
+        """猫框打窝层数 — 全局 buff，仅星空图(11-20)返回有效值。"""
+        from ..starry import is_starry_location
+
+        if not is_starry_location(location_id):
+            return 0
+        return await cls.get_global_buff_count(BuffEffect.BUFF_TYPE_CAT_NEST)
 
     @classmethod
     async def get_active_user_buff(

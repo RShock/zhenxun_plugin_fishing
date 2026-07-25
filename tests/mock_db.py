@@ -917,12 +917,16 @@ class MockDB:
     async def buff_get_cat_nest_buff_count_for_location(
         self, location_id: str
     ) -> int:
+        # 猫框打窝是全局buff，仅星空图(11-20)返回有效值
+        from zhenxun.plugins.zhenxun_plugin_fishing.starry import is_starry_location
+
+        if not is_starry_location(location_id):
+            return 0
         now = datetime.now()
         return sum(
             1
             for b in self._buffs
-            if b.target_type == "location"
-            and b.target_id == location_id
+            if b.target_type == "global"
             and b.buff_type == "cat_nest"
             and b.start_time <= now
             and b.end_time > now
