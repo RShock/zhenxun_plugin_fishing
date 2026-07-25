@@ -257,6 +257,13 @@ class FishingUser(Model):
     fishing_status = fields.JSONField(
         default=None, null=True, description="钓鱼状态{location_id, start_time}"
     )
+    # ── 防闲置：记录上次钓鱼的地图与活跃时间，闲置超阈值时自动回溯钓鱼 ──
+    last_location_id = fields.CharField(
+        50, default="", description="上次钓鱼地图ID（防闲置用）"
+    )
+    last_active_time = fields.DatetimeField(
+        null=True, description="上次钓鱼活跃时间（防闲置用）"
+    )
 
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     update_time = fields.DatetimeField(auto_now=True, description="更新时间")
@@ -287,6 +294,9 @@ class FishingUser(Model):
             "ALTER TABLE fishing_user ADD COLUMN s2_ticket_claimed INTEGER NOT NULL DEFAULT 0;",
             "ALTER TABLE fishing_user ADD COLUMN starry_fish TEXT;",
             "ALTER TABLE fishing_user ADD COLUMN starry_exhibition TEXT;",
+            # ── 防闲置 ──
+            "ALTER TABLE fishing_user ADD COLUMN last_location_id VARCHAR(50) NOT NULL DEFAULT '';",
+            "ALTER TABLE fishing_user ADD COLUMN last_active_time TIMESTAMP;",
         ]
 
     @classmethod
@@ -1115,9 +1125,16 @@ class FishingUser(Model):
         return count
 
     @classmethod
-    async def start_fishing(cls, user_id: str, location_id: str) -> dict:
+    async def start_fishing(
+        cls,
+        user_id: str,
+        location_id: str,
+        start_time: datetime | None = None,
+    ) -> dict:
         user = await cls.get_user(user_id)
-        now_iso = datetime.now().isoformat()
+        # start_time 用于防闲置回溯：会话起始设为过去时刻，懒计算在收杆时补算鱼获
+        session_start = start_time or datetime.now()
+        now_iso = session_start.isoformat()
         user.fishing_status = {
             "location_id": location_id,
             "start_time": now_iso,
@@ -1129,7 +1146,12 @@ class FishingUser(Model):
             "cat_frame_pity": user.cat_frame_pity_counter,
             "time_potions_used": [],
         }
-        await user.save(update_fields=["fishing_status"])
+        # 防闲置记录：last_active_time 始终为真实操作时间（now），而非回溯的 start_time
+        user.last_location_id = location_id
+        user.last_active_time = datetime.now()
+        await user.save(
+            update_fields=["fishing_status", "last_location_id", "last_active_time"]
+        )
         return user.fishing_status
 
     @classmethod
@@ -1148,8 +1170,16 @@ class FishingUser(Model):
         user = await cls.get_user(user_id)
         status = user.fishing_status
         if status:
+            # 防闲置：收杆时记录上次钓鱼位置和活跃时间
+            if isinstance(status, dict) and status.get("location_id"):
+                user.last_location_id = status["location_id"]
+            user.last_active_time = datetime.now()
             user.fishing_status = None
-            await user.save(update_fields=["fishing_status"])
+            await user.save(
+                update_fields=[
+                    "fishing_status", "last_location_id", "last_active_time"
+                ]
+            )
         return status
 
     @classmethod

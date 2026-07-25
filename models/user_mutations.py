@@ -590,6 +590,12 @@ def apply_update_fishing_status(
 def apply_stop_fishing(user, dirty: set[str] | None = None) -> dict | None:
     status = user.fishing_status
     if status:
+        # 防闲置：收杆前记录上次钓鱼位置和活跃时间，供下次防闲置检测
+        if isinstance(status, dict) and status.get("location_id"):
+            user.last_location_id = status["location_id"]
+            mark_dirty(dirty, "last_location_id")
+        user.last_active_time = datetime.now()
+        mark_dirty(dirty, "last_active_time")
         user.fishing_status = None
         mark_dirty(dirty, "fishing_status")
     return status

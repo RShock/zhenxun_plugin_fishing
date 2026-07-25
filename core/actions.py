@@ -14,7 +14,7 @@ from typing import Any
 
 from zhenxun.services.log import logger
 
-from ..config import ConfigManager, LocationData
+from ..config import ConfigManager, IDLE_THRESHOLD_MINUTES, LocationData
 from ..models import (
     BuffEffect,
     FishingBuff,
@@ -250,6 +250,65 @@ async def start_fishing(
     image = await render_scene(user_id, location, group_id=group_id)
     logger.info(f"用户 {user_id} 在 {location.name} 开始钓鱼")
     return image, True, ""
+
+
+async def try_auto_fish_on_idle(user_id: str, nickname: str = "") -> str | None:
+    """防闲置：用户未在钓鱼且闲置超阈值时，自动回到上次地图开始钓鱼。
+
+    利用懒计算——会话起始时间回溯到阈值分钟前，收杆时由 simulate_fishing_loop
+    补算这段时间的鱼获。返回地图名称（触发成功）或 None（未触发）。
+
+    触发条件全部满足才执行：非钓鱼中 · 有上次地图记录 · 闲置超阈值 · 地图仍可访问。
+    """
+    if await FishingUser.is_fishing(user_id):
+        return None
+
+    user = await get_or_create_user(user_id, nickname)
+    last_location_id = user.last_location_id
+    last_active_time = user.last_active_time
+    if not last_location_id or not last_active_time:
+        return None
+
+    now = datetime.now()
+    idle_minutes = (now - _make_naive(last_active_time)).total_seconds() / 60
+    if idle_minutes <= IDLE_THRESHOLD_MINUTES:
+        return None
+
+    location = ConfigManager.get_location(last_location_id)
+    if not location:
+        return None
+
+    # 验证上次地图是否仍可访问（鱼竿等级 / 猫乐园门票 / 星空艇）
+    from ..cat_park import has_cat_park_ticket, is_cat_park_location
+    from ..starry import has_starry_ship, is_starry_location
+
+    if is_cat_park_location(last_location_id) and not await has_cat_park_ticket(
+        user_id
+    ):
+        return None
+    if is_starry_location(last_location_id) and not await has_starry_ship(user_id):
+        return None
+    if (
+        not is_cat_park_location(last_location_id)
+        and not is_starry_location(last_location_id)
+        and user.rod_level < location.difficulty
+    ):
+        return None
+
+    # 选择鱼饵（与正常 start_fishing 一致）
+    best_bait_id, _ = await select_bait_with_preference(user_id)
+    user.bait_id = str(best_bait_id)
+    await user.save(update_fields=["bait_id"])
+
+    # 会话起始回溯到阈值分钟前；start_fishing 内部会更新 last_active_time = now
+    auto_start = now - timedelta(minutes=IDLE_THRESHOLD_MINUTES)
+    await FishingUser.start_fishing(user_id, location.id, start_time=auto_start)
+
+    logger.info(
+        f"用户 {user_id} 防闲置自动在 {location.name} 开始钓鱼"
+        f"（回溯{IDLE_THRESHOLD_MINUTES}分钟）"
+    )
+    return location.name
 
 
 async def _compute_settle_step(

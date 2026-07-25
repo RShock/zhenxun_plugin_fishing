@@ -19,6 +19,7 @@ from .actions import (
     settle_fishing_step,
     start_fishing,
     stop_fishing,
+    try_auto_fish_on_idle,
 )
 from .context import (
     FishingContext,
@@ -58,5 +59,6 @@ __all__ = [
     "simulate_fishing_loop",
     "start_fishing",
     "stop_fishing",
+    "try_auto_fish_on_idle",
     "use_time_potion_settle",
 ]

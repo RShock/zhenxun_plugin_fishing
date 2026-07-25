@@ -610,3 +610,145 @@ class TestSimulationResultIntegration:
         # 第二阶段必须以第一阶段的整套鱼饵状态初始化，不能重新读取未扣库存。
         assert call_kwargs[1]["initial_available_baits"] == captured[0].available_baits
         assert call_kwargs[1]["initial_no_bait_mode"] is captured[0].no_bait_mode
+
+
+class TestAntiIdleFishing:
+    """防闲置功能：闲置超阈值时自动回到上次钓鱼地图开始钓鱼。"""
+
+    async def test_idle_over_threshold_triggers_auto_fishing(self, db):
+        """闲置超过阈值时，自动回到上次地图钓鱼，返回地图名称。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_location_id = LOCATION_1
+        user.last_active_time = datetime.now() - timedelta(minutes=20)
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is not None
+        assert result == "乡间浅溪"
+        assert await db.status_is_fishing(USER_ID) is True
+
+    async def test_auto_fish_sets_retroactive_start_time(self, db):
+        """防闲置自动钓鱼时，会话起始时间应回溯到阈值分钟前。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.constants import (
+            IDLE_THRESHOLD_MINUTES,
+        )
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_location_id = LOCATION_1
+        user.last_active_time = datetime.now() - timedelta(minutes=30)
+
+        before = datetime.now()
+        await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        status = await db.status_get(USER_ID)
+        start_time = datetime.fromisoformat(status["start_time"])
+        # 会话起始应回溯到约 IDLE_THRESHOLD_MINUTES 分钟前，而非 last_active_time
+        expected_start = before - timedelta(minutes=IDLE_THRESHOLD_MINUTES)
+        assert abs((start_time - expected_start).total_seconds()) < 5
+
+    async def test_idle_under_threshold_no_trigger(self, db):
+        """闲置未超阈值时不触发自动钓鱼。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_location_id = LOCATION_1
+        user.last_active_time = datetime.now() - timedelta(minutes=5)
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is None
+        assert await db.status_is_fishing(USER_ID) is False
+
+    async def test_already_fishing_no_trigger(self, db):
+        """用户正在钓鱼中时不触发防闲置。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        await start_fishing(USER_ID, LOCATION_1, "TestUser")
+        user.last_location_id = LOCATION_1
+        user.last_active_time = datetime.now() - timedelta(minutes=20)
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is None
+
+    async def test_no_last_location_no_trigger(self, db):
+        """无上次钓鱼地图记录时不触发。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_active_time = datetime.now() - timedelta(minutes=20)
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is None
+
+    async def test_no_last_active_time_no_trigger(self, db):
+        """无上次活跃时间记录时不触发。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_location_id = LOCATION_1
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is None
+
+    async def test_rod_level_too_low_no_trigger(self, db):
+        """鱼竿等级不足以访问上次地图时不触发。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 0
+        user.last_location_id = "2"  # difficulty=1, rod_level=0 不足
+        user.last_active_time = datetime.now() - timedelta(minutes=20)
+
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+
+        assert result is None
+        assert await db.status_is_fishing(USER_ID) is False
+
+    async def test_stop_fishing_records_last_location(self, db):
+        """收杆后应记录上次钓鱼位置和活跃时间，供下次防闲置检测。"""
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        await start_fishing(USER_ID, LOCATION_1, "TestUser")
+
+        # start_fishing 内部已更新追踪字段
+        assert user.last_location_id == LOCATION_1
+        assert user.last_active_time is not None
+
+        await stop_fishing(USER_ID, gm_mode=True)
+
+        # 收杆后追踪字段仍保留
+        assert user.last_location_id == LOCATION_1
+        assert user.last_active_time is not None
+
+    async def test_auto_fish_then_stop_settles(self, db):
+        """防闲置触发自动钓鱼后，收杆能正常结算鱼获（懒计算补算）。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 5
+        user.last_location_id = LOCATION_1
+        user.last_active_time = datetime.now() - timedelta(minutes=20)
+
+        # 防闲置自动开始钓鱼（回溯15分钟）
+        result = await try_auto_fish_on_idle(USER_ID, "TestUser")
+        assert result is not None
+        assert await db.status_is_fishing(USER_ID) is True
+
+        # 收杆应能正常结算鱼获
+        render_data, buffs, ok = await stop_fishing(USER_ID, gm_mode=True)
+        assert render_data is not None
+        fish_list = await db.backpack_get_user_fish(USER_ID)
+        assert len(fish_list) > 0

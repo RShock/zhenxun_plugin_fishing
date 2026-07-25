@@ -20,6 +20,7 @@ from .constants import (
     DAILY_NEST_LIMIT,
     DAILY_SELL_LIMIT,
     DISPLAY_SLOT_COSTS,
+    IDLE_THRESHOLD_MINUTES,  # noqa: F401 — 重新导出
     INDEX_RARITY,
     MAX_FRAME_BUFF_LAYERS,
     MAX_NEST_LAYERS,

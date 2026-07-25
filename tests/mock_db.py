@@ -49,6 +49,9 @@ class InMemoryUser:
         self.items = {}
         self.displays = {}
         self.fishing_status = None
+        # 防闲置追踪字段（与 FishingUser 模型同步）
+        self.last_location_id = ""
+        self.last_active_time = None
 
     @property
     def base_rod_level(self) -> int:
@@ -380,9 +383,11 @@ class MockDB:
         }
 
     # --- FishingUser: Status (fishing_status JSONB) ---
-    async def status_start_fishing(self, user_id: str, location_id: str):
+    async def status_start_fishing(self, user_id: str, location_id: str, start_time=None):
         u = await self.user_get(user_id)
-        now_iso = datetime.now().isoformat()
+        # start_time 用于防闲置回溯：会话起始设为过去时刻，懒计算在收杆时补算鱼获
+        session_start = start_time or datetime.now()
+        now_iso = session_start.isoformat()
         u.fishing_status = {
             "location_id": location_id,
             "start_time": now_iso,
@@ -394,6 +399,9 @@ class MockDB:
             "cat_frame_pity": u.cat_frame_pity_counter,
             "time_potions_used": [],
         }
+        # 防闲置记录：last_active_time 始终为真实操作时间（now），而非回溯的 start_time
+        u.last_location_id = location_id
+        u.last_active_time = datetime.now()
         return u.fishing_status
 
     async def status_get(self, user_id: str):
@@ -404,6 +412,10 @@ class MockDB:
         u = await self.user_get(user_id)
         status = u.fishing_status
         if status:
+            # 防闲置：收杆前记录上次钓鱼位置和活跃时间，供下次防闲置检测
+            if isinstance(status, dict) and status.get("location_id"):
+                u.last_location_id = status["location_id"]
+            u.last_active_time = datetime.now()
             u.fishing_status = None
         return status
 

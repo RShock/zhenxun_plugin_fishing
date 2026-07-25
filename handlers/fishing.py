@@ -9,7 +9,13 @@ from nonebot.matcher import Matcher
 from nonebot.params import Arg, RegexGroup
 
 from ..config import ConfigManager
-from ..core import check_fishing_status, render_scene, start_fishing, stop_fishing
+from ..core import (
+    check_fishing_status,
+    render_scene,
+    start_fishing,
+    stop_fishing,
+    try_auto_fish_on_idle,
+)
 from ..core.actions import run_post_settlement
 from ..matchers import fishing_matcher, status_matcher, stop_fishing_matcher
 from ..models import FishingUser
@@ -60,6 +66,24 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
                     await matcher.finish()
 
         user = await get_or_create_user(user_id, nickname)
+
+        # ── 防闲置：未在钓鱼但闲置超阈值，自动回到上次地图 ──
+        auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+        if auto_loc:
+            status = await FishingUser.get_status(user_id)
+            if status:
+                loc = ConfigManager.get_location(status["location_id"])
+                if loc:
+                    image = await render_scene(user_id, loc, group_id=group_id)
+                    await _send_image(
+                        matcher,
+                        image,
+                        f"你的角色自己去{auto_loc}钓鱼了，请输入收杆",
+                        user_id,
+                        is_private=is_private,
+                    )
+                    await matcher.finish()
+
         locations = ConfigManager.get_locations()
         image = await render_location_select(user_id, locations, user.rod_level)
         await _send_image(matcher, image, user_id=user_id, is_private=is_private)
@@ -112,6 +136,11 @@ async def _(event: Event, matcher: Matcher):
 
         await FishingActiveGroup.record_fishing(group_id, user_id, nickname)
 
+    # ── 防闲置：收杆时若未在钓鱼且闲置超阈值，自动回到上次地图钓鱼再结算 ──
+    auto_loc = None
+    if not await FishingUser.is_fishing(user_id):
+        auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+
     try:
         render_data, buff_messages, _ = await stop_fishing(
             user_id, is_private=is_private
@@ -133,6 +162,8 @@ async def _(event: Event, matcher: Matcher):
         await _send_text(matcher, "你还没有开始钓鱼！", user_id, is_private=is_private)
 
     hints = list(buff_messages)
+    if auto_loc:
+        hints.insert(0, f"你的角色自己去{auto_loc}钓鱼了")
     if not is_private and is_last_stop_action(stop_count, status_count):
         hints.append("⚠️ 这是今天的最后一次收杆！")
 
