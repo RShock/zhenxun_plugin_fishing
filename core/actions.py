@@ -322,6 +322,16 @@ async def _compute_settle_step(
     return step, updated_status, ctx
 
 
+def _sync_active_bait(user, bait, dirty: set[str] | None = None) -> bool:
+    """把模拟中自动切换后的当前鱼饵同步回用户状态。"""
+    if bait is None or str(user.bait_id) == str(bait.id):
+        return False
+    user.bait_id = str(bait.id)
+    if dirty is not None:
+        dirty.add("bait_id")
+    return True
+
+
 async def settle_fishing_step(user_id: str, gm_mode: bool = False) -> StepResult | None:
     """结算一次钓鱼步进（状态查询路径：立即落库）。"""
     computed = await _compute_settle_step(user_id, gm_mode)
@@ -332,6 +342,8 @@ async def settle_fishing_step(user_id: str, gm_mode: bool = False) -> StepResult
 
     # 模拟阶段只计算自动换饵结果，不持久化 user.bait_id；状态与鱼饵扣除
     # 必须在同一事务中提交，避免状态已推进但鱼饵未扣除。
+    # 步进结算不同步临时鱼饵（保持玩家持久化偏好），收杆时由
+    # _apply_session_reward_stage 中的 _sync_active_bait 统一落库。
     async with _stop_db_transaction():
         await FishingUser.update_fishing_status(user_id, updated_status)
         if step.bait_usage:
@@ -599,6 +611,7 @@ async def _apply_session_reward_stage(plan: _StopSettlementPlan) -> None:
 
     mut.apply_stop_fishing(plan.user, plan.dirty)
     plan.bait_speed_bonus = plan.step.bait.speed_bonus if plan.step.bait else 0
+    _sync_active_bait(plan.user, plan.step.bait, plan.dirty)
     plan.start_time = _make_naive(datetime.fromisoformat(status["start_time"]))
     plan.now = datetime.now()
     if plan.gm_mode:

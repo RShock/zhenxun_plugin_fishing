@@ -263,8 +263,8 @@ class TestStarWishNumbers:
         assert indices is not None
         assert sum(values[i] for i in indices) % 10_000_000 == 7_777_777
 
-    def test_miracle_subset_uses_top_max_exact_n_when_above_cap(self):
-        """超过 26 条时只对编号最大的 26 条做 MITM。"""
+    def test_miracle_subset_searches_all_items_when_above_legacy_cap(self):
+        """超过旧上限后仍应搜索全部背包，不能漏掉小编号参与的解。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
             MIRACLE_MAX_EXACT_N,
         )
@@ -277,12 +277,12 @@ class TestStarWishNumbers:
         assert indices is not None
         assert sum(values[i] for i in indices) % 10_000_000 == 7_777_777
 
-        # 唯一解依赖被挤出 top-26 的小数时，应放弃匹配
-        big_noise = list(range(900_000, 900_000 + MIRACLE_MAX_EXACT_N))
+        # 唯一解依赖旧 top-26 会挤出的小编号，现应仍能精确找到。
+        big_noise = [9_000_001] * MIRACLE_MAX_EXACT_N
         crowded = big_noise + [3, 7_777_777 - 3]
-        top = sorted(crowded, reverse=True)[:MIRACLE_MAX_EXACT_N]
-        assert 3 not in top
-        assert find_starry_miracle_subset(crowded) is None
+        indices = find_starry_miracle_subset(crowded)
+        assert indices is not None
+        assert sum(crowded[i] for i in indices) % 10_000_000 == 7_777_777
 
     def test_miracle_subset_finds_singleton_equal_to_target_mod(self):
         values = [7_777_777, 3, 5]
