@@ -342,6 +342,7 @@ async def render_white_market_records(user_id: str) -> bytes:
             "name": record.source_name,
             "rarity": record.source_rarity,
             "location_name": record.source_location_name,
+            "location_id": record.source_location_id,
             "numeric_id": record.source_numeric_id,
         })
 
@@ -352,6 +353,8 @@ async def render_white_market_records(user_id: str) -> bytes:
         loc_id = group["target_location_id"]
         rarity = group["target_rarity"]
         loc_name = group["target_location_name"]
+        # 标注"图x"：location_id 即地图编号（猫猫乐园=S1，其余为数字）
+        loc_tag = f"图{loc_id}"
 
         # 右侧获得鱼：按 numeric_id 去重，再按(场景,稀有度)分组合并为单行
         seen_ids: set[str] = set()
@@ -361,12 +364,14 @@ async def render_white_market_records(user_id: str) -> bytes:
             if s["numeric_id"] in seen_ids:
                 continue
             seen_ids.add(s["numeric_id"])
+            s_loc_tag = f"图{s['location_id']}"
             sgk = (s["location_name"], s["rarity"])
             if sgk not in group_index:
                 group_index[sgk] = len(get_groups)
                 get_groups.append({
                     "rarity": s["rarity"],
                     "location_name": s["location_name"],
+                    "location_tag": s_loc_tag,
                     "names": [],
                 })
             get_groups[group_index[sgk]]["names"].append(s["name"])
@@ -387,12 +392,14 @@ async def render_white_market_records(user_id: str) -> bytes:
                     "name": f["fish_name"],
                     "rarity": f["rarity"],
                     "location_name": loc_name,
+                    "location_tag": loc_tag,
                 })
 
         if backpack_fish:
             # 可以交换：左边显示背包中具体的鱼，右边显示获得鱼分组
             now_items.append({
                 "pay_fish": backpack_fish,
+                "pay_location_tag": loc_tag,
                 "get_groups": get_groups,
             })
         else:
@@ -408,6 +415,7 @@ async def render_white_market_records(user_id: str) -> bytes:
             possible_items.append({
                 "pay_label": f"{loc_name} {rarity}",
                 "pay_rarity": rarity,
+                "pay_location_tag": loc_tag,
                 "get_groups": get_groups,
             })
 

@@ -18,20 +18,22 @@ class TestListRender:
         now_items = [
             {
                 "pay_fish": [
-                    {"name": "鲤鱼", "rarity": "N", "location_name": "浅水区"},
-                    {"name": "鲶鱼", "rarity": "N", "location_name": "浅水区"},
+                    {"name": "鲤鱼", "rarity": "N", "location_name": "浅水区", "location_tag": "图1"},
+                    {"name": "鲶鱼", "rarity": "N", "location_name": "浅水区", "location_tag": "图1"},
                 ],
+                "pay_location_tag": "图1",
                 "get_groups": [
-                    {"rarity": "UR", "location_name": "浅水区", "names": ["小鲫鱼"]},
+                    {"rarity": "UR", "location_name": "浅水区", "location_tag": "图1", "names": ["小鲫鱼"]},
                 ],
             },
             {
                 "pay_fish": [
-                    {"name": "金鱼", "rarity": "SSR", "location_name": "深水区"},
+                    {"name": "金鱼", "rarity": "SSR", "location_name": "深水区", "location_tag": "图3"},
                 ],
+                "pay_location_tag": "图3",
                 "get_groups": [
-                    {"rarity": "UR", "location_name": "深水区", "names": ["黑鱼"]},
-                    {"rarity": "UR", "location_name": "急流区", "names": ["刀鱼"]},
+                    {"rarity": "UR", "location_name": "深水区", "location_tag": "图3", "names": ["黑鱼"]},
+                    {"rarity": "UR", "location_name": "急流区", "location_tag": "图4", "names": ["刀鱼"]},
                 ],
             },
         ]
@@ -39,8 +41,9 @@ class TestListRender:
             {
                 "pay_label": "深海区 UTR",
                 "pay_rarity": "UTR",
+                "pay_location_tag": "图S1",
                 "get_groups": [
-                    {"rarity": "UTR", "location_name": "深海区", "names": ["鲨鱼", "旗鱼"]},
+                    {"rarity": "UTR", "location_name": "深海区", "location_tag": "图S1", "names": ["鲨鱼", "旗鱼"]},
                 ],
             },
         ]
