@@ -88,16 +88,20 @@ async def render_location_select(
             if wt not in ("sunny", "chaotic_era") and w.get("start_time") and w.get("end_time"):
                 st = w["start_time"]
                 et = w["end_time"]
-                if hasattr(st, "hour"):
-                    st_str = str(st.hour)
+                # 星空天气/迷途风等全天窗口（23点~次日23点）直接显示「全天」
+                if hasattr(st, "hour") and hasattr(et, "hour") and st.hour == 23 and et.hour == 23:
+                    weather_time = "全天"
                 else:
-                    st_str = str(st)
-                if hasattr(et, "hour"):
-                    et_hour = et.hour
-                    et_str = "24" if et_hour == 0 else str(et_hour)
-                else:
-                    et_str = str(et)
-                weather_time = f"{st_str}-{et_str}"
+                    if hasattr(st, "hour"):
+                        st_str = str(st.hour)
+                    else:
+                        st_str = str(st)
+                    if hasattr(et, "hour"):
+                        et_hour = et.hour
+                        et_str = "24" if et_hour == 0 else str(et_hour)
+                    else:
+                        et_str = str(et)
+                    weather_time = f"{st_str}-{et_str}"
         else:
             _default_wt = "chaotic_era" if is_starry_location(loc.id) else "sunny"
             weather_emoji = WEATHER_EMOJI.get(_default_wt, "☀️")
@@ -313,16 +317,20 @@ async def render_weather_forecast(
             if wt not in ("sunny", "chaotic_era") and w.get("start_time") and w.get("end_time"):
                 st = w["start_time"]
                 et = w["end_time"]
-                if hasattr(st, "hour"):
-                    st_str = str(st.hour) + "点"
+                # 星空天气/迷途风等全天窗口（23点~次日23点）直接显示「全天」
+                if hasattr(st, "hour") and hasattr(et, "hour") and st.hour == 23 and et.hour == 23:
+                    weather_time = "全天"
                 else:
-                    st_str = str(st)
-                if hasattr(et, "hour"):
-                    et_hour = et.hour
-                    et_str = ("24" if et_hour == 0 else str(et_hour)) + "点"
-                else:
-                    et_str = str(et)
-                weather_time = f"{st_str}-{et_str}"
+                    if hasattr(st, "hour"):
+                        st_str = str(st.hour) + "点"
+                    else:
+                        st_str = str(st)
+                    if hasattr(et, "hour"):
+                        et_hour = et.hour
+                        et_str = ("24" if et_hour == 0 else str(et_hour)) + "点"
+                    else:
+                        et_str = str(et)
+                    weather_time = f"{st_str}-{et_str}"
                 weather_effect = WEATHER_EFFECT_DESC.get(wt, "")
         else:
             _default_wt = "chaotic_era" if is_starry_location(loc.id) else "sunny"

@@ -87,7 +87,7 @@ STARRY_FISH_DROP_RATE = 0.05
 # 鱼竿等级超过 10 后，每高 1 级额外 +0.5% 星空鱼掉落率（绝对加值）
 STARRY_FISH_ROD_BONUS_THRESHOLD = 10
 STARRY_FISH_ROD_BONUS_PER_LEVEL = 0.005
-# 太阳风：掉落率恒定 +2.5%（绝对加值，不与鱼竿加成相乘叠加）
+# 太阳风：掉落率 +2.5%（绝对加值，不与鱼竿加成相乘叠加）
 STARRY_FISH_SOLAR_WIND_BONUS = 0.025
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -170,7 +170,7 @@ WEATHER_EFFECT_DESC = {
     "storm": "鱼饵消耗减半",
     "lost_wind": "有概率UTR",
     "cat": "随机吃鱼！",
-    "solar_wind": "流星鱼出现率恒定+2.5%",
+    "solar_wind": "流星鱼出现率+2.5%",
     "meteor_shower": "星空鱼变得幸运",
     "hengjiyuan": "流星鱼数字限定为2-8",
     "chaotic_era": "",

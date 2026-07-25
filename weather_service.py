@@ -208,7 +208,7 @@ async def generate_starry_weather() -> bool:
             "hengjiyuan": 1,
         }
         desc_map = {
-            "solar_wind": "太阳风：流星鱼出现率恒定+2.5%",
+            "solar_wind": "太阳风：流星鱼出现率+2.5%",
             "meteor_shower": "流星雨：星空鱼变得幸运",
             "hengjiyuan": "恒纪元：流星鱼数字限定为2-8",
         }

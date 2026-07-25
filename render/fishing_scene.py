@@ -685,9 +685,20 @@ def _build_weather_view(weather_info: dict | None) -> _WeatherView:
         weather_info and weather_info.get("start_time") and weather_info.get("end_time")
     )
     if weather_type not in ("sunny", "chaotic_era") and has_period:
-        start_text = _format_weather_hour(weather_info["start_time"])
-        end_text = _format_weather_hour(weather_info["end_time"], end=True)
-        time_text = f"{start_text}-{end_text}"
+        start_time = weather_info["start_time"]
+        end_time = weather_info["end_time"]
+        # 星空天气/迷途风等全天窗口（23点~次日23点）直接显示「全天」
+        if (
+            hasattr(start_time, "hour")
+            and hasattr(end_time, "hour")
+            and start_time.hour == 23
+            and end_time.hour == 23
+        ):
+            time_text = "全天"
+        else:
+            start_text = _format_weather_hour(start_time)
+            end_text = _format_weather_hour(end_time, end=True)
+            time_text = f"{start_text}-{end_text}"
         effect = WEATHER_EFFECT_DESC.get(weather_type, "")
     overlay = _find_weather_overlay(weather_type) if active else ""
     return _WeatherView(

@@ -473,7 +473,7 @@ class FishingBuffCalculator:
 
     # ── 流星鱼/星空祈愿 buff 说明 ──
     # 以下 buff 不直接映射到 BUFF_EFFECTS，其效果在钓鱼引擎中特殊处理：
-    # - BUFF_TYPE_WEATHER_SOLAR_WIND:  在引擎中处理流星鱼掉率加成（恒定 +2.5%）
+    # - BUFF_TYPE_WEATHER_SOLAR_WIND:  在引擎中处理流星鱼掉率加成（+2.5%）
     # - BUFF_TYPE_WEATHER_METEOR_SHOWER: 在引擎中处理2选1机制
     # - BUFF_TYPE_WEATHER_HENGJIYUAN:  在引擎中处理流星鱼数字过滤（品种质量更高）
     # - BUFF_TYPE_GAMMA_RAY_BURST:     在引擎中处理综合效果（闪光药水）

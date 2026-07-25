@@ -248,11 +248,23 @@ def _status_weather(weather_info: dict | None) -> _StatusWeather:
         weather_info and weather_info.get("start_time") and weather_info.get("end_time")
     )
     if weather_type not in ("sunny", "chaotic_era") and has_period:
-        description = (
-            f"{_format_weather_hour(weather_info['start_time'])}-"
-            f"{_format_weather_hour(weather_info['end_time'], end=True)}"
-        )
+        start_time = weather_info["start_time"]
+        end_time = weather_info["end_time"]
+        # 星空天气/迷途风等全天窗口（23点~次日23点）直接显示「全天」
+        if (
+            hasattr(start_time, "hour")
+            and hasattr(end_time, "hour")
+            and start_time.hour == 23
+            and end_time.hour == 23
+        ):
+            time_desc = "全天"
+        else:
+            time_desc = (
+                f"{_format_weather_hour(start_time)}-"
+                f"{_format_weather_hour(end_time, end=True)}"
+            )
         effect = WEATHER_EFFECT_DESC.get(weather_type, "")
+        description = time_desc
         if effect:
             description += f" {effect}"
     return _StatusWeather(
