@@ -392,7 +392,7 @@ class MockDB:
             "frame_pity": u.frame_pity_counter,
             "utr_pity": u.utr_pity_counter,
             "cat_frame_pity": u.cat_frame_pity_counter,
-            "time_potions_used": 0,
+            "time_potions_used": [],
         }
         return u.fishing_status
 

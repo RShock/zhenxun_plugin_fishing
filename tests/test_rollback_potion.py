@@ -83,7 +83,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
 
     observed_status = None
 
-    async def fake_check_fishing_status(called_user_id):
+    async def fake_check_fishing_status(called_user_id, **kwargs):
         nonlocal observed_status
         assert called_user_id == user_id
         observed_status = await FishingUser.get_status(user_id)
@@ -106,7 +106,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
 
     assert success is True
     assert image == b"RESETTLED_IMAGE"
-    check_mock.assert_awaited_once_with(user_id)
+    check_mock.assert_awaited_once()
     stop_mock.assert_not_awaited()
     get_daily_mock.assert_not_awaited()
     increment_daily_mock.assert_not_awaited()
@@ -119,7 +119,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert observed_status["cat_frame_pity"] == 12
     assert observed_status["utr_pity"] == 13
     assert observed_status["cat_eaten_fish"] == []
-    assert observed_status["time_potions_used"] == 0
+    assert observed_status["time_potions_used"] == []
     assert observed_status["shadow_scene"] is True
     assert observed_status["bait_usage_log"] == {}
     # 回档应按 bait_usage_log 退还鱼饵，避免重新结算时重复扣除
@@ -140,7 +140,7 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     - 24h 内的鱼获被移除
     - last_settle_time 设为 24h 前（不是 start_time）
     - 鱼饵按比例退还（不是全额）
-    - 时光药水不退还（会话 > 24h）
+    - 时光药水按时间戳精确退还：24h 前用的不退，24h 内用的退还
     """
     user_id = "rollback-potion-24h-limit"
     user, _ = await FishingUser.get_or_create_user(user_id, "24h回档测试")
@@ -155,7 +155,8 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     start_30h_ago = (now - timedelta(hours=30)).isoformat()
     fish_25h_ago = (now - timedelta(hours=25)).isoformat()
     fish_1h_ago = (now - timedelta(hours=1)).isoformat()
-    cutoff_24h_ago = (now - timedelta(hours=24)).isoformat()
+    tp_25h_ago = (now - timedelta(hours=25)).isoformat()
+    tp_1h_ago = (now - timedelta(hours=1)).isoformat()
 
     await FishingUser.update_fishing_status(
         user_id,
@@ -178,15 +179,18 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
                 {"fish_id": "麦穗鱼", "rarity": "N", "count": 2, "catch_time": fish_1h_ago},
             ],
             "cat_gifts": {"gold": 100},
-            "time_potions_used": 2,
+            # 1瓶 25h 前用（不退）+ 1瓶 1h 前用（退还）
+            "time_potions_used": [tp_25h_ago, tp_1h_ago],
         },
     )
 
     observed_status = None
+    observed_messages = None
 
-    async def fake_check_fishing_status(called_user_id):
-        nonlocal observed_status
+    async def fake_check_fishing_status(called_user_id, **kwargs):
+        nonlocal observed_status, observed_messages
         observed_status = await FishingUser.get_status(user_id)
+        observed_messages = kwargs.get("extra_messages")
         return b"PARTIAL_RESETTLED_IMAGE", object()
 
     check_mock = AsyncMock(side_effect=fake_check_fishing_status)
@@ -198,7 +202,7 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
 
     assert success is True
     assert image == b"PARTIAL_RESETTLED_IMAGE"
-    check_mock.assert_awaited_once_with(user_id)
+    check_mock.assert_awaited_once()
     stop_mock.assert_not_awaited()
     assert observed_status is not None
 
@@ -222,10 +226,15 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     assert len(kept_cat_eaten) == 1
     assert kept_cat_eaten[0]["fish_id"] == "草鱼"
 
-    # 时光药水不退还（会话 > 24h）
-    assert observed_status["time_potions_used"] == 2
+    # 时光药水：25h 前用的保留，1h 前用的退还
+    assert observed_status["time_potions_used"] == [tp_25h_ago]
     time_potion_item = await FishingUser.get_item(user_id, "time_potion", "potion")
-    assert time_potion_item is None  # 没有退还
+    assert time_potion_item is not None
+    assert time_potion_item["count"] == 1  # 退还1瓶
+
+    # 退还提示消息通过结算页面传递
+    assert observed_messages is not None
+    assert any("退还时光药水 1 瓶" in msg for msg in observed_messages)
 
     # 鱼饵按比例退还：被移除鱼数=3+2=5，总鱼数=5+3+1+2=11，比例≈0.4545
     # refund = round(8 * 0.4545) = round(3.636) = 4

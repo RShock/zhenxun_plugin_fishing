@@ -52,7 +52,9 @@ async def test_time_potion_persists_progress_then_end_fishing_applies_rewards(db
 
     persisted_status = await FishingUser.get_status(user_id)
     assert persisted_status is not None
-    assert persisted_status["time_potions_used"] == 1
+    # time_potions_used 现为时间戳列表（每瓶1条记录）
+    assert isinstance(persisted_status["time_potions_used"], list)
+    assert len(persisted_status["time_potions_used"]) == 1
     assert persisted_status["fish_caught"]
     assert (
         datetime.fromisoformat(persisted_status["last_settle_time"]) <= datetime.now()

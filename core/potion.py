@@ -19,7 +19,7 @@ from ..render import render_fishing_status
 from ..weather_service import get_location_weather
 from .bait import consume_bait_incremental
 from .cat_gift import default_cat_gifts, merge_cat_gifts
-from .context import deserialize_fish_caught
+from .context import deserialize_fish_caught, normalize_time_potions
 from .engine import simulate_fishing_loop
 from .probability import calculate_display_probabilities
 from .settlement_status import build_settlement_status
@@ -209,9 +209,12 @@ async def use_time_potion_settle(
         bait_usage=all_bait_usage,
     )
     if potion_count > 0:
-        updated_status["time_potions_used"] = (
-            int(status_dict.get("time_potions_used", 0)) + potion_count
+        # 记录每瓶时光药水的使用时间戳，供回档药水按 24h 窗口精确退还
+        existing_tp = normalize_time_potions(
+            status_dict.get("time_potions_used", [])
         )
+        now_iso = now.isoformat()
+        updated_status["time_potions_used"] = existing_tp + [now_iso] * potion_count
     await FishingUser.update_fishing_status(user_id, updated_status)
 
     # 鱼饵消耗

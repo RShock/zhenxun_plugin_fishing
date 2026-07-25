@@ -10,7 +10,11 @@ from datetime import datetime, timedelta
 from zhenxun.services.log import logger
 
 from ..core.cat_gift import default_cat_gifts
-from ..core.context import deserialize_fish_caught, serialize_fish_caught
+from ..core.context import (
+    deserialize_fish_caught,
+    normalize_time_potions,
+    serialize_fish_caught,
+)
 from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
@@ -88,7 +92,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     - start_time 早于 24 小时前的鱼获（catch_time 为 None 或早于截止点）保留
     - 24 小时窗口内的鱼获被移除并重新结算
     - 鱼饵按鱼获比例退还（无法精确追踪每条鱼消耗的饵，用鱼数比例估算）
-    - 时光药水仅在会话开始于 24 小时内时退还
+    - 时光药水按每瓶使用时间戳精确退还：24h 内使用的退还，24h 前使用的不退
     """
     status_dict = await FishingUser.get_status(user_id)
     if not status_dict:
@@ -170,15 +174,32 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     )
 
     # ── 时光药水处理 ──
-    # 无法追踪每瓶时光药水的使用时间。会话 < 24h 时全部退还，
-    # 会话 > 24h 时不退还（保守策略，避免误退）
-    time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
-    if is_full_rollback:
-        refund_time_potions = time_potions_used
-        new_time_potions_used = 0
-    else:
-        refund_time_potions = 0
-        new_time_potions_used = time_potions_used
+    # 每瓶时光药水有独立时间戳，按 24h 窗口精确退还：
+    # 24h 内使用的退还，24h 前使用的不退。
+    # 旧数据（int 格式）转为 [None, ...]，None 视为 24h 前使用（不退还）。
+    time_potions_raw = normalize_time_potions(
+        status_dict.get("time_potions_used", [])
+    )
+    keep_time_potions: list = []
+    remove_time_potions: list = []
+    for ts_str in time_potions_raw:
+        if is_full_rollback:
+            # 全量回档：全部移除并退还
+            remove_time_potions.append(ts_str)
+        elif ts_str is None:
+            # 旧数据无时间戳：视为 24h 前使用，保留不退
+            keep_time_potions.append(ts_str)
+        else:
+            try:
+                ts = _make_naive(datetime.fromisoformat(ts_str))
+                if ts < rollback_cutoff:
+                    keep_time_potions.append(ts_str)
+                else:
+                    remove_time_potions.append(ts_str)
+            except (ValueError, TypeError):
+                keep_time_potions.append(ts_str)
+
+    refund_time_potions = len(remove_time_potions)
 
     # ── 构建回溯后的状态 ──
     reset_status = {
@@ -195,7 +216,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "cat_eaten_fish": serialize_fish_caught(keep_cat_eaten),
         # 猫礼物无法按时间拆分，重置为默认值
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
-        "time_potions_used": new_time_potions_used,
+        "time_potions_used": keep_time_potions,
         "bait_usage_log": new_bait_usage_log,
     }
     if status_dict.get("shadow_scene"):
@@ -207,17 +228,26 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
             user_id, "time_potion", "potion", refund_time_potions
         )
 
-    from ..core.actions import check_fishing_status
-
-    image, step = await check_fishing_status(user_id)
-    if image is None:
-        image = await get_status_image(user_id)
-
+    # 构建回档提示消息，通过结算页面显示给玩家
     window_desc = (
         "全部钓鱼进度"
         if is_full_rollback
         else f"最近{_ROLLBACK_WINDOW_HOURS}小时"
     )
+    rollback_messages = [f"⏪ 回档药水生效，回溯{window_desc}"]
+    if refund_time_potions > 0:
+        rollback_messages.append(f"🎁 退还时光药水 {refund_time_potions} 瓶")
+    if refunded_bait > 0:
+        rollback_messages.append(f"🎁 退还鱼饵 {refunded_bait} 个")
+
+    from ..core.actions import check_fishing_status
+
+    image, step = await check_fishing_status(
+        user_id, extra_messages=rollback_messages
+    )
+    if image is None:
+        image = await get_status_image(user_id)
+
     logger.info(
         f"用户 {user_id} 使用回档药水，回溯{window_desc}，"
         f"保留{len(keep_fish)}条鱼获，移除{len(remove_fish)}条，"

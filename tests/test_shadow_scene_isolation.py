@@ -99,4 +99,5 @@ async def test_time_potion_works_without_losing_shadow_isolation(db):
     assert status["location_id"] == "11"
     assert status["scene_instance_id"] == "-11"
     assert status["shadow_scene"] is True
-    assert status["time_potions_used"] == 1
+    assert isinstance(status["time_potions_used"], list)
+    assert len(status["time_potions_used"]) == 1

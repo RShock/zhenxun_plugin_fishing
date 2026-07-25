@@ -358,8 +358,13 @@ async def check_fishing_status(
     user_id: str,
     location: LocationData | None = None,
     group_id: str | None = None,
+    extra_messages: list[str] | None = None,
 ) -> tuple[bytes | None, StepResult | None]:
-    """查看当前钓鱼状态（含步进结算）。"""
+    """查看当前钓鱼状态（含步进结算）。
+
+    extra_messages 会在渲染时追加到 buff_messages，供回档药水等场景
+    向玩家展示退还信息。
+    """
     step = await settle_fishing_step(user_id)
     if not step:
         return None, None
@@ -490,6 +495,11 @@ async def check_fishing_status(
     now = datetime.now()
     weather_info = await get_location_weather(location.id, user_id)
 
+    # 合并 buff_messages 和外部传入的额外消息（如回档药水退还提示）
+    render_messages = list(step.buff_messages or [])
+    if extra_messages:
+        render_messages.extend(extra_messages)
+
     image = await render_fishing_status(
         user_id=user_id,
         location=location,
@@ -501,7 +511,7 @@ async def check_fishing_status(
         probabilities=probabilities,
         bait=step.bait,
         bait_remaining=step.bait_remaining,
-        buff_messages=step.buff_messages,
+        buff_messages=render_messages,
         fishing_power=user.rod_level - location.difficulty,
         rod_level=user.rod_level,
         buffs=active_buffs,

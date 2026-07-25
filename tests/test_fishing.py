@@ -80,7 +80,7 @@ class TestStartFishing:
         assert status["location_id"] == "11"
         assert status["scene_instance_id"] == "-11"
         assert status["shadow_scene"] is True
-        assert status["time_potions_used"] == 0
+        assert status["time_potions_used"] == []
         rendered_location = scene_mock.await_args.args[1]
         assert rendered_location.id == "11"
 

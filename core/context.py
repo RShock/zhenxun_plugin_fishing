@@ -148,3 +148,20 @@ def merge_fish(
             else:
                 merged[key] = (fish, rarity, count, catch_time)
     return merged if as_dict else list(merged.values())
+
+
+def normalize_time_potions(raw) -> list[str | None]:
+    """将 time_potions_used 字段统一为时间戳字符串列表。
+
+    向后兼容：
+    - 旧数据为 int（如 3）→ 转为 [None, None, None]，回档时视为 24h 前使用（不退还）
+    - 新数据为 list[str] → 原样返回
+    - 空值 → []
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, int):
+        return [None] * raw
+    if isinstance(raw, list):
+        return raw
+    return []

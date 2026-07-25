@@ -1127,7 +1127,7 @@ class FishingUser(Model):
             "frame_pity": user.frame_pity_counter,
             "utr_pity": user.utr_pity_counter,
             "cat_frame_pity": user.cat_frame_pity_counter,
-            "time_potions_used": 0,
+            "time_potions_used": [],
         }
         await user.save(update_fields=["fishing_status"])
         return user.fishing_status
