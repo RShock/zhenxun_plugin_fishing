@@ -63,7 +63,9 @@ class TestConfigManager:
         shop = ConfigManager.get_shop()
         assert shop is not None
         assert len(shop.baits) > 0
-        assert len(shop.potions) > 0
+        # 药水配置已从 shop.json 拆出至 items.json
+        items = ConfigManager.get_items()
+        assert len(items.potions) > 0
 
     def test_get_bait(self):
         bait = ConfigManager.get_bait(1)

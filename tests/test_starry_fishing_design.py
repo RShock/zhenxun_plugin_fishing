@@ -789,7 +789,7 @@ class TestStarryRewardItemKeys:
 
 class TestUtrSelectNormalize:
     def test_normalize_utr_fish_name(self):
-        from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import (
+        from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import (
             _normalize_utr_fish_name,
         )
 

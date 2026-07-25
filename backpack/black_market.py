@@ -518,6 +518,11 @@ async def black_market_exchange(
         [(actual_target.name, actual_target.rarity, actual_target.numeric_id, 1)],
         auto_display=True,
     )
+    # 锁定继承说明（非 bug）：
+    # add_fish_to_user 对「首条 UTR」会自动消耗该鱼以解锁图鉴（见 core/result.py），
+    # 此时鱼不入背包，toggle_lock_by_numeric_id 自然返回 False，lock_inherited 为 False。
+    # 这是预期行为：用图鉴解锁消耗鱼是合理的，被消耗的鱼无需也无法锁定。
+    # 切勿将此处的 lock_inherited=False 误判为锁定继承失败的 bug。
     lock_inherited = False
     if inherited_lock:
         lock_inherited = await FishingUser.toggle_lock_by_numeric_id(

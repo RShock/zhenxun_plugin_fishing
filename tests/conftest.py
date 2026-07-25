@@ -419,7 +419,7 @@ def _patch_nonebot(monkeypatch):
     )
     monkeypatch.setattr(f"{FISHING_PKG}.shop.nest.logger", mock_logger, raising=False)
     monkeypatch.setattr(
-        f"{FISHING_PKG}.shop.potion_use.logger", mock_logger, raising=False
+        f"{FISHING_PKG}.items.potion_use.logger", mock_logger, raising=False
     )
     monkeypatch.setattr(f"{FISHING_PKG}.shop.account.logger", mock_logger, raising=False)
     monkeypatch.setattr(

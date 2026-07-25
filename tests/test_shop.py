@@ -13,10 +13,10 @@ from zhenxun.plugins.zhenxun_plugin_fishing.shop import (
     upgrade_display_slots,
     do_cat_frame_nest,
     do_nest,
-    use_display_frame_buff,
     check_sign,
     exchange_to_gold,
 )
+from zhenxun.plugins.zhenxun_plugin_fishing.items import use_display_frame_buff
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
 from zhenxun.plugins.zhenxun_plugin_fishing.models import BuffEffect, FishingBuff
 from zhenxun.plugins.zhenxun_plugin_fishing.render.shop import render_shop

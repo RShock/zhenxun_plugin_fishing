@@ -6,7 +6,7 @@ import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.core.actions import stop_fishing
 from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
-from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import use_time_potion
+from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import use_time_potion
 
 
 async def _start_fishing_with_supplies(user_id: str, potion_count: int = 1) -> None:

@@ -1,5 +1,8 @@
 """
-药水系统 — 时光药水、回档药水、幸运药水、闪光药水、木框加速、UTR自选券。
+道具使用系统 — 时光药水、回档药水、幸运药水、闪光药水、木框加速、UTR自选券。
+
+这些道具不在鱼店出售，因此从 shop/ 拆出至 items/。
+药水时长等配置见 config/items.json，效果描述需与 web/static/help.html 保持同步。
 """
 
 from datetime import datetime, timedelta
@@ -13,7 +16,7 @@ from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
 from ..services import get_or_create_user
 
-from .view import get_status_image
+from ..shop.view import get_status_image
 
 
 _MUTEX_POTION_BUFFS = (

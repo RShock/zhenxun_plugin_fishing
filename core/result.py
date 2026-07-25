@@ -60,6 +60,9 @@ async def add_fish_to_user(
         if rarity == "UTR":
             utr_collected = await FishingUser.is_collected(user_id, fish_name, "UTR")
             if not utr_collected:
+                # 首条 UTR 自动消耗以解锁图鉴——鱼不入背包，这是预期行为。
+                # 黑商交换场景下，若来源鱼已锁定，目标鱼被此处消耗后无法继承锁定，
+                # 这并非 bug：图鉴解锁消耗鱼是合理的，无需锁定。详见 backpack/black_market.py 注释。
                 await FishingUser.mark_collected(user_id, fish_name, "UTR", 1)
                 displayable_fish.append((fish_name, rarity, numeric_id))
                 messages.append(f"🌈 {fish_name} UTR图鉴已解锁！（已自动消耗1条）")

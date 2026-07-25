@@ -322,8 +322,10 @@ r:\zhenxun_bot\tests\
 | 药水名 | 效果 | 持续时间 | 实现文件 |
 |--------|------|----------|---------|
 | 时光药水 | 每瓶模拟8小时钓鱼 | — | `core/potion.py` → `use_time_potion_settle` |
-| 回档药水 | 清空当前钓鱼进度（鱼获归零） | — | `shop/potion_use.py` → `use_rollback_potion` |
-| 幸运药水 | 双次结算，取最好稀有度 | 12h | `shop/potion_use.py` → `use_lucky_potion` |
+| 回档药水 | 回溯最近24小时钓鱼结果并重新结算 | — | `items/potion_use.py` → `use_rollback_potion` |
+| 幸运药水 | 双次结算，取最好稀有度 | 8h/瓶 | `items/potion_use.py` → `use_lucky_potion` |
+| 真多多药水 | 鱼竿-1级，鱼获翻倍 | 8h/瓶 | `items/potion_use.py` → `use_duoduo_potion` |
+| 闪光药水 | 伽马射线暴(三重天气+流星鱼翻倍) | 8h/瓶 | `items/potion_use.py` → `use_flash_potion` |
 | 许愿药水 | 50%概率替换为未收集鱼种 | 10h | `models/buff.py` → `BUFF_TYPE_WISH` |
 
 **时光药水关键特性**：
@@ -519,8 +521,11 @@ fishing/
 │   ├── view.py          #   渲染
 │   ├── purchase.py      #   购买 + 升级
 │   ├── nest.py          #   打窝
-│   ├── potion_use.py    #   药水使用
-│   └── misc.py          #   兑换/签到/改名/皮肤
+│   ├── item_dispatch.py #   「钓鱼使用」道具分发表
+│   └── account.py       #   兑换/签到/改名/皮肤
+│
+├── items/               # ★ 道具使用子系统（从 shop/ 拆出，不在鱼店出售）
+│   └── potion_use.py    #   药水使用（时光/回档/幸运/闪光/真多多/木框/UTR自选券）
 │
 ├── backpack/            # ★ NEW：背包子系统（从 backpack.py 拆分）
 │   ├── view.py          #   渲染
@@ -575,11 +580,12 @@ fishing/
 5. 运行 `test_cat_weather_scenario` 风格的集成测试
 
 ### 新增药水类型
-1. `config/shop.json`：添加药水配置
+1. `config/items.json`：添加药水配置（不在鱼店出售）
 2. `models/buff.py`：添加对应 `BUFF_TYPE_*` 和 `_POTION_EFFECT_MAP`
-3. `shop/potion_use.py`：添加 `use_xxx_potion` 函数
+3. `items/potion_use.py`：添加 `use_xxx_potion` 函数
 4. `core/engine.py`：在 `_catch_fish_with_buffs` 处理新药水效果
 5. 创建集成测试（参照 `test_lucky_potion_double_roll`）
+6. 同步更新 `web/static/help.html` 中的药水效果描述
 
 ### 新增 Buff 效果
 1. `models/buff.py` → `BuffEffect` 添加 `BUFF_TYPE_*` 常量

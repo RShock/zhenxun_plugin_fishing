@@ -101,13 +101,21 @@ class ShopData(BaseModel):
     hook_upgrade_prices: dict[str, int]
     hook_speed_bonus_per_level: int = 10
     baits: list[BaitData]
-    potions: list[PotionData]
     display_slot_frame_costs: dict[str, int]
     nest_price: int = 500000
     nest_duration_hours: int = 8
     initial_gift: InitialGiftData
     exchange_rate: int = 1
     base_fishing_interval: int = 60
+
+
+class ItemsData(BaseModel):
+    """药水/道具配置——这些道具不在鱼店出售，配置已从 shop.json 拆出至 items.json。
+
+    duration 字段需与 items/potion_use.py 的实际实现及 help.html 保持一致。
+    """
+    model_config = {"extra": "ignore"}  # 忽略 items.json 中的 _comment 字段
+    potions: list[PotionData] = []
 
 
 # ── ConfigManager ─────────────────────────────────────────────────────────────
@@ -119,6 +127,7 @@ class ConfigManager:
     _locations: list[LocationData] | None = None
     _fish: list[FishData] | None = None
     _shop: ShopData | None = None
+    _items: ItemsData | None = None
     _fish_order: dict[str, int] | None = None
 
     # ── JSON 加载 ─────────────────────────────────────────────────────────
@@ -189,6 +198,14 @@ class ConfigManager:
             cls._shop = ShopData(**data)
         return cls._shop
 
+    @classmethod
+    def get_items(cls) -> ItemsData:
+        """加载药水/道具配置（已从 shop.json 拆出至 items.json）。"""
+        if cls._items is None:
+            data = cls._load_json("items.json")
+            cls._items = ItemsData(**data)
+        return cls._items
+
     # ── 钓竿 / 鱼钩 ───────────────────────────────────────────────────────
 
     @classmethod
@@ -230,16 +247,16 @@ class ConfigManager:
 
     @classmethod
     def get_potion(cls, potion_id: int | str) -> PotionData | None:
-        shop = cls.get_shop()
+        items = cls.get_items()
         if isinstance(potion_id, str):
             if potion_id.isdigit():
                 potion_id = int(potion_id)
             else:
-                for potion in shop.potions:
+                for potion in items.potions:
                     if potion.name == potion_id:
                         return potion
                 return None
-        for potion in shop.potions:
+        for potion in items.potions:
             if potion.id == potion_id:
                 return potion
         return None

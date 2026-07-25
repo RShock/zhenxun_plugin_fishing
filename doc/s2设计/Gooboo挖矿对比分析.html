@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gooboo 挖矿系统 vs S2 星穹矿脉 — 借鉴分析</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --card-alt: #222634;
+  --border: #2d3142;
+  --text: #e0e0e0;
+  --text-dim: #8b8fa3;
+  --accent: #5b8def;
+  --accent-2: #c084fc;
+  --green: #4ade80;
+  --orange: #fb923c;
+  --red: #f87171;
+  --yellow: #fbbf24;
+  --code-bg: #15171f;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans CJK SC', 'WenQuanYi Micro Hei', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  padding: 0;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 32px; }
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 40px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text);
+}
+h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 24px 0 12px;
+  color: var(--accent);
+}
+h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 16px 0 8px;
+  color: var(--accent-2);
+}
+p { margin-bottom: 12px; color: var(--text); }
+ul, ol { margin: 8px 0 16px 20px; }
+li { margin-bottom: 6px; }
+code {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: var(--green);
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+pre code {
+  background: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0;
+}
+.card-alt {
+  background: var(--card-alt);
+}
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.tag-gooboo { background: rgba(91,141,239,0.15); color: var(--accent); border: 1px solid rgba(91,141,239,0.3); }
+.tag-s2 { background: rgba(192,132,252,0.15); color: var(--accent-2); border: 1px solid rgba(192,132,252,0.3); }
+.tag-borrow { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+.tag-skip { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+.tag-keep { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+th {
+  background: var(--card-alt);
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 13px;
+}
+td { background: var(--card); }
+tr:hover td { background: var(--card-alt); }
+.highlight-box {
+  background: linear-gradient(135deg, rgba(74,222,128,0.08), rgba(91,141,239,0.08));
+  border: 1px solid rgba(74,222,128,0.2);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 16px 0;
+}
+.warn-box {
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 16px 0;
+}
+.section-num {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.flex-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 768px) { .flex-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Gooboo 挖矿系统 vs S2 星穹矿脉 — 借鉴分析</h1>
+<p class="subtitle">Gooboo v1.6.2 (gityxs/gooboo) · S2 v4.2 · 2026-07-25</p>
+
+<!-- ==================== 概览 ==================== -->
+<div class="highlight-box">
+<h3 style="margin-top:0">核心结论</h3>
+<p>Gooboo 是一款成熟的增量/放置类网页游戏，其挖矿系统以<strong>深度推进 + 镐子制作 + 冶炼转化 + 增强权衡 + 信标布局 + 深度居民转生</strong>为核心，拥有 9 种矿石、7 种稀有掉落、7 种冶炼锭、6 种气体、3 种转生货币和 80+ 升级项，系统复杂度极高。</p>
+<p>S2 星穹矿脉以<strong>分层矿物 + 一阶/二阶无限 + 稳定态批量外推</strong>为核心，在天文数字处理和确定性设计上远超 Gooboo，但在<strong>玩法多样性、资源转化链、策略深度</strong>上有明显差距。</p>
+<p><strong>最值得借鉴的 5 项设计：</strong></p>
+<ol>
+<li><strong>矿物转化链</strong>（冶炼炉：矿石→锭→增强）— 增加 2 层生产链</li>
+<li><strong>条件性稀有掉落</strong>（数学条件触发）— 增加探索感和彩蛋</li>
+<li><strong>全局效果注册表</strong>（mult 系统）— 更清晰的 buff 管理</li>
+<li><strong>深度门控解锁</strong>（每个升级绑定深度里程碑）— 自然节奏控制</li>
+<li><strong>信标式空间策略</strong>（在特定深度区间放置增益）— 增加布局决策</li>
+</ol>
+</div>
+
+<!-- ==================== 架构对比 ==================== -->
+<h2><span class="section-num">1</span>整体架构对比</h2>
+
+<table>
+<tr>
+  <th style="width:18%">维度</th>
+  <th style="width:41%">Gooboo 挖矿</th>
+  <th style="width:41%">S2 星穹矿脉</th>
+</tr>
+<tr>
+  <td><strong>运行模式</strong></td>
+  <td>实时 tick（每秒结算），需持续在线或挂机</td>
+  <td>波次结算（每日 4 波），低频访问，适合 bot 场景</td>
+</tr>
+<tr>
+  <td><strong>核心循环</strong></td>
+  <td>挖→破层→获矿→造镐→挖更深→转生重置</td>
+  <td>挖→深度推进→发现地层→升级矿→挖穿→一阶无限→二阶外推</td>
+</tr>
+<tr>
+  <td><strong>矿物数量</strong></td>
+  <td>9 种矿石 + 7 种稀有掉落 + 7 种锭 + 6 种气体 = <strong>29 种资源</strong></td>
+  <td>5 种矿物 + 1 种星核 = <strong>6 种资源</strong></td>
+</tr>
+<tr>
+  <td><strong>升级系统</strong></td>
+  <td>80+ 升级项，每项有深度门控、独立价格曲线、效果多重叠加</td>
+  <td>4 项永久科技，按一阶次数门控，效果简洁</td>
+</tr>
+<tr>
+  <td><strong>转生层级</strong></td>
+  <td>深度居民转生（crystalGreen/Yellow + ember + resin + 6 气体），2 个子模式</td>
+  <td>一阶无限（星核）→ 二阶无限（10^308 外推）</td>
+</tr>
+<tr>
+  <td><strong>随机性</strong></td>
+  <td>制作概率、RNG 分组、掉落条件多样，不确定性强</td>
+  <td>确定性扰动（±2%，零均值，可复现）</td>
+</tr>
+<tr>
+  <td><strong>天文数字</strong></td>
+  <td>无专门处理，依赖 JS 原生浮点 + buildNum 格式化</td>
+  <td>稳定态单循环采样 + 批量外推，O(1) 处理 10^308</td>
+</tr>
+<tr>
+  <td><strong>与主游戏关系</strong></td>
+  <td>深度联动（宝石购买消耗品、村庄任务、卡片系统等）</td>
+  <td>完全独立（不消耗鱼竿、不读写钓鱼金币）</td>
+</tr>
+<tr>
+  <td><strong>代码规模</strong></td>
+  <td>store 716 行 + 模块入口 606 行 + 12 个子模块（共 ~3000 行 JS）</td>
+  <td>模拟器 344 行 Python + 网页 Demo 46 行 JS</td>
+</tr>
+</table>
+
+<!-- ==================== Gooboo 核心机制拆解 ==================== -->
+<h2><span class="section-num">2</span>Gooboo 挖矿核心机制拆解</h2>
+
+<h3>2.1 深度推进模型</h3>
+<div class="card">
+<p>Gooboo 的挖矿是<strong>破层推进</strong>式：每一层深度有 <code>durability</code>（耐久 HP）和 <code>toughness</code>（护甲）。玩家镐子造成 <code>damage - toughness</code> 的有效伤害，耐久归零后破层进入下一深度。</p>
+<pre><code>// 深度耐久公式：指数增长 + 二次项
+depthDurability(depth) = ceil(1.75^depth × (depth×0.1+1)² × 10)
+
+// 深度护甲：深度 ≥10 后出现，削弱有效伤害
+depthToughness(depth) = min(1eC, 1.82^depth × (depth×0.01-0.09) × 0.25 × ...)
+
+// 击破所需次数
+hitsNeeded = ceil(durability / (damage - toughness))</code></pre>
+<p>关键设计：护甲的存在使得<strong>伤害不够时完全无法推进</strong>（hitsNeeded = Infinity），形成硬性门控。深度 150+ 后还有额外指数衰减，深度 300+ 每 10 层有 100 倍 toughness 跳升。</p>
+</div>
+
+<h3>2.2 矿石系统（9 种矿石 + 深度区间 + 模数）</h3>
+<div class="card">
+<p>每种矿石有 <code>minDepth</code>、<code>maxDepth</code>、<code>modulo</code> 三个参数，控制出现范围和递归模式：</p>
+<table>
+<tr><th>矿石</th><th>power</th><th>impurity</th><th>minDepth</th><th>maxDepth</th><th>modulo</th></tr>
+<tr><td>铝</td><td>15</td><td>1.5</td><td>15</td><td>45</td><td>3</td></tr>
+<tr><td>铜</td><td>50</td><td>2</td><td>30</td><td>68</td><td>4</td></tr>
+<tr><td>锡</td><td>240</td><td>2.5</td><td>50</td><td>100</td><td>5</td></tr>
+<tr><td>铁</td><td>1,300</td><td>3</td><td>80</td><td>140</td><td>7</td></tr>
+<tr><td>钛</td><td>7,000</td><td>3.5</td><td>120</td><td>200</td><td>11</td></tr>
+<tr><td>铂</td><td>40K</td><td>4</td><td>175</td><td>295</td><td>13</td></tr>
+<tr><td>铱</td><td>250K</td><td>5</td><td>260</td><td>420</td><td>17</td></tr>
+<tr><td>锇</td><td>1.75M</td><td>6</td><td>350</td><td>525</td><td>23</td></tr>
+<tr><td>铅</td><td>12.5M</td><td>7.5</td><td>450</td><td>650</td><td>29</td></tr>
+</table>
+<p><code>modulo</code> 是质数递增序列（3,5,7,11,13,17,23,29）。超出 maxDepth 后，矿石只在 modulo 的倍数深度出现且产量衰减 50%。这创造了<strong>矿石稀缺性轮转</strong>——玩家必须不断向更深处推进才能获得更高品质矿石。</p>
+</div>
+
+<h3>2.3 镐子制作系统（最独特的设计）</h3>
+<div class="card">
+<p>Gooboo 最核心的玩法是<strong>镐子制作</strong>：玩家将多种矿石组合成镐子，获得新的 <code>pickaxePower</code>。制作系统包含 4 个维度的权衡：</p>
+
+<div class="flex-2">
+<div>
+<h4>质量（Quality）</h4>
+<pre><code>quality = Σ(矿石.power) × (resin×0.3+1) × alloying
+// alloying = 独特矿石种类数 × 0.5 + 0.5
+// 鼓励使用多种不同矿石</code></pre>
+</div>
+<div>
+<h4>纯度（Purity）</h4>
+<pre><code>impurity = Π(矿石.impurity × 0.95^compress - compress×0.05)
+cleanse = compress × 0.25 + 1
+purity = impurity/cleanse > 1 
+  ? 0.5^(impurity/cleanse) 
+  : 1 - impurity/cleanse/2</code></pre>
+</div>
+</div>
+
+<p><strong>压缩（Compression）</strong>：高级矿石可以压缩（消耗更多材料），降低杂质、增加清洁度，但成本指数增长。</p>
+<p><strong>制作概率</strong>：成功概率取决于质量 vs 当前镐力 + 纯度：</p>
+<pre><code>// 如果 quality × purity >= 当前power → 100%成功
+// 如果 quality <= 当前power → 0%成功
+// 否则按对数曲线计算概率
+rngNeeded = (power/quality - purity) / (1 - purity)
+chance = (2^((1-rngNeeded) × log2(1/purity+1)) - 1) × purity</code></pre>
+<p>使用 <strong>Golden Hammer</strong> 消耗品可跳过 RNG 直接成功。RNG 按 <code>rngGroup</code> 分组预生成，避免连续暴击/连续失败的差体验。</p>
+</div>
+
+<h3>2.4 冶炼炉（Ore → Bar 转化）</h3>
+<div class="card">
+<p>7 种冶炼配方，将矿石组合转化为锭，需要<strong>时间 + 温度</strong>两个条件：</p>
+<table>
+<tr><th>锭</th><th>原料</th><th>基础时间</th><th>最低温度</th></tr>
+<tr><td>铝锭</td><td>铝矿 + 花岗岩</td><td>5 分钟</td><td>100°C</td></tr>
+<tr><td>青铜锭</td><td>铜矿 + 锡矿 + 盐</td><td>1 小时</td><td>275°C</td></tr>
+<tr><td>钢锭</td><td>铁矿 + 煤</td><td>8 小时</td><td>500°C</td></tr>
+<tr><td>钛锭</td><td>钛矿 + 硫 + 硝石</td><td>3 天</td><td>800°C</td></tr>
+<tr><td>闪亮锭</td><td>铂矿 + 黑曜石</td><td>30 天</td><td>1250°C</td></tr>
+<tr><td>铱锭</td><td>铱矿 + 氦气</td><td>1 年</td><td>2000°C</td></tr>
+<tr><td>暗铁锭</td><td>铁矿+锇矿+深岩+氖气</td><td>15 年</td><td>3000°C</td></tr>
+</table>
+<p>冶炼时间随已冶炼总量递增（<code>timeNeeded × 1.0X^total</code>），温度越高速度越快。温度通过升级 <code>heatShield</code> 提升。这构成了<strong>矿石 → 锭 → 增强/升级</strong>的三级生产链。</p>
+</div>
+
+<h3>2.5 增强系统（Bar → 永久 buff + 惩罚权衡）</h3>
+<div class="card">
+<p>7 种锭各有独立的增强树，消耗对应锭升级，提供永久 buff：</p>
+<table>
+<tr><th>锭</th><th>增强效果</th></tr>
+<tr><td>铝锭</td><td>制作质量 ×(lvl×0.5+1)，矿石品质 ×2^lvl</td></tr>
+<tr><td>青铜锭</td><td>矿石产量 ×1.1^lvl×(lvl×0.1+1)，稀有掉落 ×1.15^lvl×(lvl×0.15+1)</td></tr>
+<tr><td>钢锭</td><td>伤害 ×(lvl×0.08+1)，护甲 ×1/1.35^lvl</td></tr>
+<tr><td>钛锭</td><td>废料产量 ×(sequence×0.1+1)</td></tr>
+<tr><td>闪亮锭</td><td>深度居民速度 ×(lvl×0.1+1)，绿色水晶产量 ×(lvl×0.1+1)</td></tr>
+<tr><td>铱锭</td><td>余烬产量 ×(lvl×0.3+1)</td></tr>
+<tr><td>暗铁锭</td><td>废料容量 ×(sequence×0.15+1)</td></tr>
+</table>
+<p><strong>权衡机制</strong>：增强等级越高，黑曜石产量惩罚越重（<code>0.75 × 1.5^(enhancementLevel-1)</code>）。玩家可以随时开关增强效果来切换是否承受惩罚。这创造了<strong>"增强收益 vs 黑曜石损失"</strong>的策略决策。</p>
+</div>
+
+<h3>2.6 信标系统（空间策略）</h3>
+<div class="card">
+<p>4 种信标可以放置在特定深度，为该深度范围内提供持续 buff：</p>
+<table>
+<tr><th>信标</th><th>效果</th><th>范围</th></tr>
+<tr><td>Piercing（穿透）</td><td>护甲 ÷(lvl×0.25+5)</td><td>1 层</td></tr>
+<tr><td>Rich（富矿）</td><td>矿石产量 ×(lvl×0.05+2)</td><td>1 层</td></tr>
+<tr><td>Wonder（奇迹）</td><td>稀有掉落 ×(lvl×0.04+1.6)</td><td>1 层</td></tr>
+<tr><td>Hope（希望）</td><td>伤害×(lvl×0.01+1.1)，废料×(lvl×0.015+1.2)</td><td>5 层</td></tr>
+</table>
+<p>信标放置后只能通过 20 小时冷却移除，且同一时间只有当前深度范围内的信标生效。这迫使玩家<strong>提前规划深度路线</strong>。</p>
+</div>
+
+<h3>2.7 条件性稀有掉落（探索感设计）</h3>
+<div class="card">
+<p>Gooboo 最巧妙的设计是<strong>稀有掉落的触发条件</strong>，每种稀有材料都有独特的数学条件：</p>
+<table>
+<tr><th>材料</th><th>解锁深度</th><th>触发条件</th><th>用途</th></tr>
+<tr><td>花岗岩</td><td>45</td><td>该深度已破层 ≥1000 次</td><td>冶炼、升级</td></tr>
+<tr><td>盐</td><td>55</td><td>该深度只有 1 种矿石 或 已插火把</td><td>冶炼、升级</td></tr>
+<tr><td>煤</td><td>60</td><td>该深度首次破层（breaks===0）</td><td>冶炼钢、升级</td></tr>
+<tr><td>硫</td><td>65</td><td>该深度首次破层</td><td>冶炼钛、升级</td></tr>
+<tr><td>硝石</td><td>70</td><td>破层总数是 10 的幂（log10 为整数）</td><td>冶炼、升级</td></tr>
+<tr><td>黑曜石</td><td>75</td><td>无增强或增强关闭</td><td>冶炼闪亮锭</td></tr>
+<tr><td>深岩</td><td>85</td><td>深度数字之和 ≥14（digitSum）</td><td>冶炼暗铁锭</td></tr>
+<tr><td>辉光碎片</td><td>90+</td><td>超过辉光限制深度后</td><td>特殊</td></tr>
+</table>
+<p>子模式 1（气体模式）有额外条件：<strong>质数深度</strong>掉石灰岩、<strong>25 的倍数深度</strong>掉磷、<strong>深度居民上限内</strong>掉月碎片。这些条件创造了"挖到某个特殊深度时有意外惊喜"的探索感。</p>
+</div>
+
+<h3>2.8 深度居民转生系统</h3>
+<div class="card">
+<p>深度居民是一个<strong>被动填充的转生条</strong>，基于时间而非操作：</p>
+<pre><code>// 转生进度（对数衰减逼近上限）
+newDweller = overflow + limit - (overflow + limit - current) × (1-speed)^seconds
+
+// 转生奖励
+prestigeGain = dwellerBaseGain(capSteps) × bonus
+// Green Crystal（模式0）或 Yellow Crystal（模式1）
+// Ember（余烬）= 附加奖励，基于深度居民步数</code></pre>
+<p>转生重置：镐力、深度、矿石库存、冶炼进度、增强等级、信标——但保留转生货币和部分永久升级。6 种气体（氦/氖/氩/氪/氙/氡）作为另一种转生货币，每种影响不同的子系统（废料容量、镐力、废料产量、稀有掉落等）。</p>
+</div>
+
+<h3>2.9 全局 mult 注册表架构</h3>
+<div class="card">
+<p>Gooboo 的核心架构是<strong>命名乘数注册表</strong>：所有 buff/debuff 都注册为命名的 mult，结算时通过 <code>mult/get</code> 统一查询：</p>
+<pre><code>// 注册 mult（在模块定义中）
+mult: {
+  miningDamage: {},
+  miningToughness: {isPositive: false},
+  miningOreGain: {},
+  miningOreCap: {},
+  currencyMiningScrapGain: {},
+  // ...
+}
+
+// 应用效果（来源：升级、增强、信标、卡片等）
+dispatch('system/applyEffect', {
+  type: 'mult',
+  name: 'miningDamage',
+  multKey: 'upgrade_damageUp',  // 唯一来源标识
+  value: Math.pow(1.12, lvl) * Math.pow(lvl*0.2+1, 2)
+})
+
+// 查询最终值（自动叠加所有来源）
+finalDamage = rootGetters['mult/get']('miningDamage', basePickaxePower)</code></pre>
+<p>这个架构的优势：<strong>效果来源完全解耦</strong>。一个 <code>miningDamage</code> 可以同时被升级、增强、信标、卡片、消耗品影响，互不干扰。添加新来源只需注册一个新 multKey。</p>
+</div>
+
+<!-- ==================== S2 现状 ==================== -->
+<h2><span class="section-num">3</span>S2 星穹矿脉现状总结</h2>
+
+<div class="card">
+<table>
+<tr><th style="width:30%">方面</th><th style="width:70%">现状</th></tr>
+<tr><td><strong>矿物</strong></td><td>5 种（猫砂石→铜须矿→紫晶猫眼→金猫锭→虹核晶），按深度比例解锁，永久可用</td></tr>
+<tr><td><strong>升级</strong></td><td>每种矿物独立升级，消耗自身库存，成本 ×1.74~1.82 增长，产量 ×2.04~2.20 增长</td></tr>
+<tr><td><strong>自动化</strong></td><td>4 项永久科技：整备→升级→地层→无限，按 3/6/9/12 次一阶门控</td></tr>
+<tr><td><strong>转生</strong></td><td>一阶无限（挖穿→清空→+1星核）；二阶无限（10^308 次→稳定态外推）</td></tr>
+<tr><td><strong>随机性</strong></td><td>确定性扰动 ±2%，每 4 波零均值，完全可复现</td></tr>
+<tr><td><strong>资源链</strong></td><td>矿物库存 → 直接升级矿物等级（单层）</td></tr>
+<tr><td><strong>策略深度</strong></td><td>较低：升级顺序由成本曲线决定，无制作/转化/权衡决策</td></tr>
+<tr><td><strong>探索感</strong></td><td>地层发现是确定性的（深度比例到达即解锁），无意外/彩蛋</td></tr>
+</table>
+</div>
+
+<!-- ==================== 借鉴建议 ==================== -->
+<h2><span class="section-num">4</span>可借鉴设计（按优先级排序）</h2>
+
+<!-- 建议1 -->
+<h3>4.1 矿物转化链：矿石 → 精炼锭 → 增强 <span class="tag tag-borrow">强烈推荐</span></h3>
+<div class="card">
+<p><strong>现状问题</strong>：S2 的矿物库存只能直接升级矿物等级，资源链只有一层（库存→等级），缺乏中间决策点。</p>
+<p><strong>Gooboo 做法</strong>：矿石 → 冶炼炉（时间+温度）→ 锭 → 增强站（消耗锭升级永久buff）→ 影响多个子系统。三层生产链创造了"先冶炼还是先升级"的资源分配决策。</p>
+
+<h4>S2 适配方案</h4>
+<p>在矿物等级之上增加一层<strong>精炼系统</strong>：</p>
+<pre><code># 新增：精炼炉
+# 矿物库存 → 精炼锭（消耗时间，按波次推进）
+# 精炼锭 → 增强等级（永久buff，但一阶无限时清除）
+
+REFINERY = {
+    "stone_bar": {
+        input: {"stone": 100},
+        output: "stone_bar",
+        timeNeeded: 1,  # 单位：日
+    },
+    "copper_bar": {
+        input: {"stone_bar": 5, "copper": 50},
+        output: "copper_bar",
+        timeNeeded: 2,
+    },
+    # ... 每种矿物有对应精炼锭
+}
+
+# 增强效果示例
+ENHANCEMENT = {
+    "stone_bar": {
+        effect: lambda lvl: {"depth_scale": 1 + lvl * 0.1}  # 深度推进加速
+    },
+    "copper_bar": {
+        effect: lambda lvl: {"ore_gain": 1.1 ** lvl}  # 矿石产量
+    },
+}</code></pre>
+<p><strong>关键约束</strong>：增强等级在一阶无限时清除（与矿物等级、库存一起），但不消耗星核。这样增强成为了<strong>每轮可选的额外投入</strong>——投入精炼时间换取当轮更快的推进，但不影响永久进度。</p>
+</div>
+
+<!-- 建议2 -->
+<h3>4.2 条件性稀有掉落：深度数学彩蛋 <span class="tag tag-borrow">强烈推荐</span></h3>
+<div class="card">
+<p><strong>现状问题</strong>：S2 地层发现完全确定性，深度推进没有"惊喜感"，玩家缺少探索动力。</p>
+<p><strong>Gooboo 做法</strong>：稀有材料基于深度的数学属性掉落（digitSum≥14、isPrime、10的幂、25的倍数），创造了"挖到特殊深度时有意外收获"的体验。</p>
+
+<h4>S2 适配方案</h4>
+<p>在 5 种矿物之外增加<strong>稀有矿物碎片</strong>，按深度属性触发：</p>
+<pre><code># 稀有碎片触发条件（不向玩家显示条件，仅文档说明）
+RARE_FRAGMENTS = {
+    "星尘碎片": {
+        # 深度数字之和为 7 的倍数时概率掉落
+        condition: lambda depth: digit_sum(int(depth)) % 7 == 0,
+        effect: "可在星核商店兑换额外星核碎片",
+    },
+    "共振结晶": {
+        # 深度为质数时掉落
+        condition: lambda depth: is_prime(int(depth)),
+        effect: "当轮深度推进速度 +10%",
+    },
+    "深渊印记": {
+        # 深度为 2 的幂时掉落
+        condition: lambda depth: is_power_of_2(int(depth)),
+        effect: "一阶无限时额外获得 1 星核碎片（10个=1星核）",
+    },
+}</code></pre>
+<p><strong>设计要点</strong>：条件不向玩家显示（与恒纪元天气规则一致），仅文档说明。碎片的收益应保持温和，避免破坏星核仅来自一阶无限的约束（碎片兑换的是"星核碎片"而非完整星核）。</p>
+</div>
+
+<!-- 建议3 -->
+<h3>4.3 全局效果注册表：mult 系统 <span class="tag tag-borrow">推荐</span></h3>
+<div class="card">
+<p><strong>现状问题</strong>：S2 的效率目前由 <code>tech_efficiency ^ len(techs)</code> 单一公式决定，如果未来增加增强、信标等 buff 来源，需要统一管理。</p>
+<p><strong>Gooboo 做法</strong>：所有 buff/debuff 注册为命名 mult，结算时通过 <code>mult/get(name, base)</code> 自动叠加所有来源。</p>
+
+<h4>S2 适配方案</h4>
+<pre><code># 全局效果注册表
+class MultRegistry:
+    """所有 buff/debuff 来源通过 multKey 注册，查询时自动叠加。"""
+    def __init__(self):
+        self._effects = {}  # {mult_name: {source_key: value}}
+
+    def apply(self, mult_name: str, source_key: str, value: float):
+        """注册一个效果来源（如 upgrade_damageUp、enhancement_copper）"""
+        self._effects.setdefault(mult_name, {})[source_key] = value
+
+    def reset_source(self, mult_name: str, source_key: str):
+        """移除某个来源（如增强关闭）"""
+        self._effects.get(mult_name, {}).pop(source_key, None)
+
+    def get(self, mult_name: str, base: float = 1.0) -> float:
+        """查询最终值：base × Π(所有来源的 value)"""
+        result = base
+        for value in self._effects.get(mult_name, {}).values():
+            result *= value
+        return result
+
+# 使用示例
+registry = MultRegistry()
+registry.apply("mining_speed", "tech_upgrade", 1.18 ** len(techs))
+registry.apply("mining_speed", "enhancement_stone", 1 + stone_enh_lvl * 0.1)
+registry.apply("mining_speed", "beacon_rich", 2.0)
+
+final_speed = registry.get("mining_speed", 1.0)
+# = 1.0 × (1.18^n) × (1+lvl×0.1) × 2.0</code></pre>
+<p><strong>适配要点</strong>：这与 S1 钓鱼系统的 buff 管理可共用同一套基础设施。multKey 使用 <code>来源类型_标识</code> 格式（如 <code>tech_start</code>、<code>enhance_copper</code>、<code>beacon_rich</code>），确保来源可追溯、可单独移除。</p>
+</div>
+
+<!-- 建议4 -->
+<h3>4.4 深度门控解锁：升级绑定深度里程碑 <span class="tag tag-borrow">推荐</span></h3>
+<div class="card">
+<p><strong>现状问题</strong>：S2 的永久科技只绑定一阶次数（3/6/9/12），矿物解锁绑定深度比例。缺少更细粒度的进度门控，玩家无法感受到"挖到某个深度解锁了新东西"的里程碑感。</p>
+<p><strong>Gooboo 做法</strong>：80+ 个升级项每一个都绑定一个具体的 <code>requirementValue</code>（如深度 5、15、30、60、100、150...），到达深度后自动解锁购买权限。</p>
+
+<h4>S2 适配方案</h4>
+<p>在现有 4 项永久科技之外，增加<strong>深度里程碑奖励</strong>：</p>
+<pre><code># 深度里程碑（在一阶循环内生效，一阶无限时清除）
+DEPTH_MILESTONES = {
+    1e6: {"name": "浅层勘探", "reward": "解锁猫砂石精炼"},
+    1e7: {"name": "中层突破", "reward": "解锁铜须矿精炼"},
+    5e7: {"name": "深层发现", "reward": "解锁紫晶猫眼精炼"},
+    8e7: {"name": "地心逼近", "reward": "精炼速度 +20%"},
+}</code></pre>
+<p>这些里程碑在每轮一阶循环中重新达成，为重复重玩提供节奏感和短期目标。</p>
+</div>
+
+<!-- 建议5 -->
+<h3>4.5 信标式空间策略：勘探信标 <span class="tag tag-borrow">可选</span></h3>
+<div class="card">
+<p><strong>现状问题</strong>：S2 的深度推进是线性的，没有"在哪个深度区间投入资源"的决策。</p>
+<p><strong>Gooboo 做法</strong>：信标可以放置在特定深度，为该区间提供 buff，但移除有 20 小时冷却，且同时只生效一个。</p>
+
+<h4>S2 适配方案</h4>
+<pre><code># 勘探信标：玩家在一阶循环中放置，为特定深度比例区间提供增益
+BEACONS = {
+    "rich": {
+        name: "富矿信标",
+        range: 0.1,  # 覆盖深度比例 10% 的区间
+        effect: "该区间内矿石产量 ×2",
+        cost: "消耗当轮部分矿物库存",
+    },
+    "piercing": {
+        name: "穿透信标",
+        range: 0.05,
+        effect: "该区间内深度推进速度 ×1.5",
+    },
+    "wonder": {
+        name: "奇迹信标",
+        range: 0.05,
+        effect: "该区间内稀有碎片掉率 ×3",
+    },
+}
+# 约束：每轮最多放置 2 个信标，一阶无限时清除</code></pre>
+<p>信标系统需要在网页 Demo 中配合可视化（在深度进度条上标记信标位置），在 bot 场景中可通过命令放置。鉴于 S2 的低频交互特性，信标可以作为<strong>每轮开始时的战略部署</strong>——玩家选择在哪个深度区间放置信标，然后挂机等待推进到该区间时生效。</p>
+</div>
+
+<!-- 建议6 -->
+<h3>4.6 概率性制作：矿物合成 <span class="tag tag-borrow">可选</span></h3>
+<div class="card">
+<p><strong>Gooboo 做法</strong>：镐子制作有成功概率，取决于质量/纯度/当前镐力。Golden Hammer 可保底。</p>
+<p><strong>S2 适配考量</strong>：S2 目前采用确定性扰动（±2%），引入概率制作需要谨慎。如果要做，建议作为<strong>可选的高风险高回报机制</strong>，而非核心路径：</p>
+<pre><code># 矿物合成：将多种矿物合成为高级矿物，有失败概率
+# 成功：获得目标矿物 + 等级提升
+# 失败：消耗矿物但不获得产物
+# 使用"星核保底券"可保证成功
+
+synth_chance = min(1.0, base_quality / target_quality × purity)
+# 与 Gooboo 类似的概率曲线，但保底券用星核碎片兑换</code></pre>
+<p><span class="tag tag-skip">谨慎</span>引入概率可能与 S2 的确定性设计哲学冲突。如果团队偏好确定性，可改为<strong>必成功但有成本递增</strong>的合成（类似当前的矿物升级，但跨矿物合成）。</p>
+</div>
+
+<!-- ==================== 不建议借鉴 ==================== -->
+<h2><span class="section-num">5</span>不建议借鉴的部分</h2>
+
+<div class="card card-alt">
+<h3>5.1 80+ 升级项的规模 <span class="tag tag-skip">不借鉴</span></h3>
+<p>Gooboo 的 80+ 升级项虽然提供了丰富的进度感，但维护成本极高，且大部分升级是简单的数值乘数堆叠。S2 的 4 项永久科技 + 深度里程碑已经能提供足够的进度感，且更符合低频交互的 bot 场景。</p>
+
+<h3>5.2 实时 tick 结算 <span class="tag tag-skip">不借鉴</span></h3>
+<p>Gooboo 每秒 tick 的实时结算适合网页游戏，但 S2 运行在 bot 环境中，波次结算（每日 4 波）更适合。实时 tick 会增加数据库读写频率和 CPU 开销。</p>
+
+<h3>5.3 RNG 分组系统 <span class="tag tag-skip">不借鉴</span></h3>
+<p>Gooboo 的 RNG 分组（<code>rngGroup</code>）用于改善制作概率的体验公平性。S2 采用确定性扰动，不需要 RNG 公平性机制。如果引入概率制作，可使用更简单的伪随机（PRD）即可。</p>
+
+<h3>5.4 6 种气体的复杂转生货币 <span class="tag tag-skip">不借鉴</span></h3>
+<p>Gooboo 的 6 种气体各自影响不同子系统，增加了策略维度但也大幅增加了理解成本。S2 的单一星核货币更清晰，且星核"仅来自一阶无限"的约束是核心设计，不宜稀释。</p>
+
+<h3>5.5 与主游戏深度联动 <span class="tag tag-skip">不借鉴</span></h3>
+<p>Gooboo 的挖矿与村庄、卡片、宝石等系统深度联动。S2 明确设计为"完全独立"（不消耗鱼竿、不读写钓鱼金币），这一约束应保持。</p>
+</div>
+
+<!-- ==================== S2 优势 ==================== -->
+<h2><span class="section-num">6</span>S2 已有的优势（应保持）</h2>
+
+<div class="card">
+<h3>6.1 稳定态批量外推 <span class="tag tag-keep">S2 独有优势</span></h3>
+<p>S2 的二阶无限目标 <code>10^308</code> 通过稳定态单循环采样 + 批量外推实现 O(1) 复杂度，这是 Gooboo 完全没有的架构。Gooboo 依赖 JS 原生浮点数和 buildNum 格式化，遇到大数时只能靠格式化"遮掩"精度丢失。S2 的设计从根本上解决了天文数字的结算问题。</p>
+
+<h3>6.2 确定性扰动 <span class="tag tag-keep">S2 独有优势</span></h3>
+<p>S2 的 <code>1 + 0.02 × [-1, 0.5, 1, -0.5]</code> 扰动模式每 4 波零均值、完全可复现，使测试可以精确验证。Gooboo 的随机掉落和制作概率难以测试和平衡。确定性设计是 S2 的核心优势，新功能应尽量保持可复现性。</p>
+
+<h3>6.3 低频手动批量操作 <span class="tag tag-keep">S2 独有优势</span></h3>
+<p>S2 的"一次访问批量购买最多 3 级"设计完美适配 bot 场景，玩家不需要高频交互。Gooboo 的实时点击式玩法不适合 bot。新增的冶炼/增强等功能也应遵循"批量操作"模式（如一次冶炼多批、一次增强多级）。</p>
+
+<h3>6.4 前三轮完整手动重玩 <span class="tag tag-keep">S2 独有优势</span></h3>
+<p>S2 要求前 3 次一阶无限必须完整手动操作，确保玩家理解所有机制后再解锁自动化。这种"先体验后自动化"的设计比 Gooboo 的"一切从开始就可自动化"更有教学价值。</p>
+</div>
+
+<!-- ==================== 实施优先级 ==================== -->
+<h2><span class="section-num">7</span>实施建议与优先级</h2>
+
+<table>
+<tr>
+  <th style="width:5%">优先级</th>
+  <th style="width:25%">功能</th>
+  <th style="width:30%">实施要点</th>
+  <th style="width:20%">影响范围</th>
+  <th style="width:20%">与现有设计兼容性</th>
+</tr>
+<tr>
+  <td><strong>P0</strong></td>
+  <td>全局 mult 注册表</td>
+  <td>实现 MultRegistry 类，将现有 tech_efficiency 迁移为 mult 来源之一</td>
+  <td>core 模块</td>
+  <td>完全兼容，纯重构</td>
+</tr>
+<tr>
+  <td><strong>P1</strong></td>
+  <td>条件性稀有掉落</td>
+  <td>新增 RARE_FRAGMENTS 配置，在 pulse() 结算中检查条件</td>
+  <td>sim_v12_layered.py, game_v4.js</td>
+  <td>兼容，不影响星核守恒</td>
+</tr>
+<tr>
+  <td><strong>P1</strong></td>
+  <td>深度里程碑</td>
+  <td>新增 DEPTH_MILESTONES 配置，在 discover() 中检查</td>
+  <td>sim_v12_layered.py, game_v4.js</td>
+  <td>兼容，每轮重置</td>
+</tr>
+<tr>
+  <td><strong>P2</strong></td>
+  <td>矿物精炼系统</td>
+  <td>新增 REFINERY + ENHANCEMENT 配置，精炼锭在一阶无限时清除</td>
+  <td>新增模块, GAME_DESIGN_V4.md</td>
+  <td>需验证平衡性</td>
+</tr>
+<tr>
+  <td><strong>P3</strong></td>
+  <td>勘探信标</td>
+  <td>新增 BEACONS 配置，需配合 UI 可视化</td>
+  <td>新增模块, 网页 Demo</td>
+  <td>需 UI 支持</td>
+</tr>
+<tr>
+  <td><strong>P4</strong></td>
+  <td>概率性矿物合成</td>
+  <td>可选功能，需团队讨论是否引入概率</td>
+  <td>新增模块</td>
+  <td>与确定性哲学冲突</td>
+</tr>
+</table>
+
+<div class="highlight-box">
+<h3 style="margin-top:0">最终建议</h3>
+<p>建议优先实施 <strong>P0（mult 注册表）</strong>作为基础设施重构，为后续功能铺路。然后实施 <strong>P1（稀有掉落 + 深度里程碑）</strong>——这两项改动小、不破坏现有平衡，但能显著提升探索感和节奏感。<strong>P2（精炼系统）</strong>是最大幅度的玩法扩展，需要在模拟器中验证平衡性后实施。<strong>P3/P4</strong>视团队精力和玩家反馈决定。</p>
+<p>所有新功能必须遵循 S2 的核心约束：确定性扰动、低频批量操作、星核仅来自一阶无限、前三轮手动重玩、一阶无限清除本轮状态。</p>
+</div>
+
+</div>
+</body>
+</html>

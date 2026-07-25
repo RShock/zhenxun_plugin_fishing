@@ -10,7 +10,7 @@ import pytest
 from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
 from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
 from zhenxun.plugins.zhenxun_plugin_fishing.render import fishing_status
-from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import use_rollback_potion
+from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import use_rollback_potion
 
 
 @pytest.mark.asyncio

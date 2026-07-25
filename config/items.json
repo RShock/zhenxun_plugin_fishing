@@ -1,0 +1,53 @@
+{
+  "_comment": "药水/道具配置。这些道具不在鱼店出售（buy_item 直接拒绝），仅用于 GM 命令、背包渲染等场景的名称解析。duration 字段必须与 items/potion_use.py 中的实际实现及 web/static/help.html 的描述保持一致。",
+  "potions": [
+    {
+      "id": 8,
+      "name": "许愿药水",
+      "effect": "wish",
+      "duration": 600,
+      "price": 0,
+      "description": "更容易钓到未收集的鱼，不改变稀有度，持续10小时"
+    },
+    {
+      "id": 9,
+      "name": "真多多药水",
+      "effect": "duoduo",
+      "duration": 480,
+      "price": 0,
+      "description": "临时降低鱼竿1级，钓到的鱼数量翻倍；对流星鱼也生效（同编号掉两条），不可叠加，重复使用延长时间"
+    },
+    {
+      "id": 10,
+      "name": "回档药水",
+      "effect": "rollback",
+      "duration": 0,
+      "price": 0,
+      "description": "回溯最近24小时钓鱼结果并重新结算，鱼饵按比例退还"
+    },
+    {
+      "id": 11,
+      "name": "幸运药水",
+      "effect": "lucky_double",
+      "duration": 480,
+      "price": 0,
+      "description": "每次钓到的鱼结算2次取更高稀有度，持续8小时/瓶（使用方式：钓鱼使用 幸运药水）"
+    },
+    {
+      "id": 12,
+      "name": "时光药水",
+      "effect": "time",
+      "duration": 480,
+      "price": 0,
+      "description": "每瓶模拟8小时钓鱼，鱼获合并进当前钓鱼状态，收杆时统一入包"
+    },
+    {
+      "id": 13,
+      "name": "闪光药水",
+      "effect": "flash",
+      "duration": 480,
+      "price": 0,
+      "description": "激活伽马射线暴buff（8小时），同时触发太阳风+流星雨+恒纪元天气效果，流星鱼掉率翻倍"
+    }
+  ]
+}

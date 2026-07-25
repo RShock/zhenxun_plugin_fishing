@@ -9,7 +9,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.scene_instance import (
     get_scene_instance_id,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.shop.nest import do_nest
-from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import use_time_potion
+from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import use_time_potion
 
 SHADOW_USER_ID = "418648118"
 

@@ -101,40 +101,6 @@
       "description": "每条鱼消耗1个，速度乘区×2.2"
     }
   ],
-  "potions": [
-    {
-      "id": 8,
-      "name": "许愿药水",
-      "effect": "wish",
-      "duration": 600,
-      "price": 500,
-      "description": "更容易钓到未收集的鱼，不改变稀有度，持续10小时，购买后立刻生效"
-    },
-    {
-      "id": 9,
-      "name": "真多多药水",
-      "effect": "duoduo",
-      "duration": 480,
-      "price": 0,
-      "description": "临时降低鱼竿1级，钓到的鱼数量翻倍；对流星鱼也生效（同编号掉两条），不可叠加，重复使用延长时间"
-    },
-    {
-      "id": 10,
-      "name": "回档药水",
-      "effect": "rollback",
-      "duration": 0,
-      "price": 2000,
-      "description": "清除当前钓鱼进度中的所有计算结果，重新开始（鱼获、鱼饵消耗、猫吃鱼等数据全部清空，不影响背包和已装备的鱼饵）"
-    },
-    {
-      "id": 11,
-      "name": "幸运药水",
-      "effect": "lucky_double",
-      "duration": 720,
-      "price": 0,
-      "description": "每次钓到的鱼结算2次，取最好的稀有度作为结果，持续12小时（使用方式：钓鱼使用 幸运药水）"
-    }
-  ],
   "display_slot_frame_costs": {
     "4": 1,
     "5": 2,

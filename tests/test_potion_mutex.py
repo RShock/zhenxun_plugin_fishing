@@ -1,7 +1,7 @@
 """真多多药水与幸运药水通过公开使用入口的互斥行为测试。"""
 
 from zhenxun.plugins.zhenxun_plugin_fishing.models import BuffEffect
-from zhenxun.plugins.zhenxun_plugin_fishing.shop.potion_use import (
+from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import (
     use_duoduo_potion,
     use_flash_potion,
     use_lucky_potion,
