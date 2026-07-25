@@ -43,14 +43,15 @@
     function fishChip(fish){
         var bg = rarityColors[fish.rarity] || '#808080';
         var name = esc(fish.name);
+        var sub = fish.rarity;
+        if (fish.location_tag) sub += ' ' + esc(fish.location_tag);
         return '<span class="wm-fish" style="background:' + bg + ';color:#fff;">' + name +
-            '<span class="wm-fish-sub"> ' + fish.rarity + '</span></span>';
+            '<span class="wm-fish-sub"> ' + sub + '</span></span>';
     }
 
-    function payFishHtml(payFish, locTag){
+    function payFishHtml(payFish){
         var chips = payFish.map(function(f){ return fishChip(f); }).join('');
-        var loc = locTag ? '<div class="wm-pay-loc">' + esc(locTag) + '</div>' : '';
-        return '<div class="wm-pay-row">' + chips + '</div>' + loc;
+        return '<div class="wm-pay-row">' + chips + '</div>';
     }
 
     // 右侧获得鱼分组：同一场景同一稀有度的鱼合并为一行
@@ -70,12 +71,14 @@
     function renderItem(item, isNow){
         var leftHtml, rightHtml;
         if (isNow){
-            leftHtml = payFishHtml(item.pay_fish, item.pay_location_tag);
+            leftHtml = payFishHtml(item.pay_fish);
         } else {
             var bg = rarityColors[item.pay_rarity] || '#808080';
-            var loc = item.pay_location_tag ? '<div class="wm-pay-loc">' + esc(item.pay_location_tag) + '</div>' : '';
+            var sub = item.pay_rarity;
+            if (item.pay_location_tag) sub += ' ' + esc(item.pay_location_tag);
             leftHtml = '<span class="wm-pay-label" style="background:' + bg + ';color:#fff;">' +
-                esc(item.pay_label) + '</span>' + loc;
+                esc(item.pay_label) +
+                '<span class="wm-fish-sub"> ' + sub + '</span></span>';
         }
         rightHtml = getGroupsHtml(item.get_groups);
         return '<div class="wm-item">' +
