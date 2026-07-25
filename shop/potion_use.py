@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from zhenxun.services.log import logger
 
 from ..core.cat_gift import default_cat_gifts
+from ..core.context import deserialize_fish_caught, serialize_fish_caught
 from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
@@ -74,7 +75,18 @@ async def use_time_potion(
     return success, result
 
 
+_ROLLBACK_WINDOW_HOURS = 24
+
+
 async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
+    """使用回档药水：回溯最近 _ROLLBACK_WINDOW_HOURS 小时的钓鱼结果。
+
+    削弱后只回溯最近 24 小时：
+    - start_time 早于 24 小时前的鱼获（catch_time 为 None 或早于截止点）保留
+    - 24 小时窗口内的鱼获被移除并重新结算
+    - 鱼饵按鱼获比例退还（无法精确追踪每条鱼消耗的饵，用鱼数比例估算）
+    - 时光药水仅在会话开始于 24 小时内时退还
+    """
     status_dict = await FishingUser.get_status(user_id)
     if not status_dict:
         return False, "你还没有在钓鱼，无法使用回档药水！请先【钓鱼 地点编号】开始钓鱼"
@@ -87,39 +99,110 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
     await FishingUser.remove_item(user_id, "回档药水", "potion", 1)
 
-    # 退还本轮钓鱼已消耗的鱼饵：回档会重置 last_settle_time 并重新结算整段
-    # 时间，重新结算时 consume_bait_incremental 会再次扣饵。若不先退还，
-    # 鱼饵就被扣除两次（正常钓鱼扣一次 + 重新结算扣一次）。
+    now = datetime.now()
+    cutoff = now - timedelta(hours=_ROLLBACK_WINDOW_HOURS)
+    original_start_time = _make_naive(
+        datetime.fromisoformat(status_dict["start_time"])
+    )
+    # 回溯截止点不会早于开钓时间（会话不足 24h 时退化为全量回档）
+    rollback_cutoff = max(original_start_time, cutoff)
+    is_full_rollback = rollback_cutoff == original_start_time
+
+    # ── 按时间戳拆分已有鱼获 ──
+    existing_fish = deserialize_fish_caught(status_dict.get("fish_caught", []))
+    existing_cat_eaten = deserialize_fish_caught(
+        status_dict.get("cat_eaten_fish", [])
+    )
+
+    keep_fish: list = []
+    remove_fish: list = []
+    for fish, rarity, count, ct in existing_fish:
+        # catch_time 为 None（旧数据）：
+        #   - 会话不足 24h（全量回档）→ 视为窗口内，移除
+        #   - 会话超过 24h → 视为窗口外，保留
+        if not is_full_rollback and (ct is None or ct < rollback_cutoff):
+            keep_fish.append((fish, rarity, count, ct))
+        else:
+            remove_fish.append((fish, rarity, count, ct))
+
+    keep_cat_eaten: list = []
+    remove_cat_eaten: list = []
+    for fish, rarity, count, ct in existing_cat_eaten:
+        if not is_full_rollback and (ct is None or ct < rollback_cutoff):
+            keep_cat_eaten.append((fish, rarity, count, ct))
+        else:
+            remove_cat_eaten.append((fish, rarity, count, ct))
+
+    # ── 估算鱼饵退还量 ──
+    # bait_usage_log 只记录总消耗，无时间戳。用「被移除鱼数 / 总鱼数」
+    # 比例估算 24h 窗口内消耗的鱼饵。全量回档时比例为 1.0。
+    total_fish_count = sum(
+        c for _, _, c, _ in existing_fish + existing_cat_eaten
+    )
+    removed_fish_count = sum(
+        c for _, _, c, _ in remove_fish + remove_cat_eaten
+    )
+    if total_fish_count > 0:
+        refund_ratio = removed_fish_count / total_fish_count
+    else:
+        refund_ratio = 1.0 if is_full_rollback else 0.0
+
     bait_usage_log = status_dict.get("bait_usage_log", {})
+    total_bait_consumed = status_dict.get("bait_consumed", 0)
     refunded_bait = 0
+    new_bait_usage_log: dict[str, int] = {}
     for bait_id, count in bait_usage_log.items():
         count = int(count)
         if count > 0:
-            await FishingUser.add_item(user_id, str(bait_id), "bait", count)
-            refunded_bait += count
+            refund_count = round(count * refund_ratio)
+            keep_count = count - refund_count
+            if refund_count > 0:
+                await FishingUser.add_item(user_id, str(bait_id), "bait", refund_count)
+                refunded_bait += refund_count
+            if keep_count > 0:
+                new_bait_usage_log[bait_id] = keep_count
 
-    original_start_time = status_dict["start_time"]
+    new_bait_consumed = total_bait_consumed - round(
+        total_bait_consumed * refund_ratio
+    )
+
+    # ── 时光药水处理 ──
+    # 无法追踪每瓶时光药水的使用时间。会话 < 24h 时全部退还，
+    # 会话 > 24h 时不退还（保守策略，避免误退）
     time_potions_used = max(0, int(status_dict.get("time_potions_used", 0)))
+    if is_full_rollback:
+        refund_time_potions = time_potions_used
+        new_time_potions_used = 0
+    else:
+        refund_time_potions = 0
+        new_time_potions_used = time_potions_used
+
+    # ── 构建回溯后的状态 ──
     reset_status = {
         "location_id": status_dict["location_id"],
-        "start_time": original_start_time,
-        "last_settle_time": original_start_time,
-        "fish_caught": [],
-        "bait_consumed": 0,
+        "start_time": status_dict["start_time"],
+        # last_settle_time 推进到截止点，check_fishing_status 会从这里重新结算到 now
+        "last_settle_time": rollback_cutoff.isoformat(),
+        "fish_caught": serialize_fish_caught(keep_fish),
+        "bait_consumed": new_bait_consumed,
+        # 保底计数器沿用玩家当前值（与原回档一致：保留当前保底进度）
         "frame_pity": user.frame_pity_counter,
         "cat_frame_pity": user.cat_frame_pity_counter,
         "utr_pity": user.utr_pity_counter,
-        "cat_eaten_fish": [],
+        "cat_eaten_fish": serialize_fish_caught(keep_cat_eaten),
+        # 猫礼物无法按时间拆分，重置为默认值
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
-        "time_potions_used": 0,
-        "bait_usage_log": {},
+        "time_potions_used": new_time_potions_used,
+        "bait_usage_log": new_bait_usage_log,
     }
     if status_dict.get("shadow_scene"):
         reset_status["shadow_scene"] = True
         reset_status["scene_instance_id"] = get_scene_instance_id(status_dict)
     await FishingUser.update_fishing_status(user_id, reset_status)
-    if time_potions_used:
-        await FishingUser.add_item(user_id, "time_potion", "potion", time_potions_used)
+    if refund_time_potions:
+        await FishingUser.add_item(
+            user_id, "time_potion", "potion", refund_time_potions
+        )
 
     from ..core.actions import check_fishing_status
 
@@ -127,9 +210,15 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     if image is None:
         image = await get_status_image(user_id)
 
+    window_desc = (
+        "全部钓鱼进度"
+        if is_full_rollback
+        else f"最近{_ROLLBACK_WINDOW_HOURS}小时"
+    )
     logger.info(
-        f"用户 {user_id} 使用回档药水，重置钓鱼进度，"
-        f"退还时光药水 {time_potions_used} 瓶，退还鱼饵 {refunded_bait} 个"
+        f"用户 {user_id} 使用回档药水，回溯{window_desc}，"
+        f"保留{len(keep_fish)}条鱼获，移除{len(remove_fish)}条，"
+        f"退还鱼饵 {refunded_bait} 个，退还时光药水 {refund_time_potions} 瓶"
     )
     return True, image
 

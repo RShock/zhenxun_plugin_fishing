@@ -134,10 +134,10 @@ async def render_fishing_result(
         if duration_minutes >= 60
         else f"{duration_minutes:.1f}分钟"
     )
-    total_count = sum(c for _, _, c in fish_caught)
+    total_count = sum(c for _, _, c, *_ in fish_caught)
     total_count += len(meteor_fish_numbers or [])
     if cat_eaten_fish:
-        total_count += sum(c for _, _, c in cat_eaten_fish)
+        total_count += sum(c for _, _, c, *_ in cat_eaten_fish)
 
     cat_gifts_data = None
     if cat_gifts:

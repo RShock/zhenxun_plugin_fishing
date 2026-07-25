@@ -620,22 +620,26 @@ def _append_fish(
     fish: FishData | None,
     rarity: str | None,
     frame_pity: int,
-    fish_caught: list[tuple[FishData, str, int]],
+    fish_caught: list[tuple[FishData, str, int, datetime | None]],
     collected_fish_names: set[str],
     quantity: int = 1,
-    cat_eaten_fish: list[tuple[FishData, str, int]] | None = None,
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] | None = None,
     effects: dict | None = None,
     location: LocationData | None = None,
     collected_set: set[tuple[str, str]] | None = None,
     cat_gifts: dict | None = None,
     bait_id: str = "",
+    catch_time: datetime | None = None,
 ) -> int:
-    """将捕获的鱼追加到结果列表中，处理猫吃鱼逻辑。"""
+    """将捕获的鱼追加到结果列表中，处理猫吃鱼逻辑。
+
+    catch_time 记录本次捕获的模拟时间，供回档药水按24小时窗口筛选鱼获。
+    """
     lucky_double = bool(effects and effects.get("lucky_double_active", False))
     if fish and rarity:
         if quantity == 0:
             if cat_eaten_fish is not None:
-                cat_eaten_fish.append((fish, rarity, 1))
+                cat_eaten_fish.append((fish, rarity, 1, catch_time))
             if cat_gifts is not None:
                 process_cat_gift(
                     fish, rarity, cat_gifts, location, collected_set, bait_id,
@@ -655,7 +659,7 @@ def _append_fish(
                 if random.random() < cat_eat_chance:
                     eaten_count += 1
                     if cat_eaten_fish is not None:
-                        cat_eaten_fish.append((fish, rarity, 1))
+                        cat_eaten_fish.append((fish, rarity, 1, catch_time))
                     if cat_gifts is not None:
                         process_cat_gift(
                             fish, rarity, cat_gifts, location, collected_set, bait_id,
@@ -663,10 +667,10 @@ def _append_fish(
                         )
             kept = quantity - eaten_count
             if kept > 0:
-                fish_caught.append((fish, rarity, kept))
+                fish_caught.append((fish, rarity, kept, catch_time))
                 collected_fish_names.add(fish.id)
         else:
-            fish_caught.append((fish, rarity, quantity))
+            fish_caught.append((fish, rarity, quantity, catch_time))
             collected_fish_names.add(fish.id)
     return frame_pity
 
@@ -676,9 +680,9 @@ def _catch_fish_at_interval(
     location: LocationData,
     collected_fish_names: set[str],
     frame_pity: int,
-    fish_caught: list[tuple[FishData, str, int]],
+    fish_caught: list[tuple[FishData, str, int, datetime | None]],
     utr_pity: int = 0,
-    cat_eaten_fish: list[tuple[FishData, str, int]] | None = None,
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] | None = None,
     collected_set: set[tuple[str, str]] | None = None,
     cat_gifts: dict | None = None,
     bait_id: str = "",
@@ -715,6 +719,7 @@ def _catch_fish_at_interval(
             collected_set=collected_set,
             cat_gifts=cat_gifts,
             bait_id=bait_id,
+            catch_time=catch_time,
         )
         _try_append_starry_meteor_fish(
             location, fish, rarity, meteor_fish_numbers, effects=effects
@@ -750,6 +755,7 @@ def _catch_fish_at_interval(
             collected_set=collected_set,
             cat_gifts=cat_gifts,
             bait_id=bait_id,
+            catch_time=catch_time,
         )
 
     return frame_pity, utr_pity
@@ -791,11 +797,11 @@ def _try_catch_in_remaining_time(
     location: LocationData,
     collected_fish_names: set[str],
     frame_pity: int,
-    fish_caught: list[tuple[FishData, str, int]],
+    fish_caught: list[tuple[FishData, str, int, datetime | None]],
     no_bait_mode: bool,
     bait_remaining: int,
     utr_pity: int = 0,
-    cat_eaten_fish: list[tuple[FishData, str, int]] | None = None,
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] | None = None,
     collected_set: set[tuple[str, str]] | None = None,
     cat_gifts: dict | None = None,
     bait_id: str = "",
@@ -844,8 +850,8 @@ class _SimulationState:
     bait: FishData | None
     bait_speed_bonus: int
     bait_remaining: int
-    fish_caught: list[tuple[FishData, str, int]] = field(default_factory=list)
-    cat_eaten_fish: list[tuple[FishData, str, int]] = field(default_factory=list)
+    fish_caught: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
     meteor_fish_numbers: list[int] = field(default_factory=list)
     bait_usage: dict[str, int] = field(default_factory=dict)
     available_baits: dict[str, dict] = field(default_factory=dict)
@@ -884,7 +890,7 @@ async def _initialize_simulation_state(
     status_dict = await FishingUser.get_status(ctx.user_id)
     if status_dict:
         existing_fish = deserialize_fish_caught(status_dict.get("fish_caught", []))
-        for fish, _rarity, _count in existing_fish:
+        for fish, _rarity, _count, _catch_time in existing_fish:
             collected_fish_names.add(fish.id)
 
     if initial_utr_pity is not None:

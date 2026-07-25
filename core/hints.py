@@ -24,7 +24,7 @@ def build_pity_hints(
 ) -> list[str]:
     hints: list[str] = []
 
-    has_frame = any(fish.id in ("展示木框", "木框") for fish, _, _ in total_fish)
+    has_frame = any(fish.id in ("展示木框", "木框") for fish, _, _, *_ in total_fish)
     if not skip_frame_pity and not has_frame:
         # 当前这一杆尚未结算，提示的是“再钓多少次会触发”，需包含即将进行的一次。
         remaining = FRAME_PITY_THRESHOLD - frame_pity

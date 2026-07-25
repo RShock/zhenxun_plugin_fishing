@@ -366,12 +366,12 @@ async def render_fishing_status(
         else f"{total_duration_min:.1f}分钟"
     )
 
-    total_count = sum(c for _, _, c in total_fish) + len(meteor_fish_numbers or [])
-    new_count = sum(c for _, _, c in new_fish)
+    total_count = sum(c for _, _, c, *_ in total_fish) + len(meteor_fish_numbers or [])
+    new_count = sum(c for _, _, c, *_ in new_fish)
 
     total_value = sum(
         calculate_fish_price(fish, rarity, 0) * count
-        for fish, rarity, count in total_fish
+        for fish, rarity, count, *_ in total_fish
     )
     prob_rows = _probability_rows(probabilities)
     bait_info = _bait_info(bait, new_bait_consumed, total_bait_consumed)
@@ -385,7 +385,7 @@ async def render_fishing_status(
     effective_now = now_time if now_time else datetime.now()
     lucky_active = _is_lucky_active(buffs, effective_now)
     weather = _status_weather(weather_info)
-    total_cat_count = sum(c for _, _, c in cat_eaten_fish or [])
+    total_cat_count = sum(c for _, _, c, *_ in cat_eaten_fish or [])
 
     cat_gifts_data = None
     if cat_gifts:

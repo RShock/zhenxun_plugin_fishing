@@ -577,7 +577,7 @@ def apply_process_fish_results_on_user(
     fish_entries: list[tuple[str, str, str, int]] = []
     cat_park_materials: dict[str, int] = {}
 
-    for fish, rarity, count in merged.values():
+    for fish, rarity, count, *_ in merged.values():
         if fish.id.startswith(f"{CAT_PARK_MATERIAL_TYPE}:"):
             material_name = fish.id.split(":", 1)[1]
             cat_park_materials[material_name] = (
@@ -626,7 +626,7 @@ def apply_process_fish_results_on_user(
 
     visible_fish: list[tuple[FishData, str, int]] = []
     materials: list[tuple[str, str, int]] = []
-    for fish, rarity, count in merged.values():
+    for fish, rarity, count, *_ in merged.values():
         if fish.id.startswith(f"{CAT_PARK_MATERIAL_TYPE}:"):
             material_name = fish.id.split(":", 1)[1]
             materials.append((material_name, rarity, count))

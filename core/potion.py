@@ -118,7 +118,7 @@ async def use_time_potion_settle(
 
             logger.info(
                 f"用户 {user_id} 阶段一完成："
-                f"钓到{sum(c for _, _, c in simulation1.fish_caught)}条鱼"
+                f"钓到{sum(c for _, _, c, *_ in simulation1.fish_caught)}条鱼"
             )
         else:
             pending_minutes = 0  # 构建失败视为无待处理
@@ -225,7 +225,7 @@ async def use_time_potion_settle(
         )
 
     # ── 渲染 ──
-    fish_count = sum(count for _, _, count in all_fish) + len(all_meteor)
+    fish_count = sum(count for _, _, count, *_ in all_fish) + len(all_meteor)
     potion_msgs = [f"⏳ 时光药水生效！模拟了{hours}小时钓鱼时间"]
     if pending_minutes > 0:
         potion_msgs.insert(

@@ -864,7 +864,7 @@ def _append_pity_hints(plan: _StopSettlementPlan) -> None:
 
 
 def _log_stop_result(plan: _StopSettlementPlan, fish_coins: int) -> None:
-    fish_count = sum(count for _, _, count in plan.total_fish)
+    fish_count = sum(count for _, _, count, *_ in plan.total_fish)
     bait_info = _build_bait_log_info(plan)
     logger.info(
         f"用户 {plan.user_id} 收杆，钓到 {fish_count} 条鱼，"

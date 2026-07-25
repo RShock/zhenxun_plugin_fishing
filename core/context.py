@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any
 
 from ..config import FishData, LocationData
-from ..models import FishingUser
+from ..models import FishingUser, _make_naive
 
 
 @dataclass
@@ -31,12 +31,12 @@ class FishingContext:
 class SimulationResult:
     """主钓鱼模拟循环的完整结果。"""
 
-    fish_caught: list[tuple[FishData, str, int]]
+    fish_caught: list[tuple[FishData, str, int, datetime | None]]
     bait_usage: dict[str, int]
     frame_pity: int
     bait: FishData | None
     bait_remaining: int
-    cat_eaten_fish: list[tuple[FishData, str, int]]
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]]
     cat_gifts: dict
     utr_pity: int
     meteor_fish_numbers: list[int]
@@ -48,7 +48,7 @@ class SimulationResult:
 @dataclass
 class StepResult:
     """单次钓鱼步进结算的结果。"""
-    new_fish: list[tuple[FishData, str, int]]
+    new_fish: list[tuple[FishData, str, int, datetime | None]]
     new_bait_consumed: int
     frame_pity: int
     cat_frame_pity: int
@@ -57,7 +57,7 @@ class StepResult:
     utr_pity: int = 0
     bait_usage: dict[str, int] = field(default_factory=dict)
     buff_messages: list[str] = field(default_factory=list)
-    cat_eaten_fish: list[tuple[FishData, str, int]] = field(default_factory=list)
+    cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
     cat_gifts: dict = field(
         default_factory=lambda: {
             "gold": 0,
@@ -73,11 +73,16 @@ class StepResult:
 
 def deserialize_fish_caught(
     fish_caught_raw: list,
-) -> list[tuple[FishData, str, int]]:
-    """将 JSON 反序列化的鱼获列表转为 FishData 元组列表。"""
+) -> list[tuple[FishData, str, int, datetime | None]]:
+    """将 JSON 反序列化的鱼获列表转为 FishData 元组列表。
+
+    返回4元组 (fish, rarity, count, catch_time)。
+    向后兼容：旧数据没有 catch_time 字段时返回 None，回档药水将 None
+    视为"24小时前"（保留而非丢弃），避免升级后旧鱼获被误删。
+    """
     from ..config import ConfigManager
 
-    result: list[tuple[FishData, str, int]] = []
+    result: list[tuple[FishData, str, int, datetime | None]] = []
     for entry in fish_caught_raw:
         fish_id = entry["fish_id"]
         fish = ConfigManager.get_fish(fish_id)
@@ -86,32 +91,60 @@ def deserialize_fish_caught(
         if not fish and fish_id.startswith("cat_park_material:"):
             fish = FishData(id=fish_id, base_price=0)
         if fish:
-            result.append((fish, entry["rarity"], entry["count"]))
+            catch_time: datetime | None = None
+            raw_ct = entry.get("catch_time")
+            if raw_ct:
+                try:
+                    catch_time = _make_naive(datetime.fromisoformat(raw_ct))
+                except (ValueError, TypeError):
+                    pass
+            result.append((fish, entry["rarity"], entry["count"], catch_time))
     return result
 
 
 def serialize_fish_caught(
-    fish_caught: list[tuple[FishData, str, int]],
+    fish_caught: list[tuple[FishData, str, int, datetime | None]],
 ) -> list[dict]:
-    """将 FishData 元组列表序列化为 JSON 可存储的字典列表。"""
-    return [
-        {"fish_id": fish.id, "rarity": rarity, "count": count}
-        for fish, rarity, count in fish_caught
-    ]
+    """将 FishData 元组列表序列化为 JSON 可存储的字典列表。
+
+    兼容3元组（无 catch_time）和4元组（有 catch_time）输入。
+    """
+    serialized: list[dict] = []
+    for item in fish_caught:
+        fish = item[0]
+        rarity = item[1]
+        count = item[2]
+        catch_time = item[3] if len(item) > 3 else None
+        entry: dict = {"fish_id": fish.id, "rarity": rarity, "count": count}
+        if catch_time is not None:
+            entry["catch_time"] = catch_time.isoformat()
+        serialized.append(entry)
+    return serialized
 
 
 def merge_fish(
-    *fish_lists: list[tuple[FishData, str, int]],
+    *fish_lists: list[tuple],
     as_dict: bool = False,
-) -> list[tuple[FishData, str, int]] | dict[tuple[str, str], tuple[FishData, str, int]]:
-    """合并多个鱼获列表，按 (fish_id, rarity) 去重并累加数量。"""
-    merged: dict[tuple[str, str], tuple[FishData, str, int]] = {}
+) -> list[tuple[FishData, str, int, datetime | None]] | dict[tuple[str, str], tuple[FishData, str, int, datetime | None]]:
+    """合并多个鱼获列表，按 (fish_id, rarity) 去重并累加数量。
+
+    合并时保留最早的 catch_time（回档药水据此判断哪些鱼在24小时窗口内）。
+    兼容3元组和4元组输入。
+    """
+    merged: dict[tuple[str, str], tuple[FishData, str, int, datetime | None]] = {}
     for fish_list in fish_lists:
-        for fish, rarity, count in fish_list:
+        for item in fish_list:
+            fish = item[0]
+            rarity = item[1]
+            count = item[2]
+            catch_time = item[3] if len(item) > 3 else None
             key = (fish.id, rarity)
             if key in merged:
-                f, r, c = merged[key]
-                merged[key] = (f, r, c + count)
+                f, r, c, ct = merged[key]
+                # 保留最早的 catch_time；None 视为最旧（旧数据）
+                if catch_time is not None and (ct is None or catch_time < ct):
+                    ct = catch_time
+                merged[key] = (f, r, c + count, ct)
             else:
-                merged[key] = (fish, rarity, count)
+                merged[key] = (fish, rarity, count, catch_time)
     return merged if as_dict else list(merged.values())

@@ -470,15 +470,15 @@ def build_fish_list_data(
     new_fish_map: dict[tuple[str, str], int] = {}
     if new_fish:
         for fish in new_fish:
-            if isinstance(fish, tuple) and len(fish) == 3:
-                f, rarity, count = fish
+            if isinstance(fish, tuple) and len(fish) >= 3:
+                f, rarity, count = fish[0], fish[1], fish[2]
                 key = (f.id, rarity)
                 new_fish_map[key] = new_fish_map.get(key, 0) + count
 
     merged = {}
     for fish in fish_caught:
-        if isinstance(fish, tuple) and len(fish) == 3:
-            f, rarity, count = fish
+        if isinstance(fish, tuple) and len(fish) >= 3:
+            f, rarity, count = fish[0], fish[1], fish[2]
             key = (f.id, rarity, False)
             if key in merged:
                 merged[key] = (f, rarity, merged[key][2] + count, False)
@@ -494,7 +494,7 @@ def build_fish_list_data(
                 merged[key] = (fish.fish_name, fish.rarity, fish.count, False)
 
     if cat_eaten_fish:
-        for fish, rarity, count in cat_eaten_fish:
+        for fish, rarity, count, *_ in cat_eaten_fish:
             key = (fish.id, rarity, True)
             if key in merged:
                 old_f, old_r, old_c, old_cat = merged[key]
