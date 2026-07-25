@@ -283,13 +283,15 @@ class TestStepSettlement:
         assert hasattr(result, "bait")
         assert hasattr(result, "buff_messages")
 
-    async def test_settle_step_persists_auto_switched_bait(self, db, monkeypatch):
+    async def test_settle_step_does_not_persist_auto_switched_bait(self, db, monkeypatch):
+        """步进结算不持久化临时自动换饵，保持玩家持久化偏好；
+        最终鱼饵在收杆阶段由 _apply_session_reward_stage 统一落库。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
 
         user = await db.user_get(USER_ID)
         user.rod_level = 5
-        user.bait_id = "1"
         await start_fishing(USER_ID, LOCATION_1, "TestUser")
+        bait_before = user.bait_id
         switched_bait = Mock(id=2, speed_bonus=20)
         step = actions.StepResult(
             new_fish=[],
@@ -308,7 +310,7 @@ class TestStepSettlement:
         monkeypatch.setattr(actions, "_compute_settle_step", fake_compute)
         await actions.settle_fishing_step(USER_ID)
 
-        assert user.bait_id == "2"
+        assert user.bait_id == bait_before
 
     async def test_settle_step_accumulates_fish(self, db):
         user = await db.user_get(USER_ID)
