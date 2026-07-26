@@ -300,13 +300,15 @@ async def try_auto_fish_on_idle(user_id: str, nickname: str = "") -> str | None:
     user.bait_id = str(best_bait_id)
     await user.save(update_fields=["bait_id"])
 
-    # 会话起始回溯到阈值分钟前；start_fishing 内部会更新 last_active_time = now
-    auto_start = now - timedelta(minutes=IDLE_THRESHOLD_MINUTES)
+    # 会话起始回溯到上次活跃时间（收杆时刻），让闲置期间无空档；
+    # start_fishing 内部会更新 last_active_time = now
+    auto_start = _make_naive(last_active_time)
     await FishingUser.start_fishing(user_id, location.id, start_time=auto_start)
 
+    idle_min = round(idle_minutes)
     logger.info(
         f"用户 {user_id} 防闲置自动在 {location.name} 开始钓鱼"
-        f"（回溯{IDLE_THRESHOLD_MINUTES}分钟）"
+        f"（回溯{idle_min}分钟）"
     )
     return location.name
 

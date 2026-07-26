@@ -630,26 +630,23 @@ class TestAntiIdleFishing:
         assert result == "乡间浅溪"
         assert await db.status_is_fishing(USER_ID) is True
 
-    async def test_auto_fish_sets_retroactive_start_time(self, db):
-        """防闲置自动钓鱼时，会话起始时间应回溯到阈值分钟前。"""
-        from zhenxun.plugins.zhenxun_plugin_fishing.constants import (
-            IDLE_THRESHOLD_MINUTES,
-        )
+    async def test_auto_fish_starts_from_last_active_time(self, db):
+        """防闲置自动钓鱼时，会话起始时间应回溯到上次活跃时间（收杆时刻），
+        而非固定回溯15分钟——这样闲置期间无任何空档。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.core import try_auto_fish_on_idle
 
         user = await db.user_get(USER_ID)
         user.rod_level = 5
         user.last_location_id = LOCATION_1
-        user.last_active_time = datetime.now() - timedelta(minutes=30)
+        idle_since = datetime.now() - timedelta(minutes=30)
+        user.last_active_time = idle_since
 
-        before = datetime.now()
         await try_auto_fish_on_idle(USER_ID, "TestUser")
 
         status = await db.status_get(USER_ID)
         start_time = datetime.fromisoformat(status["start_time"])
-        # 会话起始应回溯到约 IDLE_THRESHOLD_MINUTES 分钟前，而非 last_active_time
-        expected_start = before - timedelta(minutes=IDLE_THRESHOLD_MINUTES)
-        assert abs((start_time - expected_start).total_seconds()) < 5
+        # 会话起始应等于上次活跃时间，而非 now - 15分钟
+        assert abs((start_time - idle_since).total_seconds()) < 5
 
     async def test_idle_under_threshold_no_trigger(self, db):
         """闲置未超阈值时不触发自动钓鱼。"""
