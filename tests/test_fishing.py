@@ -53,6 +53,44 @@ class TestStartFishing:
         user.rod_level = 1
         image, ok, hint = await start_fishing(USER_ID, "999")
         assert ok is False
+        assert "地图不存在" in hint
+
+    async def test_start_fishing_rod_level_too_low_hint(self, db):
+        """鱼竿等级不够时应给出明确提示。"""
+        user = await db.user_get(USER_ID)
+        user.rod_level = 6  # 10图 difficulty=9，6级不够
+        image, ok, hint = await start_fishing(USER_ID, "10")
+        assert ok is False
+        assert "鱼竿等级不够" in hint
+        assert "9" in hint
+
+    async def test_start_fishing_starry_without_ship_hint(self, db, monkeypatch):
+        """未建设星空艇时进入星空图应给出明确提示。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing import starry
+
+        monkeypatch.setattr(
+            starry, "has_starry_ship", AsyncMock(return_value=False)
+        )
+        user = await db.user_get(USER_ID)
+        user.rod_level = 10
+        image, ok, hint = await start_fishing(USER_ID, "11")
+        assert ok is False
+        assert "尚未建设星空艇" in hint
+
+    async def test_start_fishing_cat_park_without_ticket_hint(
+        self, db, monkeypatch
+    ):
+        """未获得猫猫乐园门票时应给出明确提示。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing import cat_park
+
+        monkeypatch.setattr(
+            cat_park, "has_cat_park_ticket", AsyncMock(return_value=False)
+        )
+        user = await db.user_get(USER_ID)
+        user.rod_level = 10
+        image, ok, hint = await start_fishing(USER_ID, "S1")
+        assert ok is False
+        assert "猫猫乐园门票" in hint
 
     async def test_shadow_scene_is_hidden_and_restricted(self, db, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing import render as render_module

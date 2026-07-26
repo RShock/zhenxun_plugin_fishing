@@ -223,25 +223,36 @@ async def start_fishing(
     from ..cat_park import has_cat_park_ticket, is_cat_park_location
     from ..starry import has_starry_ship, is_starry_location
 
-    if not location or (
-        not shadow_scene
-        and (
-            (
-                is_cat_park_location(location_id)
-                and not await has_cat_park_ticket(user_id)
-            )
-            or (is_starry_location(location_id) and not await has_starry_ship(user_id))
-            or (
-                not is_cat_park_location(location_id)
-                and user.rod_level < location.difficulty
-            )
-        )
-    ):
+    # 校验地图访问条件，不满足时回退到地图选择并给出具体原因
+    if not location:
         locations = ConfigManager.get_locations()
         from ..render import render_location_select
 
         image = await render_location_select(user_id, locations, user.rod_level)
-        return image, False, ""
+        return image, False, "地图不存在，请重新选择。"
+
+    if not shadow_scene:
+        fail_hint = ""
+        if is_cat_park_location(location_id) and not await has_cat_park_ticket(
+            user_id
+        ):
+            fail_hint = "你尚未获得猫猫乐园门票，请重新选择地图。"
+        elif is_starry_location(location_id) and not await has_starry_ship(user_id):
+            fail_hint = "你尚未建设星空艇，请重新选择地图。"
+        elif (
+            not is_cat_park_location(location_id)
+            and user.rod_level < location.difficulty
+        ):
+            fail_hint = (
+                f"你的鱼竿等级不够（需要{location.difficulty}级），请重新选择地图。"
+            )
+
+        if fail_hint:
+            locations = ConfigManager.get_locations()
+            from ..render import render_location_select
+
+            image = await render_location_select(user_id, locations, user.rod_level)
+            return image, False, fail_hint
 
     best_bait_id, best_bait_count = await select_bait_with_preference(user_id)
     user.bait_id = str(best_bait_id)
