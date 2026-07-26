@@ -6,7 +6,7 @@ from zhenxun.services.log import logger
 
 from ..config import ConfigManager
 from ..models import FishingUser
-from ..services import get_or_create_user
+from ..services import get_or_create_user, spend_gold
 
 
 async def exchange_to_gold(user_id: str, amount: int) -> tuple[bool, str, int]:
@@ -17,8 +17,7 @@ async def exchange_to_gold(user_id: str, amount: int) -> tuple[bool, str, int]:
     exchange_rate = ConfigManager.get_exchange_rate()
     gold_received = amount * exchange_rate
 
-    user.gold -= amount
-    await user.save(update_fields=["gold"])
+    await spend_gold(user_id, amount, "exchange_gold", f"兑换{gold_received}金币")
 
     from zhenxun.models.user_console import UserConsole
 

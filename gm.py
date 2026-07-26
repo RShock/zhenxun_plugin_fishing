@@ -23,6 +23,7 @@ from .config import (
 from .core.result import add_fish_to_user
 from .core.starry_rewards import grant_rewards_for_starry_fish
 from .models import FishingUser, FishingWeather
+from .services import adjust_gold, earn_gold, set_gold
 
 
 def _decode_fish_numeric_id(
@@ -87,7 +88,7 @@ async def gm_reset_user(user_id: str) -> tuple[bool, str]:
 
 
 async def gm_add_gold(user_id: str, amount: int = 99999999) -> tuple[bool, str]:
-    await FishingUser.add_gold(user_id, amount)
+    await adjust_gold(user_id, amount, "gm_add_gold", f"GM调整金币{amount:+d}")
     if amount >= 0:
         logger.info(f"GM给用户 {user_id} 添加 {amount} 钓鱼币")
         return True, f"已给用户 {user_id} 添加 {amount} 钓鱼币！"
@@ -361,8 +362,7 @@ async def gm_add_items(
 async def gm_set_gold(user_id: str, amount: int) -> tuple[bool, str]:
     user = await FishingUser.get_user(user_id)
     old_gold = user.gold
-    user.gold = amount
-    await user.save(update_fields=["gold"])
+    await set_gold(user_id, amount, "gm_set_gold", f"GM设定金币: {old_gold} -> {amount}")
     logger.info(f"GM设定用户 {user_id} 钓鱼币: {old_gold} -> {amount}")
     return True, f"已设定用户 {user_id} 的钓鱼币为 {amount}（原: {old_gold}）"
 
@@ -832,7 +832,7 @@ async def gm_check_achievements(user_id: str) -> tuple[bool, str]:
 
     result = await check_all_achievements(user_id)
     if result["coins"] > 0:
-        await FishingUser.add_gold(user_id, result["coins"])
+        await earn_gold(user_id, result["coins"], "gm_achievement", "GM补发成就奖励")
     if result["coins"] > 0 or result["messages"]:
         logger.info(
             f"GM补成就: 用户 {user_id} 收到 {result['coins']} 金币, "
@@ -852,7 +852,7 @@ async def gm_add_gold_all(amount: int) -> tuple[bool, str]:
     users = await FishingUser.all()
     success_count = 0
     for user in users:
-        await FishingUser.add_gold(user.user_id, amount)
+        await adjust_gold(user.user_id, amount, "gm_add_gold_all", f"GM全服调整{amount:+d}")
         success_count += 1
     logger.info(f"GM全服发钱: {success_count} 个用户, 每人 {amount}")
     if amount >= 0:

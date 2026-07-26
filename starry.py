@@ -95,6 +95,16 @@ async def build_starry_ship(
 
     user.gold -= STARRY_SHIP_COST
     await user.save(update_fields=["gold"])
+    # 账本记录：金币变动已通过 save 落库，此处仅记日志
+    from .services import ledger_service
+    await ledger_service.log_gold_change(
+        user_id,
+        operation="build_starry_ship",
+        amount=-STARRY_SHIP_COST,
+        gold_before=user.gold + STARRY_SHIP_COST,
+        gold_after=user.gold,
+        reason="建设星空艇",
+    )
     await FishingUser.add_item(user_id, STARRY_SHIP_ITEM_ID, STARRY_SHIP_ITEM_TYPE, 1)
 
     # 更新全局 buff：每位新玩家建设叠加 1 层，最多 10 层（即 +50%）

@@ -113,6 +113,15 @@ IDLE_THRESHOLD_MINUTES = 15
 # 第 6 项及后续项会映射为 UTR，这些概率项仅为未来扩展稀有度体系预留。
 # 当前星空钓鱼的实际抽选会在 core/engine.py 将 index >= 5 的质量截断并归并到 UR，
 # 因此概率表本身的 UTR 当前不可达；这些预留项不可删除，也不可直接改写成 UR 概率。
+
+# d=-1 缺省分布：多多药水使鱼竿等级降至地图等级以下（d<0）时使用。
+# 92.8%N + 7.2%R 使 d=0 用多多后的收益倍率 R(0)=2×1.072/1.3345≈1.606，
+# 与 d=1 的 R(1) 一致，避免多多在等级差 0 时因 clamp 获得无惩罚 2x 翻倍。
+RARITY_DISTRIBUTION_NEG1: list[float] = [
+    0.928, 0.072, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+]
+
 RARITY_DISTRIBUTION: list[list[float]] = [
     [0.6655, 0.3345, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
     [0.4964, 0.4246, 0.0790, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000],
@@ -219,7 +228,9 @@ def get_rarity_probabilities_full(
 ) -> list[float]:
     """获取完整的稀有度概率数组（含扩展位）。"""
     d = rod_level - location_difficulty
-    d = max(0, min(d, len(RARITY_DISTRIBUTION) - 1))
+    if d < 0:
+        return list(RARITY_DISTRIBUTION_NEG1)
+    d = min(d, len(RARITY_DISTRIBUTION) - 1)
     return list(RARITY_DISTRIBUTION[d])
 
 

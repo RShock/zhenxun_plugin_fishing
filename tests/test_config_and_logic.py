@@ -116,6 +116,40 @@ class TestRarityProbabilities:
         probs_high = get_rarity_probabilities(5, 1)
         assert probs_high.get("SSR", 0) >= probs_low.get("SSR", 0)
 
+    def test_neg1_distribution_uses_duoduo_fallback(self):
+        """d=-1（多多药水降级到地图等级以下）使用 92.8%N + 7.2%R 分布。"""
+        probs = get_rarity_probabilities_full(0, 1)  # d = -1
+        assert abs(probs[0] - 0.928) < 0.001  # N
+        assert abs(probs[1] - 0.072) < 0.001  # R
+        assert all(p == 0.0 for p in probs[2:])  # 更高稀有度为 0
+
+    def test_neg1_distribution_only_n_and_r(self):
+        """d=-1 分布的 6 稀有度字典只含 N 和 R。"""
+        probs = get_rarity_probabilities(0, 1)  # d = -1
+        assert abs(probs["N"] - 0.928) < 0.001
+        assert abs(probs["R"] - 0.072) < 0.001
+        assert probs["SR"] == 0.0
+        assert probs["SSR"] == 0.0
+        assert probs["UR"] == 0.0
+
+    def test_neg1_revenue_matches_d1(self):
+        """d=0 用多多（降到 d=-1）的收益倍率应与 d=1 用多多一致。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.constants import (
+            RARITY_MULTIPLIER,
+        )
+
+        price_mult = [RARITY_MULTIPLIER[k] for k in ["N", "R", "SR", "SSR", "UR", "UTR"]]
+
+        def M(rod, diff):
+            probs = get_rarity_probabilities_full(rod, diff)
+            return sum(probs[i] * price_mult[i] for i in range(len(price_mult)))
+
+        # d=1 用多多：R(1) = 2*M(0,0)/M(1,0)
+        r_d1 = 2 * M(0, 0) / M(1, 0)
+        # d=0 用多多：R(0) = 2*M(-1,0)/M(0,0) = 2*M(0,1)/M(0,0)
+        r_d0 = 2 * M(0, 1) / M(0, 0)
+        assert abs(r_d0 - r_d1) < 0.01
+
 
 class TestCatchFish:
     def test_catch_fish_returns_fish(self):
@@ -406,7 +440,7 @@ class TestBuffCalculator:
         assert result["duoduo_count"] == 1
         assert result["rod_level"] == 4  # base(5) + rod_bonus(0) - duoduo_count(1)
 
-    def test_duoduo_rod_level_floor_at_zero(self):
+    def test_duoduo_rod_level_floor_at_neg1(self):
         now = datetime.now()
         buff = type(
             "Buff",
@@ -420,7 +454,7 @@ class TestBuffCalculator:
         )()
         result = FishingBuffCalculator.get_effects_at_time([buff], now, 0, 0, 1)
         assert result["duoduo_count"] == 1
-        assert result["rod_level"] == 0  # floor at 0 (base(0) - duoduo(1) → capped)
+        assert result["rod_level"] == -1  # floor at -1 (base(0) - duoduo(1) → d=-1 分布)
 
     def test_duoduo_buff_default_zero(self):
         result = FishingBuffCalculator.get_effects_at_time([], datetime.now(), 5, 0, 1)

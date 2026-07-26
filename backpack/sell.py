@@ -11,7 +11,7 @@ from ..config import (
     calculate_fish_price,
 )
 from ..models import FishingUser
-from ..services import get_or_create_user
+from ..services import earn_gold, get_or_create_user
 from .selection import FishSelection, parse_fish_selection
 
 _BAIT_SELL_RATIO = 1.0
@@ -44,7 +44,7 @@ async def sell_fish(
     total_coins, sold_details = await _calculate_sell_total(user_id, fish_list)
 
     await FishingUser.delete_fish_entries(user_id, fish_list)
-    await FishingUser.add_gold(user_id, total_coins)
+    await earn_gold(user_id, total_coins, "sell_fish", f"卖出{len(fish_list)}种鱼")
     if not is_private:
         await FishingUser.increment_sell_count(user_id)
 
@@ -172,7 +172,7 @@ async def sell_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
     total_coins = sell_price * count
 
     await FishingUser.remove_item(user_id, str(bait.id), "bait", count)
-    await FishingUser.add_gold(user_id, total_coins)
+    await earn_gold(user_id, total_coins, "sell_bait", f"卖出{count}个{bait.name}")
 
     user = await FishingUser.get_user(user_id)
     if user.preferred_bait_id == str(bait.id):

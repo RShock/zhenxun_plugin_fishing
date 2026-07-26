@@ -18,7 +18,7 @@ from ..core.context import (
 from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
-from ..services import get_or_create_user
+from ..services import get_or_create_user, ledger_service
 
 from ..shop.view import get_status_image
 
@@ -253,6 +253,14 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         f"保留{len(keep_fish)}条鱼获，移除{len(remove_fish)}条，"
         f"退还鱼饵 {refunded_bait} 个，退还时光药水 {refund_time_potions} 瓶"
     )
+    await ledger_service.log_item_use(
+        user_id,
+        item_id="回档药水",
+        item_type="potion",
+        item_name="回档药水",
+        count=1,
+        context="use_rollback_potion",
+    )
     return True, image
 
 
@@ -292,6 +300,10 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
         logger.info(
             f"用户 {user_id} 使用{actual_count}瓶幸运药水，时间堆叠至 {existing.end_time}（+{total_hours}h）"
         )
+        await ledger_service.log_item_use(
+            user_id, item_id="幸运药水", item_type="potion",
+            item_name="幸运药水", count=actual_count, context="use_lucky_potion",
+        )
         return (
             True,
             f"幸运药水生效！钓鱼变得幸运 ⭐，剩余时间+{total_hours}小时（使用{actual_count}瓶）",
@@ -306,6 +318,10 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
         )
         logger.info(
             f"用户 {user_id} 使用{actual_count}瓶幸运药水，获得幸运buff（{total_hours}小时）"
+        )
+        await ledger_service.log_item_use(
+            user_id, item_id="幸运药水", item_type="potion",
+            item_name="幸运药水", count=actual_count, context="use_lucky_potion",
         )
         return (
             True,
@@ -344,6 +360,10 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
         await existing.save(update_fields=["end_time"])
         logger.info(
             f"用户 {user_id} 使用{count}瓶真多多药水，时间堆叠至 {existing.end_time}"
+        )
+        await ledger_service.log_item_use(
+            user_id, item_id="真多多药水", item_type="potion",
+            item_name="真多多药水", count=count, context="use_duoduo_potion",
         )
         return (
             True,
@@ -442,6 +462,10 @@ async def use_display_frame_buff(
         msg += f"\n木框使用上限为{MAX_FRAME_BUFF_LAYERS}个，已自动调整使用数量"
 
     logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}次，当前全图{new_total}层")
+    await ledger_service.log_item_use(
+        user_id, item_id="display_frame", item_type="display_frame",
+        item_name="木框", count=actual_frames, context="use_display_frame_buff",
+    )
     return True, msg
 
 
@@ -495,6 +519,10 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
     )
     logger.info(
         f"用户 {user_id} 使用{actual_count}瓶闪光药水，获得伽马射线暴（{total_hours}小时）"
+    )
+    await ledger_service.log_item_use(
+        user_id, item_id="闪光药水", item_type="potion",
+        item_name="闪光药水", count=actual_count, context="use_flash_potion",
     )
     return (
         True,

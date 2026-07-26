@@ -12,7 +12,7 @@ from ..config import (
     ConfigManager,
 )
 from ..models import FishingUser
-from ..services import auto_fill_new_display_slot, get_or_create_user
+from ..services import auto_fill_new_display_slot, get_or_create_user, ledger_service
 
 
 async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, str]:
@@ -51,6 +51,7 @@ async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, s
             f"钓鱼币不足，需要 {price} 钓鱼币，还差 {price - user.gold} 钓鱼币",
         )
 
+    gold_before = user.gold
     user.gold -= price
     if equipment_type == "rod":
         user.rod_level += 1
@@ -61,6 +62,16 @@ async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, s
         user.hook_level += 1
         await user.save(update_fields=["gold", "hook_level"])
         msg = f"{name}升级成功！当前速度加成：{user.hook_level * 10}%"
+
+    # 账本记录（金币与装备等级一同落库，此处仅记日志）
+    await ledger_service.log_gold_change(
+        user_id,
+        operation=f"upgrade_{equipment_type}",
+        amount=-price,
+        gold_before=gold_before,
+        gold_after=user.gold,
+        reason=f"升级{name}到{current_level + 1}级",
+    )
 
     logger.info(f"用户 {user_id} 升级{name}到 {current_level + 1} 级")
     return True, msg
@@ -80,10 +91,22 @@ async def _buy_bait(user_id: str, user, item, count: int) -> tuple[bool, str]:
         return False, f"钓鱼币不足，无法购买 {item.name}"
 
     total_price = item.price * actual_count
+    gold_before = user.gold
     user.gold -= total_price
     user.bait_id = str(item.id)
     await user.save(update_fields=["gold", "bait_id"])
     await FishingUser.add_item(user_id, str(item.id), "bait", actual_count)
+
+    # 账本记录
+    await ledger_service.log_gold_change(
+        user_id,
+        operation="buy_bait",
+        amount=-total_price,
+        gold_before=gold_before,
+        gold_after=user.gold,
+        reason=f"购买{actual_count}个{item.name}",
+        details={"bait_id": str(item.id), "count": actual_count, "unit_price": item.price},
+    )
 
     logger.info(f"用户 {user_id} 购买了 {actual_count} 个 {item.name}")
     if actual_count < count:

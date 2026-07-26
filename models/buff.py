@@ -528,7 +528,7 @@ class FishingBuffCalculator:
                         result[key] = value
 
         result["rod_level"] = max(
-            0, base_rod_level + result["rod_bonus"] - result.get("duoduo_count", 0)
+            -1, base_rod_level + result["rod_bonus"] - result.get("duoduo_count", 0)
         )
 
         return result

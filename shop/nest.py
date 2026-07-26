@@ -9,7 +9,7 @@ from zhenxun.services.log import logger
 from ..config import DAILY_NEST_LIMIT, MAX_NEST_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
-from ..services import get_or_create_user
+from ..services import get_or_create_user, ledger_service
 
 
 async def do_nest(
@@ -134,6 +134,10 @@ async def do_nest(
 
     logger.info(
         f"用户 {user_id} 在{location.name}打窝{layers_to_add}层，延长{extended_count}个buff，当前玉米{new_total}层，星空艇{starry_bonus_layers}层"
+    )
+    await ledger_service.log_item_use(
+        user_id, item_id="corn", item_type="corn",
+        item_name="香甜玉米", count=actual_corn, context="do_nest",
     )
     return True, msg
 
@@ -262,5 +266,9 @@ async def do_cat_frame_nest(
 
     logger.info(
         f"用户 {user_id} 在{location.name}使用猫框打窝{layers_to_add}层，延长{extended_count}次，当前{new_total}层"
+    )
+    await ledger_service.log_item_use(
+        user_id, item_id="cat_frame", item_type="cat_frame",
+        item_name="猫框", count=actual_frames, context="do_cat_frame_nest",
     )
     return True, msg

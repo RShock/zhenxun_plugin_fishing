@@ -29,7 +29,13 @@ from ..scene_instance import (
     SHADOW_SCENE_USER_ID,
     get_scene_instance_id,
 )
-from ..services import build_buff_messages, calculate_display_income, get_or_create_user
+from ..services import (
+    GoldDelta,
+    build_buff_messages,
+    calculate_display_income,
+    get_or_create_user,
+    ledger_service,
+)
 from ..weather_service import ensure_weather_generated, get_location_weather
 from .bait import consume_bait_incremental, select_bait_with_preference
 from .cat_gift import default_cat_gifts, merge_cat_gifts
@@ -1032,6 +1038,199 @@ async def _apply_stop_settlement_writes(
     return render_data, messages, is_last_stop
 
 
+def _serialize_fish_list(fish_list: list) -> list[dict]:
+    """将 FishData 元组列表转为 JSON 可序列化的字典列表。"""
+    result = []
+    for item in fish_list or []:
+        if not isinstance(item, (list, tuple)):
+            continue
+        fish_data = item[0]
+        rarity = item[1] if len(item) > 1 else ""
+        count = item[2] if len(item) > 2 else 0
+        fish_name = getattr(fish_data, "id", str(fish_data))
+        result.append({"name": fish_name, "rarity": rarity, "count": count})
+    return result
+
+
+async def _record_fishing_ledger(
+    user_id: str,
+    render_data: dict,
+    gold_before: int,
+    step: StepResult,
+    rod_level: int,
+    hook_level: int,
+    user_bait_id: str,
+) -> None:
+    """事务提交后记录钓鱼账本：金币净变动 + 钓鱼会话快照。
+
+    账本写入是收杆结算的副作用，失败仅记日志不阻断主流程。
+    事务内金币通过 apply_add_gold 修改，此处统一记录净变动。
+    """
+    try:
+        user_after = await FishingUser.get_user(user_id)
+        gold_after = int(user_after.gold or 0)
+
+        # ── 金币变动记录（GoldDelta 记录净变动）──
+        delta = GoldDelta(user_id, gold_before)
+        delta.set_after(gold_after)
+
+        sign_info = render_data.get("sign_info")
+        if sign_info:
+            sign_gold = sign_info.get("display_income", 0) * (
+                sign_info.get("days_missed", 0) + 1
+            )
+            if sign_gold > 0:
+                delta.add_item(
+                    "sign_display_income",
+                    sign_gold,
+                    f"签到展示收益×{sign_info.get('days_missed', 0) + 1}",
+                )
+
+        cat_gifts = render_data.get("cat_gifts") or {}
+        if cat_gifts.get("gold", 0) > 0:
+            delta.add_item("cat_gift_gold", cat_gifts["gold"], "猫礼物金币")
+
+        await delta.commit("fishing_income", "收杆结算金币变动")
+
+        # ── 钓鱼会话记录 ──
+        location = render_data.get("location")
+        merged_fish = render_data.get("merged_fish") or []
+        fish_caught_json = _serialize_fish_list(merged_fish)
+
+        items_gained: list[dict] = []
+
+        # 签到玉米
+        if sign_info:
+            items_gained.append(
+                {"item_id": "corn", "item_type": "corn", "count": 1, "source": "sign_in"}
+            )
+
+        # 猫乐园材料
+        cat_park_materials = render_data.get("cat_park_materials")
+        if cat_park_materials:
+            if isinstance(cat_park_materials, dict):
+                for name, count in cat_park_materials.items():
+                    if count > 0:
+                        items_gained.append(
+                            {"item_id": name, "item_type": "cat_park_material", "count": count}
+                        )
+            elif isinstance(cat_park_materials, list):
+                for mat in cat_park_materials:
+                    if isinstance(mat, (list, tuple)) and len(mat) >= 3:
+                        items_gained.append(
+                            {"item_id": mat[0], "item_type": "cat_park_material", "count": mat[2]}
+                        )
+
+        # 猫礼物道具
+        if cat_gifts:
+            if cat_gifts.get("cat_frames", 0) > 0:
+                items_gained.append(
+                    {"item_id": "cat_frame", "item_type": "cat_frame",
+                     "count": cat_gifts["cat_frames"], "source": "cat_gift"}
+                )
+            if cat_gifts.get("corn", 0) > 0:
+                items_gained.append(
+                    {"item_id": "corn", "item_type": "corn",
+                     "count": cat_gifts["corn"], "source": "cat_gift"}
+                )
+            if cat_gifts.get("bait_count", 0) > 0 and cat_gifts.get("bait_id"):
+                items_gained.append(
+                    {"item_id": cat_gifts["bait_id"], "item_type": "bait",
+                     "count": cat_gifts["bait_count"], "source": "cat_gift"}
+                )
+
+        # 星空鱼奖励
+        starry_rewards = render_data.get("starry_rewards") or []
+        for reward in starry_rewards:
+            if reward.get("granted"):
+                items_gained.append(
+                    {
+                        "item_id": str(reward.get("key", "")),
+                        "item_type": str(reward.get("pool_name", "starry_reward")),
+                        "count": int(reward.get("count", 1)),
+                        "source": "starry_fish",
+                        "score_bonus": reward.get("score_bonus", 0),
+                    }
+                )
+
+        # 星空鱼分数
+        starry_score_info = render_data.get("starry_score") or {}
+        starry_score = (
+            float(starry_score_info.get("session_score", 0.0)) if starry_score_info else 0.0
+        )
+        meteor_numbers = render_data.get("meteor_fish_numbers") or []
+        starry_fish_count = len(meteor_numbers)
+
+        # 奇迹信息
+        miracle_info = render_data.get("miracle")
+
+        # 自动卖鱼状态
+        auto_sold = await FishingUser.get_auto_sell(user_id)
+
+        # 天气
+        weather = ""
+        if location:
+            try:
+                weather_info = await get_location_weather(location.id, user_id)
+                if weather_info:
+                    weather = (
+                        weather_info.get("weather_name", "")
+                        if isinstance(weather_info, dict)
+                        else str(weather_info)
+                    )
+            except Exception:
+                pass
+
+        # 活跃 buff
+        buffs_active = []
+        for b in render_data.get("buffs") or []:
+            desc = getattr(b, "description", "")
+            if desc:
+                buffs_active.append(desc)
+
+        bait = render_data.get("bait")
+        bait_name = bait.name if bait else ""
+        bait_id_str = str(bait.id) if bait else str(user_bait_id)
+
+        # 猫吃掉的鱼
+        cat_eaten_json = _serialize_fish_list(render_data.get("cat_eaten_fish"))
+
+        await ledger_service.log_fishing_session(
+            user_id,
+            location_id=location.id if location else "",
+            location_name=location.name if location else "",
+            rod_level=rod_level,
+            hook_level=hook_level,
+            bait_id=bait_id_str,
+            bait_name=bait_name,
+            start_time=render_data.get("fishing_start_time").isoformat()
+            if render_data.get("fishing_start_time")
+            else None,
+            end_time=render_data.get("now_time").isoformat()
+            if render_data.get("now_time")
+            else None,
+            duration_minutes=render_data.get("duration_minutes", 0),
+            weather=weather,
+            fish_caught=fish_caught_json,
+            items_gained=items_gained,
+            starry_score=starry_score,
+            starry_fish_count=starry_fish_count,
+            gold_earned=gold_after - gold_before,
+            auto_sold=auto_sold,
+            cat_eaten_fish=cat_eaten_json,
+            cat_gifts=cat_gifts,
+            buffs_active=buffs_active,
+            miracle=miracle_info,
+            bait_consumed=step.new_bait_consumed,
+            gold_before=gold_before,
+            gold_after=gold_after,
+        )
+
+        await ledger_service.flush_pending_entries()
+    except Exception:
+        logger.warning(f"账本记录失败: user={user_id}", exc_info=True)
+
+
 async def stop_fishing(
     user_id: str, gm_mode: bool = False, is_private: bool = False
 ) -> tuple[dict | None, list[str], bool]:
@@ -1041,10 +1240,18 @@ async def stop_fishing(
     - 事务外：只读预览签到、模拟本段鱼获（不写库）
     - 事务内：签到/扣饵/清会话/入包/流星/成就/计数 等全部写库
     - 任一步失败：事务回滚，数据库保持收杆前状态
+
+    账本记录：事务提交后记录金币净变动和钓鱼会话快照，不影响主流程。
     """
     await ensure_weather_generated()
 
     # ── 事务外：纯计算，失败不会改库 ──
+    user_before = await FishingUser.get_user(user_id)
+    gold_before = int(user_before.gold or 0)
+    rod_level = user_before.rod_level
+    hook_level = user_before.hook_level
+    user_bait_id = user_before.bait_id
+
     is_new_sign, corn_count, display_income, days_missed = await _preview_daily_rewards(
         user_id
     )
@@ -1056,7 +1263,7 @@ async def stop_fishing(
     # ── 事务内：一次性提交全部写库 ──
     try:
         async with _stop_db_transaction():
-            return await _apply_stop_settlement_writes(
+            render_data, messages, is_last_stop = await _apply_stop_settlement_writes(
                 user_id,
                 gm_mode=gm_mode,
                 is_private=is_private,
@@ -1073,6 +1280,13 @@ async def stop_fishing(
     except Exception:
         logger.exception(f"用户 {user_id} 收杆事务失败，已回滚全部数据库修改")
         raise
+
+    # ── 事务提交后：记录账本（副作用，不阻断主流程）──
+    await _record_fishing_ledger(
+        user_id, render_data, gold_before, step, rod_level, hook_level, user_bait_id
+    )
+
+    return render_data, messages, is_last_stop
 
 
 async def run_post_settlement(

@@ -7,7 +7,7 @@ from zhenxun.services.log import logger
 from ..config import DAILY_GIFT_LIMIT, ConfigManager, calculate_fish_price
 from ..core.result import add_fish_to_user
 from ..models import FishingUser
-from ..services import get_or_create_user
+from ..services import earn_gold, get_or_create_user
 
 
 async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool, str]:
@@ -52,7 +52,7 @@ async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool
         if fish_data:
             # UTR 解锁型赠送奖励：发送者获得 2 倍 UTR 基础价格金币
             reward_coins = 2 * calculate_fish_price(fish_data, "UTR", 0)
-            await FishingUser.add_gold(user_id, reward_coins)
+            await earn_gold(user_id, reward_coins, "gift_utr_unlock", f"UTR解锁赠送奖励: {fish['fish_name']}")
         else:
             logger.warning(
                 f"赠送 UTR 鱼时未找到鱼配置: {fish['fish_name']}，"

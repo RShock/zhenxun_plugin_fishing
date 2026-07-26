@@ -557,7 +557,7 @@ async def sell_completed_cat_park_materials(user_id: str, messages: list[str]) -
         if count > 0:
             await FishingUser.remove_item(user_id, name, CAT_PARK_MATERIAL_TYPE, count)
     gold = total_count * CAT_PARK_MATERIAL_PRICE
-    await FishingUser.add_gold(user_id, gold)
+    await earn_gold(user_id, gold, "cat_park_material", f"自动出售{total_count}个猫乐园材料")
     messages.append(
         f"猫猫乐园已竣工，多余材料自动出售：{total_count}个 × {CAT_PARK_MATERIAL_PRICE} = {gold}金币"
     )

@@ -4,7 +4,7 @@
 
 from ..config import ConfigManager, FishData, LocationData, calculate_fish_price, generate_fish_numeric_id, DISPLAY_SLOT_COSTS
 from ..models import FishingBuffCalculator, FishingUser
-from ..services import auto_display_fish_with_msg, check_all_achievements
+from ..services import auto_display_fish_with_msg, check_all_achievements, earn_gold
 
 from .context import merge_fish
 
@@ -99,7 +99,7 @@ async def add_fish_to_user(
     if check_achievements and fish_entries:
         achievements = await check_all_achievements(user_id)
         if achievements["coins"] > 0:
-            await FishingUser.add_gold(user_id, achievements["coins"])
+            await earn_gold(user_id, achievements["coins"], "achievement", f"成就奖励: {len(achievements['messages'])}条")
         achievement_coins = achievements["coins"]
         achievement_messages = achievements["messages"]
 
@@ -170,7 +170,7 @@ async def check_and_apply_achievements(
 
     achievements = await check_all_achievements(user_id)
     if achievements["coins"] > 0:
-        await FishingUser.add_gold(user_id, achievements["coins"])
+        await earn_gold(user_id, achievements["coins"], "achievement", "成就补发")
 
     return achievements["coins"], achievements["messages"]
 

@@ -57,6 +57,7 @@ async def distribute_cat_gifts(
     返回提示消息列表。收杆和时光药水共用此函数。
     """
     from ..models import FishingUser
+    from ..services import earn_gold
 
     if not cat_gifts:
         return []
@@ -64,7 +65,7 @@ async def distribute_cat_gifts(
     messages: list[str] = []
 
     if cat_gifts.get("gold", 0) > 0:
-        await FishingUser.add_gold(user_id, cat_gifts["gold"])
+        await earn_gold(user_id, cat_gifts["gold"], "cat_gift", "猫礼物金币")
         messages.append(f"🐱 猫送了{cat_gifts['gold']}金币")
     if cat_gifts.get("cat_frames", 0) > 0:
         await FishingUser.add_cat_frames(user_id, cat_gifts["cat_frames"])

@@ -11,9 +11,16 @@ from .display_service import (
     auto_fill_new_display_slot,
     calculate_display_income,
 )
+from . import ledger_service
+from .gold_service import GoldDelta, adjust_gold, earn_gold, set_gold, spend_gold
+from .item_registry import ItemType, add_item, get_all_items, get_item, remove_item
 from .user_service import get_or_create_user, get_user
 
 __all__ = [
+    "GoldDelta",
+    "ItemType",
+    "add_item",
+    "adjust_gold",
     "announce_starry_ship_build",
     "auto_announce",
     "auto_display_fish",
@@ -24,7 +31,14 @@ __all__ = [
     "calculate_display_income",
     "check_achievements_for_location",
     "check_all_achievements",
+    "earn_gold",
     "generate_buff_message",
+    "get_all_items",
+    "get_item",
     "get_or_create_user",
     "get_user",
+    "ledger_service",
+    "remove_item",
+    "set_gold",
+    "spend_gold",
 ]
