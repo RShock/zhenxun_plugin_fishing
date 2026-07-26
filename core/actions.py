@@ -749,20 +749,26 @@ def _apply_pity_cat_gift_stage(plan: _StopSettlementPlan) -> None:
     )
 
 
-def _apply_starry_rewards(plan: _StopSettlementPlan) -> tuple[float, int]:
-    """处理流星鱼入库和奖池，返回本次积分与有效流星鱼数。"""
+def _apply_starry_rewards(
+    plan: _StopSettlementPlan,
+) -> tuple[float, float, int]:
+    """处理流星鱼入库和奖池，返回(本次总分, 抽奖bonus, 有效流星鱼数)。
+
+    总分 = 基础番型分数 + 抽奖bonus；bonus 单独返回用于结算页右侧额外展示。
+    """
     from ..models import user_mutations as mut
     from . import stop_mutations as sm
     from .starry_system import score_starry_fish
 
-    score = 0.0
+    base_score = 0.0
+    bonus_score = 0.0
     count = 0
     for num in plan.meteor_fish_numbers:
         if int(num) > 999_999:
             mut.apply_add_item(plan.user, str(num), "meteor_fish", 1, plan.dirty)
             continue
         scored = score_starry_fish(num)
-        score += scored.raw_score
+        base_score += scored.raw_score
         count += 1
         mut.apply_add_starry_fish(plan.user, num, plan.location.id, plan.dirty)
         if not scored.reward_pool or scored.reward_pool == "none":
@@ -778,9 +784,9 @@ def _apply_starry_rewards(plan: _StopSettlementPlan) -> tuple[float, int]:
             )
             reward.setdefault("granted", True)
             if reward.get("granted"):
-                score += float(reward.get("score_bonus") or 0)
+                bonus_score += float(reward.get("score_bonus") or 0)
         plan.starry_rewards.extend(granted)
-    return score, count
+    return base_score + bonus_score, bonus_score, count
 
 
 def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
@@ -815,7 +821,12 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
     }
 
 
-def _set_starry_score_info(plan: _StopSettlementPlan, score: float, count: int) -> None:
+def _set_starry_score_info(
+    plan: _StopSettlementPlan,
+    score: float,
+    count: int,
+    bonus: float = 0.0,
+) -> None:
     from .starry_system import S2_TICKET_SCORE_THRESHOLD
 
     if count <= 0:
@@ -830,8 +841,11 @@ def _set_starry_score_info(plan: _StopSettlementPlan, score: float, count: int) 
         plan.messages.append("🎫 星空努力值达标，已获得 S2 入场券")
     target_display = int(target) if target.is_integer() else target
     progress_pct = min(100.0, accumulated / target * 100) if target else 0.0
+    base_score = max(0.0, score - bonus)
     plan.starry_score_info = {
         "session_score": round(score, 3),
+        "session_base": round(base_score, 3),
+        "session_bonus": round(bonus, 3),
         "accumulated": round(accumulated, 3),
         "target": target_display,
         "remaining": round(max(0.0, target - accumulated), 3),
@@ -872,9 +886,11 @@ def _apply_catch_achievement_display_stage(
     """处理流星、签到附加奖励、鱼获成就、提示与最终展示。"""
     from . import stop_mutations as sm
 
-    starry_score, starry_count = _apply_starry_rewards(plan)
+    starry_score, starry_bonus, starry_count = _apply_starry_rewards(plan)
     _apply_miracle_claims(plan)
-    _set_starry_score_info(plan, starry_score, starry_count)
+    _set_starry_score_info(
+        plan, starry_score, starry_count, bonus=starry_bonus
+    )
     if plan.is_new_sign:
         plan.messages.extend(
             sm.apply_ferris_wheel_rewards_on_user(

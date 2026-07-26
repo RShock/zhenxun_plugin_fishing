@@ -120,6 +120,15 @@
 .starry-score-row .label { color: #c9d7ea; }
 .starry-score-row .value { font-weight: bold; color: #fff; }
 .starry-score-row .value.gain { color: #86efac; }
+.starry-score-row .score-values { display: flex; gap: 6px; align-items: baseline; }
+.starry-score-row .value.bonus {
+    color: #fbbf24;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(251,191,36,0.18);
+    border: 1px solid rgba(251,191,36,0.4);
+}
 .starry-progress {
     height: 10px;
     background: rgba(255,255,255,0.15);
@@ -332,7 +341,12 @@
         {% if starry_score.session_score and starry_score.session_score > 0 %}
         <div class="starry-score-row">
             <span class="label">本次积分</span>
-            <span class="value gain">+{{ starry_score.session_score }}</span>
+            <span class="score-values">
+                <span class="value gain">+{{ starry_score.session_base }}</span>
+                {% if starry_score.session_bonus and starry_score.session_bonus > 0 %}
+                <span class="value bonus">加{{ starry_score.session_bonus }}</span>
+                {% endif %}
+            </span>
         </div>
         {% endif %}
         <div class="starry-progress">
