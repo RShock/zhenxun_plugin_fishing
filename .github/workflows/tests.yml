@@ -51,4 +51,17 @@ jobs:
           ZX_LIGHTWEIGHT_NONEBOT: "1"
           ZX_LIGHTWEIGHT_NONEBOT_STUBS: "1"
         run: |
-          python -m pytest tests --tb=short --confcutdir=. -p support.pytest_plugin
+          set +e
+          python -m pytest tests --tb=long -v --confcutdir=. -p support.pytest_plugin 2>&1 | tee /tmp/test_output.txt
+          TEST_EXIT=${PIPESTATUS[0]}
+          if [ $TEST_EXIT -ne 0 ]; then
+            echo "## Test Output (last 60 lines)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -60 /tmp/test_output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            # Also emit error annotations for FAILED/ERROR lines
+            grep -E "^(FAILED|ERROR|E |_____ )" /tmp/test_output.txt | head -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit 1
+          fi
