@@ -1,6 +1,5 @@
 """在 pytest 环境中生成白商列表 HTML，验证视觉效果。"""
 import json
-from pathlib import Path
 
 from zhenxun.plugins.zhenxun_plugin_fishing.constants import RARITY_COLORS
 from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
@@ -8,13 +7,11 @@ from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
     render_template,
 )
 
-OUT_DIR = Path(r"c:\Users\Administrator\.trae-cn\work\6a62baabd6700100ef34b48a")
-
 
 class TestListRender:
     """生成白商列表 HTML 用于视觉验证。"""
 
-    def test_generate_list_html(self):
+    def test_generate_list_html(self, tmp_path):
         now_items = [
             {
                 "pay_fish": [
@@ -56,7 +53,7 @@ class TestListRender:
             possible_items_json=json.dumps(possible_items, ensure_ascii=False),
             rarity_colors_json=json.dumps(RARITY_COLORS, ensure_ascii=False),
         )
-        html_path = OUT_DIR / "white_market_list_test.html"
+        html_path = tmp_path / "white_market_list_test.html"
         html_path.write_text(html, encoding="utf-8")
         print(f"\nHTML saved to: {html_path}")
         assert "wm-title" in html
