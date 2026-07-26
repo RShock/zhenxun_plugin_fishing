@@ -255,8 +255,9 @@ async def start_fishing(
 async def try_auto_fish_on_idle(user_id: str, nickname: str = "") -> str | None:
     """防闲置：用户未在钓鱼且闲置超阈值时，自动回到上次地图开始钓鱼。
 
-    利用懒计算——会话起始时间回溯到阈值分钟前，收杆时由 simulate_fishing_loop
-    补算这段时间的鱼获。返回地图名称（触发成功）或 None（未触发）。
+    利用懒计算——会话起始时间回溯到上次活跃时间（收杆时刻），收杆时由
+    simulate_fishing_loop 补算这段闲置期间的鱼获。返回地图名称（触发成功）或
+    None（未触发）。
 
     触发条件全部满足才执行：非钓鱼中 · 有上次地图记录 · 闲置超阈值 · 地图仍可访问。
     """

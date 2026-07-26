@@ -211,6 +211,9 @@ async def _(event: Event, matcher: Matcher):
         if status_count >= _max_status:
             await matcher.finish()
 
+    # ── 防闲置：未在钓鱼但闲置超阈值，自动回到上次地图 ──
+    auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+
     try:
         if not await FishingUser.is_fishing(user_id):
             from ..shop import get_status_image
@@ -243,6 +246,10 @@ async def _(event: Event, matcher: Matcher):
             )
         else:
             side_text = ""
+        if auto_loc:
+            side_text = f"你的角色自己去{auto_loc}钓鱼了" + (
+                f"\n{side_text}" if side_text else ""
+            )
         await _send_image(matcher, image, side_text, user_id, is_private=is_private)
     except Exception as e:
         from nonebot.log import logger
