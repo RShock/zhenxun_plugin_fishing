@@ -97,9 +97,9 @@ async def _buy_bait(user_id: str, user, item, count: int) -> tuple[bool, str]:
 async def buy_item(user_id: str, name_or_id: str, count: int = 1) -> tuple[bool, str]:
     if name_or_id.strip() in [
         "增加展示栏位", "展示栏位", "展示栏",
-        "升级展示栏", "升级展示位", "扩展展示栏", "扩充展示栏",
+        "升级展示栏", "升级展示位", "升级展示框", "扩展展示栏", "扩充展示栏",
         "强化展示栏位",
-        "升级星空木框", "星空木框",
+        "升级木框", "升级星空木框", "星空木框",
         "展示框", "增加展示框", "猫猫展示框",
         "星空展示框", "升级星空展示框",
     ]:
