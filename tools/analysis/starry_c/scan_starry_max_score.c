@@ -36,7 +36,6 @@
 static const double S_SAME[7] = {0,0,0, 1.432856, 2.552842, 3.721246, 5.0};
 static const double S_STEP[7] = {0,0,0, 1.227224, 2.402305, 3.638272, 5.0};
 static const double S_SLIDE[7]= {0,0,0, 0.757901, 1.517984, 2.368759, 3.337242};
-static const double S_DSLIDE[7]= {0,0,0,0, 2.269056, 3.443697, 4.744727};
 static const double S_PSNK[7] = {0,0,0, 1.180417, 1.874649, 2.698536, 3.653647};
 static const double S_SNAK[7] = {0,0,0, 1.180417, 1.567993, 2.133004, 2.838033};
 static const double S_PAL[7]  = {0,0,0, 0.505804, 1.570086, 1.705313, 3.004365};
@@ -90,19 +89,6 @@ static int window_slide(const int *d, int s, int len) {
         if (!all_up && !all_dn) return 0;
     }
     return all_up || all_dn;
-}
-
-/* Double slide: xyy...yx where |x-y|=1 (e.g. 0110, 01110, 011110).
-   Absorbs all internal single slides to prevent double-counting. */
-static int window_double_slide(const int *d, int s, int len) {
-    int x, y, i;
-    if (len < 4) return 0;
-    x = d[s];
-    y = d[s + 1];
-    if (x == y || (x - y != 1 && y - x != 1)) return 0;
-    for (i = 1; i < len - 1; ++i)
-        if (d[s + i] != y) return 0;
-    return d[s + len - 1] == x;
 }
 
 static int window_snake(const int *d, int s, int len, int pure) {
@@ -235,7 +221,6 @@ static int full_house_any(const int *d) {
 static double score_raw(int value) {
     int d[DIGITS];
     unsigned ok_same = 0, ok_step = 0, ok_slide = 0, ok_snake = 0, ok_pure = 0, ok_pal = 0;
-    unsigned ok_ds = 0;
     int length, start;
     double total = 0.0;
     int hit = 0;
@@ -250,7 +235,6 @@ static double score_raw(int value) {
             if (window_same(d, start, length))  ok_same  |= bit;
             if (window_step(d, start, length))  ok_step  |= bit;
             if (window_slide(d, start, length)) ok_slide |= bit;
-            if (length >= 4 && window_double_slide(d, start, length)) ok_ds |= bit;
             if (window_snake(d, start, length, 1)) ok_pure |= bit;
             if (window_snake(d, start, length, 0)) ok_snake |= bit;
             if (window_pal(d, start, length))   ok_pal   |= bit;
@@ -271,25 +255,13 @@ static double score_raw(int value) {
     }
     if (star_airplane(d)) { total += S_AIR; hit = 1; }
 
-    /* Double slide scoring: maximal windows only (smaller absorbed by larger) */
-    for (length = 4; length <= DIGITS; ++length) {
-        for (start = 0; start <= DIGITS - length; ++start) {
-            unsigned bit = 1u << bit_of(start, length);
-            if ((ok_ds & bit) && !contained_in_larger(ok_ds, start, length)) {
-                total += S_DSLIDE[length]; hit = 1;
-            }
-        }
-    }
-
     for (length = 3; length <= DIGITS; ++length) {
         for (start = 0; start <= DIGITS - length; ++start) {
             unsigned bit = 1u << bit_of(start, length);
             if ((ok_same & bit) && !contained_in_larger(ok_same, start, length)) {
                 total += S_SAME[length]; hit = 1;
             }
-            /* Slide/step: skip if contained in larger slide OR in any double slide */
-            if ((ok_slide & bit) && !contained_in_larger(ok_slide, start, length)
-                && !contained_in_larger(ok_ds, start, length)) {
+            if ((ok_slide & bit) && !contained_in_larger(ok_slide, start, length)) {
                 if (ok_step & bit) total += S_STEP[length];
                 else total += S_SLIDE[length];
                 hit = 1;
@@ -467,7 +439,7 @@ static int run_selftest(void) {
     /* Compare a few anchors against known Python results (current rules). */
     struct { int id; double raw; } cases[] = {
         {777777, 16.853252},
-        {122221, 16.845432},
+        {122221, 16.838223},
         {222422, 8.014234},
         {0, 0.0},
     };

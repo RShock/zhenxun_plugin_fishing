@@ -1703,7 +1703,6 @@ code, .ic {
         <li><strong>不同家族之间</strong>：彼此独立判定、独立计分，命中后<strong>全部加分</strong>（例如同号 + 滑梯 + 回文 + 飞机）。</li>
         <li><strong>同一家族内部</strong>：更长的连段会<strong>吸收</strong>被它完全包含的更短连段，不重复计；互不包含的多段仍可各计一次。</li>
         <li><strong>滑梯家族</strong>：普通滑梯允许停顿，包含全程停顿的全同号窗口；同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
-        <li><strong>双滑梯</strong>：形如 <code>xyy...yx</code>（|x-y|=1）的窗口计为<strong>双滑梯</strong>，并<strong>吸收</strong>其内部所有单滑梯，防止 <code>011110</code> 被重复计为两个5位滑梯。</li>
         <li><strong>贪吃蛇家族</strong>：同一窗口若是「纯正贪吃蛇」（每步必动 ±1 且有转向），只按<strong>纯正</strong>计，不再计普通贪吃蛇。</li>
         <li><strong>对子家族</strong>：两对 / 三对只取更高的一档（有三对时不计两对）；命中葫芦时两对被葫芦吸收，不单独计分。</li>
         <li><strong>葫芦 / 星空飞机 / 区间色系 / 奇偶色系</strong>：满足条件时各计一次。</li>
@@ -1747,13 +1746,6 @@ code, .ic {
           <tr><td>4 位滑梯</td><td>1.52</td><td>四位单调滑梯，如 <code>1123</code>、<code>5544</code>、<code>7777</code></td></tr>
           <tr><td>5 位滑梯</td><td>2.37</td><td>五位单调滑梯，允许全程停顿</td></tr>
           <tr><td>6 位滑梯</td><td>3.34</td><td>六位单调滑梯，如 <code>777777</code></td></tr>
-
-          <tr>
-            <td rowspan="3"><span class="tag t-star">双滑梯</span><br><span style="font-size:11px;color:var(--sub)">吸收内部单滑梯；更长吸收更短</span></td>
-            <td>4 位双滑梯</td><td>2.27</td><td>形如 <code>xyyx</code>，|x-y|=1，如 <code>0110</code>、<code>1001</code></td>
-          </tr>
-          <tr><td>5 位双滑梯</td><td>3.44</td><td>形如 <code>xyyyx</code>，如 <code>01110</code>、<code>12221</code></td></tr>
-          <tr><td>6 位双滑梯</td><td>4.74</td><td>形如 <code>xyyyyx</code>，如 <code>011110</code>、<code>100001</code></td></tr>
 
           <tr>
             <td rowspan="4"><span class="tag t-star">纯正贪吃蛇</span><br><span style="font-size:11px;color:var(--sub)">蛇家族·纯正档</span></td>
@@ -1995,9 +1987,6 @@ code, .ic {
     ['slide', 4, '4_slide', 1.517984],
     ['slide', 5, '5_slide', 2.368759],
     ['slide', 6, '6_slide', 3.337242],
-    ['double_slide', 4, '4_double_slide', 2.269056],
-    ['double_slide', 5, '5_double_slide', 3.443697],
-    ['double_slide', 6, '6_double_slide', 4.744727],
     ['pure_snake', 3, '3_pure_snake', 1.180417],
     ['pure_snake', 4, '4_pure_snake', 1.874649],
     ['pure_snake', 5, '5_pure_snake', 2.698536],
@@ -2053,15 +2042,6 @@ code, .ic {
     }
     return ascending || descending;
   }
-  function starryWindowDoubleSlide(digits, start, length){
-    if(length < 4) return false;
-    var x = digits[start], y = digits[start + 1];
-    if(x === y || Math.abs(x - y) !== 1) return false;
-    for(var i = 1; i < length - 1; i++){
-      if(digits[start + i] !== y) return false;
-    }
-    return digits[start + length - 1] === x;
-  }
   function starryWindowSnake(digits, start, length, pure){
     var previous = 0;
     var moved = false;
@@ -2085,14 +2065,13 @@ code, .ic {
     return true;
   }
   function starryBuildMatches(digits){
-    var matches = {same_run: {}, step_high: {}, slide: {}, double_slide: {}, pure_snake: {}, snake: {}, palindrome: {}};
+    var matches = {same_run: {}, step_high: {}, slide: {}, pure_snake: {}, snake: {}, palindrome: {}};
     for(var length = 3; length <= 6; length++){
       for(var start = 0; start <= 6 - length; start++){
         var key = start + ':' + length;
         matches.same_run[key] = starryWindowSame(digits, start, length);
         matches.step_high[key] = starryWindowStep(digits, start, length);
         matches.slide[key] = starryWindowSlide(digits, start, length);
-        if(length >= 4) matches.double_slide[key] = starryWindowDoubleSlide(digits, start, length);
         matches.pure_snake[key] = starryWindowSnake(digits, start, length, true);
         matches.snake[key] = starryWindowSnake(digits, start, length, false);
         matches.palindrome[key] = starryWindowPalindrome(digits, start, length);
@@ -2123,7 +2102,6 @@ code, .ic {
     var family = label.slice(separator + 1);
     var suffix = {
       same_run: '同号连段', step_high: '步步高', slide: '滑梯',
-      double_slide: '双滑梯',
       pure_snake: '纯正贪吃蛇', snake: '贪吃蛇', palindrome: '回文'
     };
     return length + '位' + suffix[family];
@@ -2183,24 +2161,13 @@ code, .ic {
     }
     if(airplane) features.push(starryFeature('star_airplane', 'star_airplane', '1-6', '第2-5位均属于至少2连块'));
 
-    /* 双滑梯：极大窗口计分，吸收内部单滑梯 */
-    for(var dsLen = 4; dsLen <= 6; dsLen++){
-      for(var dsStart = 0; dsStart <= 6 - dsLen; dsStart++){
-        var dsKey = dsStart + ':' + dsLen;
-        if(matches.double_slide[dsKey] && !starryContainedInLarger(matches.double_slide, dsStart, dsLen))
-          features.push(starryFeature(dsLen + '_double_slide', 'double_slide', (dsStart + 1) + '-' + (dsStart + dsLen), 'xyy...yx模式，吸收内部单滑梯'));
-      }
-    }
-
     for(var length = 3; length <= 6; length++){
       for(var start = 0; start <= 6 - length; start++){
         var key = start + ':' + length;
         var span = (start + 1) + '-' + (start + length);
         if(matches.same_run[key] && !starryContainedInLarger(matches.same_run, start, length))
           features.push(starryFeature(length + '_same_run', 'same_run', span));
-        /* 滑梯：被更大滑梯或双滑梯覆盖时跳过 */
-        if(matches.slide[key] && !starryContainedInLarger(matches.slide, start, length)
-            && !starryContainedInLarger(matches.double_slide, start, length)){
+        if(matches.slide[key] && !starryContainedInLarger(matches.slide, start, length)){
           if(matches.step_high[key]) features.push(starryFeature(length + '_step_high', 'step_high', span, '纯正替代普通滑梯计分'));
           else features.push(starryFeature(length + '_slide', 'slide', span));
         }
