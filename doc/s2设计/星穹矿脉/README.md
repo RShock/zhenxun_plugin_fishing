@@ -64,18 +64,19 @@
 | [GAME_DESIGN_V5.md](./GAME_DESIGN_V5.md) | v5 权威设计文档（五条升级线、22 项永久升级、指数加速曲线、稳定态外推） |
 | [GAME_DESIGN_V4.md](./GAME_DESIGN_V4.md) | v4 设计文档（保留作对照） |
 | [GAME_DESIGN.md](./GAME_DESIGN.md) | v1~v3 历史方案，保留作迁移对照 |
-| [demo/web/](./demo/web/) | v5 网页交互 Demo |
+| [demo/web/](./demo/web/) | v5 网页交互 Demo（源文件副本） |
 
 ## 网页 Demo
 
-```powershell
-# 单独起静态服
-python ".\demo\web\serve.py"
-# 访问 http://127.0.0.1:4160/index.html
+**纯静态页面**，无需 Python / Node.js，直接浏览器打开即可：
+
+```
+web/static/_lab/xqkm/index.html
 ```
 
-源文件：
+源文件（lab 文件夹为权威位置，demo/web 为副本）：
 
+- `web/static/_lab/xqkm/{index.html, game_v5.js, style.css}`
 - `demo/web/{index.html, game_v5.js, style.css}`
 
 ## 与旧版
@@ -83,6 +84,7 @@ python ".\demo\web\serve.py"
 - v4「分层无限」的稳定态批量外推机制已保留到 v5
 - v4 的手动升级限制（每日 3 次）已移除，改为深度门控解锁
 - v4 的 depthScale 从 200,000 降至 2,000，初始速度降低 900 倍
+- **纯静态实现**：无 Python/Node.js 依赖，直接浏览器打开即可运行
 - v0.x「破界指数轮回」及 v3 的 16 项公共采购不再作为权威
 
 ## 与 S1
