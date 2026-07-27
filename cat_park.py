@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-import random
 from pathlib import Path
+import random
 from typing import Any
 
 from PIL import Image
@@ -14,6 +14,7 @@ from zhenxun.services.log import logger
 from .config import ConfigManager, FishData, LocationData, calculate_fish_price
 from .models import FishingUser
 from .render.base import FONT_FAMILY_DEFAULT, gradient_bg, render_html
+from .services.gold_service import earn_gold
 
 CAT_PARK_LOCATION_ID = "S1"
 CAT_PARK_STATE_ITEM_ID = "cat_park_state"

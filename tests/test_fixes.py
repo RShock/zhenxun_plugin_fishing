@@ -323,6 +323,42 @@ class TestDailyLimitHelpers:
         set_bool.assert_awaited_once_with("group_action_limit_enabled", True)
 
 
+class TestCatParkMaterialSettlement:
+    @pytest.mark.asyncio
+    async def test_completed_materials_are_sold_through_gold_service(self, monkeypatch):
+        from unittest.mock import AsyncMock
+
+        from zhenxun.plugins.zhenxun_plugin_fishing import cat_park
+
+        monkeypatch.setattr(
+            cat_park,
+            "get_cat_park_state",
+            AsyncMock(
+                return_value={
+                    "buildings": dict.fromkeys(cat_park.CAT_PARK_BUILD_COSTS, 3)
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            cat_park,
+            "get_cat_park_materials",
+            AsyncMock(return_value={"毛线团": 2, "特级小鱼干": 1, "彩虹逗猫棒": 0}),
+        )
+        remove_item = AsyncMock()
+        earn = AsyncMock()
+        monkeypatch.setattr(cat_park.FishingUser, "remove_item", remove_item)
+        monkeypatch.setattr(cat_park, "earn_gold", earn)
+        messages: list[str] = []
+
+        await cat_park.sell_completed_cat_park_materials("test-user", messages)
+
+        assert remove_item.await_count == 2
+        earn.assert_awaited_once_with(
+            "test-user", 240, "cat_park_material", "自动出售3个猫乐园材料"
+        )
+        assert messages == ["猫猫乐园已竣工，多余材料自动出售：3个 × 80 = 240金币"]
+
+
 class TestSkinStemParsing:
     """皮肤文件名解析：支持 star_man_-21 这类带下划线 id。"""
 
