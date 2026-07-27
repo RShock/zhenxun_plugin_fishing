@@ -506,6 +506,9 @@ def score_starry_fish(value: int | str) -> StarryFish:
     if _motif_abcabc(digits):
         features.append(_feature("ABCABC", "rhythm", "1-6"))
 
+    full_house_spans = _full_house_spans(digits)
+    has_full_house = bool(full_house_spans)
+
     pair_type, pair_span = _detect_pairs(digits)
     if pair_type >= 3:
         features.append(
@@ -516,7 +519,8 @@ def score_starry_fish(value: int | str) -> StarryFish:
                 "三段长度为2且中间与两侧不同",
             )
         )
-    elif pair_type >= 2:
+    elif pair_type >= 2 and not has_full_house:
+        # 两对是葫芦的子牌型：命中葫芦时不单独计分，由葫芦吸收。
         features.append(
             _feature(
                 "two_pair",
@@ -526,8 +530,7 @@ def score_starry_fish(value: int | str) -> StarryFish:
             )
         )
 
-    full_house_spans = _full_house_spans(digits)
-    if full_house_spans:
+    if has_full_house:
         # 存在即计一次（不因两个 5 位窗口同时命中而叠分）
         span = f"{full_house_spans[0][0] + 1}-{full_house_spans[-1][1]}"
         features.append(

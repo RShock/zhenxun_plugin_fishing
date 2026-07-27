@@ -24,7 +24,7 @@ async def render_shop(
     rod_section = {"is_max": rod_level >= 20}
     if rod_level >= 20:
         rod_section["name"] = "🎣 钓竿已满级"
-        rod_section["desc"] = "当前等级: 20级 · 奇迹彼岸钓竿"
+        rod_section["desc"] = "当前等级: 20级 · 愿星钓竿"
     elif base_level >= 10 and not has_starry_ship:
         # 基础 Lv.10+ 未建艇：入口固定为建艇（雕像把总等级顶到 11+ 也不能绕过）
         # 注意：此处用参数 has_starry_ship，不可再 import 同名函数遮蔽布尔值

@@ -282,11 +282,14 @@ static double score_raw(int value) {
     }
     if (motif_abcabc(d)) { total += S_ABCABC; hit = 1; }
 
-    pairs = detect_pairs(d);
-    if (pairs >= 3) { total += S_3PAIR; hit = 1; }
-    else if (pairs >= 2) { total += S_2PAIR; hit = 1; }
-
-    if (full_house_any(d)) { total += S_FH; hit = 1; }
+    {
+        /* 两对是葫芦的子牌型：命中葫芦时不单独计分，由葫芦吸收。 */
+        int fh = full_house_any(d);
+        pairs = detect_pairs(d);
+        if (pairs >= 3) { total += S_3PAIR; hit = 1; }
+        else if (pairs >= 2 && !fh) { total += S_2PAIR; hit = 1; }
+        if (fh) { total += S_FH; hit = 1; }
+    }
     if (chunk_sequence(d)) { total += S_CHUNK; hit = 1; }
 
     if (!hit) {
@@ -404,12 +407,13 @@ static void merge_into(WorkerResult *acc, const WorkerResult *src, int *inited) 
         top_consider(acc, src->top_raw[i], src->top_id[i]);
 }
 
-static int parse_args(int argc, char **argv, int *threads, int *top, int *selftest, int *count) {
+static int parse_args(int argc, char **argv, int *threads, int *top, int *selftest, int *count, int *hist) {
     int i;
     *threads = 0;
     *top = 10;
     *selftest = 0;
     *count = 0;
+    *hist = 0;
     for (i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--threads") && i + 1 < argc) {
             *threads = atoi(argv[++i]);
@@ -419,8 +423,10 @@ static int parse_args(int argc, char **argv, int *threads, int *top, int *selfte
             *selftest = 1;
         } else if (!strcmp(argv[i], "--count")) {
             *count = 1;
+        } else if (!strcmp(argv[i], "--hist")) {
+            *hist = 1;
         } else if (!strcmp(argv[i], "--help")) {
-            printf("Usage: %s [--threads N] [--top K] [--selftest] [--count]\n", argv[0]);
+            printf("Usage: %s [--threads N] [--top K] [--selftest] [--count] [--hist]\n", argv[0]);
             return 1;
         }
     }
@@ -457,7 +463,7 @@ static int run_selftest(void) {
 }
 
 int main(int argc, char **argv) {
-    int threads = 0, top_n = 10, selftest = 0, count_mode = 0;
+    int threads = 0, top_n = 10, selftest = 0, count_mode = 0, hist_mode = 0;
     int i, chunk, rem, inited = 0;
     WorkerResult *workers;
     WorkerResult acc;
@@ -472,8 +478,60 @@ int main(int argc, char **argv) {
     clock_t t0, t1;
 #endif
 
-    if (parse_args(argc, argv, &threads, &top_n, &selftest, &count_mode)) return 0;
+    if (parse_args(argc, argv, &threads, &top_n, &selftest, &count_mode, &hist_mode)) return 0;
     if (selftest) return run_selftest();
+
+    if (hist_mode) {
+        /* display_score 直方图：扫描全空间 000000..999999，
+         * 统计每个展示分 floor(raw+0.5) 的计数与概率。
+         * 同时输出奖池（reward_pool）汇总概率，与 starry_system.get_reward_pool 对齐：
+         *   0 -> none / 1-2 low / 3-5 middle / 6-10 high / 11+ ultimate
+         * 注意：C 版 display_score 上限约 32，数组开到 64 留余量。 */
+        long long hist[64];
+        long long pool_none = 0, pool_low = 0, pool_middle = 0, pool_high = 0, pool_ultimate = 0;
+        long long total_raw_milli = 0; /* 千倍原始分累计，避免浮点漂移 */
+        int max_disp = 0;
+        double e_raw = 0.0;
+        memset(hist, 0, sizeof(hist));
+        for (i = 0; i < SPACE; ++i) {
+            double raw = score_raw(i);
+            int disp = (int)floor(raw + 0.5);
+            if (disp < 0) disp = 0;
+            if (disp >= 64) disp = 63;
+            hist[disp]++;
+            e_raw += raw;
+            if (disp > max_disp) max_disp = disp;
+            if (disp <= 0) pool_none++;
+            else if (disp <= 2) pool_low++;
+            else if (disp <= 5) pool_middle++;
+            else if (disp <= 10) pool_high++;
+            else pool_ultimate++;
+        }
+        printf("=== DISPLAY_SCORE HISTOGRAM (space=000000..999999, n=%d) ===\n", SPACE);
+        printf("E[raw_score]     = %.6f\n", e_raw / SPACE);
+        {
+            double e_disp = 0.0;
+            for (i = 0; i <= max_disp; ++i) e_disp += (double)i * hist[i] / SPACE;
+            printf("E[display_score] = %.6f\n", e_disp);
+        }
+        printf("display range    = 0 ~ %d\n", max_disp);
+        printf("\n%-8s %-14s %-10s %s\n", "display", "count", "prob", "bar");
+        for (i = 0; i <= max_disp; ++i) {
+            double p = (double)hist[i] / SPACE;
+            int barlen = (int)(p * 200.0 + 0.5);
+            if (barlen > 60) barlen = 60;
+            printf("%-8d %-14lld %.6f%%  %.*s\n", i, hist[i], p * 100.0, barlen,
+                   "############################################################");
+        }
+        printf("\n=== REWARD POOL BREAKDOWN (get_reward_pool) ===\n");
+        printf("%-12s %-14s %-10s\n", "pool", "count", "prob");
+        printf("%-12s %-14lld %.6f%%\n", "none",     pool_none,     (double)pool_none / SPACE * 100.0);
+        printf("%-12s %-14lld %.6f%%\n", "low",      pool_low,      (double)pool_low / SPACE * 100.0);
+        printf("%-12s %-14lld %.6f%%\n", "middle",   pool_middle,   (double)pool_middle / SPACE * 100.0);
+        printf("%-12s %-14lld %.6f%%\n", "high",     pool_high,     (double)pool_high / SPACE * 100.0);
+        printf("%-12s %-14lld %.6f%%\n", "ultimate", pool_ultimate, (double)pool_ultimate / SPACE * 100.0);
+        return 0;
+    }
 
     if (count_mode) {
         long long two_pair_count = 0, three_pair_count = 0;

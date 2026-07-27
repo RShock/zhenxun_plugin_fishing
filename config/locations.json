@@ -114,9 +114,9 @@
     },
     {
       "id": "15",
-      "name": "星砂漠",
+      "name": "镜砂海",
       "difficulty": 14,
-      "description": "漂浮星砂与镜面沙海构成的幻境。",
+      "description": "镜面沙海与漂浮星砂交织的幻境。",
       "fish_pool": ["沙星魟", "琉璃沙鳗", "星蝎鲶", "金尘鲷", "海市蜃鱼"],
       "max_rarity": "UTR"
     },
@@ -130,31 +130,31 @@
     },
     {
       "id": "17",
-      "name": "黑洞涡",
+      "name": "坠星渊",
       "difficulty": 16,
-      "description": "低重力暗潮旋转成黑洞涡流。",
+      "description": "低重力暗潮托着坠落星屑的无底深渊。",
       "fish_pool": ["引力鲶", "暗环魟", "奇点鳕", "坠星鳗", "潮汐黑鲤"],
       "max_rarity": "UTR"
     },
     {
       "id": "18",
-      "name": "水晶星冠",
+      "name": "晶冕礁",
       "difficulty": 17,
-      "description": "水晶冠冕状小行星带中的钓场。",
+      "description": "冠冕状晶石礁群环绕的钓场。",
       "fish_pool": ["晶冠鲷", "棱镜鲫", "星核金鱼", "蓝晶鳟", "冠冕灯鲈"],
       "max_rarity": "UTR"
     },
     {
       "id": "19",
-      "name": "时钟星湖",
+      "name": "停时湖",
       "difficulty": 18,
-      "description": "时间碎片组成的静止星湖。",
+      "description": "时间碎片凝滞成面的静止星湖。",
       "fish_pool": ["秒针鲑", "回环鳗", "逆刻鲤", "钟摆鲈", "永昼银鱼"],
       "max_rarity": "UTR"
     },
     {
       "id": "20",
-      "name": "奇迹彼岸",
+      "name": "愿星岸",
       "difficulty": 19,
       "description": "星海尽头回应愿望的彼岸。",
       "fish_pool": ["奇迹锦鲤", "终星鳐", "愿核灯鱼", "彼岸银鲑", "九曜梦鱼"],

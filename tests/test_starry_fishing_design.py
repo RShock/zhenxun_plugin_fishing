@@ -59,7 +59,7 @@ STAR_MAPS = [
     ),
     (
         "15",
-        "星砂漠",
+        "镜砂海",
         14,
         ["沙星魟", "琉璃沙鳗", "星蝎鲶", "金尘鲷", "海市蜃鱼"],
         [470, 580, 530, 490, 560],
@@ -73,28 +73,28 @@ STAR_MAPS = [
     ),
     (
         "17",
-        "黑洞涡",
+        "坠星渊",
         16,
         ["引力鲶", "暗环魟", "奇点鳕", "坠星鳗", "潮汐黑鲤"],
         [820, 1000, 920, 860, 970],
     ),
     (
         "18",
-        "水晶星冠",
+        "晶冕礁",
         17,
         ["晶冠鲷", "棱镜鲫", "星核金鱼", "蓝晶鳟", "冠冕灯鲈"],
         [1100, 1300, 1200, 1100, 1300],
     ),
     (
         "19",
-        "时钟星湖",
+        "停时湖",
         18,
         ["秒针鲑", "回环鳗", "逆刻鲤", "钟摆鲈", "永昼银鱼"],
         [1400, 1700, 1600, 1500, 1600],
     ),
     (
         "20",
-        "奇迹彼岸",
+        "愿星岸",
         19,
         ["奇迹锦鲤", "终星鳐", "愿核灯鱼", "彼岸银鲑", "九曜梦鱼"],
         [1900, 2300, 2100, 1900, 2200],
@@ -430,12 +430,14 @@ class TestStarWishNumbers:
         )  # 每个窗口家族内仍由 6 位长段吸收短段
 
     def test_pair_features_two_and_three_pair(self):
-        """两对：相邻两段长度≥2且数字不同；三对：3段长度2且中间与两侧不同。三对吸收两对。"""
-        # 000011: runs=[0000, 11], 相邻且数字不同 → 两对
-        two = score_starry_fish("000011")
+        """两对：相邻两段长度≥2且数字不同；三对：3段长度2且中间与两侧不同。三对吸收两对。
+        命中葫芦时两对被葫芦吸收，不单独计分。"""
+        # 001123: runs=[00, 11, 2, 3], 两对(00+11)且无葫芦 → 纯两对
+        two = score_starry_fish("001123")
         labels = {f.label for f in two.features}
         assert "two_pair" in labels
         assert "three_pair" not in labels
+        assert "full_house" not in labels
         assert any(
             f.score == pytest.approx(1.595508)
             for f in two.features
@@ -466,7 +468,8 @@ class TestStarWishNumbers:
         assert "three_pair" not in labels
 
     def test_full_house_feature(self):
-        """葫芦：5 位窗口 AAABB / AABBB；存在即计一次。"""
+        """葫芦：5 位窗口 AAABB / AABBB；存在即计一次。
+        命中葫芦时两对被吸收，不单独计分。"""
         aaabb = score_starry_fish("000112")
         labels = {f.label for f in aaabb.features}
         assert "full_house" in labels
@@ -483,6 +486,12 @@ class TestStarWishNumbers:
         both = score_starry_fish("000111")
         fh = [f for f in both.features if f.label == "full_house"]
         assert len(fh) == 1
+
+        # 000011 同时有两对结构和葫芦(00011=AAABB)，两对应被葫芦吸收
+        absorbed = score_starry_fish("000011")
+        labels = {f.label for f in absorbed.features}
+        assert "full_house" in labels
+        assert "two_pair" not in labels
 
         # 非葫芦：000011 是 4+2，不是 3+2
         not_fh = score_starry_fish("000011")
