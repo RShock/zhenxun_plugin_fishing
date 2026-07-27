@@ -141,9 +141,10 @@
   }
 
   function addItem(key,count=1){state.items[key]=(state.items[key]||0)+count}
+  function limitedRewardPool(pool){return pool==="ultimate"&&state.totalUltimate>=3?"high":pool}
   function drawReward(pool,depth=0){
     if(!REWARD_POOLS[pool])return null;const item={...randomChoice(REWARD_POOLS[pool])};addItem(item.key,item.count);if(item.score){state.totalScore+=item.score;state.effort+=item.score}
-    if(depth<8){const chain={lottery_fragment_low:"middle",lottery_fragment_mid:"high",lottery_fragment_high:"ultimate"};const next=chain[item.key];if(next)while((state.items[item.key]||0)>=5){state.items[item.key]-=5;const upgraded=drawReward(next,depth+1);log(`5 枚碎片自动升级：${upgraded.name} ×${upgraded.count}`,"reward")}}
+    if(depth<8){const chain={lottery_fragment_low:"middle",lottery_fragment_mid:"high",lottery_fragment_high:"ultimate"};const next=chain[item.key];if(next)while((state.items[item.key]||0)>=5){state.items[item.key]-=5;const upgraded=drawReward(limitedRewardPool(next),depth+1);log(`5 枚碎片自动升级：${upgraded.name} ×${upgraded.count}`,"reward")}}
     return{...item,name:ITEM_INFO[item.key]?.[0]||item.key,pool};
   }
   function galleryFish(){return [...state.allFish].filter(f=>f.pool==="ultimate").sort((a,b)=>b.displayScore-a.displayScore||b.rawScore-a.rawScore||a.id-b.id).slice(0,10)}
@@ -152,7 +153,7 @@
     const entry={uid:state.uid++,id:scored.id,idText:scored.idText,rawScore:scored.rawScore,displayScore:scored.displayScore,band:scored.band,pool:scored.pool,features:scored.features.map(x=>({label:x.label,name:x.name,score:x.score})),day:state.day,location:11+((state.day-1)%10)};
     state.allFish.push(entry);state.totalStarry++;state.totalScore+=entry.displayScore;state.effort+=entry.displayScore;
     // 究极鱼仍按原番型和分数入馆，但第四条起只抽高级池，避免长线模拟被究极奖励淹没。
-    let rewardPoolName=entry.pool;if(reward&&entry.pool==="ultimate"){state.totalUltimate++;if(state.totalUltimate>3)rewardPoolName="high"}
+    let rewardPoolName=entry.pool;if(entry.pool==="ultimate"){state.totalUltimate++;if(reward&&state.totalUltimate>3)rewardPoolName="high"}
     const prize=reward?drawReward(rewardPoolName):null;checkTickets();if(check)checkMiracle();return{entry,prize,rewardPoolName};
   }
   function checkTickets(){while(state.effort>=EFFORT_TARGET){state.effort-=EFFORT_TARGET;state.tickets++;queued.tickets++;log(`努力值达标，获得第 ${state.tickets} 张 S2 入场券！`,"reward");if(!quiet)showModal("ticketModal")}}

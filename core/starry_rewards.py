@@ -13,6 +13,7 @@ from .starry_system import (
     REWARD_POOL_NAMES,
     draw_starry_reward,
     get_reward_pool,
+    limit_ultimate_reward_pool,
     score_starry_fish,
 )
 
@@ -145,9 +146,17 @@ async def _resolve_fragment_upgrades(
                 )
                 if not ok:
                     break
-                drawn = draw_starry_reward(spec["upgrade_pool"])
+                upgrade_pool = spec["upgrade_pool"]
+                if upgrade_pool == "ultimate":
+                    exhibition = await FishingUser.get_user_starry_exhibition(user_id)
+                    upgrade_pool = limit_ultimate_reward_pool(
+                        upgrade_pool, exhibition
+                    )
+                drawn = draw_starry_reward(upgrade_pool)
                 if not drawn:
                     break
+                if upgrade_pool != spec["upgrade_pool"]:
+                    drawn["downgraded_from"] = spec["upgrade_pool"]
                 drawn["upgrade_from"] = spec["name"]
                 if fish_id is not None:
                     fid = str(fish_id)
@@ -172,13 +181,24 @@ async def grant_starry_pool_reward(
     *,
     fish_id: str | int | None = None,
     display_score: int | None = None,
+    limit_current_ultimate_fish: bool = False,
 ) -> list[dict]:
     """Draw and grant from pool immediately; resolve fragment upgrades."""
     if not pool or pool == "none":
         return []
-    drawn = draw_starry_reward(pool)
+    reward_pool = pool
+    if pool == "ultimate":
+        exhibition = await FishingUser.get_user_starry_exhibition(user_id)
+        reward_pool = limit_ultimate_reward_pool(
+            pool,
+            exhibition,
+            current_fish_id=fish_id if limit_current_ultimate_fish else None,
+        )
+    drawn = draw_starry_reward(reward_pool)
     if not drawn:
         return []
+    if reward_pool != pool:
+        drawn["downgraded_from"] = pool
     if fish_id is not None:
         fid = str(fish_id)
         drawn["fish_id"] = fid.zfill(6) if fid.isdigit() else fid
@@ -202,4 +222,5 @@ async def grant_rewards_for_starry_fish(
         pool,
         fish_id=scored.id_text,
         display_score=scored.display_score,
+        limit_current_ultimate_fish=True,
     )

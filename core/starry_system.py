@@ -90,6 +90,7 @@ S2_TICKET_SCORE_THRESHOLD = 1200.0
 # 星空框是升级星空展示框所需的库存，不设持有上限。
 EXHIBITION_MIN_SCORE = 4
 EXHIBITION_LIMIT = 10
+ULTIMATE_EXHIBITION_REWARD_LIMIT = 3
 
 CN_FAMILY = {
     "same_run": "同号连段",
@@ -105,6 +106,9 @@ CN_FAMILY = {
     "pairs": "对子",
     "full_house": "葫芦",
     "chunk_sequence": "分块连号",
+    "permutation": "排列",
+    "frog_jump": "蛙跳",
+    "mirror_sum": "镜和",
     "pihu": "屁胡",
 }
 
@@ -140,8 +144,17 @@ FEATURES = [
     ("parity", 6, "6_all_odd", 1.806180),
     ("parity", 6, "6_all_even", 1.806180),
     ("rhythm", 4, "ABAB", 1.598599),
-    ("rhythm", 6, "ABCABC", 3.142668),
+    # ABCABC 允许 A/B/C 彼此重复，但排除六位全同；990/1e6 → 3.004365
+    ("rhythm", 6, "ABCABC", 3.004365),
     ("star_airplane", 6, "star_airplane", 1.899285),
+    # 排列x：窗口数字互不相同，排序后连续；同家族长窗吸收短窗。
+    ("permutation", 4, "4_permutation", 1.444857),
+    ("permutation", 5, "5_permutation", 1.947691),
+    ("permutation", 6, "6_permutation", 2.443697),
+    # 蛙跳6：六位严格递增或严格递减；420/1e6 → 3.376751
+    ("frog_jump", 6, "frog_jump_6", 3.376751),
+    # 镜和：三组镜像位之和相等，与回文独立；5050/1e6 → 2.296709
+    ("mirror_sum", 6, "mirror_sum", 2.296709),
     # 两对：相邻两段长度≥2且数字不同（如 000011）；全量 25380/1e6 → 1.595508
     ("pairs", 2, "two_pair", 1.595508),
     ("pairs", 3, "three_pair", 3.091515),
@@ -252,6 +265,11 @@ def _window_palindrome(digits: Sequence[int], start: int, length: int) -> bool:
     )
 
 
+def _window_permutation(digits: Sequence[int], start: int, length: int) -> bool:
+    window = digits[start : start + length]
+    return len(set(window)) == length and max(window) - min(window) == length - 1
+
+
 def _motif_abab(digits: Sequence[int], start: int) -> bool:
     return (
         digits[start] == digits[start + 2]
@@ -262,7 +280,22 @@ def _motif_abab(digits: Sequence[int], start: int) -> bool:
 
 def _motif_abcabc(digits: Sequence[int]) -> bool:
     a, b, c = digits[0], digits[1], digits[2]
-    return a == digits[3] and b == digits[4] and c == digits[5] and len({a, b, c}) == 3
+    return (
+        a == digits[3]
+        and b == digits[4]
+        and c == digits[5]
+        and not (a == b == c)
+    )
+
+
+def _frog_jump_6(digits: Sequence[int]) -> bool:
+    return all(digits[i] > digits[i - 1] for i in range(1, DIGITS)) or all(
+        digits[i] < digits[i - 1] for i in range(1, DIGITS)
+    )
+
+
+def _mirror_sum(digits: Sequence[int]) -> bool:
+    return digits[0] + digits[5] == digits[1] + digits[4] == digits[2] + digits[3]
 
 
 def _chunk_sequence_mode(digits: Sequence[int]) -> str | None:
@@ -390,6 +423,11 @@ def _build_ok(digits: Sequence[int]) -> dict[str, dict[tuple[int, int], bool]]:
             for length in range(3, DIGITS + 1)
             for start in range(DIGITS - length + 1)
         },
+        "permutation": {
+            (start, length): _window_permutation(digits, start, length)
+            for length in range(4, DIGITS + 1)
+            for start in range(DIGITS - length + 1)
+        },
     }
 
 
@@ -459,6 +497,19 @@ def score_starry_fish(value: int | str) -> StarryFish:
         features.append(
             _feature("star_airplane", "star_airplane", "1-6", "第2-5位均属于至少2连块")
         )
+    if _frog_jump_6(digits):
+        features.append(
+            _feature("frog_jump_6", "frog_jump", "1-6", "六位严格递增或严格递减")
+        )
+    if _mirror_sum(digits):
+        features.append(
+            _feature(
+                "mirror_sum",
+                "mirror_sum",
+                "1-6",
+                "第1+6位、第2+5位、第3+4位之和相等",
+            )
+        )
 
     for length in range(3, DIGITS + 1):
         for start in range(DIGITS - length + 1):
@@ -503,6 +554,14 @@ def score_starry_fish(value: int | str) -> StarryFish:
                 and not _contained_in_larger(ok["same_run"], start, length)
             ):
                 features.append(_feature(f"{length}_palindrome", "palindrome", span))
+            if (
+                length >= 4
+                and ok["permutation"][(start, length)]
+                and not _contained_in_larger(ok["permutation"], start, length)
+            ):
+                features.append(
+                    _feature(f"{length}_permutation", "permutation", span)
+                )
 
     for start in range(DIGITS - 4 + 1):
         if _motif_abab(digits, start):
@@ -590,6 +649,8 @@ def label_cn(label: str) -> str:
         "three_pair": "三对",
         "full_house": "葫芦",
         "chunk_sequence": "连号",
+        "frog_jump_6": "蛙跳6",
+        "mirror_sum": "镜和",
         "pihu": "屁胡",
     }
     if label in direct:
@@ -602,6 +663,7 @@ def label_cn(label: str) -> str:
         "pure_snake": "纯正贪吃蛇",
         "snake": "贪吃蛇",
         "palindrome": "回文",
+        "permutation": "排列",
     }[family]
     return f"{length}位{suffix}"
 
@@ -616,6 +678,50 @@ def get_reward_pool(display_score: int) -> str:
     if display_score <= 10:
         return "high"
     return "ultimate"
+
+
+def count_ultimate_starry_exhibition(records: Iterable[dict]) -> int:
+    """按当前评分规则统计展馆中的究极鱼；仅在准备抽究极池时调用。"""
+    count = 0
+    for record in records:
+        fish_id = record.get("id") if isinstance(record, dict) else None
+        if fish_id is None:
+            continue
+        try:
+            if score_starry_fish(fish_id).reward_pool == "ultimate":
+                count += 1
+        except (TypeError, ValueError):
+            continue
+    return count
+
+
+def limit_ultimate_reward_pool(
+    pool: str,
+    exhibition: Iterable[dict],
+    *,
+    current_fish_id: int | str | None = None,
+) -> str:
+    """已有3条究极展品后，将后续究极抽奖降为高级池。
+
+    正常收杆会先把本条鱼放入展馆再发奖；直接奖励允许排除本条鱼一次，
+    使前三条究极鱼仍能各取得一次究极奖励。碎片升级不排除。
+    """
+    if pool != "ultimate":
+        return pool
+    records = list(exhibition)
+    ultimate_count = count_ultimate_starry_exhibition(records)
+    if current_fish_id is not None:
+        current_id = format_starry_fish_id(current_fish_id)
+        if any(
+            isinstance(record, dict)
+            and str(record.get("id", "")).zfill(DIGITS) == current_id
+            and score_starry_fish(record.get("id", 0)).reward_pool == "ultimate"
+            for record in records
+        ):
+            ultimate_count -= 1
+    if ultimate_count >= ULTIMATE_EXHIBITION_REWARD_LIMIT:
+        return "high"
+    return pool
 
 
 def band(display_score: int) -> str:

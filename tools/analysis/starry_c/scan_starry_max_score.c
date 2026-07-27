@@ -51,6 +51,7 @@ static const double S_3PAIR = 3.091515;
 static const double S_FH    = 2.454693;
 static const double S_CHUNK = 2.658763;
 static const double S_PIHU  = 0.802444;
+static const double S_PERM[7] = {0,0,0,0, 1.444857, 1.947691, 2.443697}; /* 排列4/5/6 */
 
 /* Window packing: index = length*8 + start  (length 3..6, start 0..3) */
 static inline int wkey(int start, int length) { return (length << 3) | start; }
@@ -115,6 +116,22 @@ static int window_pal(const int *d, int s, int len) {
     for (i = 0; i < half; ++i)
         if (d[s + i] != d[s + len - 1 - i]) return 0;
     return 1;
+}
+
+/* 排列x：窗口内所有数字互不相同，且排序后连续（max-min==len-1）。
+ * 例如 4321 → {1,2,3,4} 连续 → 排列4；4231 → {1,2,3,4} 连续 → 排列4。
+ * x 最低为 4。 */
+static int window_perm(const int *d, int s, int len) {
+    int i, j, mn, mx;
+    for (i = 0; i < len; ++i)
+        for (j = i + 1; j < len; ++j)
+            if (d[s + i] == d[s + j]) return 0;
+    mn = mx = d[s];
+    for (i = 1; i < len; ++i) {
+        if (d[s + i] < mn) mn = d[s + i];
+        if (d[s + i] > mx) mx = d[s + i];
+    }
+    return mx - mn == len - 1;
 }
 
 /* bitset: bit = (length-3)*4 + start  covers all valid windows */
@@ -220,7 +237,7 @@ static int full_house_any(const int *d) {
 
 static double score_raw(int value) {
     int d[DIGITS];
-    unsigned ok_same = 0, ok_step = 0, ok_slide = 0, ok_snake = 0, ok_pure = 0, ok_pal = 0;
+    unsigned ok_same = 0, ok_step = 0, ok_slide = 0, ok_snake = 0, ok_pure = 0, ok_pal = 0, ok_perm = 0;
     int length, start;
     double total = 0.0;
     int hit = 0;
@@ -238,6 +255,7 @@ static double score_raw(int value) {
             if (window_snake(d, start, length, 1)) ok_pure |= bit;
             if (window_snake(d, start, length, 0)) ok_snake |= bit;
             if (window_pal(d, start, length))   ok_pal   |= bit;
+            if (length >= 4 && window_perm(d, start, length)) ok_perm |= bit;
         }
     }
 
@@ -275,6 +293,10 @@ static double score_raw(int value) {
             if ((ok_pal & bit) && !contained_in_larger(ok_pal, start, length)
                 && !contained_in_larger(ok_same, start, length)) {
                 total += S_PAL[length]; hit = 1;
+            }
+            /* 排列x：独立家族，大窗口吸收小窗口 */
+            if (length >= 4 && (ok_perm & bit) && !contained_in_larger(ok_perm, start, length)) {
+                total += S_PERM[length]; hit = 1;
             }
         }
     }
@@ -539,12 +561,39 @@ int main(int argc, char **argv) {
 
     if (count_mode) {
         long long two_pair_count = 0, three_pair_count = 0;
+        long long perm4_count = 0, perm5_count = 0, perm6_count = 0;
         int d[DIGITS];
         for (i = 0; i < SPACE; ++i) {
             extract_digits(i, d);
             int p = detect_pairs(d);
             if (p >= 3) three_pair_count++;
             else if (p >= 2) two_pair_count++;
+
+            /* 排列计数：同家族大窗口吸收小窗口 */
+            {
+                unsigned ok_perm = 0;
+                int length, start;
+                for (length = 4; length <= DIGITS; ++length) {
+                    for (start = 0; start <= DIGITS - length; ++start) {
+                        if (window_perm(d, start, length))
+                            ok_perm |= 1u << bit_of(start, length);
+                    }
+                }
+                int has4 = 0, has5 = 0, has6 = 0;
+                for (length = 4; length <= DIGITS; ++length) {
+                    for (start = 0; start <= DIGITS - length; ++start) {
+                        unsigned bit = 1u << bit_of(start, length);
+                        if ((ok_perm & bit) && !contained_in_larger(ok_perm, start, length)) {
+                            if (length == 4) has4 = 1;
+                            else if (length == 5) has5 = 1;
+                            else if (length == 6) has6 = 1;
+                        }
+                    }
+                }
+                if (has4) perm4_count++;
+                if (has5) perm5_count++;
+                if (has6) perm6_count++;
+            }
         }
         printf("=== PAIR COUNTS (new adjacency-based definition) ===\n");
         printf("two_pair_count: %lld\n", two_pair_count);
@@ -553,6 +602,16 @@ int main(int argc, char **argv) {
         printf("three_pair_prob: %.12f\n", (double)three_pair_count / SPACE);
         printf("two_pair_score: %.6f\n", -log10((double)two_pair_count / SPACE));
         printf("three_pair_score: %.6f\n", -log10((double)three_pair_count / SPACE));
+        printf("\n=== PERM COUNTS (排列x: all distinct, sorted consecutive) ===\n");
+        printf("perm4_count: %lld\n", perm4_count);
+        printf("perm5_count: %lld\n", perm5_count);
+        printf("perm6_count: %lld\n", perm6_count);
+        printf("perm4_prob: %.12f\n", (double)perm4_count / SPACE);
+        printf("perm5_prob: %.12f\n", (double)perm5_count / SPACE);
+        printf("perm6_prob: %.12f\n", (double)perm6_count / SPACE);
+        printf("perm4_score: %.6f\n", -log10((double)perm4_count / SPACE));
+        printf("perm5_score: %.6f\n", -log10((double)perm5_count / SPACE));
+        printf("perm6_score: %.6f\n", -log10((double)perm6_count / SPACE));
         return 0;
     }
 

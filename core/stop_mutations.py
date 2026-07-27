@@ -439,7 +439,7 @@ def apply_fragment_upgrades_on_user(
 ) -> list[dict]:
     """碎片够 5 个时在本杆立刻结算，可连锁到更高等级。"""
     from .starry_rewards import _FRAGMENT_SPECS
-    from .starry_system import draw_starry_reward
+    from .starry_system import draw_starry_reward, limit_ultimate_reward_pool
 
     granted: list[dict] = []
     for _ in range(40):
@@ -457,9 +457,14 @@ def apply_fragment_upgrades_on_user(
                 )
                 if not ok:
                     break
-                drawn = draw_starry_reward(spec["upgrade_pool"])
+                upgrade_pool = limit_ultimate_reward_pool(
+                    spec["upgrade_pool"], user.starry_exhibition or []
+                )
+                drawn = draw_starry_reward(upgrade_pool)
                 if not drawn:
                     break
+                if upgrade_pool != spec["upgrade_pool"]:
+                    drawn["downgraded_from"] = spec["upgrade_pool"]
                 drawn["upgrade_from"] = spec["name"]
                 if fish_id is not None:
                     fid = str(fish_id)
@@ -479,15 +484,27 @@ def apply_fragment_upgrades_on_user(
 def apply_grant_rewards_for_starry_fish_on_user(
     user, fish_id: int | str, dirty: set[str]
 ) -> list[dict]:
-    from .starry_system import draw_starry_reward, get_reward_pool, score_starry_fish
+    from .starry_system import (
+        draw_starry_reward,
+        get_reward_pool,
+        limit_ultimate_reward_pool,
+        score_starry_fish,
+    )
 
     scored = score_starry_fish(fish_id)
     pool = scored.reward_pool or get_reward_pool(scored.display_score)
     if not pool or pool == "none":
         return []
-    drawn = draw_starry_reward(pool)
+    reward_pool = limit_ultimate_reward_pool(
+        pool,
+        user.starry_exhibition or [],
+        current_fish_id=scored.id_text,
+    )
+    drawn = draw_starry_reward(reward_pool)
     if not drawn:
         return []
+    if reward_pool != pool:
+        drawn["downgraded_from"] = pool
     drawn["fish_id"] = scored.id_text
     drawn["display_score"] = scored.display_score
     results = [apply_starry_reward_on_user(user, drawn, dirty, source="catch")]
