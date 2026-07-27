@@ -1688,11 +1688,14 @@ code, .ic {
     <div class="callout tip" style="margin-top:8px">
       <strong>积分显示：</strong>结算页"本次积分"左侧显示流星鱼番型基础分，右侧以金色标签额外标注抽奖获得的积分（如"加0.5"）。
     </div>
+    <div class="callout info" style="margin-top:8px">
+      <strong>实验室模拟：</strong>究极鱼前 3 次正常抽取究极奖池，第 4 次起改抽高级奖池；鱼本身仍保留究极评分，并计入展馆。
+    </div>
   </div>
 
   <!-- 番型分组与分值 -->
   <div class="card">
-    <div class="sec-h">流星鱼番型一览（共 36 种）</div>
+    <div class="sec-h">流星鱼番型一览（共 41 种）</div>
     <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
       6 位编号按<strong>多个番型家族</strong>分别判定：<strong>不同家族可以叠加</strong>，分数相加后再四舍五入得到展示分。
       同一家族内不会把「被更长结构包住」的短段重复计分；部分家族还有「纯正档替代普通档」「高档吸收低档」的规则。
@@ -1704,6 +1707,8 @@ code, .ic {
         <li><strong>同一家族内部</strong>：更长的连段会<strong>吸收</strong>被它完全包含的更短连段，不重复计；互不包含的多段仍可各计一次。</li>
         <li><strong>滑梯家族</strong>：普通滑梯允许停顿，包含全程停顿的全同号窗口；同一窗口若同时是「步步高」（相邻差恒为 ±1），只按<strong>步步高</strong>计，不再计普通滑梯。</li>
         <li><strong>贪吃蛇家族</strong>：同一窗口若是「纯正贪吃蛇」（每步必动 ±1 且有转向），只按<strong>纯正</strong>计，不再计普通贪吃蛇。</li>
+        <li><strong>排列家族</strong>：窗口越长档位越高，长排列会吸收被它完全包含的短排列。</li>
+        <li><strong>镜和</strong>与回文独立判定；满足两者时可以同时计分。</li>
         <li><strong>对子家族</strong>：两对 / 三对只取更高的一档（有三对时不计两对）；命中葫芦时两对被葫芦吸收，不单独计分。</li>
         <li><strong>葫芦 / 星空飞机 / 区间色系 / 奇偶色系</strong>：满足条件时各计一次。</li>
       </ul>
@@ -1772,6 +1777,23 @@ code, .ic {
           <tr><td>6 位回文</td><td>3.00</td><td>形如 <code>abccba</code>；例如 <code>777777</code> 同时命中同号、滑梯和回文并分别计分</td></tr>
 
           <tr>
+            <td rowspan="3"><span class="tag t-utr">排列</span><br><span style="font-size:11px;color:var(--sub)">组内：长窗吸收短窗</span></td>
+            <td>排列4</td><td>1.44</td><td>连续 4 位互不相同，排序后为连续数字，如 <code>4231</code></td>
+          </tr>
+          <tr><td>排列5</td><td>1.95</td><td>连续 5 位互不相同，排序后为连续数字</td></tr>
+          <tr><td>排列6</td><td>2.44</td><td>六位互不相同，排序后为连续数字；命中后吸收其中的排列4/5</td></tr>
+
+          <tr>
+            <td><span class="tag t-star">蛙跳</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
+            <td>蛙跳6</td><td>3.38</td><td>六位数字严格递增或严格递减，不要求相邻差为 1，如 <code>135789</code></td>
+          </tr>
+
+          <tr>
+            <td><span class="tag t-event">镜和</span><br><span style="font-size:11px;color:var(--sub)">独立于回文</span></td>
+            <td>镜和</td><td>2.30</td><td>三组镜像位置的数字和相等，即第 1+6 位、第 2+5 位、第 3+4 位之和相同</td>
+          </tr>
+
+          <tr>
             <td rowspan="2"><span class="tag t-cat">区间色系</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
             <td>6 位全小 (0-4)</td><td>1.81</td><td>六位数字全部落在 0–4</td>
           </tr>
@@ -1787,7 +1809,7 @@ code, .ic {
             <td rowspan="2"><span class="tag t-utr">周期节奏</span><br><span style="font-size:11px;color:var(--sub)">可与其它家族叠加</span></td>
             <td>ABAB</td><td>1.60</td><td>四位交替 <code>abab</code>（a≠b）；不同起点的窗口可各计一次</td>
           </tr>
-          <tr><td>ABCABC</td><td>3.14</td><td>六位重复两遍三段，且 a、b、c 互不相同，如 <code>123123</code></td></tr>
+          <tr><td>ABCABC</td><td>3.00</td><td>六位重复两遍三段，a、b、c 允许重复但不能全同，如 <code>123123</code>、<code>112112</code></td></tr>
 
           <tr>
             <td><span class="tag t-star">星空飞机</span><br><span style="font-size:11px;color:var(--sub)">命中计一次</span></td>
@@ -1830,7 +1852,7 @@ code, .ic {
   <div class="card">
     <div class="sec-h">流星鱼展馆</div>
     <p style="font-size:14px; line-height:1.7; margin-bottom:10px;">
-      分数 ≥ 4 分的流星鱼自动进入个人展馆（最多 10 条），进入后不在背包显示。展馆内详细介绍数字番型。
+      仅究极奖池（展示分 ≥ 11）的流星鱼计入个人展馆（最多 10 条），进入后不在背包显示。展馆内详细介绍数字番型。
     </p>
     <div class="cmd-card">
       <span class="cmd-name">流星鱼展馆</span>
@@ -1899,7 +1921,7 @@ code, .ic {
       <div class="step"><div class="step-num">3</div><div class="step-text">获得 <strong>星空框</strong>；收杆页用小字列出本次消耗的流星鱼编号（要因）</div></div>
     </div>
     <div class="callout info" style="margin-top:10px">
-      计分只累计、不消耗流星鱼；仅奇迹会消耗背包中的对应子集。≥4 分进入展馆的鱼不在背包显示，也不参加奇迹运算。
+      计分只累计、不消耗流星鱼；仅奇迹会消耗背包中的对应子集。进入展馆的究极鱼不在背包显示，也不参加奇迹运算。
     </div>
   </div>
 
@@ -2004,12 +2026,17 @@ code, .ic {
     ['parity', 6, '6_all_odd', 1.806180],
     ['parity', 6, '6_all_even', 1.806180],
     ['rhythm', 4, 'ABAB', 1.598599],
-    ['rhythm', 6, 'ABCABC', 3.142668],
+    ['rhythm', 6, 'ABCABC', 3.004365],
     ['star_airplane', 6, 'star_airplane', 1.899285],
     ['pairs', 2, 'two_pair', 1.595508],
     ['pairs', 3, 'three_pair', 3.091515],
     ['full_house', 5, 'full_house', 2.454693],
     ['chunk_sequence', 6, 'chunk_sequence', 2.658763],
+    ['permutation', 4, '4_permutation', 1.444857],
+    ['permutation', 5, '5_permutation', 1.947691],
+    ['permutation', 6, '6_permutation', 2.443697],
+    ['frog_jump', 6, 'frog_jump_6', 3.376751],
+    ['mirror_sum', 6, 'mirror_sum', 2.296709],
     ['pihu', 6, 'pihu', 0.802444]
   ];
   var STARRY_FEATURE_SCORES = {};
@@ -2064,8 +2091,13 @@ code, .ic {
     }
     return true;
   }
+  function starryWindowPermutation(digits, start, length){
+    var windowDigits = digits.slice(start, start + length);
+    return new Set(windowDigits).size === length &&
+      Math.max.apply(null, windowDigits) - Math.min.apply(null, windowDigits) === length - 1;
+  }
   function starryBuildMatches(digits){
-    var matches = {same_run: {}, step_high: {}, slide: {}, pure_snake: {}, snake: {}, palindrome: {}};
+    var matches = {same_run: {}, step_high: {}, slide: {}, pure_snake: {}, snake: {}, palindrome: {}, permutation: {}};
     for(var length = 3; length <= 6; length++){
       for(var start = 0; start <= 6 - length; start++){
         var key = start + ':' + length;
@@ -2075,6 +2107,7 @@ code, .ic {
         matches.pure_snake[key] = starryWindowSnake(digits, start, length, true);
         matches.snake[key] = starryWindowSnake(digits, start, length, false);
         matches.palindrome[key] = starryWindowPalindrome(digits, start, length);
+        if(length >= 4) matches.permutation[key] = starryWindowPermutation(digits, start, length);
       }
     }
     return matches;
@@ -2092,9 +2125,10 @@ code, .ic {
     var direct = {
       '6_all_small_0_4': '6位全小(0-4)', '6_all_big_5_9': '6位全大(5-9)',
       '6_all_odd': '6位全奇', '6_all_even': '6位全偶',
+      '4_permutation': '排列4', '5_permutation': '排列5', '6_permutation': '排列6',
       ABAB: 'ABAB', ABCABC: 'ABCABC', star_airplane: '星空飞机',
       two_pair: '两对', three_pair: '三对', full_house: '葫芦',
-      chunk_sequence: '连号', pihu: '屁胡'
+      chunk_sequence: '连号', frog_jump_6: '蛙跳6', mirror_sum: '镜和', pihu: '屁胡'
     };
     if(direct[label]) return direct[label];
     var separator = label.indexOf('_');
@@ -2177,14 +2211,21 @@ code, .ic {
         }
         if(matches.palindrome[key] && !starryContainedInLarger(matches.palindrome, start, length))
           features.push(starryFeature(length + '_palindrome', 'palindrome', span));
+        if(length >= 4 && matches.permutation[key] && !starryContainedInLarger(matches.permutation, start, length))
+          features.push(starryFeature(length + '_permutation', 'permutation', span));
       }
     }
+    var frogDiffs = digits.slice(1).map(function(digit, index){ return digit - digits[index]; });
+    if(frogDiffs.every(function(diff){ return diff > 0; }) || frogDiffs.every(function(diff){ return diff < 0; }))
+      features.push(starryFeature('frog_jump_6', 'frog_jump', '1-6'));
+    if(digits[0] + digits[5] === digits[1] + digits[4] && digits[1] + digits[4] === digits[2] + digits[3])
+      features.push(starryFeature('mirror_sum', 'mirror_sum', '1-6'));
     for(var start = 0; start <= 2; start++){
       if(digits[start] === digits[start + 2] && digits[start + 1] === digits[start + 3] && digits[start] !== digits[start + 1])
         features.push(starryFeature('ABAB', 'rhythm', (start + 1) + '-' + (start + 4)));
     }
     if(digits[0] === digits[3] && digits[1] === digits[4] && digits[2] === digits[5] &&
-        new Set(digits.slice(0, 3)).size === 3)
+        new Set(digits.slice(0, 3)).size > 1)
       features.push(starryFeature('ABCABC', 'rhythm', '1-6'));
 
     var runDigit = [], runLen = [], runStart = [];

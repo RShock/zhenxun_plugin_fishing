@@ -41,11 +41,12 @@
     "3_snake":1.180417,"4_snake":1.567993,"5_snake":2.133004,"6_snake":2.838033,
     "3_palindrome":.505804,"4_palindrome":1.570086,"5_palindrome":1.705313,"6_palindrome":3.004365,
     "6_all_small_0_4":1.806180,"6_all_big_5_9":1.806180,"6_all_odd":1.806180,"6_all_even":1.806180,
-    ABAB:1.598599,ABCABC:3.142668,star_airplane:1.899285,two_pair:1.359121,three_pair:3.091515,
-    full_house:2.454693,chunk_sequence:2.658763,pihu:.802444
+    ABAB:1.598599,ABCABC:3.004365,star_airplane:1.899285,two_pair:1.359121,three_pair:3.091515,
+    full_house:2.454693,chunk_sequence:2.658763,"4_permutation":1.444857,"5_permutation":1.947691,"6_permutation":2.443697,
+    frog_jump_6:3.376751,mirror_sum:2.296709,pihu:.802444
   };
-  const DIRECT_LABEL = {"6_all_small_0_4":"6位全小(0-4)","6_all_big_5_9":"6位全大(5-9)","6_all_odd":"6位全奇","6_all_even":"6位全偶",ABAB:"ABAB",ABCABC:"ABCABC",star_airplane:"星空飞机",two_pair:"两对",three_pair:"三对",full_house:"葫芦",chunk_sequence:"连号",pihu:"屁胡"};
-  const SUFFIX = {same_run:"同号连段",step_high:"步步高",slide:"滑梯",pure_snake:"纯正贪吃蛇",snake:"贪吃蛇",palindrome:"回文"};
+  const DIRECT_LABEL = {"6_all_small_0_4":"6位全小(0-4)","6_all_big_5_9":"6位全大(5-9)","6_all_odd":"6位全奇","6_all_even":"6位全偶","4_permutation":"排列4","5_permutation":"排列5","6_permutation":"排列6",ABAB:"ABAB",ABCABC:"ABCABC",star_airplane:"星空飞机",two_pair:"两对",three_pair:"三对",full_house:"葫芦",chunk_sequence:"连号",frog_jump_6:"蛙跳6",mirror_sum:"镜和",pihu:"屁胡"};
+  const SUFFIX = {same_run:"同号连段",step_high:"步步高",slide:"滑梯",pure_snake:"纯正贪吃蛇",snake:"贪吃蛇",palindrome:"回文",permutation:"排列"};
 
   const $ = id => document.getElementById(id);
   const qsa = selector => [...document.querySelectorAll(selector)];
@@ -57,7 +58,7 @@
 
   function defaultState(){
     return {version:SAVE_VERSION,day:1,castsLeft:CASTS_PER_DAY,weather:rollWeather(),effort:0,totalScore:0,tickets:0,coins:0,
-      allFish:[],items:{},starFrames:0,celestialFrameLevel:0,starryFrameLevel:0,totalCasts:0,totalStarry:0,totalMiracles:0,
+      allFish:[],items:{},starFrames:0,celestialFrameLevel:0,starryFrameLevel:0,totalCasts:0,totalStarry:0,totalUltimate:0,totalMiracles:0,
       buffs:{lucky:0,flash:0,duoduo:0},debug:{weather:"auto",forceDrop:false,infiniteCasts:false,lucky:false,flash:false,duoduo:false},
       logs:[],lastCatch:null,uid:1,createdAt:Date.now(),updatedAt:Date.now()};
   }
@@ -65,6 +66,7 @@
     const base=defaultState(); const s=Object.assign(base,raw||{});
     s.items=Object.assign({},base.items,raw?.items||{}); s.buffs=Object.assign({},base.buffs,raw?.buffs||{}); s.debug=Object.assign({},base.debug,raw?.debug||{});
     s.allFish=Array.isArray(raw?.allFish)?raw.allFish:[]; s.logs=Array.isArray(raw?.logs)?raw.logs.slice(0,80):[];
+    s.totalUltimate=Number.isFinite(Number(raw?.totalUltimate))?Math.max(0,Number(raw.totalUltimate)):s.allFish.filter(f=>f.pool==="ultimate").length;
     s.castsLeft=clamp(Number(s.castsLeft)||0,0,CASTS_PER_DAY); s.day=Math.max(1,Number(s.day)||1); s.uid=Math.max(Number(s.uid)||1,s.allFish.length+1);
     return s;
   }
@@ -87,8 +89,11 @@
   function windowSlide(d,s,l){const dif=[];for(let i=1;i<l;i++)dif.push(d[s+i]-d[s+i-1]);return dif.every(x=>x===0||x===1)||dif.every(x=>x===0||x===-1)}
   function windowSnake(d,s,l,pure){let prev=0,moved=false,turned=false;for(let i=1;i<l;i++){const diff=d[s+i]-d[s+i-1];if(pure){if(diff!==1&&diff!==-1)return false}else if(diff<-1||diff>1)return false;const dir=sign(diff);if(dir){moved=true;if(prev&&dir!==prev)turned=true;prev=dir}}return moved&&turned}
   function windowPalindrome(d,s,l){for(let i=0;i<Math.floor(l/2);i++)if(d[s+i]!==d[s+l-1-i])return false;return true}
+  function windowPermutation(d,s,l){const w=d.slice(s,s+l);return new Set(w).size===l&&Math.max(...w)-Math.min(...w)===l-1}
+  function frogJump6(d){const diff=d.slice(1).map((x,i)=>x-d[i]);return diff.every(x=>x>0)||diff.every(x=>x<0)}
+  function mirrorSum(d){return d[0]+d[5]===d[1]+d[4]&&d[1]+d[4]===d[2]+d[3]}
   function motifAbab(d,s){return d[s]===d[s+2]&&d[s+1]===d[s+3]&&d[s]!==d[s+1]}
-  function motifAbcabc(d){const [a,b,c]=d;return a===d[3]&&b===d[4]&&c===d[5]&&new Set([a,b,c]).size===3}
+  function motifAbcabc(d){const [a,b,c]=d;return a===d[3]&&b===d[4]&&c===d[5]&&new Set([a,b,c]).size>1}
   function chunkSequence(d){const a=[d[0]*10+d[1],d[2]*10+d[3],d[4]*10+d[5]];if(a[1]-a[0]===a[2]-a[1]&&Math.abs(a[1]-a[0])===1)return"2+2+2";const x=d[0]*100+d[1]*10+d[2],y=d[3]*100+d[4]*10+d[5];return Math.abs(y-x)===1?"3+3":null}
   function starAirplane(d){for(let i=1;i<5;i++)if(d[i]!==d[i-1]&&d[i]!==d[i+1])return false;return true}
   function exactPairRuns(d){const out=[];for(let i=0;i<d.length;){let e=i+1;while(e<d.length&&d[e]===d[i])e++;if(e-i===2)out.push([i,e]);i=e}return out}
@@ -99,10 +104,11 @@
   function band(score){return score===0?"普通":score<=2?"小吉":score<=4?"良品":score<=6?"稀有":score<=8?"珍品":score<=10?"极品":score<=12?"传说":"神话"}
   function makeFeature(label,family,span,note=""){return{label,family,span,note,score:FEATURE_SCORE[label],name:labelCn(label)}}
   function scoreFish(value){
-    const d=digitsOf(value),ok={};for(const family of ["same_run","step_high","slide","pure_snake","snake","palindrome"])ok[family]=new Map();
+    const d=digitsOf(value),ok={};for(const family of ["same_run","step_high","slide","pure_snake","snake","palindrome","permutation"])ok[family]=new Map();
     for(let len=3;len<=6;len++)for(let start=0;start<=6-len;start++){
       ok.same_run.set(`${start}:${len}`,windowSame(d,start,len));ok.step_high.set(`${start}:${len}`,windowStep(d,start,len));ok.slide.set(`${start}:${len}`,windowSlide(d,start,len));
       ok.pure_snake.set(`${start}:${len}`,windowSnake(d,start,len,true));ok.snake.set(`${start}:${len}`,windowSnake(d,start,len,false));ok.palindrome.set(`${start}:${len}`,windowPalindrome(d,start,len));
+      if(len>=4)ok.permutation.set(`${start}:${len}`,windowPermutation(d,start,len));
     }
     const f=[];
     if(d.every(x=>x<=4))f.push(makeFeature("6_all_small_0_4","range","1-6"));if(d.every(x=>x>=5))f.push(makeFeature("6_all_big_5_9","range","1-6"));
@@ -112,12 +118,15 @@
       if(ok.slide.get(key)&&!contained(ok.slide,start,len))f.push(makeFeature(`${len}_${ok.step_high.get(key)?"step_high":"slide"}`,ok.step_high.get(key)?"step_high":"slide",span));
       if(ok.snake.get(key)&&!contained(ok.snake,start,len))f.push(makeFeature(`${len}_${ok.pure_snake.get(key)?"pure_snake":"snake"}`,ok.pure_snake.get(key)?"pure_snake":"snake",span));
       if(ok.palindrome.get(key)&&!contained(ok.palindrome,start,len))f.push(makeFeature(`${len}_palindrome`,`palindrome`,span));
+      if(len>=4&&ok.permutation.get(key)&&!contained(ok.permutation,start,len))f.push(makeFeature(`${len}_permutation`,`permutation`,span));
     }
+    if(frogJump6(d))f.push(makeFeature("frog_jump_6","frog_jump","1-6"));
+    if(mirrorSum(d))f.push(makeFeature("mirror_sum","mirror_sum","1-6"));
     for(let s=0;s<=2;s++)if(motifAbab(d,s))f.push(makeFeature("ABAB","rhythm",`${s+1}-${s+4}`));if(motifAbcabc(d))f.push(makeFeature("ABCABC","rhythm","1-6"));
     const pairs=exactPairRuns(d);if(pairs.length>=2){const lab=pairs.length>=3?"three_pair":"two_pair";f.push(makeFeature(lab,"pairs",`${pairs[0][0]+1}-${pairs[pairs.length-1][1]}`))}
     const spans=[];for(let s=0;s<=1;s++)if(fullHouse(d,s))spans.push([s,s+5]);if(spans.length)f.push(makeFeature("full_house","full_house",`${spans[0][0]+1}-${spans[spans.length-1][1]}`));
     const seq=chunkSequence(d);if(seq)f.push(makeFeature("chunk_sequence","chunk_sequence","1-6",seq));
-    const counts={};d.forEach(x=>counts[x]=(counts[x]||0)+1);if(!f.length&&Math.max(...Object.values(counts))>=3){const hot=Object.keys(counts).filter(k=>counts[k]>=3).map(Number);const pos=digits.map((d,i)=>hot.includes(d)?i:-1).filter(i=>i>=0);const parts=[];let s=pos[0],p=pos[0];for(let i=1;i<pos.length;i++){const x=pos[i];if(x===p+1){p=x;continue;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));s=p=x;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));f.push(makeFeature("pihu","pihu",parts.join(",")));}
+    const counts={};d.forEach(x=>counts[x]=(counts[x]||0)+1);if(!f.length&&Math.max(...Object.values(counts))>=3){const hot=Object.keys(counts).filter(k=>counts[k]>=3).map(Number);const pos=d.map((digit,i)=>hot.includes(digit)?i:-1).filter(i=>i>=0);const parts=[];let s=pos[0],p=pos[0];for(let i=1;i<pos.length;i++){const x=pos[i];if(x===p+1){p=x;continue;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));s=p=x;}parts.push(s===p?String(s+1):(s+1)+"-"+(p+1));f.push(makeFeature("pihu","pihu",parts.join(",")));}
     f.sort((a,b)=>b.score-a.score||a.span.localeCompare(b.span)||a.label.localeCompare(b.label));const raw=f.reduce((a,x)=>a+x.score,0),display=Math.floor(raw+.5);
     return{id:Number(value),idText:formatId(value),rawScore:raw,displayScore:display,features:f,pool:rewardPool(display),band:band(display)};
   }
@@ -137,12 +146,14 @@
     if(depth<8){const chain={lottery_fragment_low:"middle",lottery_fragment_mid:"high",lottery_fragment_high:"ultimate"};const next=chain[item.key];if(next)while((state.items[item.key]||0)>=5){state.items[item.key]-=5;const upgraded=drawReward(next,depth+1);log(`5 枚碎片自动升级：${upgraded.name} ×${upgraded.count}`,"reward")}}
     return{...item,name:ITEM_INFO[item.key]?.[0]||item.key,pool};
   }
-  function galleryFish(){return [...state.allFish].filter(f=>f.displayScore>=4).sort((a,b)=>b.displayScore-a.displayScore||b.rawScore-a.rawScore||a.id-b.id).slice(0,10)}
+  function galleryFish(){return [...state.allFish].filter(f=>f.pool==="ultimate").sort((a,b)=>b.displayScore-a.displayScore||b.rawScore-a.rawScore||a.id-b.id).slice(0,10)}
   function bagFish(){const ids=new Set(galleryFish().map(f=>f.uid));return state.allFish.filter(f=>!ids.has(f.uid))}
   function addFish(scored,{reward=true,check=true}={}){
     const entry={uid:state.uid++,id:scored.id,idText:scored.idText,rawScore:scored.rawScore,displayScore:scored.displayScore,band:scored.band,pool:scored.pool,features:scored.features.map(x=>({label:x.label,name:x.name,score:x.score})),day:state.day,location:11+((state.day-1)%10)};
     state.allFish.push(entry);state.totalStarry++;state.totalScore+=entry.displayScore;state.effort+=entry.displayScore;
-    const prize=reward?drawReward(entry.pool):null;checkTickets();if(check)checkMiracle();return{entry,prize};
+    // 究极鱼仍按原番型和分数入馆，但第四条起只抽高级池，避免长线模拟被究极奖励淹没。
+    let rewardPoolName=entry.pool;if(reward&&entry.pool==="ultimate"){state.totalUltimate++;if(state.totalUltimate>3)rewardPoolName="high"}
+    const prize=reward?drawReward(rewardPoolName):null;checkTickets();if(check)checkMiracle();return{entry,prize,rewardPoolName};
   }
   function checkTickets(){while(state.effort>=EFFORT_TARGET){state.effort-=EFFORT_TARGET;state.tickets++;queued.tickets++;log(`努力值达标，获得第 ${state.tickets} 张 S2 入场券！`,"reward");if(!quiet)showModal("ticketModal")}}
 
@@ -165,7 +176,7 @@
   function cast({silent=false}={}){
     if(state.castsLeft<=0&&!state.debug.infiniteCasts)return null;if(!state.debug.infiniteCasts)state.castsLeft--;state.totalCasts++;state.coins+=5+Math.floor(Math.random()*13);
     const normal=randomChoice(NORMAL_FISH),starry=rollStarry();let last=null;
-    if(starry){const copies=activeBuff("duoduo")?2:1;const rewards=[];for(let i=0;i<copies;i++){const added=addFish(starry);last=added.entry;if(added.prize)rewards.push(added.prize)}
+    if(starry){const copies=activeBuff("duoduo")?2:1;const rewards=[];for(let i=0;i<copies;i++){const added=addFish(starry);last={...added.entry,rewardPool:added.rewardPoolName};if(added.prize)rewards.push(added.prize)}
       const prizeText=rewards.length?rewards.map(r=>`${r.name}×${r.count}`).join("、"):"无额外奖励";log(`⭐ ${starry.idText} · ${starry.displayScore}分 ${starry.features.slice(0,2).map(x=>x.name).join(" + ")||"无显著番型"}；${prizeText}`,"starry");state.lastCatch={...last,rewardText:prizeText,copies};
     }else log(`钓到 ${normal}，获得 ${5+Math.floor(Math.random()*8)} 枚鱼币。`);
     consumeBuffs();if(!silent)render();return state.lastCatch;
@@ -204,7 +215,7 @@
     ["掉率",state.debug.forceDrop?"100%":`${(.05*((w==="solar_wind"||flash)?1.5:1)*(flash?1.5:1)*100).toFixed(2).replace(/\.00$/,"")}%`,true],
     ["☘",`幸运${activeBuff("lucky")?"开启":"关闭"}`,activeBuff("lucky")],["ϟ",`闪光${flash?"开启":"关闭"}`,flash],["∞",`多多${activeBuff("duoduo")?"开启":"关闭"}`,activeBuff("duoduo")]
   ];$("buffStrip").innerHTML=data.map(x=>`<div class="buff-chip ${x[2]?"on":""}"><b>${x[0]}</b>${x[1]}</div>`).join("")}
-  function renderCatch(){const c=state.lastCatch;if(!c){$("catchEmpty").classList.remove("hidden");$("catchResult").classList.add("hidden");return}$("catchEmpty").classList.add("hidden");$("catchResult").classList.remove("hidden");$("resultFishId").textContent=c.idText;$("resultScore").textContent=c.displayScore;$("resultBand").textContent=c.band;$("resultFeatures").innerHTML=(c.features.length?c.features:[{name:"无显著番型"}]).slice(0,6).map(f=>`<span>${esc(f.name)}</span>`).join("");$("resultReward").textContent=`${POOL_NAMES[c.pool]} · ${c.rewardText||"无奖励"}${c.copies>1?" · 多多复制×2":""}`;$("resultTime").textContent=`第${c.day}天`;$("catchCard").classList.remove("pulse");requestAnimationFrame(()=>$("catchCard").classList.add("pulse"))}
+  function renderCatch(){const c=state.lastCatch;if(!c){$("catchEmpty").classList.remove("hidden");$("catchResult").classList.add("hidden");return}$("catchEmpty").classList.add("hidden");$("catchResult").classList.remove("hidden");$("resultFishId").textContent=c.idText;$("resultScore").textContent=c.displayScore;$("resultBand").textContent=c.band;$("resultFeatures").innerHTML=(c.features.length?c.features:[{name:"无显著番型"}]).slice(0,6).map(f=>`<span>${esc(f.name)}</span>`).join("");$("resultReward").textContent=`${POOL_NAMES[c.rewardPool||c.pool]} · ${c.rewardText||"无奖励"}${c.copies>1?" · 多多复制×2":""}`;$("resultTime").textContent=`第${c.day}天`;$("catchCard").classList.remove("pulse");requestAnimationFrame(()=>$("catchCard").classList.add("pulse"))}
   function renderLog(){const el=$("timeline");el.innerHTML=state.logs.length?state.logs.slice(0,24).map(x=>`<div class="log-row ${x.type}"><i></i><p>${esc(x.text)}</p><b>D${x.day} ${x.time}</b></div>`).join(""):`<div class="timeline-empty">还没有记录，先抛出第一竿吧。</div>`}
   function renderBag(){
     const bag=bagFish().sort((a,b)=>b.day-a.day||b.displayScore-a.displayScore);$("bagCapacity").textContent=`${bag.length} 条`;
@@ -212,7 +223,7 @@
     const keys=Object.keys(ITEM_INFO);$("itemInventory").innerHTML=`<div class="item-list">${keys.map(k=>{const n=state.items[k]||0,usable=["lucky_potion","flash_potion","duoduo_potion","reset_potion","time_potion"].includes(k);return`<article class="item-row"><div class="item-icon">${ITEM_INFO[k][2]}</div><div class="item-info"><b>${ITEM_INFO[k][0]}</b><small>${ITEM_INFO[k][1]}</small></div><strong>×${n}</strong>${usable?`<button class="frame-upgrade" style="width:46px" data-use-item="${k}" ${n?"":"disabled"}>使用</button>`:""}</article>`}).join("")}</div>`;
     const cat=state.items.cat_frame||0,starCost=state.starryFrameLevel+1,celCost=state.celestialFrameLevel+1;$("frameInventory").innerHTML=`<div class="item-list"><article class="item-row"><div class="item-icon">✧</div><div class="item-info"><b>星空展示框 · Lv.${state.starryFrameLevel}/10</b><small>展示最贵的鱼，签到奖励 ×4 · 持有猫框 ${cat}</small><button class="frame-upgrade" data-upgrade="starry" ${state.starryFrameLevel>=10||cat<starCost?"disabled":""}>消耗 ${starCost} 猫框强化</button></div></article><article class="item-row"><div class="item-icon">✦</div><div class="item-info"><b>星辰展示栏 · Lv.${state.celestialFrameLevel}/10</b><small>奇迹产物 · 持有星空框 ${state.starFrames}</small><button class="frame-upgrade" data-upgrade="celestial" ${state.celestialFrameLevel>=10||state.starFrames<celCost?"disabled":""}>消耗 ${celCost} 星空框强化</button></div></article></div>`;
   }
-  function renderGallery(){const list=galleryFish();$("galleryList").innerHTML=list.length?list.map((f,i)=>`<article class="gallery-entry"><div class="rank">${String(i+1).padStart(2,"0")}</div><div><div class="gid">${f.idText}</div><small>${esc(f.features.slice(0,3).map(x=>x.name).join(" + ")||"无显著番型")} · D${f.day}</small></div><strong>${f.displayScore}</strong></article>`).join(""):`<div class="empty-panel"><b>展馆尚未点亮</b>获得至少 4 分的星空鱼后，它会自动陈列于此。</div>`}
+  function renderGallery(){const list=galleryFish();$("galleryList").innerHTML=list.length?list.map((f,i)=>`<article class="gallery-entry"><div class="rank">${String(i+1).padStart(2,"0")}</div><div><div class="gid">${f.idText}</div><small>${esc(f.features.slice(0,3).map(x=>x.name).join(" + ")||"无显著番型")} · D${f.day}</small></div><strong>${f.displayScore}</strong></article>`).join(""):`<div class="empty-panel"><b>展馆尚未点亮</b>获得究极奖池的星空鱼后，它会自动陈列于此。</div>`}
   function renderDebug(){
     $("forceDrop").checked=state.debug.forceDrop;$("infiniteCasts").checked=state.debug.infiniteCasts;$("dbgLucky").checked=state.debug.lucky;$("dbgFlash").checked=state.debug.flash;$("dbgDuoduo").checked=state.debug.duoduo;qsa("#weatherDebug button").forEach(b=>b.classList.toggle("active",b.dataset.weather===state.debug.weather));updateStorageSize();
   }
