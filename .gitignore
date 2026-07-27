@@ -81,3 +81,11 @@ resources/temp*.png
 
 # CI local runtime (generated import layout)
 ci/runtime/
+
+# Mining game tests and simulation outputs
+doc/s2设计/星穹矿脉/**/test_*
+doc/s2设计/星穹矿脉/**/*_test.*
+doc/s2设计/星穹矿脉/demo/sim*_result.json
+doc/s2设计/星穹矿脉/demo/best_config.txt
+web/static/_lab/xqkm/test_*
+web/static/_lab/xqkm/*_test.*
