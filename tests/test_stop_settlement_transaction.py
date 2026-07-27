@@ -203,6 +203,23 @@ class TestStopSettlementTransaction:
         assert messages.index("🐱 猫送了7金币") < messages.index("🐱 猫送了2个猫框")
         assert messages.index("🐱 猫送了2个猫框") < messages.index("🐱 猫送了3个玉米")
 
+    async def test_disabled_limit_does_not_increment_stop_count(self, db, monkeypatch):
+        user = await _arrange_settlement(db, monkeypatch)
+        monkeypatch.setattr(
+            actions,
+            "_stop_db_transaction",
+            _transaction_with_memory_rollback(user, []),
+        )
+
+        _, _, is_last_stop = await stop_fishing(
+            USER_ID,
+            is_private=False,
+            limit_enabled=False,
+        )
+
+        assert user.daily_counters["stop"]["count"] == 0
+        assert is_last_stop is False
+
     async def test_starry_score_threshold_grants_s2_ticket_once(self, db, monkeypatch):
         user = await _arrange_settlement(db, monkeypatch)
         user.starry_score_accumulated = 1200.0
@@ -211,6 +228,7 @@ class TestStopSettlementTransaction:
             user=user,
             gm_mode=False,
             is_private=True,
+            limit_enabled=True,
             step=_step(),
             updated_status={},
             is_new_sign=False,

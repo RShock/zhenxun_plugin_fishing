@@ -126,8 +126,13 @@ async def _(event: Event, matcher: Matcher):
 
     stop_count = await FishingUser.get_stop_count(user_id)
     status_count = await FishingUser.get_status_count(user_id)
+    limit_enabled = await is_group_action_limit_enabled()
 
-    if not is_private and remaining_stop_actions(stop_count, status_count) <= 0:
+    if (
+        not is_private
+        and limit_enabled
+        and remaining_stop_actions(stop_count, status_count) <= 0
+    ):
         await matcher.finish()
 
     # 记录活跃群（群聊收杆时记录）
@@ -143,7 +148,9 @@ async def _(event: Event, matcher: Matcher):
 
     try:
         render_data, buff_messages, _ = await stop_fishing(
-            user_id, is_private=is_private
+            user_id,
+            is_private=is_private,
+            limit_enabled=limit_enabled,
         )
     except Exception as e:
         # 事务已回滚，数据库保持收杆前状态；提示用户重试
@@ -164,7 +171,11 @@ async def _(event: Event, matcher: Matcher):
     hints = list(buff_messages)
     if auto_loc:
         hints.insert(0, f"你的角色自己去{auto_loc}钓鱼了")
-    if not is_private and is_last_stop_action(stop_count, status_count):
+    if (
+        not is_private
+        and limit_enabled
+        and is_last_stop_action(stop_count, status_count)
+    ):
         hints.append("⚠️ 这是今天的最后一次收杆！")
 
     # 共用后半段结算：自动锁鱼、自动卖鱼、自动卖猫乐园材料
@@ -201,7 +212,7 @@ async def _(event: Event, matcher: Matcher):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)
     is_private = _is_private_chat(event)
-    limit_enabled = is_group_action_limit_enabled()
+    limit_enabled = await is_group_action_limit_enabled()
     user = await get_or_create_user(user_id, nickname)
     stop_count = await FishingUser.get_stop_count(user_id)
     status_count = await FishingUser.get_status_count(user_id)

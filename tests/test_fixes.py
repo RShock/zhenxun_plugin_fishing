@@ -300,20 +300,27 @@ class TestDailyLimitHelpers:
         # max_status=3, current+1=2 → not last
         assert is_last_status_view(status_count=1, stop_count=0) is False
 
-    def test_group_action_limit_toggle(self):
+    async def test_group_action_limit_toggle_is_persisted(self, monkeypatch):
+        from unittest.mock import AsyncMock
+
+        from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingGlobalConfig
         from zhenxun.plugins.zhenxun_plugin_fishing.services.limit_service import (
             is_group_action_limit_enabled,
             set_group_action_limit_enabled,
         )
 
-        original = is_group_action_limit_enabled()
-        try:
-            set_group_action_limit_enabled(False)
-            assert is_group_action_limit_enabled() is False
-            set_group_action_limit_enabled(True)
-            assert is_group_action_limit_enabled() is True
-        finally:
-            set_group_action_limit_enabled(original)
+        get_bool = AsyncMock(return_value=False)
+        set_bool = AsyncMock()
+        monkeypatch.setattr(FishingGlobalConfig, "get_bool", get_bool)
+        monkeypatch.setattr(FishingGlobalConfig, "set_bool", set_bool)
+
+        assert await is_group_action_limit_enabled() is False
+        get_bool.assert_awaited_once_with(
+            "group_action_limit_enabled", default=True
+        )
+
+        await set_group_action_limit_enabled(True)
+        set_bool.assert_awaited_once_with("group_action_limit_enabled", True)
 
 
 class TestSkinStemParsing:

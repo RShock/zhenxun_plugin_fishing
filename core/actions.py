@@ -639,6 +639,7 @@ class _StopSettlementPlan:
     user: Any
     gm_mode: bool
     is_private: bool
+    limit_enabled: bool
     step: StepResult
     updated_status: dict
     is_new_sign: bool
@@ -720,6 +721,7 @@ async def _apply_stop_settlement_plan(
     *,
     gm_mode: bool,
     is_private: bool,
+    limit_enabled: bool,
     step: StepResult,
     updated_status: dict,
     is_new_sign: bool,
@@ -733,6 +735,7 @@ async def _apply_stop_settlement_plan(
         user=user,
         gm_mode=gm_mode,
         is_private=is_private,
+        limit_enabled=limit_enabled,
         step=step,
         updated_status=updated_status,
         is_new_sign=is_new_sign,
@@ -889,11 +892,7 @@ def _build_bait_log_info(plan: _StopSettlementPlan) -> str:
 def _apply_stop_limit(plan: _StopSettlementPlan) -> bool:
     from ..models import user_mutations as mut
 
-    if plan.gm_mode or plan.is_private:
-        return False
-    from ..services.limit_service import is_group_action_limit_enabled
-
-    if not is_group_action_limit_enabled():
+    if plan.gm_mode or plan.is_private or not plan.limit_enabled:
         return False
     stop_count, is_last_stop = mut.apply_increment_stop_count(plan.user, plan.dirty)
     logger.info(f"用户 {plan.user_id} 今日第 {stop_count} 次收杆")
@@ -1019,6 +1018,7 @@ async def _apply_stop_settlement_writes(
     *,
     gm_mode: bool,
     is_private: bool,
+    limit_enabled: bool,
     step: StepResult,
     updated_status: dict,
     is_new_sign: bool,
@@ -1038,6 +1038,7 @@ async def _apply_stop_settlement_writes(
         user,
         gm_mode=gm_mode,
         is_private=is_private,
+        limit_enabled=limit_enabled,
         step=step,
         updated_status=updated_status,
         is_new_sign=is_new_sign,
@@ -1243,7 +1244,10 @@ async def _record_fishing_ledger(
 
 
 async def stop_fishing(
-    user_id: str, gm_mode: bool = False, is_private: bool = False
+    user_id: str,
+    gm_mode: bool = False,
+    is_private: bool = False,
+    limit_enabled: bool = True,
 ) -> tuple[dict | None, list[str], bool]:
     """收杆：结算所有鱼获，输出结果。
 
@@ -1278,6 +1282,7 @@ async def stop_fishing(
                 user_id,
                 gm_mode=gm_mode,
                 is_private=is_private,
+                limit_enabled=limit_enabled,
                 step=step,
                 updated_status=updated_status,
                 is_new_sign=is_new_sign,

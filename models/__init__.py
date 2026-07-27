@@ -9,11 +9,13 @@
 - ledger.py: FishingLedger (账本)
 - web_key.py: FishingWebKey
 - announcement.py: FishingActiveGroup
+- global_config.py: FishingGlobalConfig
 """
 
 from .announcement import FishingActiveGroup
 from .buff import BuffEffect, BuffMeta, FishingBuff, FishingBuffCalculator
 from .exchange import FishingExchangeRecord
+from .global_config import FishingGlobalConfig
 from .ledger import FishingLedger
 from .user import FishingUser, _make_naive
 from .weather import FishingWeather
@@ -26,6 +28,7 @@ __all__ = [
     "FishingBuff",
     "FishingBuffCalculator",
     "FishingExchangeRecord",
+    "FishingGlobalConfig",
     "FishingLedger",
     "FishingUser",
     "FishingWeather",

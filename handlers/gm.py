@@ -425,7 +425,7 @@ async def _(matcher: Matcher):
 
     from ..services.limit_service import set_group_action_limit_enabled
 
-    set_group_action_limit_enabled(True)
+    await set_group_action_limit_enabled(True)
     logger.info("GM开启群聊钓鱼限流（收杆/钓鱼状态）")
     await matcher.finish(
         "已开启群聊钓鱼限流：群里「钓鱼状态」「收杆」恢复每日次数限制。"
@@ -438,9 +438,9 @@ async def _(matcher: Matcher):
 
     from ..services.limit_service import set_group_action_limit_enabled
 
-    set_group_action_limit_enabled(False)
+    await set_group_action_limit_enabled(False)
     logger.info("GM关闭群聊钓鱼限流（收杆/钓鱼状态）")
     await matcher.finish(
         "已关闭群聊钓鱼限流：群里可无限次查看「钓鱼状态」与「收杆」（私聊本就无限流）。"
-        "\n重启机器人后默认会重新开启限流。"
+        "\n该设置已保存，重启机器人后仍然生效。"
     )
