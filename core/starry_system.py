@@ -144,6 +144,8 @@ FEATURES = [
     ("parity", 6, "6_all_odd", 1.806180),
     ("parity", 6, "6_all_even", 1.806180),
     ("rhythm", 4, "ABAB", 1.598599),
+    # ABABAB 六位严格交替且 A≠B；90/1e6 → 4.045757，命中时仅吸收其三个 ABAB 窗口。
+    ("rhythm", 6, "ABABAB", 4.045757),
     # ABCABC 允许 A/B/C 彼此重复，但排除六位全同；990/1e6 → 3.004365
     ("rhythm", 6, "ABCABC", 3.004365),
     ("star_airplane", 6, "star_airplane", 1.899285),
@@ -275,6 +277,12 @@ def _motif_abab(digits: Sequence[int], start: int) -> bool:
         digits[start] == digits[start + 2]
         and digits[start + 1] == digits[start + 3]
         and digits[start] != digits[start + 1]
+    )
+
+
+def _motif_ababab(digits: Sequence[int]) -> bool:
+    return all(digits[index] == digits[index % 2] for index in range(2, DIGITS)) and (
+        digits[0] != digits[1]
     )
 
 
@@ -563,9 +571,16 @@ def score_starry_fish(value: int | str) -> StarryFish:
                     _feature(f"{length}_permutation", "permutation", span)
                 )
 
-    for start in range(DIGITS - 4 + 1):
-        if _motif_abab(digits, start):
-            features.append(_feature("ABAB", "rhythm", f"{start + 1}-{start + 4}"))
+    has_ababab = _motif_ababab(digits)
+    if has_ababab:
+        # 只吸收完整六位内部的三个 ABAB 窗口，不参与其他家族的吸收关系。
+        features.append(_feature("ABABAB", "rhythm", "1-6", "六位严格交替且A≠B"))
+    else:
+        for start in range(DIGITS - 4 + 1):
+            if _motif_abab(digits, start):
+                features.append(
+                    _feature("ABAB", "rhythm", f"{start + 1}-{start + 4}")
+                )
     if _motif_abcabc(digits):
         features.append(_feature("ABCABC", "rhythm", "1-6"))
 
@@ -643,6 +658,7 @@ def label_cn(label: str) -> str:
         "6_all_odd": "6位全奇",
         "6_all_even": "6位全偶",
         "ABAB": "ABAB",
+        "ABABAB": "ABABAB",
         "ABCABC": "ABCABC",
         "star_airplane": "星空飞机",
         "two_pair": "两对",

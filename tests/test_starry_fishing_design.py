@@ -547,6 +547,22 @@ class TestStarWishNumbers:
         mirror_labels = {feature.label for feature in mirror.features}
         assert "mirror_sum" in mirror_labels
 
+    def test_ababab_absorbs_only_its_three_abab_windows(self):
+        scored = score_starry_fish("252525")
+        rhythm_labels = [
+            feature.label for feature in scored.features if feature.family == "rhythm"
+        ]
+
+        assert rhythm_labels.count("ABABAB") == 1
+        assert "ABAB" not in rhythm_labels
+        assert next(
+            feature for feature in scored.features if feature.label == "ABABAB"
+        ).score == pytest.approx(4.045757)
+        # ABABAB 不吸收其它家族；252525 同时仍命中回文、镜和规则。
+        labels = {feature.label for feature in scored.features}
+        assert "5_palindrome" in labels
+        assert "mirror_sum" in labels
+
     def test_abcabc_allows_repeated_symbols_but_not_all_same(self):
         repeated = score_starry_fish("112112")
         abcabc = next(feature for feature in repeated.features if feature.label == "ABCABC")

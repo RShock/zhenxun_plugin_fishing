@@ -1806,9 +1806,10 @@ code, .ic {
           <tr><td>6 位全偶</td><td>1.81</td><td>六位数字全部为偶数（0、2、4、6、8），概率 1.5625%</td></tr>
 
           <tr>
-            <td rowspan="2"><span class="tag t-utr">周期节奏</span><br><span style="font-size:11px;color:var(--sub)">可与其它家族叠加</span></td>
+            <td rowspan="3"><span class="tag t-utr">周期节奏</span><br><span style="font-size:11px;color:var(--sub)">可与其它家族叠加</span></td>
             <td>ABAB</td><td>1.60</td><td>四位交替 <code>abab</code>（a≠b）；不同起点的窗口可各计一次</td>
           </tr>
+          <tr><td>ABABAB</td><td>4.05</td><td>六位严格交替且 a≠b，如 <code>252525</code>；命中后不再计算其中三个 ABAB 窗口，但不影响其它家族</td></tr>
           <tr><td>ABCABC</td><td>3.00</td><td>六位重复两遍三段，a、b、c 允许重复但不能全同，如 <code>123123</code>、<code>112112</code></td></tr>
 
           <tr>
@@ -2026,6 +2027,7 @@ code, .ic {
     ['parity', 6, '6_all_odd', 1.806180],
     ['parity', 6, '6_all_even', 1.806180],
     ['rhythm', 4, 'ABAB', 1.598599],
+    ['rhythm', 6, 'ABABAB', 4.045757],
     ['rhythm', 6, 'ABCABC', 3.004365],
     ['star_airplane', 6, 'star_airplane', 1.899285],
     ['pairs', 2, 'two_pair', 1.595508],
@@ -2126,7 +2128,7 @@ code, .ic {
       '6_all_small_0_4': '6位全小(0-4)', '6_all_big_5_9': '6位全大(5-9)',
       '6_all_odd': '6位全奇', '6_all_even': '6位全偶',
       '4_permutation': '排列4', '5_permutation': '排列5', '6_permutation': '排列6',
-      ABAB: 'ABAB', ABCABC: 'ABCABC', star_airplane: '星空飞机',
+      ABAB: 'ABAB', ABABAB: 'ABABAB', ABCABC: 'ABCABC', star_airplane: '星空飞机',
       two_pair: '两对', three_pair: '三对', full_house: '葫芦',
       chunk_sequence: '连号', frog_jump_6: '蛙跳6', mirror_sum: '镜和', pihu: '屁胡'
     };
@@ -2220,9 +2222,16 @@ code, .ic {
       features.push(starryFeature('frog_jump_6', 'frog_jump', '1-6'));
     if(digits[0] + digits[5] === digits[1] + digits[4] && digits[1] + digits[4] === digits[2] + digits[3])
       features.push(starryFeature('mirror_sum', 'mirror_sum', '1-6'));
-    for(var start = 0; start <= 2; start++){
-      if(digits[start] === digits[start + 2] && digits[start + 1] === digits[start + 3] && digits[start] !== digits[start + 1])
-        features.push(starryFeature('ABAB', 'rhythm', (start + 1) + '-' + (start + 4)));
+    var hasAbabab = digits[0] !== digits[1] && digits.every(function(digit, index){
+      return index < 2 || digit === digits[index % 2];
+    });
+    if(hasAbabab){
+      features.push(starryFeature('ABABAB', 'rhythm', '1-6', '六位严格交替且A≠B'));
+    } else {
+      for(var start = 0; start <= 2; start++){
+        if(digits[start] === digits[start + 2] && digits[start + 1] === digits[start + 3] && digits[start] !== digits[start + 1])
+          features.push(starryFeature('ABAB', 'rhythm', (start + 1) + '-' + (start + 4)));
+      }
     }
     if(digits[0] === digits[3] && digits[1] === digits[4] && digits[2] === digits[5] &&
         new Set(digits.slice(0, 3)).size > 1)

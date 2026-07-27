@@ -44,7 +44,8 @@ static const double S_BIG   = 1.806180;
 static const double S_ODD   = 1.806180;
 static const double S_EVEN  = 1.806180;
 static const double S_ABAB  = 1.598599;
-static const double S_ABCABC= 3.142668;
+static const double S_ABABAB= 4.045757;
+static const double S_ABCABC= 3.004365;
 static const double S_AIR   = 1.899285;
 static const double S_2PAIR = 1.595508;
 static const double S_3PAIR = 3.091515;
@@ -153,6 +154,11 @@ static int contained_in_larger(unsigned ok, int start, int length) {
 
 static int motif_abab(const int *d, int s) {
     return d[s] == d[s + 2] && d[s + 1] == d[s + 3] && d[s] != d[s + 1];
+}
+
+static int motif_ababab(const int *d) {
+    return d[0] != d[1] && d[0] == d[2] && d[0] == d[4]
+        && d[1] == d[3] && d[1] == d[5];
 }
 
 static int motif_abcabc(const int *d) {
@@ -301,8 +307,13 @@ static double score_raw(int value) {
         }
     }
 
-    for (start = 0; start <= 2; ++start) {
-        if (motif_abab(d, start)) { total += S_ABAB; hit = 1; }
+    if (motif_ababab(d)) {
+        /* ABABAB 只吸收其内部三个 ABAB 窗口，其他家族照常累计。 */
+        total += S_ABABAB; hit = 1;
+    } else {
+        for (start = 0; start <= 2; ++start) {
+            if (motif_abab(d, start)) { total += S_ABAB; hit = 1; }
+        }
     }
     if (motif_abcabc(d)) { total += S_ABCABC; hit = 1; }
 

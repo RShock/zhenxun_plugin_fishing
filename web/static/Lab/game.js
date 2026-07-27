@@ -41,11 +41,11 @@
     "3_snake":1.180417,"4_snake":1.567993,"5_snake":2.133004,"6_snake":2.838033,
     "3_palindrome":.505804,"4_palindrome":1.570086,"5_palindrome":1.705313,"6_palindrome":3.004365,
     "6_all_small_0_4":1.806180,"6_all_big_5_9":1.806180,"6_all_odd":1.806180,"6_all_even":1.806180,
-    ABAB:1.598599,ABCABC:3.004365,star_airplane:1.899285,two_pair:1.359121,three_pair:3.091515,
+    ABAB:1.598599,ABABAB:4.045757,ABCABC:3.004365,star_airplane:1.899285,two_pair:1.359121,three_pair:3.091515,
     full_house:2.454693,chunk_sequence:2.658763,"4_permutation":1.444857,"5_permutation":1.947691,"6_permutation":2.443697,
     frog_jump_6:3.376751,mirror_sum:2.296709,pihu:.802444
   };
-  const DIRECT_LABEL = {"6_all_small_0_4":"6位全小(0-4)","6_all_big_5_9":"6位全大(5-9)","6_all_odd":"6位全奇","6_all_even":"6位全偶","4_permutation":"排列4","5_permutation":"排列5","6_permutation":"排列6",ABAB:"ABAB",ABCABC:"ABCABC",star_airplane:"星空飞机",two_pair:"两对",three_pair:"三对",full_house:"葫芦",chunk_sequence:"连号",frog_jump_6:"蛙跳6",mirror_sum:"镜和",pihu:"屁胡"};
+  const DIRECT_LABEL = {"6_all_small_0_4":"6位全小(0-4)","6_all_big_5_9":"6位全大(5-9)","6_all_odd":"6位全奇","6_all_even":"6位全偶","4_permutation":"排列4","5_permutation":"排列5","6_permutation":"排列6",ABAB:"ABAB",ABABAB:"ABABAB",ABCABC:"ABCABC",star_airplane:"星空飞机",two_pair:"两对",three_pair:"三对",full_house:"葫芦",chunk_sequence:"连号",frog_jump_6:"蛙跳6",mirror_sum:"镜和",pihu:"屁胡"};
   const SUFFIX = {same_run:"同号连段",step_high:"步步高",slide:"滑梯",pure_snake:"纯正贪吃蛇",snake:"贪吃蛇",palindrome:"回文",permutation:"排列"};
 
   const $ = id => document.getElementById(id);
@@ -93,6 +93,7 @@
   function frogJump6(d){const diff=d.slice(1).map((x,i)=>x-d[i]);return diff.every(x=>x>0)||diff.every(x=>x<0)}
   function mirrorSum(d){return d[0]+d[5]===d[1]+d[4]&&d[1]+d[4]===d[2]+d[3]}
   function motifAbab(d,s){return d[s]===d[s+2]&&d[s+1]===d[s+3]&&d[s]!==d[s+1]}
+  function motifAbabab(d){return d[0]!==d[1]&&d.every((x,i)=>i<2||x===d[i%2])}
   function motifAbcabc(d){const [a,b,c]=d;return a===d[3]&&b===d[4]&&c===d[5]&&new Set([a,b,c]).size>1}
   function chunkSequence(d){const a=[d[0]*10+d[1],d[2]*10+d[3],d[4]*10+d[5]];if(a[1]-a[0]===a[2]-a[1]&&Math.abs(a[1]-a[0])===1)return"2+2+2";const x=d[0]*100+d[1]*10+d[2],y=d[3]*100+d[4]*10+d[5];return Math.abs(y-x)===1?"3+3":null}
   function starAirplane(d){for(let i=1;i<5;i++)if(d[i]!==d[i-1]&&d[i]!==d[i+1])return false;return true}
@@ -122,7 +123,7 @@
     }
     if(frogJump6(d))f.push(makeFeature("frog_jump_6","frog_jump","1-6"));
     if(mirrorSum(d))f.push(makeFeature("mirror_sum","mirror_sum","1-6"));
-    for(let s=0;s<=2;s++)if(motifAbab(d,s))f.push(makeFeature("ABAB","rhythm",`${s+1}-${s+4}`));if(motifAbcabc(d))f.push(makeFeature("ABCABC","rhythm","1-6"));
+    if(motifAbabab(d))f.push(makeFeature("ABABAB","rhythm","1-6","六位严格交替且A≠B"));else for(let s=0;s<=2;s++)if(motifAbab(d,s))f.push(makeFeature("ABAB","rhythm",`${s+1}-${s+4}`));if(motifAbcabc(d))f.push(makeFeature("ABCABC","rhythm","1-6"));
     const pairs=exactPairRuns(d);if(pairs.length>=2){const lab=pairs.length>=3?"three_pair":"two_pair";f.push(makeFeature(lab,"pairs",`${pairs[0][0]+1}-${pairs[pairs.length-1][1]}`))}
     const spans=[];for(let s=0;s<=1;s++)if(fullHouse(d,s))spans.push([s,s+5]);if(spans.length)f.push(makeFeature("full_house","full_house",`${spans[0][0]+1}-${spans[spans.length-1][1]}`));
     const seq=chunkSequence(d);if(seq)f.push(makeFeature("chunk_sequence","chunk_sequence","1-6",seq));
