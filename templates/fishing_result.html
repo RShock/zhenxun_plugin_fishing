@@ -207,6 +207,20 @@
     background: #eef6ff;
     color: #24527a;
 }
+.starry-features {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+.starry-feature {
+    font-size: 10px;
+    padding: 3px 5px;
+    border-radius: 5px;
+    background: #eef6ff;
+    color: #24527a;
+    word-break: break-all;
+}
 .starry-card-reward {
     margin-top: 6px;
     padding: 4px 8px;
@@ -369,10 +383,17 @@
                 <div class="starry-score">{{ card.display_score }}分</div>
             </div>
             <div class="starry-meta">
-                <span class="starry-chip">{{ card.band }}</span>
                 <span class="starry-chip">{{ card.reward_pool }}</span>
-                <span class="starry-chip">{{ card.feature_summary }}</span>
             </div>
+            {% if card.features %}
+            <div class="starry-features">
+                {% for feature in card.features %}<span class="starry-feature">{{ feature }}</span>{% endfor %}
+            </div>
+            {% else %}
+            <div class="starry-features">
+                <span class="starry-feature">无显著番型</span>
+            </div>
+            {% endif %}
             {% if card.reward_text %}
             <div class="starry-card-reward">🎁 抽中 {{ card.reward_text }}</div>
             {% elif card.reward_pool and card.reward_pool != '无奖励' %}

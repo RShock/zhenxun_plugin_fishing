@@ -230,7 +230,7 @@ async def render_starry_ranking(
     entries: (user_id, nickname, exhibition_records) 列表，来自全表扫描。
     展馆记录保存的是入馆时分数快照，这里按当前规则重算以确保排行一致性。
     """
-    from ..core.starry_system import REWARD_POOL_NAMES, band, score_starry_fish
+    from ..core.starry_system import REWARD_POOL_NAMES, score_starry_fish
 
     flat: list[dict] = []
     for user_id, nickname, records in entries:
@@ -254,12 +254,11 @@ async def render_starry_ranking(
                     "digit_text_colors": digit_text_colors,
                     "score": round(scored.raw_score, 3),
                     "display_score": scored.display_score,
-                    "band": band(scored.display_score),
                     "reward_pool": REWARD_POOL_NAMES.get(
                         scored.reward_pool, scored.reward_pool
                     ),
                     "features": [
-                        f.display_name for f in scored.features[:4]
+                        f.display_name for f in scored.features
                     ],
                 }
             )

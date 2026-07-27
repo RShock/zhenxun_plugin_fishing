@@ -148,6 +148,7 @@
     border-radius: 5px;
     background: #eef6ff;
     color: #24527a;
+    word-break: break-all;
 }
 {% endblock %}
 
@@ -187,7 +188,6 @@
             </div>
         </div>
         <div class="starry-meta">
-            <span class="starry-chip">{{ card.band }}</span>
             <span class="starry-chip pool">{{ card.reward_pool }}</span>
             {% if card.location_id %}<span class="starry-chip">{{ card.location_id }}</span>{% endif %}
         </div>

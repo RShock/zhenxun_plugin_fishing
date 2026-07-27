@@ -407,7 +407,11 @@ class TestStarWishNumbers:
         scored = score_starry_fish("011110")
         assert scored.display_score == 17
         assert scored.reward_pool == "ultimate"
-        assert scored.raw_score == pytest.approx(16.838223, abs=0.00001)
+        assert scored.raw_score == pytest.approx(16.845432, abs=0.00001)
+        # 011110 是6位双滑梯，吸收内部两个5位滑梯
+        labels = {f.label for f in scored.features}
+        assert "6_double_slide" in labels
+        assert "5_slide" not in labels
 
     def test_777777_scores_each_family_independently(self):
         """全同号也属于普通滑梯和镜像回文，各家族独立计分。"""
@@ -428,6 +432,74 @@ class TestStarWishNumbers:
         assert not any(
             feature.label.startswith(("3_", "4_", "5_")) for feature in scored.features
         )  # 每个窗口家族内仍由 6 位长段吸收短段
+
+    def test_double_slide_6_digit_absorbs_internal_slides(self):
+        """6位双滑梯 xyyyyx（如011110）吸收内部所有单滑梯，防止计为两个5位滑梯。"""
+        scored = score_starry_fish("011110")
+        labels = {f.label for f in scored.features}
+        assert "6_double_slide" in labels
+        # 内部5位滑梯(01111, 11110)和更短滑梯全部被吸收
+        assert "5_slide" not in labels
+        assert "4_slide" not in labels
+        assert "3_slide" not in labels
+        # 确认双滑梯分值
+        ds = next(f for f in scored.features if f.label == "6_double_slide")
+        assert ds.score == pytest.approx(4.744727, abs=0.000001)
+
+    def test_double_slide_5_digit_partial_absorption(self):
+        """5位双滑梯 xyyyx（如001110中的11110）吸收内部滑梯，但不吸收溢出的5位滑梯。"""
+        # 001110: 5位双滑梯在(1,5)覆盖位置2-6；5位滑梯在(0,5)覆盖位置1-5，未被覆盖
+        scored = score_starry_fish("001110")
+        labels = {f.label for f in scored.features}
+        assert "5_double_slide" in labels
+        # 位置1-5的5位滑梯(00111)未被双滑梯覆盖，仍单独计分
+        assert "5_slide" in labels
+        # 双滑梯内部的4位滑梯被吸收
+        assert "4_slide" not in labels
+
+    def test_double_slide_4_digit_absorbs_internal_slides(self):
+        """4位双滑梯 xyyx（如000110中的0110）吸收内部3位滑梯。"""
+        # 000110: 4位双滑梯在(2,4)覆盖位置3-6
+        scored = score_starry_fish("000110")
+        labels = {f.label for f in scored.features}
+        assert "4_double_slide" in labels
+        # 双滑梯内部(位置3-6)的3位滑梯被吸收，不单独出现
+        regular_slides = [
+            f for f in scored.features
+            if f.label.endswith("_slide") and "double" not in f.label
+        ]
+        for f in regular_slides:
+            # 滑梯的起始位不应在双滑梯覆盖范围(3-6)内
+            assert int(f.span.split("-")[0]) < 3
+
+    def test_double_slide_maximal_absorption(self):
+        """较大双滑梯吸收较小双滑梯：6位双滑梯吸收内部4位/5位双滑梯。"""
+        # 011110 只有6位双滑梯，不应同时出现4位或5位双滑梯
+        scored = score_starry_fish("011110")
+        ds_labels = {f.label for f in scored.features if "double_slide" in f.label}
+        assert ds_labels == {"6_double_slide"}
+
+    def test_double_slide_not_triggered_when_adjacent_not_1(self):
+        """|x-y|≠1时不构成双滑梯（如0220, 0330等差值不为1的情况）。"""
+        # 0220: x=0, y=2, |x-y|=2 → 不是双滑梯
+        scored = score_starry_fish("002200")
+        labels = {f.label for f in scored.features}
+        assert not any("double_slide" in l for l in labels)
+
+    def test_double_slide_score_values(self):
+        """验证三种长度双滑梯的分值与概率匹配。"""
+        # 4位: 5382/1e6 → 2.269056
+        s4 = score_starry_fish("000110")
+        ds4 = next(f for f in s4.features if f.label == "4_double_slide")
+        assert ds4.score == pytest.approx(2.269056, abs=0.000001)
+        # 5位: 360/1e6 → 3.443697
+        s5 = score_starry_fish("001110")
+        ds5 = next(f for f in s5.features if f.label == "5_double_slide")
+        assert ds5.score == pytest.approx(3.443697, abs=0.000001)
+        # 6位: 18/1e6 → 4.744727
+        s6 = score_starry_fish("011110")
+        ds6 = next(f for f in s6.features if f.label == "6_double_slide")
+        assert ds6.score == pytest.approx(4.744727, abs=0.000001)
 
     def test_pair_features_two_and_three_pair(self):
         """两对：相邻两段长度≥2且数字不同；三对：3段长度2且中间与两侧不同。三对吸收两对。

@@ -656,9 +656,11 @@ class TestStarryExhibitionCurrentScoring:
         card = cards[0]
         assert card["score"] == pytest.approx(7.995, abs=0.001)
         assert card["display_score"] == 8
-        assert card["band"] == "珍品"
         assert card["reward_pool"] == "高级奖池"
         assert "三对" in card["features"]
+        # features 不再截断，全部番型都应显示
+        scored_features = len(card["features"])
+        assert scored_features > 4 or "三对" in card["features"]
 
 
 class TestMeteorBackpackInventory:

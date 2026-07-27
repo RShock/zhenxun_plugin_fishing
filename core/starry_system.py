@@ -95,6 +95,7 @@ CN_FAMILY = {
     "same_run": "同号连段",
     "step_high": "步步高",
     "slide": "滑梯",
+    "double_slide": "双滑梯",
     "pure_snake": "纯正贪吃蛇",
     "snake": "贪吃蛇",
     "palindrome": "镜像回文",
@@ -121,6 +122,12 @@ FEATURES = [
     ("slide", 4, "4_slide", 1.517984),
     ("slide", 5, "5_slide", 2.368759),
     ("slide", 6, "6_slide", 3.337242),
+    # 双滑梯：xyy...yx 模式，|x-y|=1（如 0110, 01110, 011110）
+    # 吸收内部所有单滑梯番型，防止 011110 被计为两个5滑梯导致分数虚高
+    # 4位: 5382/1e6 → 2.269056；5位: 360/1e6 → 3.443697；6位: 18/1e6 → 4.744727
+    ("double_slide", 4, "4_double_slide", 2.269056),
+    ("double_slide", 5, "5_double_slide", 3.443697),
+    ("double_slide", 6, "6_double_slide", 4.744727),
     ("pure_snake", 3, "3_pure_snake", 1.180417),
     ("pure_snake", 4, "4_pure_snake", 1.874649),
     ("pure_snake", 5, "5_pure_snake", 2.698536),
@@ -190,7 +197,7 @@ class StarryFish:
     def feature_summary(self) -> str:
         if not self.features:
             return "无显著番型"
-        return " + ".join(feature.display_name for feature in self.features[:4])
+        return " + ".join(feature.display_name for feature in self.features)
 
 
 def format_starry_fish_id(value: int | str) -> str:
@@ -224,6 +231,24 @@ def _window_slide(digits: Sequence[int], start: int, length: int) -> bool:
     return all(diff in (0, 1) for diff in diffs) or all(
         diff in (0, -1) for diff in diffs
     )
+
+
+def _window_double_slide(digits: Sequence[int], start: int, length: int) -> bool:
+    """双滑梯窗口检测：xyy...yx 模式，首尾相同(x)，中间全为相邻值(y)，|x-y|=1。
+
+    例如 0110(4位), 01110(5位), 011110(6位)。
+    双滑梯本身不是单滑梯（方向先升后降或先降后升），
+    但会吸收其内部的所有单滑梯窗口，防止重复计分。
+    """
+    if length < 4:
+        return False
+    x = digits[start]
+    y = digits[start + 1]
+    if x == y or abs(x - y) != 1:
+        return False
+    if not all(digits[start + i] == y for i in range(1, length - 1)):
+        return False
+    return digits[start + length - 1] == x
 
 
 def _window_snake(digits: Sequence[int], start: int, length: int, pure: bool) -> bool:
@@ -407,6 +432,44 @@ def _contained_in_larger(
     return False
 
 
+def _double_slide_maximal_spans(
+    digits: Sequence[int],
+) -> list[tuple[int, int, int]]:
+    """返回所有极大双滑梯窗口 (start, length, end)。
+
+    较小的双滑梯若被更大的双滑梯完全覆盖则被吸收。
+    """
+    all_ds: list[tuple[int, int, int]] = []
+    for length in (4, 5, 6):
+        for start in range(DIGITS - length + 1):
+            if _window_double_slide(digits, start, length):
+                all_ds.append((start, length, start + length))
+
+    maximal: list[tuple[int, int, int]] = []
+    for ds_start, ds_len, ds_end in all_ds:
+        contained = False
+        for other_start, other_len, other_end in all_ds:
+            if (other_start, other_len) == (ds_start, ds_len):
+                continue
+            if other_start <= ds_start and ds_end <= other_end:
+                contained = True
+                break
+        if not contained:
+            maximal.append((ds_start, ds_len, ds_end))
+    return maximal
+
+
+def _contained_in_double_slide(
+    ds_spans: list[tuple[int, int, int]], start: int, length: int
+) -> bool:
+    """检查 (start, start+length) 是否被任一双滑梯窗口完全覆盖。"""
+    end = start + length
+    for ds_start, _ds_len, ds_end in ds_spans:
+        if ds_start <= start and end <= ds_end:
+            return True
+    return False
+
+
 
 def _format_digit_span(positions: Iterable[int]) -> str:
     """Compact 0-based indices into a 1-based span string (e.g. 1-2,6)."""
@@ -460,6 +523,19 @@ def score_starry_fish(value: int | str) -> StarryFish:
             _feature("star_airplane", "star_airplane", "1-6", "第2-5位均属于至少2连块")
         )
 
+    # 双滑梯检测：先找出所有极大双滑梯窗口，再在滑梯处理时吸收内部单滑梯
+    ds_spans = _double_slide_maximal_spans(digits)
+    for ds_start, ds_len, ds_end in ds_spans:
+        span = f"{ds_start + 1}-{ds_end}"
+        features.append(
+            _feature(
+                f"{ds_len}_double_slide",
+                "double_slide",
+                span,
+                "xyy...yx模式，吸收内部单滑梯",
+            )
+        )
+
     for length in range(3, DIGITS + 1):
         for start in range(DIGITS - length + 1):
             span = f"{start + 1}-{start + length}"
@@ -467,8 +543,11 @@ def score_starry_fish(value: int | str) -> StarryFish:
                 ok["same_run"], start, length
             ):
                 features.append(_feature(f"{length}_same_run", "same_run", span))
-            if ok["slide"][(start, length)] and not _contained_in_larger(
-                ok["slide"], start, length
+            # 滑梯/步步高：被双滑梯完全覆盖的窗口跳过，由双滑梯吸收
+            if (
+                ok["slide"][(start, length)]
+                and not _contained_in_larger(ok["slide"], start, length)
+                and not _contained_in_double_slide(ds_spans, start, length)
             ):
                 if ok["step_high"][(start, length)]:
                     features.append(
@@ -495,8 +574,11 @@ def score_starry_fish(value: int | str) -> StarryFish:
                     )
                 else:
                     features.append(_feature(f"{length}_snake", "snake", span))
-            if ok["palindrome"][(start, length)] and not _contained_in_larger(
-                ok["palindrome"], start, length
+            # 同号吸收同号回文：被同号连段完全覆盖的回文不计分
+            if (
+                ok["palindrome"][(start, length)]
+                and not _contained_in_larger(ok["palindrome"], start, length)
+                and not _contained_in_larger(ok["same_run"], start, length)
             ):
                 features.append(_feature(f"{length}_palindrome", "palindrome", span))
 
@@ -595,6 +677,7 @@ def label_cn(label: str) -> str:
         "same_run": "同号连段",
         "step_high": "步步高",
         "slide": "滑梯",
+        "double_slide": "双滑梯",
         "pure_snake": "纯正贪吃蛇",
         "snake": "贪吃蛇",
         "palindrome": "回文",

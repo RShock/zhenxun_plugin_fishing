@@ -36,6 +36,7 @@
 static const double S_SAME[7] = {0,0,0, 1.432856, 2.552842, 3.721246, 5.0};
 static const double S_STEP[7] = {0,0,0, 1.227224, 2.402305, 3.638272, 5.0};
 static const double S_SLIDE[7]= {0,0,0, 0.757901, 1.517984, 2.368759, 3.337242};
+static const double S_DSLIDE[7]= {0,0,0,0, 2.269056, 3.443697, 4.744727};
 static const double S_PSNK[7] = {0,0,0, 1.180417, 1.874649, 2.698536, 3.653647};
 static const double S_SNAK[7] = {0,0,0, 1.180417, 1.567993, 2.133004, 2.838033};
 static const double S_PAL[7]  = {0,0,0, 0.505804, 1.570086, 1.705313, 3.004365};
@@ -89,6 +90,19 @@ static int window_slide(const int *d, int s, int len) {
         if (!all_up && !all_dn) return 0;
     }
     return all_up || all_dn;
+}
+
+/* Double slide: xyy...yx where |x-y|=1 (e.g. 0110, 01110, 011110).
+   Absorbs all internal single slides to prevent double-counting. */
+static int window_double_slide(const int *d, int s, int len) {
+    int x, y, i;
+    if (len < 4) return 0;
+    x = d[s];
+    y = d[s + 1];
+    if (x == y || (x - y != 1 && y - x != 1)) return 0;
+    for (i = 1; i < len - 1; ++i)
+        if (d[s + i] != y) return 0;
+    return d[s + len - 1] == x;
 }
 
 static int window_snake(const int *d, int s, int len, int pure) {
@@ -221,6 +235,7 @@ static int full_house_any(const int *d) {
 static double score_raw(int value) {
     int d[DIGITS];
     unsigned ok_same = 0, ok_step = 0, ok_slide = 0, ok_snake = 0, ok_pure = 0, ok_pal = 0;
+    unsigned ok_ds = 0;
     int length, start;
     double total = 0.0;
     int hit = 0;
@@ -235,6 +250,7 @@ static double score_raw(int value) {
             if (window_same(d, start, length))  ok_same  |= bit;
             if (window_step(d, start, length))  ok_step  |= bit;
             if (window_slide(d, start, length)) ok_slide |= bit;
+            if (length >= 4 && window_double_slide(d, start, length)) ok_ds |= bit;
             if (window_snake(d, start, length, 1)) ok_pure |= bit;
             if (window_snake(d, start, length, 0)) ok_snake |= bit;
             if (window_pal(d, start, length))   ok_pal   |= bit;
@@ -255,13 +271,25 @@ static double score_raw(int value) {
     }
     if (star_airplane(d)) { total += S_AIR; hit = 1; }
 
+    /* Double slide scoring: maximal windows only (smaller absorbed by larger) */
+    for (length = 4; length <= DIGITS; ++length) {
+        for (start = 0; start <= DIGITS - length; ++start) {
+            unsigned bit = 1u << bit_of(start, length);
+            if ((ok_ds & bit) && !contained_in_larger(ok_ds, start, length)) {
+                total += S_DSLIDE[length]; hit = 1;
+            }
+        }
+    }
+
     for (length = 3; length <= DIGITS; ++length) {
         for (start = 0; start <= DIGITS - length; ++start) {
             unsigned bit = 1u << bit_of(start, length);
             if ((ok_same & bit) && !contained_in_larger(ok_same, start, length)) {
                 total += S_SAME[length]; hit = 1;
             }
-            if ((ok_slide & bit) && !contained_in_larger(ok_slide, start, length)) {
+            /* Slide/step: skip if contained in larger slide OR in any double slide */
+            if ((ok_slide & bit) && !contained_in_larger(ok_slide, start, length)
+                && !contained_in_larger(ok_ds, start, length)) {
                 if (ok_step & bit) total += S_STEP[length];
                 else total += S_SLIDE[length];
                 hit = 1;
@@ -271,7 +299,9 @@ static double score_raw(int value) {
                 else total += S_SNAK[length];
                 hit = 1;
             }
-            if ((ok_pal & bit) && !contained_in_larger(ok_pal, start, length)) {
+            /* 同号吸收同号回文：被同号连段完全覆盖的回文不计分 */
+            if ((ok_pal & bit) && !contained_in_larger(ok_pal, start, length)
+                && !contained_in_larger(ok_same, start, length)) {
                 total += S_PAL[length]; hit = 1;
             }
         }
@@ -437,7 +467,7 @@ static int run_selftest(void) {
     /* Compare a few anchors against known Python results (current rules). */
     struct { int id; double raw; } cases[] = {
         {777777, 16.853252},
-        {122221, 16.838223},
+        {122221, 16.845432},
         {222422, 8.014234},
         {0, 0.0},
     };
@@ -491,7 +521,7 @@ int main(int argc, char **argv) {
         long long pool_none = 0, pool_low = 0, pool_middle = 0, pool_high = 0, pool_ultimate = 0;
         long long total_raw_milli = 0; /* 千倍原始分累计，避免浮点漂移 */
         int max_disp = 0;
-        double e_raw = 0.0;
+        double e_raw = 0.0, e_raw_sq = 0.0;
         memset(hist, 0, sizeof(hist));
         for (i = 0; i < SPACE; ++i) {
             double raw = score_raw(i);
@@ -500,6 +530,7 @@ int main(int argc, char **argv) {
             if (disp >= 64) disp = 63;
             hist[disp]++;
             e_raw += raw;
+            e_raw_sq += raw * raw;
             if (disp > max_disp) max_disp = disp;
             if (disp <= 0) pool_none++;
             else if (disp <= 2) pool_low++;
@@ -509,6 +540,7 @@ int main(int argc, char **argv) {
         }
         printf("=== DISPLAY_SCORE HISTOGRAM (space=000000..999999, n=%d) ===\n", SPACE);
         printf("E[raw_score]     = %.6f\n", e_raw / SPACE);
+        printf("Std[raw_score]   = %.6f\n", sqrt(e_raw_sq / SPACE - (e_raw / SPACE) * (e_raw / SPACE)));
         {
             double e_disp = 0.0;
             for (i = 0; i <= max_disp; ++i) e_disp += (double)i * hist[i] / SPACE;

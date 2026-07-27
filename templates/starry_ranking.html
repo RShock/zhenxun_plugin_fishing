@@ -140,6 +140,7 @@
     border-radius: 999px;
     background: #e8eef7;
     color: #344054;
+    word-break: break-all;
 }
 .rank-chip.pool {
     background: #fff4d6;
@@ -167,7 +168,6 @@
                 <span class="rank-score">{{ entry.display_score }}分</span>
             </div>
             <div class="rank-chips">
-                <span class="rank-chip">{{ entry.band }}</span>
                 <span class="rank-chip pool">{{ entry.reward_pool }}</span>
                 {% for feature in entry.features %}<span class="rank-chip">{{ feature }}</span>{% endfor %}
             </div>

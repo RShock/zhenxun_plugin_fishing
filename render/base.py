@@ -407,7 +407,7 @@ def _starry_feature_digit_mask(
 def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
     if not records:
         return []
-    from ..core.starry_system import REWARD_POOL_NAMES, band, score_starry_fish
+    from ..core.starry_system import REWARD_POOL_NAMES, score_starry_fish
 
     cards = []
     for record in records:
@@ -442,13 +442,12 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
                 "pool_text_color": pool_text_color,
                 "score": round(scored.raw_score, 3),
                 "display_score": scored.display_score,
-                "band": band(scored.display_score),
                 "reward_pool": REWARD_POOL_NAMES.get(
                     scored.reward_pool,
                     scored.reward_pool,
                 ),
-                "features": feature_names[:6],
-                "feature_summary": " / ".join(feature_names[:3])
+                "features": feature_names,
+                "feature_summary": " / ".join(feature_names)
                 if feature_names
                 else "无显著番型",
                 "location_id": record.get("location_id", ""),
