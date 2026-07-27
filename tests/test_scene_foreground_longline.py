@@ -211,3 +211,47 @@ class TestLocationThumbnailSkipsForeground:
         monkeypatch.setattr(render_base, "SCENES_IMAGES_PATH", tmp_path)
         found = render_base._find_location_image_path("云鲸庭")
         assert found == bg
+
+
+class TestMirrorEffect:
+    """镜面倒影特效：以脚部线为轴向下翻转，轻度模糊，不越过脚部线。"""
+
+    def test_parse_mirror_heights(self):
+        assert fs._parse_special_and_layout("S@mirror_70") == (["mirror"], "70")
+
+    def test_parse_mirror_multi_heights(self):
+        assert fs._parse_special_and_layout("S@mirror_60_70") == (["mirror"], "60_70")
+
+    def test_parse_scene_layout_mirror(self):
+        layout = fs._parse_scene_layout("15-镜砂海-S@mirror_70")
+        assert layout["mode"] == "heights"
+        assert layout["heights"] == [70]
+        assert layout["effects"] == ["mirror"]
+
+    def test_actor_view_mirror_flag(self, tmp_path: Path):
+        img = tmp_path / "skin.png"
+        img.write_bytes(b"x")
+        view = fs._actor_view(
+            img, "A", (22.0, 61.0), (10.0, 70.0), -21, False, effects=["mirror"]
+        )
+        assert view["mirror"] is True
+        # mirror 不改变 special，仍走普通渲染分支（倒影作为附加层）
+        assert view["special"] == ""
+
+    def test_actor_view_no_mirror(self, tmp_path: Path):
+        img = tmp_path / "skin.png"
+        img.write_bytes(b"x")
+        view = fs._actor_view(
+            img, "A", (22.0, 61.0), (10.0, 70.0), 0, False, effects=[]
+        )
+        assert view["mirror"] is False
+
+    def test_mirror_coexists_with_longline(self, tmp_path: Path):
+        """mirror 与 longline 可同时声明；longline 仍走特殊渲染，mirror 标志同时置位。"""
+        img = tmp_path / "skin.png"
+        img.write_bytes(b"x")
+        view = fs._actor_view(
+            img, "A", (22.0, 61.0), (10.0, 70.0), 0, False,
+            effects=["longline", "mirror"],
+        )
+        assert view["mirror"] is True

@@ -581,6 +581,9 @@ def _actor_view(
         "scene_bottom": round(100 - scene_y, 2),
         "effects": effects,
         "special": "",
+        # 镜面特效：以脚部线（scene_bottom% + y_offset）为镜像轴向下翻转，
+        # 仅在脚部线以下绘制模糊倒影，不越过脚部线
+        "mirror": "mirror" in effects,
     }
     if "longline" in effects:
         # 自适应识别细钓线带；识别失败则退回普通渲染，避免误拉脚部
