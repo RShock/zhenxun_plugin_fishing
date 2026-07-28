@@ -123,6 +123,9 @@ class TestGoldService:
         assert entry.gold_anomaly is False
         assert entry.data["operation"] == "buy_bait"
         assert entry.data["amount"] == -300
+        assert entry.data["direction"] == "expense"
+        assert entry.data["category"] == "supplies"
+        assert entry.data["category_label"] == "购买消耗品"
 
     async def test_spend_gold_insufficient(self, db, ledger):
         from zhenxun.plugins.zhenxun_plugin_fishing.services import spend_gold
@@ -164,6 +167,21 @@ class TestGoldService:
         assert entries[0].gold_after == 700
         assert entries[0].data["amount"] == 200
         assert entries[0].data["operation"] == "sell_fish"
+        assert entries[0].data["direction"] == "income"
+        assert entries[0].data["category"] == "sale"
+        assert entries[0].data["category_label"] == "出售物品"
+
+    async def test_unknown_operation_uses_direction_fallback(self, db, ledger):
+        from zhenxun.plugins.zhenxun_plugin_fishing.services import earn_gold
+
+        user_id = "test_unknown_category"
+        await db.user_get_or_create(user_id)
+        await earn_gold(user_id, 50, "future_income")
+
+        entry = ledger.gold_entries(user_id)[0]
+        assert entry.data["direction"] == "income"
+        assert entry.data["category"] == "other_income"
+        assert entry.data["category_label"] == "其他收入"
 
     async def test_adjust_gold_positive(self, db, ledger):
         from zhenxun.plugins.zhenxun_plugin_fishing.services import adjust_gold

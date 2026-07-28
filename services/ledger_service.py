@@ -200,6 +200,38 @@ async def log_item_use(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
+_GOLD_CATEGORY_MAP = {
+    "fishing_income": ("fishing", "钓鱼结算"),
+    "sell_fish": ("sale", "出售物品"),
+    "sell_bait": ("sale", "出售物品"),
+    "cat_park_material": ("sale", "出售物品"),
+    "achievement": ("reward", "奖励收入"),
+    "gm_achievement": ("reward", "奖励收入"),
+    "gift_utr_unlock": ("reward", "奖励收入"),
+    "gift_reward": ("reward", "奖励收入"),
+    "cat_gift": ("reward", "奖励收入"),
+    "buy_bait": ("supplies", "购买消耗品"),
+    "upgrade_rod": ("upgrade", "装备升级"),
+    "upgrade_hook": ("upgrade", "装备升级"),
+    "build_starry_ship": ("construction", "设施建设"),
+    "exchange_gold": ("exchange", "货币兑换"),
+}
+
+
+def classify_gold_change(operation: str, amount: int) -> tuple[str, str, str]:
+    """返回收支方向、统计分类键和中文分类名。未知操作按金额方向兜底。"""
+    direction = "income" if amount > 0 else "expense" if amount < 0 else "neutral"
+    if operation.startswith("gm_"):
+        return direction, "admin", "管理调整"
+    category, label = _GOLD_CATEGORY_MAP.get(
+        operation,
+        ("other_income", "其他收入") if amount > 0 else
+        ("other_expense", "其他支出") if amount < 0 else
+        ("neutral", "无金额变动"),
+    )
+    return direction, category, label
+
+
 async def log_gold_change(
     user_id: str,
     *,
@@ -236,9 +268,13 @@ async def log_gold_change(
     except Exception:
         is_baseline = True
 
+    direction, category, category_label = classify_gold_change(operation, amount)
     data = {
         "operation": operation,
         "amount": amount,
+        "direction": direction,
+        "category": category,
+        "category_label": category_label,
         "reason": reason,
         "details": details or {},
         "timestamp": datetime.now().isoformat(),
