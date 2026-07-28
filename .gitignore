@@ -89,3 +89,6 @@ doc/s2设计/星穹矿脉/demo/sim*_result.json
 doc/s2设计/星穹矿脉/demo/best_config.txt
 web/static/_lab/xqkm/test_*
 web/static/_lab/xqkm/*_test.*
+
+# Local S3 game-design drafts
+doc/s3/
