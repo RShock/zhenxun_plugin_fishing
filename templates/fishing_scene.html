@@ -26,8 +26,8 @@
         .player { position:absolute; bottom:0; width:80px; transform:translateX(-50%); text-align:center; }
         .psprite { image-rendering:pixelated; display:block; margin:0 auto; }
         /* 倒影容器从场景脚部基准线向下延伸；overflow 保证任何像素都不会越过脚部线。 */
-        .prefl-wrap { position:absolute; bottom:0; width:80px; transform:translateX(-50%); overflow:hidden; pointer-events:none; -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.72) 45%,transparent 100%); mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.72) 45%,transparent 100%); }
-        .prefl { position:absolute; left:50%; transform:translateX(-50%) scaleY(-1); image-rendering:pixelated; filter:blur(1.25px); opacity:0.52; pointer-events:none; }
+        .prefl-wrap { position:absolute; bottom:0; width:80px; transform:translateX(-50%); overflow:hidden; pointer-events:none; -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.84) 55%,transparent 100%); mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.84) 55%,transparent 100%); }
+        .prefl { position:absolute; left:50%; transform:translateX(-50%) scaleY(-1); image-rendering:pixelated; filter:blur(.8px); opacity:0.62; pointer-events:none; }
         .ll-body, .ll-line { position:absolute; transform:translateX(-50%); pointer-events:none; }
         .ll-body { overflow:hidden; text-align:center; }
         .ll-body img { display:block; image-rendering:pixelated; margin:0 auto; }
