@@ -235,6 +235,9 @@ class TestMirrorEffect:
             img, "A", (22.0, 61.0), (10.0, 70.0), -21, False, effects=["mirror"]
         )
         assert view["mirror"] is True
+        assert view["scene_y"] == 70.0
+        # 皮肤高 61、文件名脚部偏移 -21：脚部位于图片内 y=40。
+        assert view["mirror_body_h"] == 40.0
         # mirror 不改变 special，仍走普通渲染分支（倒影作为附加层）
         assert view["special"] == ""
 
@@ -245,6 +248,71 @@ class TestMirrorEffect:
             img, "A", (22.0, 61.0), (10.0, 70.0), 0, False, effects=[]
         )
         assert view["mirror"] is False
+
+    def test_mirror_body_height_is_clamped(self, tmp_path: Path):
+        img = tmp_path / "skin.png"
+        img.write_bytes(b"x")
+        below_top = fs._actor_view(
+            img, "A", (22.0, 61.0), (10.0, 70.0), -100, False,
+            effects=["mirror"],
+        )
+        below_bottom = fs._actor_view(
+            img, "A", (22.0, 61.0), (10.0, 70.0), 20, False,
+            effects=["mirror"],
+        )
+        assert below_top["mirror_body_h"] == 0.0
+        assert below_bottom["mirror_body_h"] == 61.0
+
+    def test_mirror_template_anchors_at_real_foot_line(self):
+        html = fs.render_template(
+            "fishing_scene.html",
+            body_bg="",
+            width=330,
+            container_width=330,
+            scene_uri="scene.png",
+            foreground_uri="",
+            badges=[],
+            player_list=[
+                {
+                    "is_current": False,
+                    "nickname": "A",
+                    "uri": "skin.png",
+                    "skin_w": 22.0,
+                    "skin_h": 61.0,
+                    "left_pos": 100.0,
+                    "z_index": 71,
+                    "y_offset": -21,
+                    "scene_y": 70.0,
+                    "scene_bottom": 30.0,
+                    "special": "",
+                    "mirror": True,
+                    "mirror_body_h": 40.0,
+                }
+            ],
+            location_name="镜砂海",
+            location_difficulty=14,
+            fish_count=3,
+            bait_info="",
+            power_info="",
+            hook_info="",
+            prob_items=[],
+            timeline_data=None,
+            hints=[],
+            weather_emoji="",
+            weather_name="",
+            weather_time="",
+            weather_effect="",
+            weather_active=True,
+            weather_overlay_uri="",
+            material_rate=0,
+            scene_inverted=False,
+        )
+        assert 'class="prefl-wrap"' in html
+        assert "top:70.0%" in html
+        assert 'class="prefl"' in html
+        assert "top:-21px" in html
+        # 倒影不再嵌套在普通角色容器中，避免从图片底边（透明区）开始翻转。
+        assert html.index('class="prefl-wrap"') < html.index('class="player')
 
     def test_mirror_coexists_with_longline(self, tmp_path: Path):
         """mirror 与 longline 可同时声明；longline 仍走特殊渲染，mirror 标志同时置位。"""

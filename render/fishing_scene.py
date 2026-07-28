@@ -569,6 +569,9 @@ def _actor_view(
     z_base = int(scene_y)
     skin_w, skin_h = size
     effects = list(effects or [])
+    # 皮肤文件名中的 y_offset 用于把图片内的脚部线对齐到场景基准线。
+    # 因此脚部线在图片内的显示坐标为 skin_h + y_offset；倒影只能取其上方内容。
+    mirror_body_h = min(max(skin_h + y_offset, 0.0), skin_h)
     view = {
         "is_current": is_current,
         "nickname": nickname,
@@ -578,12 +581,14 @@ def _actor_view(
         "left_pos": left_pos,
         "z_index": (100 if is_current else 1) + z_base,
         "y_offset": y_offset,
+        "scene_y": round(scene_y, 2),
         "scene_bottom": round(100 - scene_y, 2),
         "effects": effects,
         "special": "",
         # 镜面特效：以脚部线（scene_bottom% + y_offset）为镜像轴向下翻转，
         # 仅在脚部线以下绘制模糊倒影，不越过脚部线
         "mirror": "mirror" in effects,
+        "mirror_body_h": round(mirror_body_h, 2),
     }
     if "longline" in effects:
         # 自适应识别细钓线带；识别失败则退回普通渲染，避免误拉脚部
