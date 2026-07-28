@@ -451,6 +451,7 @@ def build_starry_fish_cards(records: list[dict] | None) -> list[dict]:
                 if feature_names
                 else "无显著番型",
                 "location_id": record.get("location_id", ""),
+                "catch_index": record.get("catch_index"),
             }
         )
     cards.sort(key=lambda item: (item["score"], int(item["id"])), reverse=True)

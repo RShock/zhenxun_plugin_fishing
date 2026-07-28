@@ -786,7 +786,7 @@ def _apply_starry_rewards(
     base_score = 0.0
     bonus_score = 0.0
     count = 0
-    for num in plan.meteor_fish_numbers:
+    for catch_index, num in enumerate(plan.meteor_fish_numbers):
         if int(num) > 999_999:
             mut.apply_add_item(plan.user, str(num), "meteor_fish", 1, plan.dirty)
             continue
@@ -800,6 +800,9 @@ def _apply_starry_rewards(
             plan.user, num, plan.dirty
         )
         for reward in granted:
+            # 相同编号的流星鱼仍是两次独立捕获；用本杆序号区分奖励归属。
+            # 碎片升级可能让一次捕获产生多个奖励，不能按奖励列表位置硬配鱼卡。
+            reward.setdefault("catch_index", catch_index)
             reward.setdefault("fish_id", scored.id_text)
             reward.setdefault("display_score", scored.display_score)
             reward.setdefault(

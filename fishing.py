@@ -63,6 +63,7 @@ async def handle_fishing_result(
         cat_park_materials=render_data.get("cat_park_materials"),
         starry_score=render_data.get("starry_score"),
         miracle=render_data.get("miracle"),
+        starry_rewards=render_data.get("starry_rewards"),
         bait=render_data.get("bait"),
         bait_remaining=render_data.get("bait_remaining"),
     )

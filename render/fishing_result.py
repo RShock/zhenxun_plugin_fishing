@@ -75,6 +75,45 @@ def _build_cat_gifts_data(cat_gifts: dict) -> dict:
     return result
 
 
+def _attach_starry_rewards(
+    starry_cards: list[dict], starry_rewards: list[dict] | None
+) -> None:
+    """把奖励挂到本次捕获对应的流星鱼卡片，兼容旧版无序号数据。"""
+    rewards_by_catch: dict[int, list[dict]] = {}
+    legacy_rewards_by_fish: dict[str, list[dict]] = {}
+    for reward in starry_rewards or []:
+        if reward.get("granted") is False:
+            continue
+        catch_index = reward.get("catch_index")
+        if isinstance(catch_index, int):
+            rewards_by_catch.setdefault(catch_index, []).append(reward)
+            continue
+        fid = str(reward.get("fish_id") or "").zfill(6)
+        if fid and fid != "000000":
+            legacy_rewards_by_fish.setdefault(fid, []).append(reward)
+
+    for card in starry_cards:
+        catch_index = card.get("catch_index")
+        if isinstance(catch_index, int):
+            matched = rewards_by_catch.get(catch_index, [])
+        else:
+            fid = str(card.get("id", "")).zfill(6)
+            matched = legacy_rewards_by_fish.get(fid, [])
+        card["rewards"] = matched
+        parts = []
+        for reward in matched:
+            name = reward.get("name", "?")
+            if reward.get("key") == "wish_score" or reward.get("score_bonus"):
+                bonus = reward.get("score_bonus") or 0.5
+                text = f"+{bonus:g}积分"
+            else:
+                text = f"{name}×{reward.get('count', 1)}"
+            if reward.get("upgrade_from"):
+                text += "(碎片升级)"
+            parts.append(text)
+        card["reward_text"] = "、".join(parts)
+
+
 def _build_cat_park_material_items(
     materials: list[tuple] | None,
 ) -> list[dict]:
@@ -154,38 +193,15 @@ async def render_fishing_result(
     fish_items.extend(build_meteor_fish_items(meteor_fish_numbers))
     starry_records = []
     legacy_meteor_numbers = []
-    for num in meteor_fish_numbers or []:
+    for catch_index, num in enumerate(meteor_fish_numbers or []):
         if int(num) <= 999_999:
-            starry_records.append({"id": str(num).zfill(6)})
+            starry_records.append(
+                {"id": str(num).zfill(6), "catch_index": catch_index}
+            )
         else:
             legacy_meteor_numbers.append(num)
     starry_cards = build_starry_fish_cards(starry_records)
-    # 将本杆抽奖结果挂到对应流星鱼卡片上，避免只显示奖池名
-    rewards_by_fish: dict[str, list[dict]] = {}
-    for reward in starry_rewards or []:
-        if reward.get("granted") is False:
-            continue
-        fid = str(reward.get("fish_id") or "").zfill(6)
-        if fid and fid != "000000":
-            rewards_by_fish.setdefault(fid, []).append(reward)
-    for card in starry_cards:
-        matched = rewards_by_fish.get(str(card.get("id", "")).zfill(6), [])
-        card["rewards"] = matched
-        if matched:
-            parts = []
-            for r in matched:
-                name = r.get("name", "?")
-                if r.get("key") == "wish_score" or r.get("score_bonus"):
-                    bonus = r.get("score_bonus") or 0.5
-                    text = f"+{bonus:g}积分"
-                else:
-                    text = f"{name}×{r.get('count', 1)}"
-                if r.get("upgrade_from"):
-                    text += "(碎片升级)"
-                parts.append(text)
-            card["reward_text"] = "、".join(parts)
-        else:
-            card["reward_text"] = ""
+    _attach_starry_rewards(starry_cards, starry_rewards)
     if starry_cards:
         fish_items = build_fish_list_data(
             fish_caught, location.id, cat_eaten_fish=cat_eaten_fish
