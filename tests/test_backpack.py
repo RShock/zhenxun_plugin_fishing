@@ -163,6 +163,45 @@ class TestSellFish:
         user_after_sell = await db.user_get(USER_ID)
         assert user_after_sell.gold >= gold_after_fish
 
+    async def test_sell_ledger_contains_itemized_consequences(self, db, monkeypatch):
+        captured = {}
+
+        async def capture_earn_gold(
+            user_id, amount, operation, reason="", details=None
+        ):
+            captured.update({
+                "user_id": user_id,
+                "amount": amount,
+                "operation": operation,
+                "reason": reason,
+                "details": details,
+            })
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.sell.earn_gold",
+            capture_earn_gold,
+        )
+        await db.backpack_add_fish(USER_ID, "鲢鱼", "N", "123", count=3)
+
+        ok, _ = await sell_fish(USER_ID, "123")
+
+        assert ok is True
+        assert captured["operation"] == "sell_fish"
+        details = captured["details"]
+        assert details["selection"] == "123"
+        assert details["species_count"] == 1
+        assert details["fish_count"] == 3
+        assert details["total"] == captured["amount"]
+        assert details["items"] == [{
+            "numeric_id": "123",
+            "fish_name": "鲢鱼",
+            "rarity": "N",
+            "count": 3,
+            "unit_price": details["items"][0]["unit_price"],
+            "subtotal": captured["amount"],
+        }]
+        assert details["items"][0]["unit_price"] * 3 == captured["amount"]
+
     async def test_sell_by_wildcard_rarity(self, db):
         fish_list = await _setup_user_with_fish(db, USER_ID)
         assert len(fish_list) > 0

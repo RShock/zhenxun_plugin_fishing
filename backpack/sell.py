@@ -41,10 +41,25 @@ async def sell_fish(
     if not fish_list:
         return False, "没有可卖的鱼（锁定的鱼不会被出售）"
 
-    total_coins, sold_details = await _calculate_sell_total(user_id, fish_list)
+    total_coins, sold_details, ledger_items = await _calculate_sell_total(
+        user_id, fish_list
+    )
 
     await FishingUser.delete_fish_entries(user_id, fish_list)
-    await earn_gold(user_id, total_coins, "sell_fish", f"卖出{len(fish_list)}种鱼")
+    await earn_gold(
+        user_id,
+        total_coins,
+        "sell_fish",
+        f"卖出{len(fish_list)}种鱼",
+        details={
+            "selection": fish_input,
+            "exclude_utr": exclude_utr,
+            "species_count": len(ledger_items),
+            "fish_count": sum(item["count"] for item in ledger_items),
+            "items": ledger_items,
+            "total": total_coins,
+        },
+    )
     if not is_private:
         await FishingUser.increment_sell_count(user_id)
 
@@ -106,7 +121,7 @@ async def _get_sellable_fish(
 
 async def _calculate_sell_total(
     user_id: str, fish_list: list[dict]
-) -> tuple[int, list[str]]:
+) -> tuple[int, list[str], list[dict]]:
     from ..cat_park import (
         CAT_PARK_FISH,
         cat_park_fish_price,
@@ -116,6 +131,7 @@ async def _calculate_sell_total(
     cat_park_effects = None
     total_coins = 0
     sold_details = []
+    ledger_items = []
     for fish in fish_list:
         fish_data = ConfigManager.get_fish_by_name(fish["fish_name"])
         if fish_data:
@@ -132,7 +148,15 @@ async def _calculate_sell_total(
             sold_details.append(
                 f"{fish['fish_name']}({fish['rarity']})x{fish['count']}={coins}币"
             )
-    return total_coins, sold_details
+            ledger_items.append({
+                "numeric_id": fish["numeric_id"],
+                "fish_name": fish["fish_name"],
+                "rarity": fish["rarity"],
+                "count": fish["count"],
+                "unit_price": price,
+                "subtotal": coins,
+            })
+    return total_coins, sold_details, ledger_items
 
 
 async def _get_bait_inventory_hint(user_id: str) -> str:
