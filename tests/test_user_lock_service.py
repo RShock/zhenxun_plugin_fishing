@@ -416,9 +416,11 @@ async def test_cancelled_multi_lock_after_partial_acquire_releases_all_entries()
         await waiter_task
 
     # u1 已先取得，取消后必须立即可被其他业务获取。
-    async with asyncio.timeout(1):
+    async def verify_partial_lock_cleanup():
         async with user_operation_lock(["u1"], "验证部分锁回收"):
             pass
+
+    await asyncio.wait_for(verify_partial_lock_cleanup(), timeout=1)
 
     release_blocker.set()
     await blocker_task
@@ -449,7 +451,9 @@ async def test_cancelled_business_releases_lock_and_entry():
     with pytest.raises(asyncio.CancelledError):
         await task
 
-    async with asyncio.timeout(1):
+    async def retry_after_cancel():
         async with user_operation_lock(["u1"], "取消后重试"):
             pass
+
+    await asyncio.wait_for(retry_after_cancel(), timeout=1)
     assert active_user_lock_count() == 0
