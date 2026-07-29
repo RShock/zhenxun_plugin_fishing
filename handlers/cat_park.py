@@ -14,9 +14,11 @@ from ..cat_park import (
 from ..matchers import cat_park_build_matcher
 from ..utils import _get_nickname, _is_private_chat, _send_image, _send_text
 from ..services import get_or_create_user
+from ..services.user_lock_service import with_user_lock
 
 
 @cat_park_build_matcher.handle()
+@with_user_lock("猫猫乐园建设")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)

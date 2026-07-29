@@ -21,6 +21,7 @@ from ..matchers import fishing_matcher, status_matcher, stop_fishing_matcher
 from ..models import FishingUser
 from ..render import render_fishing_result, render_location_select
 from ..services import get_or_create_user, get_user
+from ..services.user_lock_service import with_user_lock
 from ..services.limit_service import (
     is_group_action_limit_enabled,
     is_last_status_view,
@@ -38,6 +39,7 @@ from ..utils import (
 
 
 @fishing_matcher.handle()
+@with_user_lock("钓鱼/选择地图")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)
@@ -90,6 +92,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @fishing_matcher.got("location")
+@with_user_lock("钓鱼/确认地图")
 async def _(event: Event, matcher: Matcher, location=Arg("location")):
     user_id, nickname = await _ensure_user(event)
     group_id = str(event.group_id) if hasattr(event, "group_id") else None
@@ -119,6 +122,7 @@ async def _(event: Event, matcher: Matcher, location=Arg("location")):
 
 
 @stop_fishing_matcher.handle()
+@with_user_lock("收杆结算")
 async def _(event: Event, matcher: Matcher):
     user_id, nickname = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -208,6 +212,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @status_matcher.handle()
+@with_user_lock("钓鱼状态结算")
 async def _(event: Event, matcher: Matcher):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)

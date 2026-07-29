@@ -20,6 +20,7 @@ from ..matchers import (
 )
 from ..render import render_exchange_result, render_upgrade_result
 from ..services import get_or_create_user, get_user
+from ..services.user_lock_service import with_user_lock
 from ..shop import (
     buy_item,
     do_nest,
@@ -46,6 +47,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @upgrade_rod_matcher.handle()
+@with_user_lock("升级钓竿")
 async def _(event: Event, matcher: Matcher):
     from ..shop import upgrade_rod
 
@@ -78,6 +80,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @build_starry_ship_matcher.handle()
+@with_user_lock("建设星空艇")
 async def _(event: Event, matcher: Matcher):
     from ..starry import build_starry_ship
 
@@ -90,6 +93,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @upgrade_hook_matcher.handle()
+@with_user_lock("升级鱼钩")
 async def _(event: Event, matcher: Matcher):
     from ..shop import upgrade_hook
 
@@ -119,6 +123,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @buy_matcher.handle()
+@with_user_lock("鱼店购买")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -137,6 +142,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @display_slot_matcher.handle()
+@with_user_lock("升级展示栏")
 async def _(event: Event, matcher: Matcher):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -145,6 +151,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @nest_matcher.handle()
+@with_user_lock("打窝")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -162,6 +169,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @exchange_matcher.handle()
+@with_user_lock("钓鱼币兑换")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -190,6 +198,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @use_item_matcher.handle()
+@with_user_lock("使用物品")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)

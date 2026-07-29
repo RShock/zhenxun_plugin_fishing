@@ -26,6 +26,7 @@ from ..backpack import (
     white_market_exchange,
 )
 from ..core.bait import set_preferred_bait
+from ..services.user_lock_service import event_user_and_at_ids, with_user_lock
 from ..matchers import (
     backpack_matcher,
     black_market_matcher,
@@ -69,6 +70,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @sell_fish_matcher.handle()
+@with_user_lock("卖鱼")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -79,6 +81,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @lock_fish_matcher.handle()
+@with_user_lock("锁鱼")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -98,6 +101,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @unlock_fish_matcher.handle()
+@with_user_lock("解锁鱼")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -117,6 +121,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @gift_fish_matcher.handle()
+@with_user_lock("赠送鱼", resolver=event_user_and_at_ids)
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if _is_private_chat(event):
         await matcher.finish("请在群内送鱼！")
@@ -139,6 +144,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @black_market_revoke_matcher.handle()
+@with_user_lock("黑商撤销")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -148,6 +154,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @black_market_matcher.handle()
+@with_user_lock("黑商交换")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -169,6 +176,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @white_market_exchange_matcher.handle()
+@with_user_lock("白商交换")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -218,6 +226,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @set_bait_matcher.handle()
+@with_user_lock("设定鱼饵")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
@@ -234,6 +243,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @sell_bait_matcher.handle()
+@with_user_lock("卖出鱼饵")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)

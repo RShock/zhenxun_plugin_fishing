@@ -33,10 +33,12 @@ from ..render import (
     render_weather_forecast,
 )
 from ..shop import change_skin, get_skin_list_image, rename_fishing_user
+from ..services.user_lock_service import with_user_lock
 from ..utils import _ensure_user, _is_private_chat, _send_image, _send_text
 
 
 @auto_sell_matcher.handle()
+@with_user_lock("设置自动卖鱼")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     is_private = _is_private_chat(event)
@@ -88,6 +90,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @auto_lock_matcher.handle()
+@with_user_lock("设置自动锁鱼")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     is_private = _is_private_chat(event)
@@ -134,6 +137,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @rename_matcher.handle()
+@with_user_lock("钓鱼改名")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     is_private = _is_private_chat(event)
@@ -152,6 +156,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @skin_matcher.handle()
+@with_user_lock("更换皮肤")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
