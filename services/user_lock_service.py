@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import wraps
 from time import monotonic
-from typing import Any, Awaitable, Callable, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 from nonebot.adapters import Event
+
 from zhenxun.services.log import logger
 
 P = ParamSpec("P")
@@ -24,12 +26,18 @@ class _UserLockEntry:
     holder_feature: str | None = None
     holder_since: float | None = None
     holder_task: str | None = None
+    holder_owner: asyncio.Task[Any] | None = None
 
 
 _entries: dict[str, _UserLockEntry] = {}
 _held_user_ids: ContextVar[frozenset[str]] = ContextVar(
     "fishing_held_user_ids", default=frozenset()
 )
+_held_owner: ContextVar[asyncio.Task[Any] | None] = ContextVar(
+    "fishing_held_owner", default=None
+)
+
+_WARNING_WAIT_SECONDS = 0.5
 
 
 def _task_name() -> str:
@@ -71,10 +79,14 @@ class user_operation_lock:
         self.feature = feature
         self._entries: list[tuple[str, _UserLockEntry]] = []
         self._token = None
+        self._owner_token = None
         self._reentrant = False
 
     async def __aenter__(self):
-        held = _held_user_ids.get()
+        current_task = asyncio.current_task()
+        inherited_owner = _held_owner.get()
+        # ContextVar 会被 create_task 复制；只有实际持锁 Task 才能重入。
+        held = _held_user_ids.get() if inherited_owner is current_task else frozenset()
         requested = frozenset(self.user_ids)
         if requested.issubset(held):
             # 同一任务内的下层业务可能再次经过共享入口；直接复用外层锁，避免自锁。
@@ -111,9 +123,15 @@ class user_operation_lock:
                 acquired.add(user_id)
                 waited = monotonic() - wait_started
                 if contended:
-                    logger.warning(
+                    log = (
+                        logger.warning
+                        if waited >= _WARNING_WAIT_SECONDS
+                        else logger.debug
+                    )
+                    log(
                         "钓鱼用户锁并发等待: "
-                        f"user={user_id}, feature={self.feature}, waited={waited:.3f}s, "
+                        f"user={user_id}, feature={self.feature}, "
+                        f"waited={waited:.3f}s, "
                         f"holder_feature={holder_feature or 'unknown'}, "
                         f"holder_task={holder_task or 'unknown'}, "
                         f"holder_seconds={holder_seconds:.3f}s"
@@ -121,11 +139,13 @@ class user_operation_lock:
                 entry.holder_feature = self.feature
                 entry.holder_since = monotonic()
                 entry.holder_task = _task_name()
+                entry.holder_owner = current_task
         except BaseException:
             self._release_entries(acquired)
             raise
 
         self._token = _held_user_ids.set(held | requested)
+        self._owner_token = _held_owner.set(current_task)
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -133,6 +153,8 @@ class user_operation_lock:
             return False
         if self._token is not None:
             _held_user_ids.reset(self._token)
+        if self._owner_token is not None:
+            _held_owner.reset(self._owner_token)
         self._release_entries()
         return False
 
@@ -141,12 +163,13 @@ class user_operation_lock:
             owns_lock = (
                 user_id in acquired
                 if acquired is not None
-                else entry.holder_task == _task_name()
+                else entry.holder_owner is asyncio.current_task()
             )
             if entry.lock.locked() and owns_lock:
                 entry.holder_feature = None
                 entry.holder_since = None
                 entry.holder_task = None
+                entry.holder_owner = None
                 entry.lock.release()
             entry.references -= 1
             if entry.references == 0 and not entry.lock.locked():

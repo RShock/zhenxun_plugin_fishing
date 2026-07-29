@@ -6,6 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from zhenxun.plugins.zhenxun_plugin_fishing.services import (
+    user_lock_service as lock_service,
+)
 from zhenxun.plugins.zhenxun_plugin_fishing.services.user_lock_service import (
     active_user_lock_count,
     event_user_and_at_ids,
@@ -65,6 +68,68 @@ async def test_same_lock_can_be_reused_in_nested_business_call():
         async with user_operation_lock(["u1"], "内层"):
             assert active_user_lock_count() == 1
 
+    assert active_user_lock_count() == 0
+
+
+async def test_child_task_inheriting_context_must_wait_for_parent_lock():
+    child_started = asyncio.Event()
+    child_entered = asyncio.Event()
+
+    async def child():
+        child_started.set()
+        async with user_operation_lock(["u1"], "子任务"):
+            child_entered.set()
+
+    async with user_operation_lock(["u1"], "父任务"):
+        child_task = asyncio.create_task(child(), name="inherited-context-child")
+        await child_started.wait()
+        await asyncio.sleep(0)
+        assert not child_entered.is_set()
+
+    await asyncio.wait_for(child_task, timeout=1)
+    assert child_entered.is_set()
+    assert active_user_lock_count() == 0
+
+
+@pytest.mark.parametrize(
+    ("warning_threshold", "expected_level"), [(0.5, "debug"), (0.0, "warning")]
+)
+async def test_contention_log_level_depends_on_wait_time(
+    monkeypatch, warning_threshold, expected_level
+):
+    messages: dict[str, list[str]] = {"debug": [], "warning": []}
+    fake_logger = type(
+        "FakeLogger",
+        (),
+        {
+            "debug": lambda _self, message: messages["debug"].append(message),
+            "warning": lambda _self, message: messages["warning"].append(message),
+        },
+    )()
+    monkeypatch.setattr(lock_service, "logger", fake_logger)
+    monkeypatch.setattr(lock_service, "_WARNING_WAIT_SECONDS", warning_threshold)
+    holder_entered = asyncio.Event()
+    release_holder = asyncio.Event()
+
+    async def holder():
+        async with user_operation_lock(["u1"], "日志持锁"):
+            holder_entered.set()
+            await release_holder.wait()
+
+    async def waiter():
+        async with user_operation_lock(["u1"], "日志等待"):
+            pass
+
+    holder_task = asyncio.create_task(holder())
+    await holder_entered.wait()
+    waiter_task = asyncio.create_task(waiter())
+    await asyncio.sleep(0)
+    release_holder.set()
+    await asyncio.gather(holder_task, waiter_task)
+
+    assert len(messages[expected_level]) == 1
+    other_level = "warning" if expected_level == "debug" else "debug"
+    assert messages[other_level] == []
     assert active_user_lock_count() == 0
 
 
@@ -327,4 +392,64 @@ async def test_cancelled_waiter_is_removed_without_leak():
 
     release_holder.set()
     await holder_task
+    assert active_user_lock_count() == 0
+
+
+async def test_cancelled_multi_lock_after_partial_acquire_releases_all_entries():
+    blocker_entered = asyncio.Event()
+    release_blocker = asyncio.Event()
+
+    async def blocker():
+        async with user_operation_lock(["u2"], "阻塞第二把锁"):
+            blocker_entered.set()
+            await release_blocker.wait()
+
+    blocker_task = asyncio.create_task(blocker(), name="multi-lock-blocker")
+    await blocker_entered.wait()
+    waiter_task = asyncio.create_task(
+        user_operation_lock(["u1", "u2"], "多锁等待").__aenter__(),
+        name="partial-multi-lock-waiter",
+    )
+    await asyncio.sleep(0)
+    waiter_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiter_task
+
+    # u1 已先取得，取消后必须立即可被其他业务获取。
+    async with asyncio.timeout(1):
+        async with user_operation_lock(["u1"], "验证部分锁回收"):
+            pass
+
+    release_blocker.set()
+    await blocker_task
+    assert active_user_lock_count() == 0
+
+
+async def test_business_exception_releases_lock_and_entry():
+    with pytest.raises(ValueError, match="业务失败"):
+        async with user_operation_lock(["u1"], "异常业务"):
+            raise ValueError("业务失败")
+
+    async with user_operation_lock(["u1"], "异常后重试"):
+        pass
+    assert active_user_lock_count() == 0
+
+
+async def test_cancelled_business_releases_lock_and_entry():
+    entered = asyncio.Event()
+
+    async def business():
+        async with user_operation_lock(["u1"], "取消业务"):
+            entered.set()
+            await asyncio.Event().wait()
+
+    task = asyncio.create_task(business(), name="cancelled-business")
+    await entered.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    async with asyncio.timeout(1):
+        async with user_operation_lock(["u1"], "取消后重试"):
+            pass
     assert active_user_lock_count() == 0
