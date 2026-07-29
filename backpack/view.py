@@ -265,7 +265,9 @@ async def get_backpack_image(user_id: str) -> bytes:
     )
 
 
-async def get_collection_image(user_id: str, page: int = 1) -> bytes:
+async def get_collection_image(
+    user_id: str, page: int = 1, *, detailed: bool = False
+) -> bytes:
     all_locations = ConfigManager.get_locations()
     collected_set = await FishingUser.get_user_collected(user_id)
 
@@ -328,6 +330,7 @@ async def get_collection_image(user_id: str, page: int = 1) -> bytes:
                     fish_data["rarities"][rarity] = {
                         "collected": collected,
                         "numeric_id": numeric_id,
+                        "price": calculate_fish_price(fish, rarity, loc.difficulty),
                     }
                     if not collected:
                         all_rarities_collected = False
@@ -342,7 +345,7 @@ async def get_collection_image(user_id: str, page: int = 1) -> bytes:
         loc_data["scene_complete"] = all_fish_complete
         collection_data.append(loc_data)
 
-    return await render_collection(collection_data, has_utr)
+    return await render_collection(collection_data, has_utr, detailed=detailed)
 
 
 async def get_starry_exhibition_image(user_id: str) -> bytes:

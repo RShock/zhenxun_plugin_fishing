@@ -1,7 +1,9 @@
 from .base import gradient_bg, render_html, render_template
 
 
-async def render_collection(collection_data: list, has_utr: bool = False) -> bytes:
+async def render_collection(
+    collection_data: list, has_utr: bool = False, *, detailed: bool = False
+) -> bytes:
     legend_rarities = (
         ["UTR", "UR", "SSR", "SR", "R", "N"]
         if has_utr
@@ -13,10 +15,11 @@ async def render_collection(collection_data: list, has_utr: bool = False) -> byt
         for fish in loc.get("fish", []):
             rarities = {}
             for r in legend_rarities:
+                rarity_data = fish.get("rarities", {}).get(r, {})
                 rarities[r] = {
-                    "collected": fish.get("rarities", {})
-                    .get(r, {})
-                    .get("collected", False),
+                    "collected": rarity_data.get("collected", False),
+                    "price": rarity_data.get("price"),
+                    "numeric_id": rarity_data.get("numeric_id"),
                 }
             fish_list.append(
                 {
@@ -40,5 +43,6 @@ async def render_collection(collection_data: list, has_utr: bool = False) -> byt
         width=480,
         legend_rarities=legend_rarities,
         locations=locations,
+        detailed=detailed,
     )
     return await render_html(html, 520)

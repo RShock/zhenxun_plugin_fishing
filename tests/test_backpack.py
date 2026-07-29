@@ -13,6 +13,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.config import (
 from zhenxun.plugins.zhenxun_plugin_fishing.backpack import (
     black_market_exchange,
     black_market_revoke,
+    get_collection_image,
     gift_fish,
     render_white_market_records,
     lock_fish,
@@ -35,6 +36,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market import (
     should_parse_market_exchange,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
+from zhenxun.plugins.zhenxun_plugin_fishing.render.collection import render_collection
 
 USER_ID = "test_user_001"
 TARGET_ID = "test_user_002"
@@ -88,6 +90,74 @@ class TestCatParkNumericId:
 
         assert ("橘座鲫鱼", "N") in collected
         assert user.collection == {"橘座鲫鱼": {"N": 2}}
+
+
+class TestDetailedCollection:
+    async def test_collection_data_only_enables_details_in_detailed_mode(
+        self, db, monkeypatch
+    ):
+        captured = []
+
+        async def _capture(collection_data, has_utr=False, *, detailed=False):
+            captured.append((collection_data, has_utr, detailed))
+            return b"collection"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.view.render_collection",
+            _capture,
+        )
+
+        assert await get_collection_image(USER_ID) == b"collection"
+        assert captured[-1][2] is False
+        assert await get_collection_image(USER_ID, detailed=True) == b"collection"
+        collection_data, _, detailed = captured[-1]
+        assert detailed is True
+        rarity = collection_data[0]["fish"][0]["rarities"]["N"]
+        assert rarity["price"] > 0
+        assert rarity["numeric_id"]
+
+    async def test_render_collection_keeps_normal_mode_and_exposes_detail_rows(
+        self, monkeypatch
+    ):
+        captured = []
+        collection_data = [
+            {
+                "id": "1",
+                "name": "测试钓场",
+                "fish": [
+                    {
+                        "name": "测试鱼",
+                        "rarities": {
+                            "N": {
+                                "collected": True,
+                                "price": 12,
+                                "numeric_id": "111",
+                            }
+                        },
+                    }
+                ],
+            }
+        ]
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.render.collection.render_template",
+            lambda template, **kwargs: captured.append(kwargs) or "<html></html>",
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.render.collection.render_html",
+            lambda html, width: _async_bytes(b"rendered"),
+        )
+
+        assert await render_collection(collection_data) == b"rendered"
+        assert captured[-1]["detailed"] is False
+        assert await render_collection(collection_data, detailed=True) == b"rendered"
+        assert captured[-1]["detailed"] is True
+        rarity = captured[-1]["locations"][0]["fish"][0]["rarities"]["N"]
+        assert rarity == {"collected": True, "price": 12, "numeric_id": "111"}
+
+
+async def _async_bytes(value):
+    return value
 
 
 class TestSellFish:

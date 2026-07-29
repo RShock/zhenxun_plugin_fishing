@@ -33,6 +33,7 @@ from ..matchers import (
     black_market_matcher,
     black_market_revoke_matcher,
     collection_matcher,
+    detailed_collection_matcher,
     gift_fish_matcher,
     lock_fish_matcher,
     sell_bait_matcher,
@@ -221,6 +222,26 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
             )
             return
     image = await get_collection_image(user_id, page=page)
+    await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+
+
+@detailed_collection_matcher.handle()
+async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    user_id, _ = await _ensure_user(event)
+    is_private = _is_private_chat(event)
+    page = int(group[0]) if group and group[0] else 1
+    if page == 2:
+        from ..starry import has_starry_ship
+
+        if not await has_starry_ship(user_id):
+            await _send_text(
+                matcher,
+                "详细图鉴2需要先修好星空艇才能查看。",
+                user_id,
+                is_private=is_private,
+            )
+            return
+    image = await get_collection_image(user_id, page=page, detailed=True)
     await _send_image(matcher, image, user_id=user_id, is_private=is_private)
 
 

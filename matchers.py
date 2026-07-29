@@ -31,6 +31,7 @@ status_matcher = on_fishing_command("钓鱼状态")
 
 nest_matcher = on_fishing_command("打窝")
 collection_matcher = on_fishing_command("图鉴")
+detailed_collection_matcher = on_fishing_command("详细图鉴")
 starry_exhibition_matcher = on_fishing_command("星空鱼展馆")
 starry_ranking_matcher = on_fishing_command("星空排行")
 exchange_matcher = on_fishing_command("兑换")

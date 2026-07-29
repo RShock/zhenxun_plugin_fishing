@@ -49,7 +49,7 @@ __plugin_meta__ = PluginMetadata(
         升级展示栏               扩充展示位/强化展示位
         打窝 [次数]                使用玉米打窝
         钓鱼使用 猫框 [数量]     在11-20图使用猫框打窝
-        钓鱼图鉴/图鉴/图鉴2       查看图鉴
+        图鉴[1/2]/详细图鉴[1/2]   查看图鉴或含价格、ID的详细图鉴
         钓鱼币兑换 [数量]          兑换钓鱼币
         钓鱼改名 [名称]            修改钓鱼昵称
         更换皮肤 [皮肤ID]          更换皮肤
@@ -85,6 +85,7 @@ from .matchers import (
     buy_matcher,
     cat_park_build_matcher,
     collection_matcher,
+    detailed_collection_matcher,
     debug_render_matcher,
     display_slot_matcher,
     exchange_matcher,
