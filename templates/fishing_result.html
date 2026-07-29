@@ -459,7 +459,7 @@
 {% if hints %}
 <div class="hints-box">
     {% for hint in hints %}
-    <div class="hint-item">{{ hint }}</div>
+    <div class="hint-item"{% if hint == "今天黑商来了" %} style="font-weight: bold;"{% endif %}>{{ hint }}</div>
     {% endfor %}
 </div>
 {% endif %}

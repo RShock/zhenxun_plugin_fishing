@@ -3,6 +3,7 @@
 """
 
 import re
+from datetime import date
 
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
@@ -36,6 +37,22 @@ from ..utils import (
     _send_image,
     _send_text,
 )
+
+
+def should_show_black_market_hint(
+    black_market_count: int,
+    smart_black_market_available_date: date | None,
+    *,
+    today: date | None = None,
+) -> bool:
+    """原黑商或智能黑商任一可用时，收竿结果应显示黑商提示。"""
+    current_date = today or date.today()
+    original_available = black_market_count < 1
+    smart_available = (
+        smart_black_market_available_date is None
+        or smart_black_market_available_date <= current_date
+    )
+    return original_available or smart_available
 
 
 @fishing_matcher.handle()
@@ -173,6 +190,11 @@ async def _(event: Event, matcher: Matcher):
         await _send_text(matcher, "你还没有开始钓鱼！", user_id, is_private=is_private)
 
     hints = list(buff_messages)
+    user = await FishingUser.get_user(user_id)
+    black_market_count = await FishingUser.get_black_market_count(user_id)
+    available_date = getattr(user, "smart_black_market_available_date", None)
+    if should_show_black_market_hint(black_market_count, available_date):
+        hints.insert(0, "今天黑商来了")
     if auto_loc:
         hints.insert(0, f"你的角色自己去{auto_loc}钓鱼了")
     if (

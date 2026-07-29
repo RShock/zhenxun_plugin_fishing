@@ -22,6 +22,7 @@ from ..backpack import (
     render_white_market_records,
     sell_bait,
     sell_fish,
+    smart_black_market_exchange,
     unlock_fish,
     white_market_exchange,
 )
@@ -37,6 +38,7 @@ from ..matchers import (
     sell_bait_matcher,
     sell_fish_matcher,
     set_bait_matcher,
+    smart_black_market_matcher,
     starry_exhibition_matcher,
     starry_ranking_matcher,
     unlock_fish_matcher,
@@ -151,6 +153,19 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     selection = group[0] if group and group[0] else ""
     success, message, should_reply = await black_market_revoke(user_id, selection)
     await _send_text(matcher, message, user_id, is_private=is_private)
+
+
+@smart_black_market_matcher.handle()
+@with_user_lock("智能黑商交换")
+async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    user_id, _ = await _ensure_user(event)
+    is_private = _is_private_chat(event)
+    exchange_input = group[0] if group and group[0] else ""
+    success, message, should_reply = await smart_black_market_exchange(
+        user_id, exchange_input
+    )
+    if should_reply:
+        await _send_text(matcher, message, user_id, is_private=is_private)
 
 
 @black_market_matcher.handle()

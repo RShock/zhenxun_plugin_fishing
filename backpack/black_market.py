@@ -6,6 +6,7 @@ import json
 import random
 import re
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 from ..config import (
     DAILY_GIFT_LIMIT,
@@ -26,6 +27,10 @@ BLACK_MARKET_USAGE = (
     "也可以使用：黑商交换 鱼名字稀有度 鱼名字稀有度\n"
     "例如：黑商 鲤鱼UR 草鱼SSR / 黑商交换 123 456\n"
     "来源鱼的场景等级和稀有度必须都不低于目标鱼；若稀有度相同，有 70% 概率改为获得目标鱼所在场景中相同稀有度的其他鱼。"
+)
+SMART_BLACK_MARKET_USAGE = (
+    "智能黑商用法：智能黑商 来源鱼 目标鱼 / 智能黑商交换 来源鱼 目标鱼\n"
+    "一次指令会把随机产物继续作为来源鱼交换，直到获得目标鱼，或产物因解锁图鉴/自动展示离开背包。"
 )
 
 _RARITY_RE = "UTR|SSR|UR|SR|R|N"
@@ -476,18 +481,7 @@ async def black_market_exchange(
     used_count = await FishingUser.get_black_market_count(user_id)
     used_extra_ticket = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:
-        ticket = await FishingUser.get_item(
-            user_id, "black_market_extra_ticket", "ticket"
-        )
-        if ticket and int(ticket.get("count", 0) or 0) > 0:
-            ok = await FishingUser.remove_item(
-                user_id, "black_market_extra_ticket", "ticket", 1
-            )
-            if not ok:
-                return False, "今天已经进行过黑商交换了", True
-            used_extra_ticket = True
-        else:
-            return False, "今天已经进行过黑商交换了", True
+        return False, "今天已经进行过黑商交换了", True
 
     # 黑商秘密保底：连续4次"失败"（被黑商随机替换目标鱼）后，下次必定获得指定目标
     user = await FishingUser.get_user(user_id)
@@ -548,6 +542,133 @@ async def black_market_exchange(
     )
     if randomized:
         msg += f"\n黑商动了手脚，目标从 {target.name} 变成了 {actual_target.name}。"
+    if messages:
+        msg += "\n" + "\n".join(messages)
+    return True, msg, True
+
+
+async def smart_black_market_exchange(
+    user_id: str, exchange_input: str
+) -> tuple[bool, str, bool]:
+    """链式执行同一目标的黑商交换，并按实际尝试数设置冷却。"""
+    if not (exchange_input or "").strip():
+        return False, SMART_BLACK_MARKET_USAGE, True
+    parsed = parse_market_exchange(exchange_input)
+    if not parsed.should_reply:
+        return False, "", False
+    if not parsed.parsed:
+        return False, SMART_BLACK_MARKET_USAGE, True
+
+    src_name, src_rarity, dst_name, dst_rarity = parsed.parsed
+    source = find_fish_target(src_name, src_rarity)
+    target = find_fish_target(dst_name, dst_rarity)
+    if not source:
+        return False, f"未找到鱼：{src_name}({src_rarity})", True
+    if not target:
+        return False, f"未找到鱼：{dst_name}({dst_rarity})", True
+
+    fish = await FishingUser.get_fish_by_numeric_id(user_id, source.numeric_id)
+    target_fish = await FishingUser.get_fish_by_numeric_id(user_id, target.numeric_id)
+    if (
+        (not fish or fish.get("count", 0) < 1)
+        and target_fish
+        and target_fish.get("count", 0) >= 1
+    ):
+        source, target = target, source
+        fish = target_fish
+    if not fish or fish.get("count", 0) < 1:
+        return False, f"背包里没有 {source.name}({source.rarity})", True
+    if not can_exchange(source, target):
+        return False, "交换失败：来源鱼的场景等级和稀有度必须都不低于目标鱼。", True
+
+    user = await FishingUser.get_user(user_id)
+    today = date.today()
+    available_date = getattr(user, "smart_black_market_available_date", None)
+    if available_date and available_date > today:
+        return False, f"智能黑商将在 {available_date.isoformat()} 再来。", True
+
+    attempts = 0
+    current = source
+    route = [f"{source.name}({source.rarity})"]
+    messages: list[str] = []
+    stop_reason = ""
+    while True:
+        current_fish = await FishingUser.get_fish_by_numeric_id(
+            user_id, current.numeric_id
+        )
+        if not current_fish or current_fish.get("count", 0) < 1:
+            stop_reason = "产物已离开背包，链式交换停止"
+            break
+
+        pity_counter = user.black_market_pity_counter if user else 0
+        if pity_counter >= _BLACK_MARKET_PITY_THRESHOLD:
+            actual_target, randomized = target, False
+        else:
+            actual_target, randomized = _maybe_randomize_same_rarity_target(
+                current, target
+            )
+        user.black_market_pity_counter = pity_counter + 1 if randomized else 0
+
+        inherited_lock = bool(current_fish.get("locked", False))
+        await FishingUser.remove_fish_by_numeric_id(user_id, current.numeric_id, 1)
+        result = await add_fish_to_user(
+            user_id,
+            [(actual_target.name, actual_target.rarity, actual_target.numeric_id, 1)],
+            auto_display=True,
+        )
+        if inherited_lock:
+            await FishingUser.toggle_lock_by_numeric_id(
+                user_id, actual_target.numeric_id, True
+            )
+        await FishingExchangeRecord.create_black_record(
+            user_id, current, actual_target, is_randomized=randomized
+        )
+        attempts += 1
+        route.append(f"{actual_target.name}({actual_target.rarity})")
+        messages.extend(result["messages"])
+        messages.extend(result["achievement_messages"])
+
+        if actual_target.numeric_id == target.numeric_id:
+            stop_reason = "已获得目标鱼"
+            break
+        # 自动展示和首条 UTR 图鉴解锁都意味着本次随机产物没有留在背包；
+        # 即使玩家原本另有同种鱼，也不能把旧库存误当作本次链式交换的产物继续消耗。
+        product_left_backpack = bool(result["utr_consumed"]) or any(
+            "自动展示" in message for message in result["messages"]
+        )
+        if product_left_backpack:
+            stop_reason = "产物已因图鉴解锁或自动展示离开背包，链式交换停止"
+            break
+        current = actual_target
+
+    ticket = await FishingUser.get_item(
+        user_id, "black_market_extra_ticket", "ticket"
+    )
+    ticket_count = int(ticket.get("count", 0) or 0) if ticket else 0
+    # 每张券只抵一天冷却；无论券有多少，智能黑商都至少要到次日才会再来。
+    used_tickets = min(ticket_count, max(0, attempts - 1))
+    if used_tickets:
+        await FishingUser.remove_item(
+            user_id, "black_market_extra_ticket", "ticket", used_tickets
+        )
+    cooldown_days = max(1, attempts - used_tickets)
+    next_date = today + timedelta(days=cooldown_days)
+    user.smart_black_market_available_date = next_date
+    await user.save(
+        update_fields=[
+            "black_market_pity_counter",
+            "smart_black_market_available_date",
+        ]
+    )
+
+    msg = (
+        f"智能黑商完成：共尝试 {attempts} 次\n"
+        f"路线：{' → '.join(route)}\n"
+        f"{stop_reason}\n"
+        f"下次可用：{next_date.isoformat()}"
+    )
+    if used_tickets:
+        msg += f"（已消耗 {used_tickets} 张黑商额外兑换券抵扣冷却）"
     if messages:
         msg += "\n" + "\n".join(messages)
     return True, msg, True

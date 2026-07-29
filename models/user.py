@@ -212,6 +212,9 @@ class FishingUser(Model):
     black_market_pity_counter = fields.IntField(
         default=0, description="黑商秘密保底计数器(连续失败次数)"
     )
+    smart_black_market_available_date = fields.DateField(
+        null=True, description="智能黑商下次可用日期"
+    )
 
     # ── 流星鱼 / 星空祈愿系统 ──
     starry_score_accumulated = fields.FloatField(
@@ -285,6 +288,7 @@ class FishingUser(Model):
             "ALTER TABLE fishing_user ADD COLUMN cat_frame_pity_counter INTEGER NOT NULL DEFAULT 0;",
             "ALTER TABLE fishing_user ADD COLUMN utr_pity_counter INTEGER NOT NULL DEFAULT 0;",
             "ALTER TABLE fishing_user ADD COLUMN black_market_pity_counter INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE fishing_user ADD COLUMN smart_black_market_available_date DATE;",
             "ALTER TABLE fishing_user ADD COLUMN preferred_bait_id VARCHAR(50) NOT NULL DEFAULT '0';",
             "ALTER TABLE fishing_user ADD COLUMN bonus_rod_level INTEGER NOT NULL DEFAULT 0;",
             # ── 流星鱼 / 星空祈愿系统 ──

@@ -29,6 +29,7 @@ class InMemoryUser:
         self.cat_frame_pity_counter = 0
         self.utr_pity_counter = 0
         self.black_market_pity_counter = 0
+        self.smart_black_market_available_date = None
         self.starry_score_accumulated = 0.0
         self.star_frames = 0
         self.starry_frames = 0

@@ -43,6 +43,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"(?:星空排行|星空排名|星空排行榜)", "星空排行", "starry_ranking_matcher", ("星空排行",)),
     CommandDef(r"钓鱼币兑换(?:\s*(\d+))?", "兑换", "exchange_matcher", ("钓鱼币兑换",)),
     CommandDef(r"(?:黑商|黑市)撤回(?:\s*(\d+))?", "黑商撤回", "black_market_revoke_matcher", ("黑商撤回",)),
+    CommandDef(r"智能黑商(?:交换)?(?:\s*(.*))?", "智能黑商", "smart_black_market_matcher", ("智能黑商", "智能黑商交换")),
     CommandDef(r"(?:黑商|黑市)(?:交换)?(?:\s*(.*))?", "黑商交换", "black_market_matcher", ("黑商交换",)),
     CommandDef(r"(?:白商|白市)", "白商", "white_market_matcher", ("白商",)),
     CommandDef(r"(?:白商|白市)(?:交换)?\s*(.+)", "白商交换", "white_market_exchange_matcher", ("白商交换",)),

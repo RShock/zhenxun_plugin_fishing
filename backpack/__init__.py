@@ -15,6 +15,7 @@ from .black_market import (
     black_market_revoke,
     extract_market_exchange_input,
     render_white_market_records,
+    smart_black_market_exchange,
     white_market_exchange,
 )
 from .gift import gift_fish
@@ -36,6 +37,7 @@ __all__ = [
     "BLACK_MARKET_REVOKE_USAGE",
     "extract_market_exchange_input",
     "render_white_market_records",
+    "smart_black_market_exchange",
     "white_market_exchange",
     "lock_fish",
     "unlock_fish",

@@ -1,4 +1,5 @@
 import json
+from datetime import date, timedelta
 
 import pytest
 
@@ -16,6 +17,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack import (
     render_white_market_records,
     lock_fish,
     sell_fish,
+    smart_black_market_exchange,
     unlock_fish,
     white_market_exchange,
 )
@@ -620,6 +622,90 @@ class TestBlackMarketExchange:
         assert second_ok is False
         assert second_should_reply is True
         assert "今天已经" in second_msg
+
+    async def test_original_black_market_does_not_consume_ticket(self, db):
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=2
+        )
+        await db.items_add(USER_ID, "black_market_extra_ticket", "ticket", 1)
+
+        first = await black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+        second = await black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert first[0] is True
+        assert second[0] is False
+        ticket = await db.items_get_item(
+            USER_ID, "black_market_extra_ticket", "ticket"
+        )
+        assert ticket["count"] == 1
+
+    async def test_smart_black_market_chains_and_uses_tickets_for_cooldown(
+        self, db, monkeypatch
+    ):
+        source = find_fish_target("橘座鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "UR")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        await db.items_add(USER_ID, "black_market_extra_ticket", "ticket", 9)
+        user = await db.user_get(USER_ID)
+        user.display_slots = 0
+        choices = iter([0.1, 0.1, 0.9])
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
+            lambda: next(choices),
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.choice",
+            lambda seq: seq[0],
+        )
+
+        ok, msg, should_reply = await smart_black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert ok is True and should_reply is True
+        assert "共尝试 3 次" in msg
+        assert "已消耗 2 张" in msg
+        assert user.smart_black_market_available_date == date.today() + timedelta(days=1)
+        ticket = await db.items_get_item(
+            USER_ID, "black_market_extra_ticket", "ticket"
+        )
+        assert ticket["count"] == 7
+
+    async def test_smart_black_market_stops_when_product_is_displayed(
+        self, db, monkeypatch
+    ):
+        source = find_fish_target("橘座鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "UR")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
+            lambda: 0.1,
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.choice",
+            lambda seq: seq[0],
+        )
+
+        ok, msg, _ = await smart_black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert ok is True
+        assert "共尝试 1 次" in msg
+        assert "自动展示离开背包" in msg
 
     async def test_locked_source_first_utr_does_not_claim_auto_lock(
         self, db, monkeypatch

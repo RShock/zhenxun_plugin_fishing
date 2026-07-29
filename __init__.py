@@ -117,6 +117,7 @@ from .matchers import (
     skin_matcher,
     status_matcher,
     stop_fishing_matcher,
+    smart_black_market_matcher,
     test_render_matcher,
     test_scene_render_matcher,
     unlock_fish_matcher,

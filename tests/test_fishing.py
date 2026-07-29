@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -19,6 +19,33 @@ from zhenxun.plugins.zhenxun_plugin_fishing.fishing import (
 
 USER_ID = "test_user_001"
 LOCATION_1 = "1"
+
+
+class TestBlackMarketHint:
+    @pytest.mark.parametrize(
+        ("black_market_count", "available_date", "expected"),
+        [
+            (0, date(2026, 8, 1), True),
+            (1, date(2026, 7, 30), True),
+            (1, None, True),
+            (1, date(2026, 8, 1), False),
+        ],
+    )
+    def test_show_when_either_market_is_available(
+        self, black_market_count, available_date, expected
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.handlers.fishing import (
+            should_show_black_market_hint,
+        )
+
+        assert (
+            should_show_black_market_hint(
+                black_market_count,
+                available_date,
+                today=date(2026, 7, 30),
+            )
+            is expected
+        )
 
 
 class TestStartFishing:

@@ -983,7 +983,7 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card">
         <span class="cmd-name">黑商交换 来源鱼 目标鱼</span>
-        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。每天 1 次。</p>
+        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。原黑商每天 1 次且不消耗兑换券。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">黑商撤回</span>
@@ -1000,7 +1000,7 @@ code, .ic {
       <li>锁定鱼也允许被交换消耗</li>
       <li>S1 猫猫乐园视为 7 级图</li>
       <li>交换失败后记录仍保留，白商列表中可看到反向交换选项</li>
-      <li>误操作后可用「黑商撤回」撤回当天交换，退还鱼获并回退次数/保底/券</li>
+      <li>误操作后可用「黑商撤回」撤回当天交换，退还鱼获并回退原黑商当日次数和保底计数</li>
     </ul>
     <div class="sec-h" style="margin-top:14px">白商规则细节</div>
     <ul class="clean">
@@ -1040,7 +1040,8 @@ code, .ic {
   <div class="card">
     <div class="sec-h">玩法总览</div>
     <p style="font-size:14px; line-height:1.7;">
-      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。每天基础 1 次，可消耗额外券再换。
+      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。原黑商每天 1 次且不消耗券。
+      <strong>智能黑商</strong>：会把随机产物继续交换，直到拿到目标鱼，或产物因图鉴解锁/自动展示离开背包；尝试越多，下次来得越晚，兑换券可缩短等待但至少次日。
       <strong>白商</strong>：查看全服仍有效的黑商记录，用与黑商目标鱼<strong>同地图同稀有度</strong>的任意鱼，换回黑商当时<strong>交出</strong>的指定鱼。成功后该记录失效，并消耗赠送次数。
     </p>
     <div class="callout tip" style="margin-top:10px">
@@ -1054,7 +1055,8 @@ code, .ic {
       <table>
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
-          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换，每日一次且不消耗兑换券。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
+          <tr><td><span class="tag t-utr">智能</span></td><td><code>智能黑商 [交换] 来源鱼 目标鱼</code></td><td>自动链式交换随机产物；尝试数决定等待天数，兑换券每张抵 1 天但至少次日。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。多条记录时需指定序号。</td></tr>
           <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可交换列表（箭头列表展示，左边为支付鱼，右边为获得鱼）。</td></tr>
@@ -1082,8 +1084,8 @@ code, .ic {
         <p class="cmd-desc">来源鱼的<strong>场景等级</strong>与<strong>稀有度</strong>都必须 ≥ 目标鱼。S1 猫猫乐园按 7 级图计算。</p>
       </div>
       <div class="cmd-card">
-        <span class="cmd-name">每日次数</span>
-        <p class="cmd-desc">每人每天基础 1 次。次数用尽后，若持有黑商额外券（<code>black_market_extra_ticket</code>）可再换一次并消耗 1 张券。</p>
+        <span class="cmd-name">原黑商每日次数</span>
+        <p class="cmd-desc">每人每天 1 次且不消耗兑换券。兑换券不能增加原黑商次数，仅用于抵扣智能黑商冷却。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">同稀有度风险</span>
@@ -1132,7 +1134,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">撤回效果</span>
-        <p class="cmd-desc">退还获得的鱼、返还消耗的来源鱼、回退当日交换次数、回退保底计数（仅随机替换的失败交换）、返还额外券（若消耗过）。</p>
+        <p class="cmd-desc">退还获得的鱼、返还消耗的来源鱼、回退原黑商当日交换次数，并回退保底计数（仅随机替换的失败交换）。原黑商不消耗兑换券，因此撤回不返券。</p>
       </div>
     </div>
     <ul class="clean" style="margin-top:8px">
@@ -1158,7 +1160,7 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card">
         <span class="cmd-name">提示「今天已经进行过黑商交换」</span>
-        <p class="cmd-desc">基础次数已用完，且没有额外券。等次日重置或获取额外券后再试。</p>
+        <p class="cmd-desc">原黑商今天的 1 次机会已使用，请等次日重置。兑换券不能增加原黑商次数，只能抵扣智能黑商冷却。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">提示「今天已经不能再赠送」</span>

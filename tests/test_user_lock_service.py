@@ -266,6 +266,7 @@ def test_all_player_mutation_handlers_have_expected_locks():
             "unlock_fish": "解锁鱼",
             "gift_fish": "赠送鱼",
             "black_market_revoke": "黑商撤销",
+            "smart_black_market_exchange": "智能黑商交换",
             "black_market_exchange": "黑商交换",
             "white_market_exchange": "白商交换",
             "set_preferred_bait": "设定鱼饵",
