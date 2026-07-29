@@ -192,6 +192,109 @@ def test_backpack_asset_handlers_have_expected_locks():
     assert resolver.id == "event_user_and_at_ids"
 
 
+def test_all_player_mutation_handlers_have_expected_locks():
+    handlers_dir = Path(__file__).parents[1] / "handlers"
+    expected = {
+        "backpack.py": {
+            "sell_fish": "卖鱼",
+            "lock_fish": "锁鱼",
+            "unlock_fish": "解锁鱼",
+            "gift_fish": "赠送鱼",
+            "black_market_revoke": "黑商撤销",
+            "black_market_exchange": "黑商交换",
+            "white_market_exchange": "白商交换",
+            "set_preferred_bait": "设定鱼饵",
+            "sell_bait": "卖出鱼饵",
+        },
+        "cat_park.py": {"upgrade_cat_park_building": "猫猫乐园建设"},
+        "fishing.py": {
+            "start_fishing": "钓鱼/确认地图",
+            "stop_fishing": "收杆结算",
+            "check_fishing_status": "钓鱼状态结算",
+        },
+        "player.py": {
+            "toggle_auto_sell": "设置自动卖鱼",
+            "set_auto_sell_rarity": "设置自动卖鱼",
+            "toggle_auto_lock": "设置自动锁鱼",
+            "set_auto_lock_pattern": "设置自动锁鱼",
+            "rename_fishing_user": "钓鱼改名",
+            "change_skin": "更换皮肤",
+        },
+        "shop.py": {
+            "upgrade_rod": "升级钓竿",
+            "build_starry_ship": "建设星空艇",
+            "upgrade_hook": "升级鱼钩",
+            "buy_item": "鱼店购买",
+            "upgrade_display_slots": "升级展示栏",
+            "do_nest": "打窝",
+            "exchange_to_gold": "钓鱼币兑换",
+            "resolve_item_handler": "使用物品",
+        },
+        "web.py": {
+            "register": "注册网页端密钥",
+            "unregister": "删除网页端密钥",
+        },
+    }
+
+    for filename, expected_calls in expected.items():
+        tree = ast.parse((handlers_dir / filename).read_text(encoding="utf-8"))
+        actual: dict[str, set[str]] = {}
+        for node in tree.body:
+            if not isinstance(node, ast.AsyncFunctionDef):
+                continue
+            lock_feature = next(
+                (
+                    decorator.args[0].value
+                    for decorator in node.decorator_list
+                    if isinstance(decorator, ast.Call)
+                    and isinstance(decorator.func, ast.Name)
+                    and decorator.func.id == "with_user_lock"
+                    and decorator.args
+                    and isinstance(decorator.args[0], ast.Constant)
+                ),
+                None,
+            )
+            if lock_feature is None:
+                continue
+            for child in ast.walk(node):
+                if not isinstance(child, ast.Call):
+                    continue
+                if isinstance(child.func, ast.Name):
+                    call_name = child.func.id
+                elif isinstance(child.func, ast.Attribute):
+                    call_name = child.func.attr
+                else:
+                    continue
+                actual.setdefault(call_name, set()).add(lock_feature)
+
+        for call_name, feature in expected_calls.items():
+            assert feature in actual.get(call_name, set()), (
+                f"{filename} 的 {call_name} 未使用预期用户锁 {feature}"
+            )
+
+
+def test_user_initialization_uses_shared_user_lock():
+    service_path = Path(__file__).parents[1] / "services" / "user_service.py"
+    tree = ast.parse(service_path.read_text(encoding="utf-8"))
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.AsyncFunctionDef)
+        and node.name == "get_or_create_user"
+    )
+    lock_calls = [
+        child
+        for child in ast.walk(function)
+        if isinstance(child, ast.Call)
+        and isinstance(child.func, ast.Name)
+        and child.func.id == "user_operation_lock"
+    ]
+    assert len(lock_calls) == 1
+    assert isinstance(lock_calls[0].args[0], ast.List)
+    assert isinstance(lock_calls[0].args[0].elts[0], ast.Name)
+    assert lock_calls[0].args[0].elts[0].id == "user_id"
+
+
 async def test_nested_lock_expansion_is_rejected_without_leak():
     with pytest.raises(RuntimeError, match="禁止嵌套扩张"):
         async with user_operation_lock(["u1"], "外层"):

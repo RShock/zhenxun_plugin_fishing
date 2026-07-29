@@ -3,6 +3,7 @@ from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 
+from ..services.user_lock_service import with_user_lock
 from ..utils import _is_private_chat, _send_text
 from ..web.key_manager import KeyManager
 
@@ -26,6 +27,7 @@ delete_key_matcher = on_regex(
 
 
 @register_key_matcher.handle()
+@with_user_lock("注册网页端密钥")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not _is_private_chat(event):
         await matcher.finish("请在私聊中使用此功能！")
@@ -77,6 +79,7 @@ async def _(event: Event, matcher: Matcher):
 
 
 @delete_key_matcher.handle()
+@with_user_lock("删除网页端密钥")
 async def _(event: Event, matcher: Matcher):
     if not _is_private_chat(event):
         await matcher.finish("请在私聊中使用此功能！")
