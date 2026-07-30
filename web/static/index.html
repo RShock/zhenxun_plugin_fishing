@@ -824,7 +824,7 @@ button { -webkit-tap-highlight-color: transparent; }
         <el-select v-model="market.targetId" placeholder="选择目标鱼"><el-option v-for="f in targetChoices" :key="f.numeric_id" :label="`${f.fish_name} ${f.rarity} #${f.numeric_id}`" :value="f.numeric_id"></el-option></el-select>
       </div>
     </div>
-    <div class="action-row"><el-button type="primary" @click="submitMarket(false)">交换</el-button><el-button type="success" @click="submitMarket(true)">智能黑商</el-button></div>
+    <div class="action-row"><el-checkbox v-model="market.smart">智能黑商</el-checkbox><el-button type="primary" @click="submitMarket">确认交换</el-button></div>
 </el-dialog>
 
 </div>
@@ -873,7 +873,7 @@ createApp({
     const fishCategory = ref('other');
     const selectedFish = ref(null);
     const fishCatalog = ref([]);
-    const market = reactive({sourceId:'',targetLocation:'',targetRarity:'',targetId:''});
+    const market = reactive({sourceId:'',targetLocation:'',targetRarity:'',targetId:'',smart:false});
 
     const DRAWER_LS_LEFT = 'fish_drawer_left';
     const DRAWER_LS_RIGHT = 'fish_drawer_right';
@@ -998,7 +998,7 @@ createApp({
       const unseen=candidates.find(f=>!backpack.fish.some(b=>String(b.numeric_id)===String(f.numeric_id)))||candidates[0];
       if(unseen){market.targetLocation=unseen.location_id;market.targetRarity=unseen.rarity;market.targetId=unseen.numeric_id;}
     }
-    function submitMarket(smart) { if(!market.sourceId||!market.targetId)return; marketModal.value=false; sendQuick(`${smart?'智能黑商':'黑商'} ${market.sourceId} ${market.targetId}`); }
+    function submitMarket() { if(!market.sourceId||!market.targetId)return; marketModal.value=false; sendQuick(`${market.smart?'智能黑商':'黑商'} ${market.sourceId} ${market.targetId}`); }
 
     function startFishTimer(startIso, locationName) {
       stopFishTimer();

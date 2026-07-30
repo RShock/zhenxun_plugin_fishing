@@ -49,6 +49,8 @@ def test_web_ui_uses_element_plus_and_responsive_scroll_contract():
     assert "<el-card v-for=\"f in visibleFishCards\"" in html
     assert "<el-select v-model=\"market.targetLocation\"" in html
     assert "<el-select v-model=\"market.targetRarity\"" in html
+    assert "<el-checkbox v-model=\"market.smart\">智能黑商</el-checkbox>" in html
+    assert "@click=\"submitMarket\">确认交换" in html
     assert "来源鱼（当前鱼）" in html
     assert "完整 10 槽" in html
     assert "药水与道具" in html

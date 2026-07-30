@@ -78,6 +78,12 @@ _KNOWN_ITEM_NAMES = {
     "black_market_extra_ticket": "黑商额外兑换券",
     "utr_select_ticket": "UTR自选券",
     "lottery_fragment": "抽奖碎片",
+    "lottery_fragment_low": "中级抽奖碎片",
+    "lottery_fragment_mid": "高级抽奖碎片",
+    "lottery_fragment_high": "究极抽奖碎片",
+    "lottery_ticket_low": "初级抽奖券",
+    "lottery_ticket_mid": "中级抽奖券",
+    "lottery_ticket_high": "高级抽奖券",
     "starry_ship_ticket": "星空艇船票",
 }
 
