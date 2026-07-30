@@ -40,6 +40,7 @@ class TestMiracleSubsetSearch:
         user = SimpleNamespace(
             starry_fish=[{"id": "999999"} for _ in range(7)],
             starry_exhibition=[{"id": "777784", "display_score": 9}],
+            items={},
             star_frames=0,
         )
         dirty: set[str] = set()
@@ -53,6 +54,27 @@ class TestMiracleSubsetSearch:
         assert user.starry_exhibition == []
         assert user.star_frames == 1
         assert {"starry_fish", "starry_exhibition", "star_frames"} <= dirty
+
+    def test_legacy_item_meteor_fish_participates_and_is_consumed(self):
+        user = SimpleNamespace(
+            starry_fish=[{"id": "999999"} for _ in range(7)],
+            starry_exhibition=[],
+            items={
+                "777784|meteor_fish": {"item_type": "meteor_fish", "count": 1},
+                "time_potion|potion": {"item_type": "potion", "count": 2},
+            },
+            star_frames=0,
+        )
+        dirty: set[str] = set()
+
+        claim = apply_try_claim_miracle(user, dirty)
+
+        assert claim is not None
+        assert "777784" in claim["consumed_ids"]
+        assert "777784|meteor_fish" not in user.items
+        assert user.items["time_potion|potion"]["count"] == 2
+        assert user.star_frames == 1
+        assert "items" in dirty
 
     def test_miracle_max_exact_n_covers_practical_sizes(self):
         assert MIRACLE_MAX_EXACT_N >= max(BACKPACK_SIZES)

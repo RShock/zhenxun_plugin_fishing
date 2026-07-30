@@ -115,6 +115,49 @@ def _fish_web_meta(fish_name: str) -> dict:
     return {"location_id": "", "location_name": "其他", "category": "other", "image_url": ""}
 
 
+def _starry_web_records(user, items_raw: list[dict]) -> tuple[list[dict], list[dict]]:
+    """补齐星空鱼网页展示数据，并兼容旧 items.meteor_fish 库存。"""
+    from ..core.starry_system import score_starry_fish
+
+    image_url = "/api/resource/images/fish/%E6%B5%81%E6%98%9F%E9%B1%BC.png"
+
+    def build(record: dict, *, in_exhibition: bool = False) -> dict:
+        scored = score_starry_fish(record.get("id", 0))
+        return {
+            **record,
+            "id": scored.id_text,
+            "numeric_id": scored.id_text,
+            "fish_name": "流星鱼",
+            "score": round(scored.raw_score, 3),
+            "display_score": scored.display_score,
+            "location_name": "星穹展馆" if in_exhibition else "星穹",
+            "category": "starry",
+            "image_url": image_url,
+        }
+
+    backpack = [build(record) for record in list(user.starry_fish or [])]
+    exhibition = [
+        build(record, in_exhibition=True) for record in list(user.starry_exhibition or [])
+    ]
+    for item in items_raw:
+        if item.get("item_type") != "meteor_fish":
+            continue
+        backpack.extend(
+            build({"id": item.get("item_id", 0), "legacy": True})
+            for _ in range(max(0, int(item.get("count", 0))))
+        )
+    return backpack, exhibition
+
+
+def _build_display_slots(displays: list[dict], slot_count: int = 10) -> list[dict]:
+    """网页展示区固定呈现完整槽位，未解锁或未放鱼的槽位也保留占位。"""
+    display_by_slot = {int(display.get("slot", 0)): display for display in displays}
+    return [
+        display_by_slot.get(slot, {"slot": slot, "empty": True})
+        for slot in range(1, slot_count + 1)
+    ]
+
+
 # ── API 端点 ──────────────────────────────────────────────────────────
 
 
@@ -190,22 +233,25 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
             "count": i["count"],
             "name": _translate_item(i["item_id"], i["item_type"], ConfigManager),
         }
-        items.append(entry)
+        if i["item_type"] != "meteor_fish":
+            items.append(entry)
         if i["item_type"] == "bait":
             baits.append(entry)
 
     displays = await FishingUser.get_user_displays(user_id)
     for display in displays:
         display.update(_fish_web_meta(display.get("fish_name", "")))
+    starry_fish, starry_exhibition = _starry_web_records(user, items_raw)
+    display_slots = _build_display_slots(displays)
     backpack = {
         "fish": fish_list,
         "total_fish_count": len(fish_list),
         "items": items,
         "baits": baits,
-        "displays": displays,
+        "displays": display_slots,
         "total_value": total_value,
-        "starry_fish": list(user.starry_fish or []),
-        "starry_exhibition": list(user.starry_exhibition or []),
+        "starry_fish": starry_fish,
+        "starry_exhibition": starry_exhibition,
     }
 
     fish_catalog = []

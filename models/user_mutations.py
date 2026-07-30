@@ -515,13 +515,21 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     current_frames = int(user.star_frames or 0)
     backpack = list(_ensure_list(user.starry_fish))
     exhibition = list(_ensure_list(user.starry_exhibition))
+    legacy_items = _ensure_dict(getattr(user, "items", None))
     candidates = [("backpack", item) for item in backpack]
     candidates.extend(("exhibition", item) for item in exhibition)
+    for key, entry in legacy_items.items():
+        item_id, separator, item_type = str(key).partition("|")
+        if separator and item_type == "meteor_fish":
+            candidates.extend(
+                ("legacy_item", {"id": item_id, "legacy_key": key})
+                for _ in range(max(0, int(entry.get("count", 0))))
+            )
     if not candidates:
         return None
 
-    # 旧版本会把高分流星鱼移入独立展馆；奇迹按“玩家持有的全部流星鱼”计算，
-    # 因此搜索和扣除都必须同时覆盖背包与展馆，不能只处理新入包记录。
+    # 奇迹按“玩家持有的全部流星鱼”计算。历史上流星鱼先后存过普通 items、
+    # 星空背包和独立展馆三种结构，因此搜索与扣除必须同时覆盖三者。
     ids = [int(item.get("id", 0)) for _, item in candidates]
     indices = find_miracle_subset(ids)
     if not indices:
@@ -539,12 +547,27 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     new_exhibition = [
         item for item in exhibition if id(item) not in consumed_exhibition_ids
     ]
+    consumed_legacy_counts: dict[str, int] = {}
+    for i in index_set:
+        source, item = candidates[i]
+        if source == "legacy_item":
+            key = item["legacy_key"]
+            consumed_legacy_counts[key] = consumed_legacy_counts.get(key, 0) + 1
+    new_items = dict(legacy_items)
+    for key, count in consumed_legacy_counts.items():
+        entry = dict(new_items[key])
+        entry["count"] = int(entry.get("count", 0)) - count
+        if entry["count"] > 0:
+            new_items[key] = entry
+        else:
+            del new_items[key]
 
     user.starry_fish = new_backpack
     user.starry_exhibition = new_exhibition
+    user.items = new_items
     user.star_frames = current_frames + 1
     subset_count = len(subset_records)
-    mark_dirty(dirty, "starry_fish", "starry_exhibition", "star_frames")
+    mark_dirty(dirty, "starry_fish", "starry_exhibition", "items", "star_frames")
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [
@@ -567,6 +590,11 @@ def apply_try_claim_miracles(
     # 仅用于防止异常数据造成无界循环，不限制星空框库存。
     held_count = len(_ensure_list(user.starry_fish)) + len(
         _ensure_list(user.starry_exhibition)
+    )
+    held_count += sum(
+        max(0, int(entry.get("count", 0)))
+        for key, entry in _ensure_dict(getattr(user, "items", None)).items()
+        if str(key).endswith("|meteor_fish")
     )
     limit = max_claims if max_claims is not None else held_count
     for _ in range(max(0, int(limit))):

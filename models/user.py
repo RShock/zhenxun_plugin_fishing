@@ -953,11 +953,11 @@ class FishingUser(Model):
 
     @classmethod
     async def try_claim_miracle(cls, user_id: str) -> dict | None:
-        """尝试用背包流星鱼凑一次奇迹，成功则消耗子集并 +1 星空框。
+        """尝试用持有的流星鱼凑一次奇迹，成功则消耗子集并 +1 星空框。
 
         规则：
-        - 仅 `starry_fish` 背包参与；`starry_exhibition` 展馆鱼不参与、不消耗
-        - 搜索：对编号最大的至多 26 条做 MITM 精确子集和
+        - `starry_fish`、`starry_exhibition` 与旧 `items.meteor_fish` 均参与并消耗
+        - 搜索全部持有记录，优先使用 MITM 精确子集和
         - 星空框库存不设持有上限
         """
         user = await cls.get_user(user_id)
@@ -972,7 +972,7 @@ class FishingUser(Model):
     ) -> list[dict]:
         """连续尝试奇迹结算，直到无法再凑出符合条件的子集。
 
-        每次成功消耗一组 `starry_fish` 并 +1 星空框。
+        每次成功消耗一组持有的流星鱼并 +1 星空框。
         """
         user = await cls.get_user(user_id)
         dirty: set[str] = set()
