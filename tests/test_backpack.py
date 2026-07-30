@@ -152,8 +152,29 @@ class TestDetailedCollection:
         assert captured[-1]["detailed"] is False
         assert await render_collection(collection_data, detailed=True) == b"rendered"
         assert captured[-1]["detailed"] is True
-        rarity = captured[-1]["locations"][0]["fish"][0]["rarities"]["N"]
+        fish = captured[-1]["locations"][0]["fish"][0]
+        rarity = fish["rarities"]["N"]
         assert rarity == {"collected": True, "price": 12, "numeric_id": "111"}
+        assert len(fish["details"]) == 5
+        assert fish["details"][-1] == {
+            "rarity": "N",
+            "numeric_id": "111",
+            "price": 12,
+        }
+
+        assert await render_collection(
+            collection_data, has_utr=True, detailed=True
+        ) == b"rendered"
+        utr_fish = captured[-1]["locations"][0]["fish"][0]
+        assert len(utr_fish["details"]) == 6
+        assert [row["rarity"] for row in utr_fish["details"]] == [
+            "UTR",
+            "UR",
+            "SSR",
+            "SR",
+            "R",
+            "N",
+        ]
 
 
 async def _async_bytes(value):

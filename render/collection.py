@@ -21,10 +21,21 @@ async def render_collection(
                     "price": rarity_data.get("price"),
                     "numeric_id": rarity_data.get("numeric_id"),
                 }
+            # 详细图鉴按稀有度逐行排版，UTR 解密前 5 行、解密后 6 行；
+            # 顺序必须与顶部稀有度图例一致，避免 ID 与价格对应错位。
+            details = [
+                {
+                    "rarity": rarity,
+                    "numeric_id": rarities[rarity]["numeric_id"],
+                    "price": rarities[rarity]["price"],
+                }
+                for rarity in legend_rarities
+            ]
             fish_list.append(
                 {
                     "name": fish.get("name", fish.get("id", "")),
                     "rarities": rarities,
+                    "details": details,
                     "fish_complete": fish.get("fish_complete", False),
                 }
             )

@@ -15,9 +15,11 @@
 .rarity-row { display: flex; gap: 1px; justify-content: center; overflow: hidden; }
 .rdot { width: 7px; height: 7px; border-radius: 50%; box-sizing: border-box; flex-shrink: 0; }
 .rdot-empty { width: 7px; height: 7px; border-radius: 50%; border: 1px solid #ddd; box-sizing: border-box; flex-shrink: 0; }
-.detail-row { display: grid; grid-template-columns: 15px repeat({{ legend_rarities|length }}, minmax(0, 1fr)); gap: 1px; align-items: center; margin-top: 3px; font-size: 5px; line-height: 1.25; color: #666; }
-.detail-label { font-weight: bold; text-align: left; color: #555; }
-.detail-value { min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; }
+.detail-list { margin-top: 2px; font-size: 5px; line-height: 1.08; color: #555; }
+.detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2px; align-items: center; min-height: 6px; border-left: 2px solid var(--rarity-color); padding-left: 1px; box-sizing: border-box; }
+.detail-id, .detail-price { min-width: 0; white-space: nowrap; overflow: hidden; }
+.detail-id { text-align: left; }
+.detail-price { text-align: right; }
 {% endblock %}
 
 {% block content %}
@@ -44,13 +46,13 @@
                 {% endfor %}
             </div>
             {% if detailed %}
-            <div class="detail-row">
-                <span class="detail-label">价格</span>
-                {% for r in legend_rarities %}<span class="detail-value">{{ fish.rarities[r].price }}</span>{% endfor %}
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">ID</span>
-                {% for r in legend_rarities %}<span class="detail-value">{{ fish.rarities[r].numeric_id }}</span>{% endfor %}
+            <div class="detail-list">
+                {% for detail in fish.details %}
+                <div class="detail-row" style="--rarity-color: {{ rarity_colors[detail.rarity] }};">
+                    <span class="detail-id">{{ detail.numeric_id }}</span>
+                    <span class="detail-price">{{ detail.price }}</span>
+                </div>
+                {% endfor %}
             </div>
             {% endif %}
         </div>
