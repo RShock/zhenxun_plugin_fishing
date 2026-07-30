@@ -19,9 +19,10 @@
     <div class="fish-img-placeholder">🐟</div>
     {% endif %}
     <div class="fish-name" style="color: {{ fish.color }};">{{ fish.name }}</div>
-    {% if fish.locked %}
-    <div class="fish-item-lock">🔒</div>
-    {% endif %}
+    <div class="fish-item-bottom-left">
+        {% if fish.white_market_exchangeable %}<span class="fish-item-exchange">⇄</span>{% endif %}
+        {% if fish.locked %}<span class="fish-item-lock">🔒</span>{% endif %}
+    </div>
     {% if fish.price is not none %}
     <div class="fish-item-price">💰{{ fish.price }}</div>
     {% endif %}

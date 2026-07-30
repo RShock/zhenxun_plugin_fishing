@@ -435,6 +435,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .fish-corner { position:absolute; max-width:70%; padding:4px 7px; border-radius:8px; color:#fff; background:rgba(27,48,58,.76); font-size:10px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .fish-corner.tl { top:7px; left:7px; } .fish-corner.tr { top:7px; right:7px; }
 .fish-corner.bl { bottom:7px; left:7px; } .fish-corner.br { bottom:7px; right:7px; }
+.fish-exchange-mark { position:absolute; bottom:7px; left:7px; z-index:3; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:8px; color:#fff; background:#1f9bb4; font-size:17px; font-weight:900; box-shadow:0 2px 7px rgba(18,109,128,.28); }
+.fish-card.has-exchange .fish-corner.bl { left:37px; max-width:calc(70% - 30px); }
+.fish-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:12px 0; }
+.fish-detail-item { padding:10px 12px; border-radius:12px; background:var(--bg-soft); }
+.fish-detail-item small { display:block; color:var(--sub); margin-bottom:3px; }
 .fish-card-name { padding:8px 10px 28px; text-align:center; font-weight:900; }
 .action-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
 .action-row .el-button + .el-button { margin-left:0; }
@@ -786,19 +791,28 @@ button { -webkit-tap-highlight-color: transparent; }
   <el-tabs v-model="fishCategory">
     <el-tab-pane label="其他鱼" name="other">
     <div class="fish-card-grid">
-      <el-card v-for="f in visibleFishCards" :key="f.numeric_id" shadow="hover" :class="['fish-card',{selected:selectedFish?.numeric_id===f.numeric_id}]" @click="selectedFish=f">
+      <el-card v-for="f in visibleFishCards" :key="f.numeric_id" shadow="hover" :class="['fish-card',{selected:selectedFish?.numeric_id===f.numeric_id,'has-exchange':f.white_market_exchangeable}]" @click="selectedFish=f">
         <img v-if="f.image_url" :src="f.image_url"><div v-else style="height:128px"></div>
         <span class="fish-corner tl">{{ f.rarity }}</span><span class="fish-corner tr">#{{ f.numeric_id }}</span>
         <div class="fish-card-name">{{ f.fish_name }}</div>
-        <span class="fish-corner bl">{{ f.location_name || '星穹' }}</span><span class="fish-corner br">{{ f.locked ? '已锁' : ('x'+(f.count||1)) }}</span>
+        <span v-if="f.white_market_exchangeable" class="fish-exchange-mark" title="可用于白商交换">⇄</span>
+        <span class="fish-corner bl">{{ f.location_name || '星穹' }}</span><span class="fish-corner br">{{ f.locked ? '已锁 · x'+(f.count||1) : ('x'+(f.count||1)) }}</span>
       </el-card>
     </div>
-    <div class="action-row" v-if="selectedFish">
-      <el-button v-if="!selectedFish.locked" type="primary" @click="runFishAction('锁鱼')">锁定</el-button>
-      <el-button v-else type="warning" @click="runFishAction('解锁')">解锁</el-button>
-      <el-button type="danger" @click="runFishAction('卖鱼')">卖出</el-button>
-      <el-button type="success" @click="openMarket">黑商</el-button>
-    </div>
+    <template v-if="selectedFish">
+      <div class="fish-detail-grid">
+        <div class="fish-detail-item"><small>ID</small>#{{ selectedFish.numeric_id }}</div>
+        <div class="fish-detail-item"><small>价格</small>{{ fmtNumber(selectedFish.price) }} 鱼币</div>
+        <div class="fish-detail-item"><small>地图 / 对应最低等级</small>{{ selectedFish.location_name }} · Lv{{ selectedFish.minimum_level }}</div>
+      </div>
+      <div class="action-row">
+        <el-button v-if="!selectedFish.locked" type="primary" @click="runFishAction('锁鱼')">锁定</el-button>
+        <el-button v-else type="warning" @click="runFishAction('解锁')">解锁</el-button>
+        <el-button type="danger" @click="runFishAction('卖鱼')">卖出</el-button>
+        <el-button type="success" @click="openMarket">黑商</el-button>
+        <el-button v-if="selectedFish.white_market_exchangeable" type="primary" plain @click="openWhiteMarket">白商</el-button>
+      </div>
+    </template>
     <el-card class="item-panel" shadow="never">
       <div class="item-panel-title">药水与道具</div>
       <div class="list"><div v-for="it in nonBaitItems" :key="it.item_id+'|'+it.item_type" class="list-item"><div class="list-main">{{ it.name || it.item_id }}</div><div class="list-count">x{{ it.count }}</div></div><div v-if="!nonBaitItems.length" class="empty-tip">暂无药水或道具</div></div>
@@ -813,6 +827,18 @@ button { -webkit-tap-highlight-color: transparent; }
       </div>
     </el-tab-pane>
   </el-tabs>
+</el-dialog>
+
+<el-dialog v-model="whiteMarketModal" title="白商交换" destroy-on-close>
+  <el-alert v-if="whiteMarket.exhausted" :title="whiteMarket.message" type="warning" :closable="false" show-icon></el-alert>
+  <template v-else>
+    <div class="source-fish-summary" v-if="whiteMarketPayment"><strong>支付 {{ whiteMarketPayment.fish_name }} {{ whiteMarketPayment.rarity }}</strong><br>{{ whiteMarketPayment.location_name }} · #{{ whiteMarketPayment.numeric_id }}</div>
+    <div class="section-title">选择可获得鱼 <span class="hint">剩余 {{ whiteMarket.remaining }} 次</span></div>
+    <el-radio-group v-model="whiteMarketTargetId" class="white-market-targets">
+      <el-radio-button v-for="target in whiteMarketTargets" :key="target.numeric_id" :value="target.numeric_id">{{ target.fish_name }} {{ target.rarity }} #{{ target.numeric_id }}</el-radio-button>
+    </el-radio-group>
+    <div class="action-row"><el-button type="primary" :disabled="!whiteMarketTargetId" @click="submitWhiteMarket">确认白商交换</el-button></div>
+  </template>
 </el-dialog>
 
 <el-dialog v-model="marketModal" title="黑商交换" destroy-on-close>
@@ -870,10 +896,13 @@ createApp({
     const collection = ref([]);
     const fishModal = ref(false);
     const marketModal = ref(false);
+    const whiteMarketModal = ref(false);
     const fishCategory = ref('other');
     const selectedFish = ref(null);
     const fishCatalog = ref([]);
     const market = reactive({sourceId:'',targetLocation:'',targetRarity:'',targetId:'',smart:false});
+    const whiteMarket = reactive({used_count:0,limit:1,remaining:1,exhausted:false,message:'',payments:[]});
+    const whiteMarketTargetId = ref('');
 
     const DRAWER_LS_LEFT = 'fish_drawer_left';
     const DRAWER_LS_RIGHT = 'fish_drawer_right';
@@ -919,6 +948,8 @@ createApp({
       return ['N','R','SR','SSR','UR','UTR'].filter(r=>!marketSource.value || ranks[r] <= ranks[marketSource.value.rarity]);
     });
     const targetChoices = computed(() => targetEntries.value.filter(f => f.location_id===market.targetLocation && f.rarity===market.targetRarity && String(f.numeric_id)!==String(market.sourceId)));
+    const whiteMarketPayment = computed(() => whiteMarket.payments.find(payment => String(payment.numeric_id)===String(selectedFish.value?.numeric_id)) || null);
+    const whiteMarketTargets = computed(() => whiteMarketPayment.value?.targets || []);
 
     function checkActionsWidth() {
       if (!quickActionsRef.value) return;
@@ -999,6 +1030,27 @@ createApp({
       if(unseen){market.targetLocation=unseen.location_id;market.targetRarity=unseen.rarity;market.targetId=unseen.numeric_id;}
     }
     function submitMarket() { if(!market.sourceId||!market.targetId)return; marketModal.value=false; sendQuick(`${market.smart?'智能黑商':'黑商'} ${market.sourceId} ${market.targetId}`); }
+    async function fetchWhiteMarket() {
+      const r=await fetch(apiUrl(`/api/player/${player.user_id||'_'}/white-market`));
+      if(!r.ok)return false;
+      const data=await r.json(); Object.assign(whiteMarket,data);
+      const exchangeable=new Set((data.payments||[]).map(payment=>String(payment.numeric_id)));
+      backpack.fish.forEach(f=>f.white_market_exchangeable=exchangeable.has(String(f.numeric_id)));
+      return true;
+    }
+    async function openWhiteMarket() {
+      if(!selectedFish.value)return;
+      try { await fetchWhiteMarket(); } catch(err) { return; }
+      if(whiteMarket.exhausted){ ElementPlus.ElMessage.warning(whiteMarket.message||'今日白商次数已用完'); return; }
+      whiteMarketTargetId.value=whiteMarketTargets.value[0]?.numeric_id||'';
+      if(!whiteMarketTargetId.value){ ElementPlus.ElMessage.info('当前没有可获得鱼'); return; }
+      fishModal.value=false; whiteMarketModal.value=true;
+    }
+    function submitWhiteMarket() {
+      if(!whiteMarketPayment.value||!whiteMarketTargetId.value)return;
+      whiteMarketModal.value=false;
+      sendQuick(`白商交换 ${whiteMarketPayment.value.numeric_id} ${whiteMarketTargetId.value}`);
+    }
 
     function startFishTimer(startIso, locationName) {
       stopFishTimer();
@@ -1137,6 +1189,7 @@ createApp({
         }
         if (data.locations) locations.splice(0, locations.length, ...data.locations);
         if (data.fish_catalog) fishCatalog.value = data.fish_catalog;
+        try { await fetchWhiteMarket(); } catch (err) { /* ignore */ }
       } catch (err) { /* ignore */ }
     }
 
@@ -1257,7 +1310,8 @@ createApp({
       textInput, loading, result, zoomSrc,
       achModal, achLoading, achievements,
       colModal, colLoading, collection,
-      fishModal, marketModal, fishCategory, selectedFish, fishCatalog, market,
+      fishModal, marketModal, whiteMarketModal, fishCategory, selectedFish, fishCatalog, market,
+      whiteMarket, whiteMarketTargetId, whiteMarketPayment, whiteMarketTargets,
       player, fishing, backpack, locations,
       WEATHER_EMOJI, drawerOpen, quickMenuOpen,
       quickBtns, useDropdown, quickActionsRef, locsCollapsed,
@@ -1269,6 +1323,7 @@ createApp({
       fmtDuration, fmtNumber, weatherName, rarityColor,
       toggleLeftDrawer, toggleRightDrawer, closeDrawer,
       openFish, runFishAction, openMarket, syncMarketTarget, smartPickTarget, submitMarket,
+      openWhiteMarket, submitWhiteMarket,
     };
   }
 }).use(ElementPlus).mount('#app');

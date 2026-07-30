@@ -241,6 +241,7 @@ def build_fish_item_data(
     locked: bool = False,
     is_cat_eaten: bool = False,
     show_utr_starry: bool = True,
+    white_market_exchangeable: bool = False,
 ) -> dict:
     color = RARITY_COLORS.get(rarity, "#808080") if rarity else "#808080"
     img_src = "" if is_cat_eaten else get_fish_image_src(fish_name, location_id)
@@ -262,6 +263,7 @@ def build_fish_item_data(
         "is_utr": is_utr,
         "utr_starry_src": utr_starry_src,
         "is_cat_eaten": is_cat_eaten,
+        "white_market_exchangeable": white_market_exchangeable,
     }
 
 

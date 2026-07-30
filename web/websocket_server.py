@@ -91,6 +91,7 @@ class WebSocketServer:
             get_collection,
             get_scenes,
             get_state,
+            get_white_market,
         )
 
         # API / WS / 显式页面入口必须注册在静态路由之前，
@@ -102,6 +103,7 @@ class WebSocketServer:
         self._app.router.add_get("/api/player/{user_id}/state", get_state)
         self._app.router.add_get("/api/player/{user_id}/achievements", get_achievements)
         self._app.router.add_get("/api/player/{user_id}/collection", get_collection)
+        self._app.router.add_get("/api/player/{user_id}/white-market", get_white_market)
         # Directory URL does not auto-serve index.html; force track editor entry.
         self._app.router.add_get(
             "/_lab/track-editor", self._track_editor_index

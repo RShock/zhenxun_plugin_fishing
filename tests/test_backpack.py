@@ -26,6 +26,10 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack.selection import (
     is_likely_misfire,
     parse_fish_selection,
 )
+from zhenxun.plugins.zhenxun_plugin_fishing.services.white_market_service import (
+    WHITE_MARKET_LIMIT_MESSAGE,
+    get_white_market_eligibility,
+)
 from zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market import (
     _maybe_randomize_same_rarity_target,
     can_exchange,
@@ -1030,6 +1034,58 @@ class TestBlackMarketExchange:
         assert records == []
         gift_count = await db.user_get_gift_count(TARGET_ID)
         assert gift_count == 1
+
+    async def test_white_market_eligibility_lists_payment_and_targets(self, db):
+        black_source = find_fish_target("小鲫鱼", "UR")
+        black_target = find_fish_target("小鲫鱼", "N")
+        assert black_source is not None and black_target is not None
+        await db.exchange_create_black_record(USER_ID, black_source, black_target)
+        await db.backpack_add_fish(
+            TARGET_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
+        await db.backpack_toggle_lock(TARGET_ID, black_target.numeric_id, True)
+
+        eligibility = await get_white_market_eligibility(TARGET_ID)
+
+        assert eligibility.exhausted is False
+        assert eligibility.remaining == DAILY_GIFT_LIMIT
+        assert len(eligibility.payments) == 1
+        payment = eligibility.payments[0]
+        assert payment.numeric_id == black_target.numeric_id
+        assert payment.locked is True
+        assert [target.numeric_id for target in payment.targets] == [
+            black_source.numeric_id
+        ]
+
+    async def test_white_market_exhausted_uses_immediate_message(self, db):
+        black_source = find_fish_target("小鲫鱼", "UR")
+        black_target = find_fish_target("小鲫鱼", "N")
+        assert black_source is not None and black_target is not None
+        await db.exchange_create_black_record(USER_ID, black_source, black_target)
+        await db.backpack_add_fish(
+            TARGET_ID,
+            black_target.name,
+            black_target.rarity,
+            black_target.numeric_id,
+            count=1,
+        )
+        for _ in range(DAILY_GIFT_LIMIT):
+            await db.user_increment_gift_count(TARGET_ID)
+
+        eligibility = await get_white_market_eligibility(TARGET_ID)
+        ok, message, should_reply = await white_market_exchange(
+            TARGET_ID, f"{black_target.numeric_id} {black_source.numeric_id}"
+        )
+
+        assert eligibility.exhausted is True
+        assert eligibility.as_dict()["message"] == WHITE_MARKET_LIMIT_MESSAGE
+        assert ok is False
+        assert should_reply is True
+        assert message == WHITE_MARKET_LIMIT_MESSAGE
 
     async def test_white_market_filter_uncollected(self, db):
         """已解锁的鱼不显示在白商列表中。"""

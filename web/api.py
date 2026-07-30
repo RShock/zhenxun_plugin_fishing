@@ -115,6 +115,7 @@ def _fish_web_meta(fish_name: str) -> dict:
         return {
             "location_id": loc.id,
             "location_name": loc.name,
+            "difficulty": loc.difficulty,
             "category": category,
             "image_url": f"/api/resource/images/fish/{filename}",
         }
@@ -162,6 +163,15 @@ def _build_display_slots(displays: list[dict], slot_count: int = 10) -> list[dic
         display_by_slot.get(slot, {"slot": slot, "empty": True})
         for slot in range(1, slot_count + 1)
     ]
+
+
+@auth_required
+async def get_white_market(request: web.Request, user_id: str) -> web.Response:
+    """返回白商剩余次数及当前背包可支付鱼、可获得鱼。"""
+    from ..services.white_market_service import get_white_market_eligibility
+
+    eligibility = await get_white_market_eligibility(user_id)
+    return web.json_response(eligibility.as_dict())
 
 
 # ── API 端点 ──────────────────────────────────────────────────────────
@@ -225,6 +235,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
                 "count": f.get("count", 0),
                 "locked": f.get("locked", False),
                 "price": price,
+                "minimum_level": _fish_web_meta(f.get("fish_name", "")).get("difficulty", 0),
                 **_fish_web_meta(f.get("fish_name", "")),
             }
         )

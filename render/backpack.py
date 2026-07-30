@@ -110,6 +110,7 @@ async def render_backpack(
                 fish_base_price=fish.get("price", 0),
                 numeric_id=fish["numeric_id"],
                 locked=fish.get("locked", False),
+                white_market_exchangeable=fish.get("white_market_exchangeable", False),
             )
         )
 

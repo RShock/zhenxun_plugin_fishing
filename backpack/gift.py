@@ -8,6 +8,7 @@ from ..config import DAILY_GIFT_LIMIT, ConfigManager, calculate_fish_price
 from ..core.result import add_fish_to_user
 from ..models import FishingUser
 from ..services import earn_gold, get_or_create_user
+from ..services.white_market_service import WHITE_MARKET_LIMIT_MESSAGE
 
 
 async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool, str]:
@@ -34,7 +35,7 @@ async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool
     if not is_utr_unlock_gift:
         gift_count = await FishingUser.get_gift_count(user_id)
         if gift_count >= DAILY_GIFT_LIMIT:
-            return False, "今天已经不能再赠送了"
+            return False, WHITE_MARKET_LIMIT_MESSAGE
 
     await FishingUser.remove_fish_by_numeric_id(user_id, fish["numeric_id"], 1)
 

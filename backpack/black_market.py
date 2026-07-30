@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from ..config import (
-    DAILY_GIFT_LIMIT,
     RARITY_COLORS,
     RARITY_INDEX,
     ConfigManager,
@@ -770,9 +769,27 @@ async def white_market_exchange(
             True,
         )
 
-    gift_count = await FishingUser.get_gift_count(user_id)
-    if gift_count >= DAILY_GIFT_LIMIT:
-        return False, "今天已经不能再赠送了，无法使用白商交换。", True
+    from ..services.white_market_service import (
+        WHITE_MARKET_LIMIT_MESSAGE,
+        get_white_market_eligibility,
+    )
+
+    eligibility = await get_white_market_eligibility(user_id)
+    if eligibility.exhausted:
+        return False, WHITE_MARKET_LIMIT_MESSAGE, True
+    eligible_payment = next(
+        (
+            payment
+            for payment in eligibility.payments
+            if payment.numeric_id == pay_fish.numeric_id
+        ),
+        None,
+    )
+    if not eligible_payment or not any(
+        target.numeric_id == get_fish.numeric_id
+        for target in eligible_payment.targets
+    ):
+        return False, "当前白商资格已变化，请重新查看白商列表。", True
 
     await FishingUser.remove_fish_by_numeric_id(user_id, pay_fish.numeric_id, 1)
     await FishingUser.increment_gift_count(user_id)

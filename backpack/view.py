@@ -232,6 +232,13 @@ async def get_backpack_image(user_id: str) -> bytes:
         items_list=items_list,
     )
 
+    from ..services.white_market_service import get_white_market_eligibility
+
+    white_market = await get_white_market_eligibility(user_id)
+    exchangeable_ids = {payment.numeric_id for payment in white_market.payments}
+    for fish in fish_with_price:
+        fish["white_market_exchangeable"] = str(fish["numeric_id"]) in exchangeable_ids
+
     # 猫猫乐园建设素材（加入重要分区）
     from ..cat_park import CAT_PARK_MATERIAL_WEIGHTS, get_cat_park_materials
 
