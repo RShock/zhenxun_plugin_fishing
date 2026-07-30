@@ -1004,7 +1004,7 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card">
         <span class="cmd-name">黑商交换 来源鱼 目标鱼</span>
-        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。原黑商每天 1 次且不消耗兑换券。</p>
+        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。每天首次黑商交换免费，之后可消耗额外兑换券继续交换。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">黑商撤回</span>
@@ -1061,7 +1061,7 @@ code, .ic {
   <div class="card">
     <div class="sec-h">玩法总览</div>
     <p style="font-size:14px; line-height:1.7;">
-      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。普通黑商每天 1 次且不消耗券。
+      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。每天首次黑商交换免费，之后可消耗额外兑换券继续使用普通或智能黑商。
       <strong>白商</strong>：查看全服仍有效的黑商记录，用与黑商目标鱼<strong>同地图同稀有度</strong>的任意鱼，换回黑商当时<strong>交出</strong>的指定鱼。成功后该记录失效，并消耗赠送次数。
     </p>
     <div class="callout tip" style="margin-top:10px">
@@ -1075,7 +1075,7 @@ code, .ic {
       <table>
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
-          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换，每日一次且不消耗兑换券。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。每日首次免费，之后每次消耗 1 张额外兑换券。鱼可用「名称+稀有度」或 3 位数字 ID。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。多条记录时需指定序号。</td></tr>
           <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可交换列表（箭头列表展示，左边为支付鱼，右边为获得鱼）。</td></tr>
@@ -1109,7 +1109,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">等待与兑换券</span>
-        <p class="cmd-desc">每实际交换一次都会增加等待时间；尝试越多，下次可用日期越晚。黑商额外兑换券每张可抵扣 1 天，但智能黑商最快也要到第二天才能再次使用。</p>
+        <p class="cmd-desc">每天第一次黑商交换免费；当天已经用过普通或智能黑商时，即使已有等待时间，也能消耗 1 张额外兑换券再次启动智能黑商。链式交换每多尝试一次都会增加等待时间，剩余兑换券每张可再抵扣 1 天。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">什么时候使用</span>
@@ -1127,7 +1127,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">普通黑商每日次数</span>
-        <p class="cmd-desc">每人每天 1 次且不消耗兑换券。兑换券不能增加普通黑商次数，仅用于抵扣智能黑商冷却。</p>
+        <p class="cmd-desc">每天第一次普通黑商免费；当天继续使用普通黑商时，每次消耗 1 张黑商额外兑换券。智能黑商当天已经执行过，也会占用这次免费机会。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">同稀有度风险</span>
@@ -1176,7 +1176,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">撤回效果</span>
-        <p class="cmd-desc">退还获得的鱼、返还消耗的来源鱼、回退原黑商当日交换次数，并回退保底计数（仅随机替换的失败交换）。原黑商不消耗兑换券，因此撤回不返券。</p>
+        <p class="cmd-desc">退还获得的鱼、返还消耗的来源鱼、回退当日黑商交换次数，并回退保底计数（仅随机替换的失败交换）。该次交换若直接消耗过额外兑换券，撤回时会返还 1 张。</p>
       </div>
     </div>
     <ul class="clean" style="margin-top:8px">
@@ -1192,7 +1192,7 @@ code, .ic {
       <li><strong>规避 70% 风险：</strong>尽量用更高稀有度换低一档，避免同稀有度被随机改写。</li>
       <li><strong>利用保底：</strong>若必须同稀有度硬换，可连续失败 4 次后用第 5 次保底锁定目标。</li>
       <li><strong>白商捡漏：</strong>别人黑商成功/随机后留下的记录，可能是你缺的图鉴捷径。先 <code>白商</code> 看「现在可交换」。</li>
-      <li><strong>次数规划：</strong>黑商每天 1 次很宝贵；白商会占赠送次数，注意与送鱼共享额度。</li>
+      <li><strong>次数规划：</strong>每天第一次黑商免费，之后普通黑商每次消耗 1 张券；智能黑商若当天已用过黑商，启动也要 1 张券。白商会占赠送次数，注意与送鱼共享额度。</li>
       <li><strong>及时撤回：</strong>黑商误操作后当天可用「黑商撤回」无损恢复，跨日则无法撤回。</li>
     </ul>
   </div>
@@ -1201,8 +1201,8 @@ code, .ic {
     <div class="sec-h">常见问题</div>
     <div class="grid-2">
       <div class="cmd-card">
-        <span class="cmd-name">提示「今天已经进行过普通黑商交换」</span>
-        <p class="cmd-desc">普通黑商今天的 1 次机会已使用，请等次日重置。兑换券不能增加普通黑商次数，只能抵扣智能黑商冷却。</p>
+        <span class="cmd-name">提示「免费黑商交换已经用完」</span>
+        <p class="cmd-desc">今天已经使用过普通或智能黑商。持有黑商额外兑换券时仍可继续：普通黑商每次消耗 1 张；智能黑商启动首轮消耗 1 张，链式后续尝试再按剩余券抵扣冷却。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">提示「今天已经不能再赠送」</span>

@@ -481,12 +481,15 @@ async def black_market_exchange(
     used_count = await FishingUser.get_black_market_count(user_id)
     used_extra_ticket = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:
-        return (
-            False,
-            "今天已经进行过普通黑商交换了。普通黑商每天只能交换 1 次，"
-            "额外兑换券仅用于抵扣智能黑商冷却，不能增加普通黑商次数。",
-            True,
+        used_extra_ticket = await FishingUser.remove_item(
+            user_id, "black_market_extra_ticket", "ticket", 1
         )
+        if not used_extra_ticket:
+            return (
+                False,
+                "今天的免费黑商交换已经用完，继续交换需要 1 张黑商额外兑换券。",
+                True,
+            )
 
     # 黑商秘密保底：连续4次"失败"（被黑商随机替换目标鱼）后，下次必定获得指定目标
     user = await FishingUser.get_user(user_id)
@@ -586,11 +589,26 @@ async def smart_black_market_exchange(
     if not can_exchange(source, target):
         return False, "交换失败：来源鱼的场景等级和稀有度必须都不低于目标鱼。", True
 
+    used_count = await FishingUser.get_black_market_count(user_id)
     user = await FishingUser.get_user(user_id)
     today = date.today()
     available_date = getattr(user, "smart_black_market_available_date", None)
-    if available_date and available_date > today:
+    # 当天已有黑商记录时，额外券可直接支付本轮智能黑商的启动费用；
+    # 非当天产生的智能黑商冷却仍需正常等待，避免额外券跨日跳过既有冷却。
+    if available_date and available_date > today and used_count < DAILY_BLACK_MARKET_LIMIT:
         return False, f"智能黑商将在 {available_date.isoformat()} 再来。", True
+
+    start_ticket_used = False
+    if used_count >= DAILY_BLACK_MARKET_LIMIT:
+        start_ticket_used = await FishingUser.remove_item(
+            user_id, "black_market_extra_ticket", "ticket", 1
+        )
+        if not start_ticket_used:
+            return (
+                False,
+                "今天的免费黑商交换已经用完，启动智能黑商需要 1 张黑商额外兑换券。",
+                True,
+            )
 
     attempts = 0
     current = source
@@ -626,8 +644,14 @@ async def smart_black_market_exchange(
                 user_id, actual_target.numeric_id, True
             )
         await FishingExchangeRecord.create_black_record(
-            user_id, current, actual_target, is_randomized=randomized
+            user_id,
+            current,
+            actual_target,
+            is_randomized=randomized,
+            # 启动券只归属于链式交换的首条记录，撤回该条时才能准确返还。
+            used_extra_ticket=start_ticket_used and attempts == 0,
         )
+        await FishingUser.increment_black_market_count(user_id)
         attempts += 1
         route.append(f"{actual_target.name}({actual_target.rarity})")
         messages.extend(result["messages"])
@@ -645,6 +669,13 @@ async def smart_black_market_exchange(
             stop_reason = "产物已因图鉴解锁或自动展示离开背包，链式交换停止"
             break
         current = actual_target
+
+    if attempts == 0:
+        if start_ticket_used:
+            await FishingUser.add_item(
+                user_id, "black_market_extra_ticket", "ticket", 1
+            )
+        return False, stop_reason or "智能黑商未能开始交换。", True
 
     ticket = await FishingUser.get_item(
         user_id, "black_market_extra_ticket", "ticket"
@@ -672,6 +703,8 @@ async def smart_black_market_exchange(
         f"{stop_reason}\n"
         f"下次可用：{next_date.isoformat()}"
     )
+    if start_ticket_used:
+        msg += "（启动时已消耗 1 张黑商额外兑换券）"
     if used_tickets:
         msg += f"（已消耗 {used_tickets} 张黑商额外兑换券抵扣冷却）"
     if messages:
