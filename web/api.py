@@ -116,10 +116,18 @@ def _fish_web_meta(fish_name: str) -> dict:
             "location_id": loc.id,
             "location_name": loc.name,
             "difficulty": loc.difficulty,
+            "minimum_level": loc.difficulty + 1,
             "category": category,
             "image_url": f"/api/resource/images/fish/{filename}",
         }
-    return {"location_id": "", "location_name": "其他", "category": "other", "image_url": ""}
+    return {
+        "location_id": "",
+        "location_name": "其他",
+        "difficulty": 0,
+        "minimum_level": 1,
+        "category": "other",
+        "image_url": "",
+    }
 
 
 def _starry_web_records(user, items_raw: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -226,6 +234,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
     for f in fish_raw:
         fd = ConfigManager.get_fish(f.get("fish_name", ""))
         price = calculate_fish_price(fd, f.get("rarity", "N"), 0) if fd else 0
+        web_meta = _fish_web_meta(f.get("fish_name", ""))
         total_value += price * f.get("count", 0)
         fish_list.append(
             {
@@ -235,8 +244,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
                 "count": f.get("count", 0),
                 "locked": f.get("locked", False),
                 "price": price,
-                "minimum_level": _fish_web_meta(f.get("fish_name", "")).get("difficulty", 0),
-                **_fish_web_meta(f.get("fish_name", "")),
+                **web_meta,
             }
         )
 

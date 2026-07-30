@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from zhenxun.plugins.zhenxun_plugin_fishing.web.api import (
     _build_display_slots,
+    _fish_web_meta,
     _starry_web_records,
 )
 
@@ -20,6 +21,16 @@ def test_display_slots_are_always_complete_ten_slots():
     assert slots[0]["empty"] is True
     assert slots[1]["fish_name"] == "鲤鱼"
     assert slots[9]["fish_name"] == "草鱼"
+
+
+def test_fish_web_meta_uses_player_facing_minimum_level():
+    first_scene = _fish_web_meta("小鲫鱼")
+    second_scene = _fish_web_meta("草鱼")
+
+    assert first_scene["difficulty"] == 0
+    assert first_scene["minimum_level"] == 1
+    assert second_scene["difficulty"] == 1
+    assert second_scene["minimum_level"] == 2
 
 
 def test_starry_web_records_include_image_number_score_and_legacy_items():
