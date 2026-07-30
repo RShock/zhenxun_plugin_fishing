@@ -377,6 +377,21 @@ class TestParseGmAddBody:
         assert specs == [("小鲫鱼sr", 10)]
         assert "全服" in target
 
+    def test_current_group(self):
+        specs, target = parse_gm_add_body("时光药水 1 本群")
+        assert specs == [("时光药水", 1)]
+        assert target == "本群"
+
+    def test_current_group_default_count(self):
+        specs, target = parse_gm_add_body("时光药水 本群")
+        assert specs == [("时光药水", 1)]
+        assert target == "本群"
+
+    def test_multi_items_current_group(self):
+        specs, target = parse_gm_add_body("时光药水,幸运药水 2 本群")
+        assert specs == [("时光药水", 2), ("幸运药水", 2)]
+        assert target == "本群"
+
     def test_multi_no_global_count(self):
         specs, target = parse_gm_add_body(
             "真多多药水,幸运药水,时光药水,时光药水,时光药水"

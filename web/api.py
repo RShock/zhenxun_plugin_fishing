@@ -73,7 +73,13 @@ def _build_fishing_status(status: dict) -> dict:
     }
 
 
-_KNOWN_ITEM_NAMES = {"time_potion": "时光药水"}
+_KNOWN_ITEM_NAMES = {
+    "time_potion": "时光药水",
+    "black_market_extra_ticket": "黑商额外兑换券",
+    "utr_select_ticket": "UTR自选券",
+    "lottery_fragment": "抽奖碎片",
+    "starry_ship_ticket": "星空艇船票",
+}
 
 
 def _translate_item(item_id: str | int, item_type: str, config: "ConfigManager") -> str:
@@ -88,12 +94,33 @@ def _translate_item(item_id: str | int, item_type: str, config: "ConfigManager")
     return _KNOWN_ITEM_NAMES.get(str(item_id), str(item_id))
 
 
+def _fish_web_meta(fish_name: str) -> dict:
+    """返回网页鱼卡所需的场景、分类和静态图片地址。"""
+    from urllib.parse import quote
+
+    from ..config import ConfigManager
+
+    for loc in ConfigManager.get_locations():
+        if fish_name not in loc.fish_pool:
+            continue
+        prefix = "s1" if loc.id.upper() == "S1" else loc.id
+        category = "starry" if loc.id.isdigit() and int(loc.id) >= 11 else "other"
+        filename = quote(f"{prefix}-{fish_name}.png")
+        return {
+            "location_id": loc.id,
+            "location_name": loc.name,
+            "category": category,
+            "image_url": f"/api/resource/images/fish/{filename}",
+        }
+    return {"location_id": "", "location_name": "其他", "category": "other", "image_url": ""}
+
+
 # ── API 端点 ──────────────────────────────────────────────────────────
 
 
 @auth_required
 async def get_state(request: web.Request, user_id: str) -> web.Response:
-    from ..config import ConfigManager, calculate_fish_price
+    from ..config import ConfigManager, calculate_fish_price, generate_fish_numeric_id
     from ..models import FishingBuff, FishingUser
     from ..services import get_or_create_user
     from ..weather_service import get_all_location_weathers
@@ -149,6 +176,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
                 "count": f.get("count", 0),
                 "locked": f.get("locked", False),
                 "price": price,
+                **_fish_web_meta(f.get("fish_name", "")),
             }
         )
 
@@ -167,6 +195,8 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
             baits.append(entry)
 
     displays = await FishingUser.get_user_displays(user_id)
+    for display in displays:
+        display.update(_fish_web_meta(display.get("fish_name", "")))
     backpack = {
         "fish": fish_list,
         "total_fish_count": len(fish_list),
@@ -174,7 +204,37 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
         "baits": baits,
         "displays": displays,
         "total_value": total_value,
+        "starry_fish": list(user.starry_fish or []),
+        "starry_exhibition": list(user.starry_exhibition or []),
     }
+
+    fish_catalog = []
+    for loc in ConfigManager.get_locations():
+        category = "starry" if loc.id.isdigit() and int(loc.id) >= 11 else "other"
+        entries = []
+        start_index = 0 if loc.id.upper() == "S1" else 1
+        for fish_idx, fish_name in enumerate(loc.fish_pool, start_index):
+            entries.append(
+                {
+                    "name": fish_name,
+                    "rarities": [
+                        {
+                            "rarity": rarity,
+                            "numeric_id": generate_fish_numeric_id(loc.id, fish_idx, rarity),
+                        }
+                        for rarity in ("N", "R", "SR", "SSR", "UR", "UTR")
+                    ],
+                }
+            )
+        fish_catalog.append(
+            {
+                "id": loc.id,
+                "name": loc.name,
+                "difficulty": loc.difficulty,
+                "category": category,
+                "fish": entries,
+            }
+        )
 
     # ── 场景 + 天气 + buff ──
     from ..cat_park import has_cat_park_ticket, is_cat_park_location
@@ -238,6 +298,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
             "fishing": fishing,
             "backpack": backpack,
             "locations": loc_data,
+            "fish_catalog": fish_catalog,
         }
     )
 

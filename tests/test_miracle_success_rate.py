@@ -6,11 +6,15 @@ import math
 import random
 
 import pytest
+from types import SimpleNamespace
 
 from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
     MIRACLE_MAX_EXACT_N,
     MIRACLE_MOD_BASE,
     find_miracle_subset,
+)
+from zhenxun.plugins.zhenxun_plugin_fishing.models.user_mutations import (
+    apply_try_claim_miracle,
 )
 
 BACKPACK_SIZES = (24, 25, 26)
@@ -32,6 +36,24 @@ def _brute_force_has_subset(values: list[int], target: int, mod_base: int) -> bo
 
 
 class TestMiracleSubsetSearch:
+    def test_old_exhibition_fish_participates_and_is_consumed(self):
+        user = SimpleNamespace(
+            starry_fish=[{"id": "999999"} for _ in range(7)],
+            starry_exhibition=[{"id": "777784", "display_score": 9}],
+            star_frames=0,
+        )
+        dirty: set[str] = set()
+
+        claim = apply_try_claim_miracle(user, dirty)
+
+        assert claim is not None
+        assert len(claim["consumed_ids"]) == 8
+        assert "777784" in claim["consumed_ids"]
+        assert user.starry_fish == []
+        assert user.starry_exhibition == []
+        assert user.star_frames == 1
+        assert {"starry_fish", "starry_exhibition", "star_frames"} <= dirty
+
     def test_miracle_max_exact_n_covers_practical_sizes(self):
         assert MIRACLE_MAX_EXACT_N >= max(BACKPACK_SIZES)
 

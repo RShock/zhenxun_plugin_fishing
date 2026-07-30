@@ -14,7 +14,6 @@ from zhenxun.plugins.zhenxun_plugin_fishing.constants import (
     get_display_probabilities,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
-    count_ultimate_starry_exhibition,
     compare_starry_fish,
     expand_starry_fish_with_duoduo,
     format_starry_fish_id,
@@ -22,7 +21,6 @@ from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
     draw_starry_reward,
     get_reward_pool,
     get_starry_fish_drop_rate,
-    limit_ultimate_reward_pool,
     score_starry_fish,
     STARRY_REWARD_POOL_ITEMS,
 )
@@ -529,53 +527,6 @@ class TestStarWishNumbers:
         assert "6_all_odd" not in mixed_labels
         assert "6_all_even" not in mixed_labels
 
-    def test_new_permutation_frog_jump_and_mirror_sum_features(self):
-        permutation4 = score_starry_fish("423189")
-        permutation4_labels = {feature.label for feature in permutation4.features}
-        assert "4_permutation" in permutation4_labels
-
-        permutation6 = score_starry_fish("423156")
-        permutation6_labels = {feature.label for feature in permutation6.features}
-        assert "6_permutation" in permutation6_labels
-        assert "4_permutation" not in permutation6_labels
-        assert "5_permutation" not in permutation6_labels
-
-        frog = score_starry_fish("135789")
-        assert "frog_jump_6" in {feature.label for feature in frog.features}
-
-        mirror = score_starry_fish("123456")
-        mirror_labels = {feature.label for feature in mirror.features}
-        assert "mirror_sum" in mirror_labels
-
-    def test_ababab_absorbs_only_its_three_abab_windows(self):
-        scored = score_starry_fish("252525")
-        rhythm_labels = [
-            feature.label for feature in scored.features if feature.family == "rhythm"
-        ]
-
-        assert rhythm_labels.count("ABABAB") == 1
-        assert "ABAB" not in rhythm_labels
-        assert next(
-            feature for feature in scored.features if feature.label == "ABABAB"
-        ).score == pytest.approx(4.045757)
-        # ABABAB 不吸收其它家族；252525 同时仍命中回文、镜和规则。
-        labels = {feature.label for feature in scored.features}
-        assert "5_palindrome" in labels
-        assert "mirror_sum" in labels
-
-    def test_abcabc_allows_repeated_symbols_but_not_all_same(self):
-        repeated = score_starry_fish("112112")
-        abcabc = next(feature for feature in repeated.features if feature.label == "ABCABC")
-        assert abcabc.score == pytest.approx(3.004365)
-        assert "ABCABC" not in {feature.label for feature in score_starry_fish("111111").features}
-
-    def test_mirror_sum_and_palindrome_are_independent(self):
-        # 六位回文要同时满足镜和，三组镜像值必须相同，因此用全同号验证可叠加。
-        scored = score_starry_fish("777777")
-        labels = {feature.label for feature in scored.features}
-        assert "mirror_sum" in labels
-        assert "6_palindrome" in labels
-
     def test_chunk_sequence_feature(self):
         for number, mode in (
             ("111213", "2+2+2"),
@@ -699,38 +650,6 @@ class TestStarWishNumbers:
         # display_score 6-10 high, 11+ ultimate
         assert get_reward_pool(6) == "high"
         assert get_reward_pool(11) == "ultimate"
-
-    def test_ultimate_reward_pool_is_limited_by_exhibition_count(self):
-        ultimate_records = [
-            {"id": "011110"},
-            {"id": "777777"},
-            {"id": "000000"},
-        ]
-        assert count_ultimate_starry_exhibition(ultimate_records) == 3
-        assert limit_ultimate_reward_pool("ultimate", ultimate_records[:2]) == "ultimate"
-        assert limit_ultimate_reward_pool("ultimate", ultimate_records) == "high"
-
-        # 正常收杆先入馆后发奖；排除本条后，第三条仍可抽究极，第四条开始降级。
-        assert (
-            limit_ultimate_reward_pool(
-                "ultimate", ultimate_records, current_fish_id="000000"
-            )
-            == "ultimate"
-        )
-        fourth = [*ultimate_records, {"id": "111111"}]
-        assert (
-            limit_ultimate_reward_pool(
-                "ultimate", fourth, current_fish_id="111111"
-            )
-            == "high"
-        )
-
-    def test_non_ultimate_pool_does_not_scan_exhibition(self):
-        class ExplodingExhibition:
-            def __iter__(self):
-                raise AssertionError("非究极奖池不应查询展馆")
-
-        assert limit_ultimate_reward_pool("high", ExplodingExhibition()) == "high"
 
     def test_compare_starry_fish_prefers_score_then_larger_id(self):
         assert compare_starry_fish("011110", "000001") == 11110

@@ -4,7 +4,7 @@ GM 指令 handler — 所有 superuser 调试命令。
 
 from datetime import datetime, timedelta
 
-from nonebot.adapters import Event, Message
+from nonebot.adapters import Bot, Event, Message
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 
@@ -218,13 +218,19 @@ async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
 
 
 @gm_add_item_matcher.handle()
-async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
-    """gm添加/gm赠送：支持多物品 + QQ/@ 批量目标。
+async def _(
+    bot: Bot,
+    event: Event,
+    matcher: Matcher,
+    arg: Message = CommandArg(),
+):
+    """gm添加/gm赠送：支持多物品 + QQ/@/本群 批量目标。
 
     格式：
     - gm添加 物品名 [数量] QQ1,QQ2,...
     - gm添加 物品A,物品B,物品C [数量] @用户
     - gm添加 物品A,物品Bx3 [数量] 全服
+    - gm添加 时光药水 [数量] 本群
     - gm添加 时光药水x3,真多多药水 1 @用户
 
     多物品用逗号/分号分隔；同名自动累加（写 3 次时光药水 = ×3）。
@@ -247,6 +253,7 @@ async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
             "例如：gm添加 真多多药水,幸运药水,时光药水,时光药水,时光药水 1 @用户\n"
             "      gm添加 猫框 5 1922570420,3404193303\n"
             "      gm添加 小鲫鱼sr 10 全服\n"
+            "      gm添加 时光药水 1 本群\n"
             "物品：猫框、木框、玉米、药水(时光/回档/幸运/闪光/真多多/许愿)、"
             "UTR自选券、黑商额外兑换券、抽奖碎片、鱼饵、流星鱼、鱼名+稀有度 等"
         )
@@ -259,7 +266,7 @@ async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
             "多物品：gm添加 A,B,C [数量] @用户"
         )
 
-    if "全服" in body:
+    if "全服" in target_text:
         # 全服：逐物品执行
         lines: list[str] = []
         any_ok = False
@@ -268,6 +275,52 @@ async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
             any_ok = any_ok or ok
             lines.append(msg)
         await matcher.finish("\n".join(lines) if lines else "全服添加失败")
+
+    if "本群" in target_text:
+        group_id = getattr(event, "group_id", None)
+        if group_id is None:
+            await matcher.finish("“本群”只能在群聊中使用！")
+        try:
+            members = await bot.call_api(
+                "get_group_member_list", group_id=int(group_id)
+            )
+        except Exception as e:
+            await matcher.finish(f"获取本群成员失败：{e}")
+        bot_id = str(getattr(bot, "self_id", ""))
+        target_ids = list(
+            dict.fromkeys(
+                str(member.get("user_id", ""))
+                for member in members
+                if str(member.get("user_id", ""))
+                and str(member.get("user_id", "")) != bot_id
+            )
+        )
+        if not target_ids:
+            await matcher.finish("未获取到本群用户，未添加任何物品。")
+
+        group_member_count = len(target_ids)
+        existing_user_ids = {
+            str(uid)
+            for uid in await FishingUser.filter(user_id__in=target_ids).values_list(
+                "user_id", flat=True
+            )
+        }
+        target_ids = [uid for uid in target_ids if uid in existing_user_ids]
+        skipped_count = group_member_count - len(target_ids)
+        if not target_ids:
+            await matcher.finish(
+                f"本群共获取 {group_member_count} 名用户，但都没有钓鱼记录，"
+                "未添加任何物品。"
+            )
+
+        success, message = await gm_apply_to_users(
+            target_ids,
+            f"向本群添加物品（群 {group_id}）",
+            lambda uid, specs=item_specs: gm_add_items(uid, specs),
+        )
+        if skipped_count:
+            message += f"\n已跳过无钓鱼记录用户：{skipped_count} 人"
+        await matcher.finish(message)
 
     target_ids = _resolve_target_ids(event, target_text)
     if not target_ids:

@@ -514,22 +514,37 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 
     current_frames = int(user.star_frames or 0)
     backpack = list(_ensure_list(user.starry_fish))
-    if not backpack:
+    exhibition = list(_ensure_list(user.starry_exhibition))
+    candidates = [("backpack", item) for item in backpack]
+    candidates.extend(("exhibition", item) for item in exhibition)
+    if not candidates:
         return None
 
-    ids = [int(item.get("id", 0)) for item in backpack]
+    # 旧版本会把高分流星鱼移入独立展馆；奇迹按“玩家持有的全部流星鱼”计算，
+    # 因此搜索和扣除都必须同时覆盖背包与展馆，不能只处理新入包记录。
+    ids = [int(item.get("id", 0)) for _, item in candidates]
     indices = find_miracle_subset(ids)
     if not indices:
         return None
 
     index_set = set(indices)
-    subset_records = [backpack[i] for i in sorted(indices)]
-    new_backpack = [item for i, item in enumerate(backpack) if i not in index_set]
+    subset_records = [candidates[i][1] for i in sorted(indices)]
+    consumed_backpack_ids = {
+        id(candidates[i][1]) for i in index_set if candidates[i][0] == "backpack"
+    }
+    consumed_exhibition_ids = {
+        id(candidates[i][1]) for i in index_set if candidates[i][0] == "exhibition"
+    }
+    new_backpack = [item for item in backpack if id(item) not in consumed_backpack_ids]
+    new_exhibition = [
+        item for item in exhibition if id(item) not in consumed_exhibition_ids
+    ]
 
     user.starry_fish = new_backpack
+    user.starry_exhibition = new_exhibition
     user.star_frames = current_frames + 1
     subset_count = len(subset_records)
-    mark_dirty(dirty, "starry_fish", "star_frames")
+    mark_dirty(dirty, "starry_fish", "starry_exhibition", "star_frames")
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [
@@ -550,7 +565,10 @@ def apply_try_claim_miracles(
     claims: list[dict] = []
     # 每次领取至少消耗一条流星鱼；默认上限由当前背包大小自然约束，
     # 仅用于防止异常数据造成无界循环，不限制星空框库存。
-    limit = max_claims if max_claims is not None else len(_ensure_list(user.starry_fish))
+    held_count = len(_ensure_list(user.starry_fish)) + len(
+        _ensure_list(user.starry_exhibition)
+    )
+    limit = max_claims if max_claims is not None else held_count
     for _ in range(max(0, int(limit))):
         info = apply_try_claim_miracle(user, dirty)
         if not info:

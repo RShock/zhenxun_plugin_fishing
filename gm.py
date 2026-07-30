@@ -260,9 +260,10 @@ def parse_gm_add_body(body: str) -> tuple[list[tuple[str, int]], str]:
     - ``真多多药水,幸运药水,时光药水,时光药水,时光药水 1 3086773658``
     - ``时光药水 2 @用户``（@ 通常不在 plaintext，目标由 handler 另取）
     - ``小鲫鱼sr 10 全服``
+    - ``时光药水 1 本群``
 
     解析策略（从右往左）：
-    1. 连续吃掉 QQ 簇 / 「全服」作为目标
+    1. 连续吃掉 QQ 簇 / 「全服」/「本群」作为目标
     2. 若剩余末尾是整数，视为全局数量
     3. 左侧整段作为物品列表（支持逗号多物品）
 
@@ -276,6 +277,7 @@ def parse_gm_add_body(body: str) -> tuple[list[tuple[str, int]], str]:
 
     tokens = [t for t in re.split(r"\s+", text) if t]
     has_all = False
+    has_current_group = False
     qq_ids: list[str] = []
     seen_qq: set[str] = set()
 
@@ -284,6 +286,10 @@ def parse_gm_add_body(body: str) -> tuple[list[tuple[str, int]], str]:
         last = tokens[-1]
         if last == "全服":
             has_all = True
+            tokens.pop()
+            continue
+        if last == "本群":
+            has_current_group = True
             tokens.pop()
             continue
         if _token_is_qq_cluster(last):
@@ -315,6 +321,8 @@ def parse_gm_add_body(body: str) -> tuple[list[tuple[str, int]], str]:
     target_bits: list[str] = []
     if has_all:
         target_bits.append("全服")
+    if has_current_group:
+        target_bits.append("本群")
     if qq_ids:
         target_bits.append(" ".join(qq_ids))
     target_text = " ".join(target_bits)

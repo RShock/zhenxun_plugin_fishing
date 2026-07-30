@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>钓鱼游戏</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
 <style>
 :root {
   --bg: #edf4f7;
@@ -159,6 +161,10 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .list-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list-count { flex-shrink: 0; color: var(--sub); font-weight: 800; }
+.list-item.clickable { cursor: pointer; }
+.list-item.clickable:hover { border-color: var(--primary); background: var(--primary-soft); }
+.fish-thumb { width: 34px; height: 34px; object-fit: contain; border-radius: 9px; background: #edf5f7; flex-shrink: 0; }
+.fish-list-info { min-width: 0; flex: 1; }
 .empty-tip { color: var(--muted); font-size: 12px; padding: 8px 2px; }
 .rarity-pill {
   display: inline-flex;
@@ -406,6 +412,24 @@ button { -webkit-tap-highlight-color: transparent; }
 .ach-item.done { color: var(--success); font-weight: 800; }
 .ach-item.pending { color: var(--muted); }
 .loading-tip { text-align: center; color: var(--sub); padding: 20px; }
+.fish-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.fish-tabs button { border:1px solid var(--border); border-radius:999px; padding:7px 14px; background:#fff; cursor:pointer; font-weight:800; }
+.fish-tabs button.active { color:#fff; background:var(--primary); border-color:var(--primary); }
+.fish-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+.fish-card { position:relative; min-height:190px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:linear-gradient(145deg,#fff,#edf8fa); cursor:pointer; }
+.fish-card.selected { box-shadow:0 0 0 3px rgba(31,155,180,.2); border-color:var(--primary); }
+.fish-card img { display:block; width:100%; height:128px; object-fit:contain; padding:12px; }
+.fish-corner { position:absolute; max-width:70%; padding:4px 7px; border-radius:8px; color:#fff; background:rgba(27,48,58,.76); font-size:10px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fish-corner.tl { top:7px; left:7px; } .fish-corner.tr { top:7px; right:7px; }
+.fish-corner.bl { bottom:7px; left:7px; } .fish-corner.br { bottom:7px; right:7px; }
+.fish-card-name { padding:8px 10px 28px; text-align:center; font-weight:900; }
+.action-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.action-row button { border:0; border-radius:10px; padding:9px 14px; cursor:pointer; color:#fff; background:var(--primary); font-weight:800; }
+.action-row button.warn { background:var(--warning); } .action-row button.danger { background:var(--danger); }
+.market-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.market-side { border:1px solid var(--border); border-radius:14px; padding:12px; }
+.market-side h4 { margin-bottom:10px; }
+.market-side select { width:100%; margin-bottom:8px; min-height:38px; border:1px solid var(--border); border-radius:10px; padding:0 8px; }
 
 .login-overlay {
   position: fixed;
@@ -493,13 +517,16 @@ button { -webkit-tap-highlight-color: transparent; }
   .locs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 8px; }
   .loc-card { min-height: 76px; padding: 10px; }
   .loc-card .loc-name { font-size: 13px; }
-  .quick-actions { padding: 8px; overflow-x: auto; flex-wrap: nowrap; }
-  .quick-actions.dropdown-mode { overflow: visible; flex-wrap: wrap; }
+  .quick-actions { width:100%; max-width:100%; padding:8px; overflow-x:auto; flex-wrap:nowrap; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+  .quick-actions.dropdown-mode { overflow-x:auto; flex-wrap:nowrap; }
+  .quick-dropdown-menu { position:fixed; left:10px; right:10px; bottom:70px; }
   .bottom-bar { padding: 9px; }
   .bottom-bar input { min-height: 40px; }
   .bottom-bar button { min-height: 40px; padding: 0 16px; }
   .result-wrap { padding: 10px; }
   .modal { max-width: 94vw; min-width: 0; padding: 15px; }
+  .fish-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .market-grid { grid-template-columns:1fr; }
 }
 @media (max-width: 430px) {
   .header .right .compact-hide { display: none; }
@@ -544,6 +571,7 @@ button { -webkit-tap-highlight-color: transparent; }
       <button class="compact-hide" onclick="window.open('/help.html', '_blank', 'noopener')">帮助</button>
       <button class="compact-hide" @click="fetchAchievements">成就</button>
       <button class="compact-hide" @click="fetchCollection">图鉴</button>
+      <button @click="fishModal = true">鱼卡</button>
     </div>
   </div>
 
@@ -575,20 +603,22 @@ button { -webkit-tap-highlight-color: transparent; }
         </div>
       </div>
 
-      <div class="section-title">展示 <span class="hint">前 5 个</span></div>
+      <div class="section-title">展示 <span class="hint">完整 {{ backpack.displays.length }} 条</span></div>
       <div class="section list">
-        <div v-for="d in backpack.displays.slice(0, 5)" :key="'d'+d.slot+d.numeric_id" class="list-item">
+        <div v-for="d in backpack.displays" :key="'d'+d.slot+d.numeric_id" class="list-item clickable" @click="openFish(d)">
+          <img v-if="d.image_url" :src="d.image_url" class="fish-thumb">
           <div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(d.rarity)}">{{ d.rarity }}</span>{{ d.fish_name }}</div>
           <div class="list-count">#{{ d.slot }}</div>
         </div>
         <div v-if="!backpack.displays.length" class="empty-tip">暂无展示鱼</div>
       </div>
 
-      <div class="section-title">背包 <span class="hint">前 20 条</span></div>
+      <div class="section-title">背包 <span class="hint">完整 {{ backpack.fish.length }} 种</span></div>
       <div class="section list">
-        <div v-for="f in backpack.fish.slice(0, 20)" :key="f.numeric_id" class="list-item">
-          <div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(f.rarity)}">{{ f.rarity }}</span>{{ f.fish_name }}</div>
-          <div class="list-count">x{{ f.count }}</div>
+        <div v-for="f in backpack.fish" :key="f.numeric_id" class="list-item clickable" @click="openFish(f)">
+          <img v-if="f.image_url" :src="f.image_url" class="fish-thumb">
+          <div class="fish-list-info"><div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(f.rarity)}">{{ f.rarity }}</span>{{ f.fish_name }}</div><small>{{ f.location_name }} · #{{ f.numeric_id }}</small></div>
+          <div class="list-count">{{ f.locked ? '锁 ' : '' }}x{{ f.count }}</div>
         </div>
         <div v-if="backpack.fish.length === 0" class="empty-tip">空空如也</div>
       </div>
@@ -737,6 +767,36 @@ button { -webkit-tap-highlight-color: transparent; }
   </div>
 </div>
 
+<div class="modal-overlay" v-if="fishModal" @click.self="fishModal = false">
+  <div class="modal">
+    <div class="modal-header"><h3>鱼卡背包</h3><button @click="fishModal=false">&times;</button></div>
+    <div class="fish-tabs"><button :class="{active:fishCategory==='other'}" @click="fishCategory='other'">其他鱼</button><button :class="{active:fishCategory==='starry'}" @click="fishCategory='starry'">星空鱼</button></div>
+    <div class="fish-card-grid">
+      <div v-for="f in visibleFishCards" :key="f.numeric_id" :class="['fish-card',{selected:selectedFish?.numeric_id===f.numeric_id}]" @click="selectedFish=f">
+        <img v-if="f.image_url" :src="f.image_url"><div v-else style="height:128px"></div>
+        <span class="fish-corner tl">{{ f.rarity }}</span><span class="fish-corner tr">#{{ f.numeric_id }}</span>
+        <div class="fish-card-name">{{ f.fish_name || ('流星鱼 #'+f.id) }}</div>
+        <span class="fish-corner bl">{{ f.location_name || '星穹' }}</span><span class="fish-corner br">{{ f.locked ? '已锁' : ('x'+(f.count||1)) }}</span>
+      </div>
+    </div>
+    <div class="action-row" v-if="selectedFish && fishCategory==='other'">
+      <button v-if="!selectedFish.locked" @click="runFishAction('锁鱼')">锁定</button><button v-else class="warn" @click="runFishAction('解锁')">解锁</button>
+      <button class="danger" @click="runFishAction('卖鱼')">卖出</button><button @click="openMarket">黑商</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" v-if="marketModal" @click.self="marketModal=false">
+  <div class="modal">
+    <div class="modal-header"><h3>黑商交换</h3><button @click="marketModal=false">&times;</button></div>
+    <div class="market-grid">
+      <div class="market-side"><h4>来源鱼（背包）</h4><select v-model="market.sourceLoc" @change="syncMarket('source')"><option value="">选择分组</option><option v-for="g in sourceGroups" :value="g.key">{{g.label}}</option></select><select v-model="market.sourceId" @change="smartPickTarget"><option value="">选择鱼</option><option v-for="f in sourceChoices" :value="f.numeric_id">{{f.fish_name}} {{f.rarity}} #{{f.numeric_id}}</option></select></div>
+      <div class="market-side"><h4>目标鱼（全图鉴）</h4><select v-model="market.targetLoc" @change="syncMarket('target')"><option value="">选择分组</option><option v-for="g in targetGroups" :value="g.key">{{g.label}}</option></select><select v-model="market.targetId"><option value="">选择鱼</option><option v-for="f in targetChoices" :value="f.numeric_id">{{f.fish_name}} {{f.rarity}} #{{f.numeric_id}}</option></select></div>
+    </div>
+    <div class="action-row"><button @click="submitMarket(false)">交换</button><button @click="submitMarket(true)">智能黑商</button></div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -778,6 +838,12 @@ createApp({
     const colModal = ref(false);
     const colLoading = ref(false);
     const collection = ref([]);
+    const fishModal = ref(false);
+    const marketModal = ref(false);
+    const fishCategory = ref('other');
+    const selectedFish = ref(null);
+    const fishCatalog = ref([]);
+    const market = reactive({sourceLoc:'',sourceId:'',targetLoc:'',targetId:''});
 
     const DRAWER_LS_LEFT = 'fish_drawer_left';
     const DRAWER_LS_RIGHT = 'fish_drawer_right';
@@ -806,12 +872,20 @@ createApp({
       frame_pity: 0, utr_pity: 0, cat_frame_pity: 0,
     });
     const fishing = reactive({ is_fishing: false, location_id: '', location_name: '', start_time: '', elapsed_seconds: 0 });
-    const backpack = reactive({ fish: [], total_fish_count: 0, items: [], baits: [], displays: [], total_value: 0 });
+    const backpack = reactive({ fish: [], total_fish_count: 0, items: [], baits: [], displays: [], total_value: 0, starry_fish: [], starry_exhibition: [] });
     const locations = reactive([]);
 
     const nonBaitItems = computed(() => backpack.items.filter(x => x.item_type !== 'bait'));
     const fishingProgress = computed(() => Math.min(100, Math.max(4, fishing.elapsed_seconds / 1800 * 100)));
     const resultFrameHtml = computed(() => '<style>html{overflow:hidden}body{margin:0;padding:0;}img{max-width:100%;height:auto}</style>' + result.html);
+    const visibleFishCards = computed(() => fishCategory.value === 'starry'
+      ? [...backpack.starry_exhibition, ...backpack.starry_fish].map(f => ({...f, numeric_id:f.id, fish_name:'流星鱼', category:'starry'}))
+      : backpack.fish.filter(f => f.category !== 'starry'));
+    const sourceGroups = computed(() => groupOptions(backpack.fish));
+    const sourceChoices = computed(() => backpack.fish.filter(f => `${f.location_id}|${f.rarity}` === market.sourceLoc));
+    const targetEntries = computed(() => fishCatalog.value.flatMap(loc => loc.fish.flatMap(f => f.rarities.map(r => ({fish_name:f.name, numeric_id:r.numeric_id, rarity:r.rarity, location_id:loc.id, location_name:loc.name, difficulty:loc.difficulty}))));
+    const targetGroups = computed(() => groupOptions(targetEntries.value));
+    const targetChoices = computed(() => targetEntries.value.filter(f => `${f.location_id}|${f.rarity}` === market.targetLoc));
 
     function checkActionsWidth() {
       if (!quickActionsRef.value) return;
@@ -875,6 +949,24 @@ createApp({
     function weatherName(type) { return WEATHER_NAME[type] || '晴天'; }
     function rarityColor(r) { return RARITY_COLOR[r] || '#8a9aa4'; }
     function zoomImage(src) { zoomSrc.value = src; }
+    function groupOptions(items) {
+      const map = new Map();
+      for (const f of items) { const key=`${f.location_id}|${f.rarity}`; if (!map.has(key)) map.set(key,{key,label:`${f.location_name} · ${f.rarity}`}); }
+      return [...map.values()];
+    }
+    function openFish(f) { selectedFish.value=f; fishCategory.value=f.category==='starry'?'starry':'other'; fishModal.value=true; }
+    function runFishAction(action) { if (!selectedFish.value) return; fishModal.value=false; sendQuick(`${action} ${selectedFish.value.numeric_id}`); }
+    function openMarket() { if (selectedFish.value) { market.sourceLoc=`${selectedFish.value.location_id}|${selectedFish.value.rarity}`; market.sourceId=selectedFish.value.numeric_id; smartPickTarget(); } fishModal.value=false; marketModal.value=true; }
+    function syncMarket(side) { if(side==='source'){ market.sourceId=sourceChoices.value[0]?.numeric_id||''; smartPickTarget(); } else market.targetId=targetChoices.value[0]?.numeric_id||''; }
+    function smartPickTarget() {
+      const source=backpack.fish.find(f=>String(f.numeric_id)===String(market.sourceId)); if(!source)return;
+      const ranks={N:0,R:1,SR:2,SSR:3,UR:4,UTR:5};
+      const sourceDifficulty=fishCatalog.value.find(x=>x.id===source.location_id)?.difficulty||0;
+      const candidates=targetEntries.value.filter(f=>f.difficulty<=sourceDifficulty&&ranks[f.rarity]<=ranks[source.rarity]&&String(f.numeric_id)!==String(source.numeric_id));
+      const unseen=candidates.find(f=>!backpack.fish.some(b=>String(b.numeric_id)===String(f.numeric_id)))||candidates[0];
+      if(unseen){market.targetLoc=`${unseen.location_id}|${unseen.rarity}`;market.targetId=unseen.numeric_id;}
+    }
+    function submitMarket(smart) { if(!market.sourceId||!market.targetId)return; marketModal.value=false; sendQuick(`${smart?'智能黑商':'黑商'} ${market.sourceId} ${market.targetId}`); }
 
     function startFishTimer(startIso, locationName) {
       stopFishTimer();
@@ -1008,8 +1100,11 @@ createApp({
           backpack.baits = data.backpack.baits || [];
           backpack.displays = data.backpack.displays || [];
           backpack.total_value = data.backpack.total_value || 0;
+          backpack.starry_fish = data.backpack.starry_fish || [];
+          backpack.starry_exhibition = data.backpack.starry_exhibition || [];
         }
         if (data.locations) locations.splice(0, locations.length, ...data.locations);
+        if (data.fish_catalog) fishCatalog.value = data.fish_catalog;
       } catch (err) { /* ignore */ }
     }
 
@@ -1130,15 +1225,18 @@ createApp({
       textInput, loading, result, zoomSrc,
       achModal, achLoading, achievements,
       colModal, colLoading, collection,
+      fishModal, marketModal, fishCategory, selectedFish, fishCatalog, market,
       player, fishing, backpack, locations,
       WEATHER_EMOJI, drawerOpen, quickMenuOpen,
       quickBtns, useDropdown, quickActionsRef, locsCollapsed,
       nonBaitItems, fishingProgress, resultFrameHtml,
+      visibleFishCards, sourceGroups, sourceChoices, targetGroups, targetChoices,
       connect, sendText, sendQuick, selectLocation,
       zoomImage, onResultFrameLoad, onResultImageLoad,
       fetchAchievements, fetchCollection, fetchState,
       fmtDuration, fmtNumber, weatherName, rarityColor,
       toggleLeftDrawer, toggleRightDrawer, closeDrawer,
+      openFish, runFishAction, openMarket, syncMarket, smartPickTarget, submitMarket,
     };
   }
 }).mount('#app');
