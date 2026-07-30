@@ -711,6 +711,7 @@ class TestBlackMarketExchange:
 
         assert first[0] is True
         assert second[0] is False
+        assert "额外兑换券仅用于抵扣智能黑商冷却" in second[1]
         ticket = await db.items_get_item(
             USER_ID, "black_market_extra_ticket", "ticket"
         )

@@ -481,7 +481,12 @@ async def black_market_exchange(
     used_count = await FishingUser.get_black_market_count(user_id)
     used_extra_ticket = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:
-        return False, "今天已经进行过黑商交换了", True
+        return (
+            False,
+            "今天已经进行过普通黑商交换了。普通黑商每天只能交换 1 次，"
+            "额外兑换券仅用于抵扣智能黑商冷却，不能增加普通黑商次数。",
+            True,
+        )
 
     # 黑商秘密保底：连续4次"失败"（被黑商随机替换目标鱼）后，下次必定获得指定目标
     user = await FishingUser.get_user(user_id)
