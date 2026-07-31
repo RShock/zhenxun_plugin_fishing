@@ -940,7 +940,18 @@ createApp({
     const visibleFishCards = computed(() => fishCategory.value === 'starry'
       ? [...backpack.starry_exhibition.map(f=>({...f,source:'exhibition'})), ...backpack.starry_fish.map(f=>({...f,source:f.legacy?'legacy':'backpack'}))]
       : backpack.fish.filter(f => f.category !== 'starry'));
-    const targetEntries = computed(() => fishCatalog.value.flatMap(loc => loc.fish.flatMap(f => f.rarities.map(r => ({fish_name:f.name, numeric_id:r.numeric_id, rarity:r.rarity, location_id:loc.id, location_name:loc.name, difficulty:loc.difficulty}))));
+    const targetEntries = computed(() => fishCatalog.value.flatMap(
+      loc => loc.fish.flatMap(
+        fish => fish.rarities.map(rarity => ({
+          fish_name: fish.name,
+          numeric_id: rarity.numeric_id,
+          rarity: rarity.rarity,
+          location_id: loc.id,
+          location_name: loc.name,
+          difficulty: loc.difficulty,
+        }))
+      )
+    ));
     const marketSource = computed(() => backpack.fish.find(f=>String(f.numeric_id)===String(market.sourceId)) || null);
     const targetLocations = computed(() => fishCatalog.value.filter(loc => loc.category === 'other' && (!marketSource.value || loc.difficulty <= (fishCatalog.value.find(x=>x.id===marketSource.value.location_id)?.difficulty ?? -1))));
     const targetRarities = computed(() => {

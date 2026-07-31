@@ -1,5 +1,10 @@
 from pathlib import Path
+import re
+import shutil
+import subprocess
 from types import SimpleNamespace
+
+import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.web.api import (
     _build_display_slots,
@@ -10,6 +15,26 @@ from zhenxun.plugins.zhenxun_plugin_fishing.web.api import (
 
 PLUGIN_DIR = Path(__file__).resolve().parents[1]
 INDEX_HTML = PLUGIN_DIR / "web" / "static" / "index.html"
+
+
+def test_index_inline_javascript_is_valid(tmp_path):
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is required for the web JavaScript syntax check")
+
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    inline_scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>", html)
+    assert inline_scripts
+    script_path = tmp_path / "index-inline.js"
+    script_path.write_text("\n".join(inline_scripts), encoding="utf-8")
+
+    result = subprocess.run(
+        [node, "--check", str(script_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_display_slots_are_always_complete_ten_slots():
