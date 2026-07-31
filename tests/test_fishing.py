@@ -547,14 +547,14 @@ class TestFishingLoopIntegration:
 
         ctx = await self._context(db, duration_minutes=0)
 
-        async def effects(*_args, **_kwargs):
+        def effects(*_args, **_kwargs):
             return {"weather_lost_wind": True}
 
         def catch(*args, **_kwargs):
             args[4].append((FishData(id="test-utr", base_price=1), "UTR", 1))
             return args[3], 0
 
-        monkeypatch.setattr(engine, "_calculate_loop_effects", effects)
+        monkeypatch.setattr(engine, "_compute_base_effects", effects)
         monkeypatch.setattr(engine, "_calculate_fishing_interval", lambda *_: 5.0)
         monkeypatch.setattr(engine, "_catch_fish_at_interval", catch)
 

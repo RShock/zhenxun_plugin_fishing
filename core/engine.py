@@ -962,61 +962,6 @@ async def _switch_depleted_bait(ctx: FishingContext, state: _SimulationState) ->
     state.bait = None
 
 
-async def _calculate_loop_effects(
-    ctx: FishingContext,
-    state: _SimulationState,
-    freeze_buff_time: datetime | None,
-) -> dict:
-    """计算当前时刻的 buff、场景和天气效果。"""
-    buff_time = freeze_buff_time if freeze_buff_time is not None else state.current_time
-    current_bait_speed = 0 if state.no_bait_mode else state.bait_speed_bonus
-    effects = FishingBuffCalculator.get_effects_at_time(
-        ctx.buffs,
-        buff_time,
-        ctx.user.rod_level,
-        current_bait_speed,
-        ctx.location.difficulty,
-    )
-    effects["_active_buffs"] = [
-        buff
-        for buff in ctx.buffs
-        if _make_naive(buff.start_time) <= buff_time < _make_naive(buff.end_time)
-    ]
-    from ..cat_park import (
-        CAT_PARK_MATERIAL_RATE,
-        get_cat_park_state,
-        get_user_cat_park_effect_values,
-        is_cat_park_location,
-    )
-    from ..starry import is_starry_location
-
-    if is_starry_location(
-        ctx.location.id
-    ) and f"collect_scene_{ctx.location.id}" not in (ctx.user.achievements or []):
-        effects["max_rarity"] = "UR"
-    if not is_cat_park_location(ctx.location.id):
-        return effects
-
-    cat_park_effects = await get_user_cat_park_effect_values(ctx.user_id)
-    effects["is_cat_park"] = True
-    effects["cat_park_speed_multiplier"] = cat_park_effects.get(
-        "cat_park_speed_multiplier", 1.0
-    )
-    effects["cat_park_double_rate"] = cat_park_effects.get("double_rate", 0)
-    effects["cat_park_castle_rod_rate"] = cat_park_effects.get("castle_rod_rate", 0)
-    effects["cat_park_bait_save"] = cat_park_effects.get("bait_save", 0)
-    effects["material_rate"] = cat_park_effects.get(
-        "material_rate", CAT_PARK_MATERIAL_RATE
-    )
-    _apply_cat_park_weather_bonus(effects, cat_park_effects.get("weather_bonus", 0))
-    cat_park_state = await get_cat_park_state(ctx.user_id)
-    all_built = all(
-        level >= 3 for level in cat_park_state.get("buildings", {}).values()
-    )
-    effects["cat_park_prefer_material"] = not all_built
-    return effects
-
-
 def _apply_cat_park_weather_bonus(effects: dict, weather_bonus: float) -> None:
     if weather_bonus <= 0:
         return
@@ -1041,6 +986,160 @@ def _calculate_fishing_interval(ctx: FishingContext, effects: dict) -> float:
     interval /= effects.get("weather_speed_multiplier", 1.0)
     interval /= effects.get("cat_park_speed_multiplier", 1.0)
     return interval
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 效果分段缓存 —— 性能关键：把循环内每步的 DB 查询与 buff 重算前移到循环前
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# 旧实现每一步都调用 _calculate_loop_effects：猫乐园地点会触发 2 次 DB 查询
+# （get_cat_park_state → get_item + get_user），且 get_effects_at_time 每步重算
+# buff，即使整段模拟期间 buff 集合未变。500 瓶时光药水 = 数十万步 × 2 次 DB
+# 查询 → 服务器卡 3 分钟。
+#
+# 新实现：
+# 1. 循环前一次性预加载猫乐园数据（_preload_cat_park_data）
+# 2. 按 buff 时间窗口把模拟区间切成若干段，每段内活跃 buff 集合恒定，
+#    预计算该段的 base_effects（_build_effect_segments）
+# 3. 时光药水模式 freeze_buff_time 固定 → 全程只有 1 段，效果只算 1 次
+# 4. 循环内零 DB 查询：仅按 current_time 顺序推进段索引（O(1) 均摊），
+#    鱼饵速度变化时才重算 interval（鱼饵耗尽/切换是低频事件）
+#
+# speed_bonus 中只有鱼饵部分随运行时状态变化（鱼饵切换/无饵模式），
+# buff 提供的 speed_bonus 与所有其他效果均按段缓存；循环内把当前鱼饵速度
+# 合并进缓存的 base_effects 即可得到完整 effects。
+
+
+@dataclass
+class _EffectSegment:
+    """一个时间段内不变的钓鱼效果快照（不含鱼饵速度，鱼饵速度运行时合并）。
+
+    start/end 为该段生效的闭开区间 [start, end)；
+    时光药水模式只有单段，end 为 None 表示无上界。
+    """
+
+    start: datetime
+    end: datetime | None
+    base_effects: dict  # bait_speed=0 基准的完整 effects，循环内只读
+
+
+async def _preload_cat_park_data(ctx: FishingContext) -> dict | None:
+    """循环前一次性加载猫乐园建筑状态与效果值，避免循环内重复 DB 查询。
+
+    返回 None 表示非猫乐园地点。猫乐园建筑在单次模拟期间不会升级，
+    因此 effect_values 与 all_built 在整个循环内恒定，可安全缓存。
+    """
+    from ..cat_park import is_cat_park_location
+
+    if not is_cat_park_location(ctx.location.id):
+        return None
+    from ..cat_park import get_cat_park_effect_values, get_cat_park_state
+
+    state = await get_cat_park_state(ctx.user_id)
+    return {
+        "effect_values": get_cat_park_effect_values(state),
+        "all_built": all(
+            level >= 3 for level in state.get("buildings", {}).values()
+        ),
+    }
+
+
+def _compute_base_effects(
+    ctx: FishingContext,
+    target_time: datetime,
+    cat_park_data: dict | None,
+) -> dict:
+    """纯函数：计算 target_time 时刻的 effects（无 DB 查询）。
+
+    以 base_bait_speed=0 为基准计算，鱼饵速度由循环运行时合并。
+    等价于旧 _calculate_loop_effects，但猫乐园数据来自预加载的 cat_park_data。
+    """
+    effects = FishingBuffCalculator.get_effects_at_time(
+        ctx.buffs,
+        target_time,
+        ctx.user.rod_level,
+        0,  # 鱼饵速度运行时合并，基准为 0
+        ctx.location.difficulty,
+    )
+    effects["_active_buffs"] = [
+        buff
+        for buff in ctx.buffs
+        if _make_naive(buff.start_time) <= target_time < _make_naive(buff.end_time)
+    ]
+
+    from ..starry import is_starry_location
+
+    if is_starry_location(
+        ctx.location.id
+    ) and f"collect_scene_{ctx.location.id}" not in (ctx.user.achievements or []):
+        effects["max_rarity"] = "UR"
+
+    if cat_park_data is None:
+        return effects
+
+    from ..cat_park import CAT_PARK_MATERIAL_RATE
+
+    cp = cat_park_data["effect_values"]
+    effects["is_cat_park"] = True
+    effects["cat_park_speed_multiplier"] = cp.get("cat_park_speed_multiplier", 1.0)
+    effects["cat_park_double_rate"] = cp.get("double_rate", 0)
+    effects["cat_park_castle_rod_rate"] = cp.get("castle_rod_rate", 0)
+    effects["cat_park_bait_save"] = cp.get("bait_save", 0)
+    effects["material_rate"] = cp.get("material_rate", CAT_PARK_MATERIAL_RATE)
+    _apply_cat_park_weather_bonus(effects, cp.get("weather_bonus", 0))
+    effects["cat_park_prefer_material"] = not cat_park_data["all_built"]
+    return effects
+
+
+def _build_effect_segments(
+    ctx: FishingContext,
+    freeze_buff_time: datetime | None,
+    cat_park_data: dict | None,
+) -> list[_EffectSegment]:
+    """按 buff 时间窗口把模拟区间切成效果恒定的段。
+
+    时光药水模式（freeze_buff_time 不为 None）：buff 全程冻结，返回单段。
+    正常模式：收集所有 buff 的 start/end 作为断点，分段预计算 base_effects。
+    段数 = O(buff 数量)，通常远小于循环步数。
+    """
+    if freeze_buff_time is not None:
+        base = _compute_base_effects(ctx, freeze_buff_time, cat_park_data)
+        return [_EffectSegment(freeze_buff_time, None, base)]
+
+    points = {ctx.settle_start, ctx.now}
+    for buff in ctx.buffs:
+        s = _make_naive(buff.start_time)
+        e = _make_naive(buff.end_time)
+        if ctx.settle_start < s < ctx.now:
+            points.add(s)
+        if ctx.settle_start < e < ctx.now:
+            points.add(e)
+    times = sorted(points)
+
+    segments: list[_EffectSegment] = []
+    for i in range(len(times) - 1):
+        base = _compute_base_effects(ctx, times[i], cat_park_data)
+        segments.append(_EffectSegment(times[i], times[i + 1], base))
+    # settle_start == now（无待结算时间）时 times 仅 1 个点，仍构建占位段，
+    # 使循环能进入并立即通过 _select_window_action 判定 STOP。
+    if not segments:
+        base = _compute_base_effects(ctx, times[0], cat_park_data)
+        segments.append(_EffectSegment(times[0], None, base))
+    return segments
+
+
+def _merge_bait_speed(
+    ctx: FishingContext, base_effects: dict, current_bait_speed: int
+) -> tuple[dict, float]:
+    """把当前鱼饵速度合并进缓存的 base_effects，返回 (effects, fishing_interval)。
+
+    仅 speed_bonus 随鱼饵状态变化；其余字段（rod_level、weather、猫乐园等）
+    均已在 base_effects 中确定。speed_bonus 只用于计算钓鱼间隔。
+    """
+    effects = dict(base_effects)
+    effects["speed_bonus"] = base_effects.get("speed_bonus", 0) + current_bait_speed
+    interval = _calculate_fishing_interval(ctx, effects)
+    return effects, interval
 
 
 def _select_window_action(
@@ -1112,10 +1211,39 @@ async def simulate_fishing_loop(
     if initial_no_bait_mode is not None:
         state.no_bait_mode = initial_no_bait_mode
 
+    # 循环前一次性预加载猫乐园数据 + 按 buff 窗口构建效果分段，
+    # 使循环内零 DB 查询、零 buff 重算（仅鱼饵速度变化时才重算 interval）。
+    cat_park_data = await _preload_cat_park_data(ctx)
+    segments = _build_effect_segments(ctx, freeze_buff_time, cat_park_data)
+    seg_idx = 0
+    last_bait_speed: int | None = None
+    last_seg: _EffectSegment | None = None
+    effects: dict = {}
+    fishing_interval: float = 1.0
+
     while True:
         await _switch_depleted_bait(ctx, state)
-        effects = await _calculate_loop_effects(ctx, state, freeze_buff_time)
-        fishing_interval = _calculate_fishing_interval(ctx, effects)
+
+        # 按当前时间顺序推进段索引（current_time 单调递增，O(1) 均摊）。
+        # 时光药水模式 freeze_buff_time 固定，恒为单段，不进入此内层 while。
+        if freeze_buff_time is None:
+            while (
+                seg_idx < len(segments) - 1
+                and segments[seg_idx].end is not None
+                and state.current_time >= segments[seg_idx].end
+            ):
+                seg_idx += 1
+        seg = segments[seg_idx]
+
+        # 鱼饵速度变化（切换/无饵）或跨段时才重算 effects 与 interval；
+        # 否则直接复用上一步结果（时光药水模式下全程只算 1 次）。
+        current_bait_speed = 0 if state.no_bait_mode else state.bait_speed_bonus
+        if current_bait_speed != last_bait_speed or seg is not last_seg:
+            effects, fishing_interval = _merge_bait_speed(
+                ctx, seg.base_effects, current_bait_speed
+            )
+            last_bait_speed = current_bait_speed
+            last_seg = seg
 
         action, window_value = _select_window_action(
             ctx, state, fishing_interval, time_credit_minutes
