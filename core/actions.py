@@ -1242,8 +1242,8 @@ async def _record_fishing_ledger(
         )
 
         await ledger_service.flush_pending_entries()
-    except Exception:
-        logger.warning(f"账本记录失败: user={user_id}", exc_info=True)
+    except Exception as exc:
+        logger.warning(f"账本记录失败: user={user_id}", e=exc)
 
 
 async def stop_fishing(
@@ -1296,8 +1296,12 @@ async def stop_fishing(
     except StopFishingAborted as exc:
         logger.warning(f"用户 {user_id} 收杆中止: {exc}")
         return None, [], False
-    except Exception:
-        logger.exception(f"用户 {user_id} 收杆事务失败，已回滚全部数据库修改")
+    except Exception as exc:
+        # 项目日志封装只提供 error(..., e=exc)，不能调用 Loguru 的 exception 接口。
+        # 这里必须保留原始异常，否则日志调用自身失败会掩盖真正的结算故障。
+        logger.error(
+            f"用户 {user_id} 收杆事务失败，已回滚全部数据库修改", e=exc
+        )
         raise
 
     # ── 事务提交后：记录账本（副作用，不阻断主流程）──

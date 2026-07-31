@@ -270,6 +270,35 @@ class TestStopSettlementTransaction:
         assert user.fishing_status is not None
         assert events == ["transaction.enter", "save.failed", "transaction.rollback"]
 
+    async def test_transaction_error_logs_original_exception_without_masking_it(
+        self, db, monkeypatch
+    ):
+        user = await _arrange_settlement(db, monkeypatch)
+        monkeypatch.setattr(
+            actions,
+            "_stop_db_transaction",
+            _transaction_with_memory_rollback(user, []),
+        )
+        original = RuntimeError("original settlement failure")
+        monkeypatch.setattr(
+            actions,
+            "_apply_stop_settlement_writes",
+            AsyncMock(side_effect=original),
+        )
+        logged = []
+        monkeypatch.setattr(
+            actions.logger,
+            "error",
+            lambda info, **kwargs: logged.append((info, kwargs.get("e"))),
+        )
+
+        with pytest.raises(RuntimeError, match="original settlement failure"):
+            await stop_fishing(USER_ID)
+
+        assert logged == [
+            (f"用户 {USER_ID} 收杆事务失败，已回滚全部数据库修改", original)
+        ]
+
     async def test_messages_keep_domain_order_when_commit_succeeds(
         self, db, monkeypatch
     ):
