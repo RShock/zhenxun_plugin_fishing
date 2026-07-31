@@ -58,8 +58,17 @@ def test_starry_web_records_include_image_number_score_and_legacy_items():
 
 def test_web_ui_uses_element_plus_and_responsive_scroll_contract():
     html = INDEX_HTML.read_text(encoding="utf-8")
+    element_plus_js = (
+        PLUGIN_DIR
+        / "web"
+        / "static"
+        / "vendor"
+        / "element-plus"
+        / "index.full.min.js"
+    ).read_text(encoding="utf-8")
 
     assert "https://unpkg.com" not in html
+    assert "sourceMappingURL" not in element_plus_js
     assert 'src="/vendor/vue/vue.global.prod.js"' in html
     assert 'href="/vendor/element-plus/index.css"' in html
     assert 'src="/vendor/element-plus/index.full.min.js"' in html
