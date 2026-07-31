@@ -435,6 +435,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .inventory-card-name { padding:2px 3px 5px; font-size:10px; line-height:1.2; font-weight:900; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .inventory-card-meta { position:absolute; top:3px; padding:2px 3px; border-radius:5px; color:#fff; background:rgba(27,48,58,.76); font-size:8px; line-height:1; font-weight:900; }
 .inventory-card-meta.left { left:3px; } .inventory-card-meta.right { right:3px; }
+.inventory-card-exchange { position:absolute; left:3px; bottom:3px; z-index:2; color:#fff; background:var(--success); border-radius:5px; padding:1px 4px; font-size:9px; line-height:1.2; font-weight:900; }
 .inventory-card-lock { position:absolute; right:3px; bottom:3px; font-size:9px; }
 .display-card.empty { cursor:default; border-style:dashed; color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:10px; }
 .starry-card { cursor:default; background:linear-gradient(145deg,#f8f5ff,#e8f3ff); }
@@ -642,7 +643,7 @@ button { -webkit-tap-highlight-color: transparent; }
       <div class="section-title">普通鱼 <span class="hint">{{ normalFish.length }} 种</span></div>
       <div class="inventory-card-grid">
         <div v-for="f in normalFish" :key="f.numeric_id" :class="['inventory-card',{active:selectedFish?.numeric_id===f.numeric_id&&fishMenu.open}]" @click.stop="openFishMenu(f,$event)" @contextmenu.prevent.stop="openFishMenu(f,$event)">
-          <img v-if="f.image_url" :src="f.image_url"><span class="inventory-card-meta left">{{ f.rarity }}</span><span class="inventory-card-meta right">x{{ f.count }}</span><span v-if="f.locked" class="inventory-card-lock">🔒</span><div class="inventory-card-name">{{ f.fish_name }}</div>
+          <img v-if="f.image_url" :src="f.image_url"><span class="inventory-card-meta left">{{ f.rarity }}</span><span class="inventory-card-meta right">x{{ f.count }}</span><span v-if="f.white_market_exchangeable" class="inventory-card-exchange" title="可用于白商交换">⇄</span><span v-if="f.locked" class="inventory-card-lock">🔒</span><div class="inventory-card-name">{{ f.fish_name }}</div>
         </div>
         <div v-if="!normalFish.length" class="empty-tip">空空如也</div>
       </div>

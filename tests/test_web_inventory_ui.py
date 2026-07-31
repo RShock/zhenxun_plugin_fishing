@@ -127,6 +127,7 @@ def test_web_ui_uses_element_plus_and_responsive_scroll_contract():
     assert '@click.stop="openFishMenu(f,$event)"' in html
     assert '@contextmenu.prevent.stop="openFishMenu(f,$event)"' in html
     assert 'class="inventory-menu"' in html
+    assert 'class="inventory-card-exchange" title="可用于白商交换">⇄' in html
     assert "<el-select v-model=\"market.targetLocation\"" in html
     assert "<el-select v-model=\"market.targetRarity\"" in html
     assert "<el-checkbox v-model=\"market.smart\">智能黑商</el-checkbox>" in html
