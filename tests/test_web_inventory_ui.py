@@ -9,6 +9,7 @@ import pytest
 from zhenxun.plugins.zhenxun_plugin_fishing.web.api import (
     _build_display_slots,
     _fish_web_meta,
+    _sort_web_fish,
     _starry_web_records,
 )
 
@@ -58,6 +59,22 @@ def test_fish_web_meta_uses_player_facing_minimum_level():
     assert second_scene["minimum_level"] == 2
 
 
+def test_web_fish_order_matches_qq_backpack():
+    fish = [
+        {"fish_name": "草鱼", "rarity": "N"},
+        {"fish_name": "小鲫鱼", "rarity": "UTR"},
+        {"fish_name": "泥鳅", "rarity": "UTR"},
+        {"fish_name": "小鲫鱼", "rarity": "UR"},
+    ]
+
+    assert [(f["rarity"], f["fish_name"]) for f in _sort_web_fish(fish)] == [
+        ("UTR", "小鲫鱼"),
+        ("UTR", "泥鳅"),
+        ("UR", "小鲫鱼"),
+        ("N", "草鱼"),
+    ]
+
+
 def test_starry_web_records_include_image_number_score_and_legacy_items():
     user = SimpleNamespace(
         starry_fish=[{"id": "123456", "location_id": "11"}],
@@ -101,23 +118,29 @@ def test_web_ui_uses_element_plus_and_responsive_scroll_contract():
     assert (PLUGIN_DIR / "web" / "static" / "vendor" / "element-plus" / "index.css").is_file()
     assert (PLUGIN_DIR / "web" / "static" / "vendor" / "element-plus" / "index.full.min.js").is_file()
     assert ").use(ElementPlus).mount('#app')" in html
-    assert "<el-dialog v-model=\"fishModal\"" in html
-    assert "<el-card v-for=\"f in visibleFishCards\"" in html
+    assert '@click="fishModal = true"' not in html
+    assert 'v-model="fishModal"' not in html
+    assert 'class="inventory-card-grid"' in html
+    assert 'grid-template-columns:repeat(4,minmax(0,1fr))' in html
+    assert 'v-for="f in normalFish"' in html
+    assert 'v-for="f in starryFishCards"' in html
+    assert '@click.stop="openFishMenu(f,$event)"' in html
+    assert '@contextmenu.prevent.stop="openFishMenu(f,$event)"' in html
+    assert 'class="inventory-menu"' in html
     assert "<el-select v-model=\"market.targetLocation\"" in html
     assert "<el-select v-model=\"market.targetRarity\"" in html
     assert "<el-checkbox v-model=\"market.smart\">智能黑商</el-checkbox>" in html
     assert "@click=\"submitMarket\">确认交换" in html
     assert 'v-model="whiteMarketModal"' in html
-    assert "@click=\"openWhiteMarket\">白商" in html
+    assert 'v-if="canOpenWhiteMarket" @click="openWhiteMarket">白商' in html
     assert "`白商交换 ${whiteMarketPayment.value.numeric_id} ${whiteMarketTargetId.value}`" in html
     assert "今日白商次数已用完" in html
-    assert "fish-exchange-mark" in html
     assert "<small>ID</small>" in html
     assert "<small>价格</small>" in html
-    assert "地图 / 对应最低等级" in html
+    assert "地图 / 最低等级" in html
     assert "来源鱼（当前鱼）" in html
     assert "完整 10 槽" in html
-    assert "药水与道具" in html
+    assert "药水道具" in html
     assert "width: 100%; min-width: 0; max-width: 100%" in html
     assert "overflow-x:auto; flex-wrap:nowrap" in html
     assert "overflow-x: hidden; overflow-y: auto" in html

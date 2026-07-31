@@ -177,6 +177,20 @@ def _build_display_slots(displays: list[dict], slot_count: int = 10) -> list[dic
     ]
 
 
+def _sort_web_fish(fish_list: list[dict]) -> list[dict]:
+    """网页普通鱼与 QQ 背包保持相同的稀有度、配置鱼序。"""
+    from ..config import ConfigManager
+
+    rarity_order = {"UTR": 0, "UR": 1, "SSR": 2, "SR": 3, "R": 4, "N": 5}
+    return sorted(
+        fish_list,
+        key=lambda fish: (
+            rarity_order.get(fish.get("rarity", "N"), 5),
+            ConfigManager.get_fish_order(fish.get("fish_name", "")),
+        ),
+    )
+
+
 @auth_required
 async def get_white_market(request: web.Request, user_id: str) -> web.Response:
     """返回白商剩余次数及当前背包可支付鱼、可获得鱼。"""
@@ -251,6 +265,7 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
                 **web_meta,
             }
         )
+    fish_list = _sort_web_fish(fish_list)
 
     items_raw = await FishingUser.get_user_items(user_id)
     items = []

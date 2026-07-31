@@ -428,19 +428,27 @@ button { -webkit-tap-highlight-color: transparent; }
 .ach-item.done { color: var(--success); font-weight: 800; }
 .ach-item.pending { color: var(--muted); }
 .loading-tip { text-align: center; color: var(--sub); padding: 20px; }
-.fish-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
-.fish-card { position:relative; min-height:190px; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:linear-gradient(145deg,#fff,#edf8fa); cursor:pointer; width:100%; }
-.fish-card.selected { box-shadow:0 0 0 3px rgba(31,155,180,.2); border-color:var(--primary); }
-.fish-card img { display:block; width:100%; height:128px; object-fit:contain; padding:12px; }
-.fish-corner { position:absolute; max-width:70%; padding:4px 7px; border-radius:8px; color:#fff; background:rgba(27,48,58,.76); font-size:10px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fish-corner.tl { top:7px; left:7px; } .fish-corner.tr { top:7px; right:7px; }
-.fish-corner.bl { bottom:7px; left:7px; } .fish-corner.br { bottom:7px; right:7px; }
-.fish-exchange-mark { position:absolute; bottom:7px; left:7px; z-index:3; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:8px; color:#fff; background:#1f9bb4; font-size:17px; font-weight:900; box-shadow:0 2px 7px rgba(18,109,128,.28); }
-.fish-card.has-exchange .fish-corner.bl { left:37px; max-width:calc(70% - 30px); }
-.fish-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:12px 0; }
-.fish-detail-item { padding:10px 12px; border-radius:12px; background:var(--bg-soft); }
-.fish-detail-item small { display:block; color:var(--sub); margin-bottom:3px; }
-.fish-card-name { padding:8px 10px 28px; text-align:center; font-weight:900; }
+.inventory-card-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:10px 12px 12px; }
+.inventory-card { position:relative; min-height:82px; border:1px solid var(--border); border-radius:11px; overflow:hidden; background:linear-gradient(145deg,#fff,#edf8fa); cursor:pointer; user-select:none; }
+.inventory-card:hover, .inventory-card.active { border-color:var(--primary); box-shadow:0 0 0 2px rgba(31,155,180,.12); }
+.inventory-card img { display:block; width:100%; height:54px; object-fit:contain; padding:5px; }
+.inventory-card-name { padding:2px 3px 5px; font-size:10px; line-height:1.2; font-weight:900; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.inventory-card-meta { position:absolute; top:3px; padding:2px 3px; border-radius:5px; color:#fff; background:rgba(27,48,58,.76); font-size:8px; line-height:1; font-weight:900; }
+.inventory-card-meta.left { left:3px; } .inventory-card-meta.right { right:3px; }
+.inventory-card-lock { position:absolute; right:3px; bottom:3px; font-size:9px; }
+.display-card.empty { cursor:default; border-style:dashed; color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:10px; }
+.starry-card { cursor:default; background:linear-gradient(145deg,#f8f5ff,#e8f3ff); }
+.inventory-menu { position:fixed; z-index:1200; width:220px; padding:10px; border:1px solid var(--border-strong); border-radius:14px; background:#fff; box-shadow:var(--shadow); }
+.inventory-menu-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; font-size:13px; font-weight:900; }
+.inventory-menu-head span:last-child { color:var(--sub); font-size:11px; }
+.inventory-menu-info { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px; }
+.inventory-menu-info div { padding:6px; border-radius:8px; background:var(--bg-soft); font-size:10px; line-height:1.35; }
+.inventory-menu-info .wide { grid-column:1/-1; }
+.inventory-menu-info small { display:block; color:var(--sub); }
+.inventory-menu-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.inventory-menu-actions button { min-height:32px; border:1px solid var(--border); border-radius:9px; background:#fff; color:var(--text); cursor:pointer; font-size:11px; font-weight:800; }
+.inventory-menu-actions button:hover { border-color:var(--primary); background:var(--primary-soft); }
+.inventory-menu-actions .danger { color:var(--danger); }.inventory-menu-actions .market { color:var(--success); }
 .action-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
 .action-row .el-button + .el-button { margin-left:0; }
 .market-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -545,7 +553,8 @@ button { -webkit-tap-highlight-color: transparent; }
   .bottom-bar button { min-height: 40px; padding: 0 16px; }
   .result-wrap { padding: 10px; }
   .modal { max-width: 94vw; min-width: 0; padding: 15px; }
-  .fish-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .inventory-card-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .inventory-menu { width:min(220px,calc(100vw - 16px)); }
   .market-grid { grid-template-columns:1fr; }
 }
 @media (max-width: 430px) {
@@ -591,7 +600,6 @@ button { -webkit-tap-highlight-color: transparent; }
       <button class="compact-hide" onclick="window.open('/help.html', '_blank', 'noopener')">帮助</button>
       <button class="compact-hide" @click="fetchAchievements">成就</button>
       <button class="compact-hide" @click="fetchCollection">图鉴</button>
-      <button @click="fishModal = true">鱼卡</button>
     </div>
   </div>
 
@@ -623,27 +631,31 @@ button { -webkit-tap-highlight-color: transparent; }
         </div>
       </div>
 
-      <div class="section-title">展示 <span class="hint">完整 10 槽</span></div>
-      <div class="section list">
-        <div v-for="d in backpack.displays" :key="'d'+d.slot+(d.numeric_id||'empty')" :class="['list-item', {clickable: !d.empty}]" @click="!d.empty && openFish(d)">
-          <img v-if="d.image_url" :src="d.image_url" class="fish-thumb">
-          <div v-if="!d.empty" class="list-main"><span class="rarity-pill" :style="{background: rarityColor(d.rarity)}">{{ d.rarity }}</span>{{ d.fish_name }}</div>
-          <div v-else class="list-main empty-tip">空槽位</div>
-          <div class="list-count">#{{ d.slot }}</div>
+      <div class="section-title">展示区 <span class="hint">完整 10 槽</span></div>
+      <div class="inventory-card-grid">
+        <div v-for="d in backpack.displays" :key="'d'+d.slot+(d.numeric_id||'empty')" :class="['inventory-card','display-card',{empty:d.empty}]">
+          <template v-if="!d.empty"><img v-if="d.image_url" :src="d.image_url"><span class="inventory-card-meta left">{{ d.rarity }}</span><span class="inventory-card-meta right">{{ d.slot }}</span><div class="inventory-card-name">{{ d.fish_name }}</div></template>
+          <template v-else>空槽 {{ d.slot }}</template>
         </div>
       </div>
 
-      <div class="section-title">背包 <span class="hint">完整 {{ backpack.fish.length }} 种</span></div>
-      <div class="section list">
-        <div v-for="f in backpack.fish" :key="f.numeric_id" class="list-item clickable" @click="openFish(f)">
-          <img v-if="f.image_url" :src="f.image_url" class="fish-thumb">
-          <div class="fish-list-info"><div class="list-main"><span class="rarity-pill" :style="{background: rarityColor(f.rarity)}">{{ f.rarity }}</span>{{ f.fish_name }}</div><small>{{ f.location_name }} · #{{ f.numeric_id }}</small></div>
-          <div class="list-count">{{ f.locked ? '锁 ' : '' }}x{{ f.count }}</div>
+      <div class="section-title">普通鱼 <span class="hint">{{ normalFish.length }} 种</span></div>
+      <div class="inventory-card-grid">
+        <div v-for="f in normalFish" :key="f.numeric_id" :class="['inventory-card',{active:selectedFish?.numeric_id===f.numeric_id&&fishMenu.open}]" @click.stop="openFishMenu(f,$event)" @contextmenu.prevent.stop="openFishMenu(f,$event)">
+          <img v-if="f.image_url" :src="f.image_url"><span class="inventory-card-meta left">{{ f.rarity }}</span><span class="inventory-card-meta right">x{{ f.count }}</span><span v-if="f.locked" class="inventory-card-lock">🔒</span><div class="inventory-card-name">{{ f.fish_name }}</div>
         </div>
-        <div v-if="backpack.fish.length === 0" class="empty-tip">空空如也</div>
+        <div v-if="!normalFish.length" class="empty-tip">空空如也</div>
       </div>
 
-      <div class="section-title">道具</div>
+      <div class="section-title">星空鱼 <span class="hint">{{ starryFishCards.length }} 条</span></div>
+      <div class="inventory-card-grid">
+        <div v-for="f in starryFishCards" :key="f.source+'|'+f.numeric_id" class="inventory-card starry-card">
+          <img :src="f.image_url"><span class="inventory-card-meta left">{{ f.display_score }}分</span><span class="inventory-card-meta right">#{{ f.numeric_id }}</span><div class="inventory-card-name">流星鱼</div>
+        </div>
+        <div v-if="!starryFishCards.length" class="empty-tip">暂无星空鱼</div>
+      </div>
+
+      <div class="section-title">药水道具</div>
       <div class="section list">
         <div v-for="it in nonBaitItems" :key="it.item_id" class="list-item">
           <div class="list-main">{{ it.name || it.item_id }}</div>
@@ -749,6 +761,21 @@ button { -webkit-tap-highlight-color: transparent; }
   </div>
 </template>
 
+<div v-if="fishMenu.open && selectedFish" class="inventory-menu" :style="fishMenuStyle" @click.stop @contextmenu.prevent>
+  <div class="inventory-menu-head"><span>{{ selectedFish.fish_name }} {{ selectedFish.rarity }}</span><span>x{{ selectedFish.count }}</span></div>
+  <div class="inventory-menu-info">
+    <div><small>ID</small>#{{ selectedFish.numeric_id }}</div>
+    <div><small>价格</small>{{ fmtNumber(selectedFish.price) }} 鱼币</div>
+    <div class="wide"><small>地图 / 最低等级</small>{{ selectedFish.location_name }} · Lv{{ selectedFish.minimum_level }}</div>
+  </div>
+  <div class="inventory-menu-actions">
+    <button @click="runFishAction(selectedFish.locked ? '解锁' : '锁鱼')">{{ selectedFish.locked ? '解锁' : '锁定' }}</button>
+    <button class="danger" @click="runFishAction('卖鱼')">卖鱼</button>
+    <button class="market" @click="openMarket">黑商</button>
+    <button v-if="canOpenWhiteMarket" @click="openWhiteMarket">白商</button>
+  </div>
+</div>
+
 <div class="modal-overlay" v-if="zoomSrc" @click="zoomSrc = null">
   <img class="img-preview" :src="zoomSrc" @click.stop>
 </div>
@@ -786,48 +813,6 @@ button { -webkit-tap-highlight-color: transparent; }
     </div>
   </div>
 </div>
-
-<el-dialog v-model="fishModal" title="鱼卡背包" destroy-on-close>
-  <el-tabs v-model="fishCategory">
-    <el-tab-pane label="其他鱼" name="other">
-    <div class="fish-card-grid">
-      <el-card v-for="f in visibleFishCards" :key="f.numeric_id" shadow="hover" :class="['fish-card',{selected:selectedFish?.numeric_id===f.numeric_id,'has-exchange':f.white_market_exchangeable}]" @click="selectedFish=f">
-        <img v-if="f.image_url" :src="f.image_url"><div v-else style="height:128px"></div>
-        <span class="fish-corner tl">{{ f.rarity }}</span><span class="fish-corner tr">#{{ f.numeric_id }}</span>
-        <div class="fish-card-name">{{ f.fish_name }}</div>
-        <span v-if="f.white_market_exchangeable" class="fish-exchange-mark" title="可用于白商交换">⇄</span>
-        <span class="fish-corner bl">{{ f.location_name || '星穹' }}</span><span class="fish-corner br">{{ f.locked ? '已锁 · x'+(f.count||1) : ('x'+(f.count||1)) }}</span>
-      </el-card>
-    </div>
-    <template v-if="selectedFish">
-      <div class="fish-detail-grid">
-        <div class="fish-detail-item"><small>ID</small>#{{ selectedFish.numeric_id }}</div>
-        <div class="fish-detail-item"><small>价格</small>{{ fmtNumber(selectedFish.price) }} 鱼币</div>
-        <div class="fish-detail-item"><small>地图 / 对应最低等级</small>{{ selectedFish.location_name }} · Lv{{ selectedFish.minimum_level }}</div>
-      </div>
-      <div class="action-row">
-        <el-button v-if="!selectedFish.locked" type="primary" @click="runFishAction('锁鱼')">锁定</el-button>
-        <el-button v-else type="warning" @click="runFishAction('解锁')">解锁</el-button>
-        <el-button type="danger" @click="runFishAction('卖鱼')">卖出</el-button>
-        <el-button type="success" @click="openMarket">黑商</el-button>
-        <el-button v-if="selectedFish.white_market_exchangeable" type="primary" plain @click="openWhiteMarket">白商</el-button>
-      </div>
-    </template>
-    <el-card class="item-panel" shadow="never">
-      <div class="item-panel-title">药水与道具</div>
-      <div class="list"><div v-for="it in nonBaitItems" :key="it.item_id+'|'+it.item_type" class="list-item"><div class="list-main">{{ it.name || it.item_id }}</div><div class="list-count">x{{ it.count }}</div></div><div v-if="!nonBaitItems.length" class="empty-tip">暂无药水或道具</div></div>
-    </el-card>
-    </el-tab-pane>
-    <el-tab-pane label="星空鱼" name="starry">
-      <div class="fish-card-grid">
-        <el-card v-for="f in visibleFishCards" :key="f.source+'|'+f.numeric_id" shadow="hover" class="fish-card">
-          <img :src="f.image_url"><span class="fish-corner tl">{{ f.location_name }}</span><span class="fish-corner tr">#{{ f.numeric_id }}</span>
-          <div class="fish-card-name">流星鱼</div><span class="fish-corner bl">{{ f.display_score }} 分</span><span class="fish-corner br">原始 {{ f.score }}</span>
-        </el-card>
-      </div>
-    </el-tab-pane>
-  </el-tabs>
-</el-dialog>
 
 <el-dialog v-model="whiteMarketModal" title="白商交换" destroy-on-close>
   <el-alert v-if="whiteMarket.exhausted" :title="whiteMarket.message" type="warning" :closable="false" show-icon></el-alert>
@@ -894,11 +879,10 @@ createApp({
     const colModal = ref(false);
     const colLoading = ref(false);
     const collection = ref([]);
-    const fishModal = ref(false);
     const marketModal = ref(false);
     const whiteMarketModal = ref(false);
-    const fishCategory = ref('other');
     const selectedFish = ref(null);
+    const fishMenu = reactive({open:false,left:0,top:0});
     const fishCatalog = ref([]);
     const market = reactive({sourceId:'',targetLocation:'',targetRarity:'',targetId:'',smart:false});
     const whiteMarket = reactive({used_count:0,limit:1,remaining:1,exhausted:false,message:'',payments:[]});
@@ -937,9 +921,11 @@ createApp({
     const nonBaitItems = computed(() => backpack.items.filter(x => x.item_type !== 'bait'));
     const fishingProgress = computed(() => Math.min(100, Math.max(4, fishing.elapsed_seconds / 1800 * 100)));
     const resultFrameHtml = computed(() => '<style>html{overflow:hidden}body{margin:0;padding:0;}img{max-width:100%;height:auto}</style>' + result.html);
-    const visibleFishCards = computed(() => fishCategory.value === 'starry'
-      ? [...backpack.starry_exhibition.map(f=>({...f,source:'exhibition'})), ...backpack.starry_fish.map(f=>({...f,source:f.legacy?'legacy':'backpack'}))]
-      : backpack.fish.filter(f => f.category !== 'starry'));
+    const normalFish = computed(() => backpack.fish.filter(f => f.category !== 'starry'));
+    const starryFishCards = computed(() => [
+      ...backpack.starry_exhibition.map(f=>({...f,source:'exhibition'})),
+      ...backpack.starry_fish.map(f=>({...f,source:f.legacy?'legacy':'backpack'})),
+    ]);
     const targetEntries = computed(() => fishCatalog.value.flatMap(
       loc => loc.fish.flatMap(
         fish => fish.rarities.map(rarity => ({
@@ -961,6 +947,8 @@ createApp({
     const targetChoices = computed(() => targetEntries.value.filter(f => f.location_id===market.targetLocation && f.rarity===market.targetRarity && String(f.numeric_id)!==String(market.sourceId)));
     const whiteMarketPayment = computed(() => whiteMarket.payments.find(payment => String(payment.numeric_id)===String(selectedFish.value?.numeric_id)) || null);
     const whiteMarketTargets = computed(() => whiteMarketPayment.value?.targets || []);
+    const canOpenWhiteMarket = computed(() => whiteMarket.remaining > 0 && !whiteMarket.exhausted && !!whiteMarketPayment.value);
+    const fishMenuStyle = computed(() => ({left:`${fishMenu.left}px`,top:`${fishMenu.top}px`}));
 
     function checkActionsWidth() {
       if (!quickActionsRef.value) return;
@@ -1011,9 +999,11 @@ createApp({
     }
 
     function _onDocClick(e) {
-      if (!quickMenuOpen.value) return;
-      const wrap = document.querySelector('.quick-dropdown-wrap');
-      if (wrap && !wrap.contains(e.target)) quickMenuOpen.value = false;
+      if (quickMenuOpen.value) {
+        const wrap = document.querySelector('.quick-dropdown-wrap');
+        if (wrap && !wrap.contains(e.target)) quickMenuOpen.value = false;
+      }
+      if (fishMenu.open && !e.target.closest('.inventory-menu')) fishMenu.open = false;
     }
 
     function fmtNumber(n) {
@@ -1028,9 +1018,17 @@ createApp({
     function weatherName(type) { return WEATHER_NAME[type] || '晴天'; }
     function rarityColor(r) { return RARITY_COLOR[r] || '#8a9aa4'; }
     function zoomImage(src) { zoomSrc.value = src; }
-    function openFish(f) { selectedFish.value=f; fishCategory.value=f.category==='starry'?'starry':'other'; fishModal.value=true; }
-    function runFishAction(action) { if (!selectedFish.value) return; fishModal.value=false; sendQuick(`${action} ${selectedFish.value.numeric_id}`); }
-    function openMarket() { if (selectedFish.value) { market.sourceId=selectedFish.value.numeric_id; smartPickTarget(); } fishModal.value=false; marketModal.value=true; }
+    function openFishMenu(f, event) {
+      selectedFish.value=f;
+      const width=220, height=190, gap=6;
+      const rect=event.currentTarget.getBoundingClientRect();
+      const preferredLeft=rect.right+gap;
+      fishMenu.left=Math.max(8,Math.min(preferredLeft+width<=window.innerWidth-8?preferredLeft:rect.left-width-gap,window.innerWidth-width-8));
+      fishMenu.top=Math.max(8,Math.min(rect.top,window.innerHeight-height-8));
+      fishMenu.open=true;
+    }
+    function runFishAction(action) { if (!selectedFish.value) return; fishMenu.open=false; sendQuick(`${action} ${selectedFish.value.numeric_id}`); }
+    function openMarket() { if (selectedFish.value) { market.sourceId=selectedFish.value.numeric_id; smartPickTarget(); } fishMenu.open=false; marketModal.value=true; }
     function syncMarketTarget() { market.targetId=targetChoices.value[0]?.numeric_id||''; }
     function smartPickTarget() {
       const source=marketSource.value; if(!source)return;
@@ -1055,7 +1053,7 @@ createApp({
       if(whiteMarket.exhausted){ ElementPlus.ElMessage.warning(whiteMarket.message||'今日白商次数已用完'); return; }
       whiteMarketTargetId.value=whiteMarketTargets.value[0]?.numeric_id||'';
       if(!whiteMarketTargetId.value){ ElementPlus.ElMessage.info('当前没有可获得鱼'); return; }
-      fishModal.value=false; whiteMarketModal.value=true;
+      fishMenu.open=false; whiteMarketModal.value=true;
     }
     function submitWhiteMarket() {
       if(!whiteMarketPayment.value||!whiteMarketTargetId.value)return;
@@ -1321,19 +1319,19 @@ createApp({
       textInput, loading, result, zoomSrc,
       achModal, achLoading, achievements,
       colModal, colLoading, collection,
-      fishModal, marketModal, whiteMarketModal, fishCategory, selectedFish, fishCatalog, market,
+      marketModal, whiteMarketModal, selectedFish, fishMenu, fishCatalog, market,
       whiteMarket, whiteMarketTargetId, whiteMarketPayment, whiteMarketTargets,
       player, fishing, backpack, locations,
       WEATHER_EMOJI, drawerOpen, quickMenuOpen,
       quickBtns, useDropdown, quickActionsRef, locsCollapsed,
-      nonBaitItems, fishingProgress, resultFrameHtml,
-      visibleFishCards, marketSource, targetLocations, targetRarities, targetChoices,
+      nonBaitItems, normalFish, starryFishCards, fishingProgress, resultFrameHtml,
+      fishMenuStyle, canOpenWhiteMarket, marketSource, targetLocations, targetRarities, targetChoices,
       connect, sendText, sendQuick, selectLocation,
       zoomImage, onResultFrameLoad, onResultImageLoad,
       fetchAchievements, fetchCollection, fetchState,
       fmtDuration, fmtNumber, weatherName, rarityColor,
       toggleLeftDrawer, toggleRightDrawer, closeDrawer,
-      openFish, runFishAction, openMarket, syncMarketTarget, smartPickTarget, submitMarket,
+      openFishMenu, runFishAction, openMarket, syncMarketTarget, smartPickTarget, submitMarket,
       openWhiteMarket, submitWhiteMarket,
     };
   }
