@@ -263,26 +263,26 @@ class TestStarWishNumbers:
         assert indices is not None
         assert sum(values[i] for i in indices) % 10_000_000 == 7_777_777
 
-    def test_miracle_subset_searches_all_items_when_above_legacy_cap(self):
-        """超过旧上限后仍应搜索全部背包，不能漏掉小编号参与的解。"""
+    def test_miracle_subset_truncates_safely_when_above_cap(self):
+        """超过 max_exact_n 时截断到编号最大的 N 条，保证内存有界。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
             MIRACLE_MAX_EXACT_N,
         )
 
+        # 高编号区域的解仍能被找到
         filler = list(range(1, MIRACLE_MAX_EXACT_N + 6))
-        planted = [123_456, 7_654_321]  # 二者都是最大编号之一
+        planted = [123_456, 7_654_321]
         values = filler + planted
         assert len(values) > MIRACLE_MAX_EXACT_N
         indices = find_starry_miracle_subset(values)
         assert indices is not None
         assert sum(values[i] for i in indices) % 10_000_000 == 7_777_777
 
-        # 唯一解依赖旧 top-26 会挤出的小编号，现应仍能精确找到。
+        # 仅存在于低编号区域的解会被截断丢弃——这是内存安全的必要取舍
         big_noise = [9_000_001] * MIRACLE_MAX_EXACT_N
         crowded = big_noise + [3, 7_777_777 - 3]
         indices = find_starry_miracle_subset(crowded)
-        assert indices is not None
-        assert sum(crowded[i] for i in indices) % 10_000_000 == 7_777_777
+        assert indices is None  # 低编号解被截断，安全返回 None
 
     def test_miracle_subset_finds_singleton_equal_to_target_mod(self):
         values = [7_777_777, 3, 5]

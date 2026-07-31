@@ -903,15 +903,31 @@ def find_miracle_subset(
 ) -> list[int] | None:
     """Find a non-empty subset whose sum ≡ target (mod mod_base).
 
-    始终用 meet-in-the-middle（二分枚举子集和）对全部背包候选精确搜索，
-    不再截断到编号最大的若干条，确保已有解不会因编号排序被漏掉。
+    当候选数超过 max_exact_n 时，只取编号最大的 max_exact_n 条做 MITM，
+    避免 2^(n/2) 规模的内存分配导致收杆事务卡死。
     Returns original indices into ``values``, or None.
     """
-    del max_exact_n, large_n_attempts, rng  # API compat only
+    del large_n_attempts, rng  # deprecated: API compat only
 
     normalized = [int(value) % mod_base for value in values]
     if not normalized:
         return None
+
+    # 候选数超过上限时截断到编号最大的 N 条，保证 MITM 内存 O(2^(N/2)) 有界。
+    # 正常星空背包不超过 26 条；只有旧版 items 流星鱼按数量展开后才会超限。
+    if len(normalized) > max_exact_n:
+        kept = sorted(
+            range(len(normalized)),
+            key=lambda i: normalized[i],
+            reverse=True,
+        )[:max_exact_n]
+        kept.sort()
+        remapped = [normalized[i] for i in kept]
+        result = _mitm_exact_indices(remapped, target, mod_base)
+        if result is None:
+            return None
+        return [kept[i] for i in result]
+
     return _mitm_exact_indices(normalized, target, mod_base)
 
 

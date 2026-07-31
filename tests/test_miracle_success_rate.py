@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
     MIRACLE_MAX_EXACT_N,
     MIRACLE_MOD_BASE,
+    MIRACLE_TARGET,
     find_miracle_subset,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.models.user_mutations import (
@@ -128,3 +129,24 @@ class TestMiracleSubsetSearch:
         assert all(0.0 < rate < 1.0 for rate in rates)
         assert rates == sorted(rates)
         assert len(set(rates)) == len(rates)
+
+    def test_truncation_prevents_memory_explosion_on_large_candidate_list(self):
+        """候选数远超 max_exact_n 时不会内存爆炸，且仍能找到有效解。"""
+        n = 200
+        values = [7777777] + [0] * (n - 1)
+        indices = find_miracle_subset(values, max_exact_n=MIRACLE_MAX_EXACT_N)
+        assert indices is not None
+        assert len(indices) == 1
+        assert 0 <= indices[0] < n
+        assert sum(values[i] for i in indices) % MIRACLE_MOD_BASE == MIRACLE_TARGET % MIRACLE_MOD_BASE
+
+    def test_truncation_finds_solution_when_top_n_contain_valid_subset(self):
+        """大候选列表中，编号最大的 N 条包含解时能正确返回。"""
+        n = 100
+        values = list(range(n - MIRACLE_MAX_EXACT_N + 1))
+        # 在高编号区域放两条能凑出 target 的鱼
+        values.extend([3888889, 3888888])
+        indices = find_miracle_subset(values, max_exact_n=MIRACLE_MAX_EXACT_N)
+        assert indices is not None
+        assert all(0 <= i < len(values) for i in indices)
+        assert sum(values[i] for i in indices) % MIRACLE_MOD_BASE == MIRACLE_TARGET % MIRACLE_MOD_BASE
