@@ -514,10 +514,8 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 
     current_frames = int(user.star_frames or 0)
     backpack = list(_ensure_list(user.starry_fish))
-    exhibition = list(_ensure_list(user.starry_exhibition))
     legacy_items = _ensure_dict(getattr(user, "items", None))
     candidates = [("backpack", item) for item in backpack]
-    candidates.extend(("exhibition", item) for item in exhibition)
     for key, entry in legacy_items.items():
         item_id, separator, item_type = str(key).partition("|")
         if separator and item_type == "meteor_fish":
@@ -528,8 +526,8 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     if not candidates:
         return None
 
-    # 奇迹按“玩家持有的全部流星鱼”计算。历史上流星鱼先后存过普通 items、
-    # 星空背包和独立展馆三种结构，因此搜索与扣除必须同时覆盖三者。
+    # 展馆是受保护存储，任何奇迹都不能读取或扣除其中的鱼。
+    # 旧版 items 流星鱼可参与，但必须按来源精确扣除，不能触碰展馆。
     ids = [int(item.get("id", 0)) for _, item in candidates]
     indices = find_miracle_subset(ids)
     if not indices:
@@ -541,13 +539,7 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     consumed_backpack_ids = {
         id(candidates[i][1]) for i in index_set if candidates[i][0] == "backpack"
     }
-    consumed_exhibition_ids = {
-        id(candidates[i][1]) for i in index_set if candidates[i][0] == "exhibition"
-    }
     new_backpack = [item for item in backpack if id(item) not in consumed_backpack_ids]
-    new_exhibition = [
-        item for item in exhibition if id(item) not in consumed_exhibition_ids
-    ]
     consumed_legacy_counts: dict[str, int] = {}
     for i in index_set:
         source, item = candidates[i]
@@ -564,11 +556,10 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
             del new_items[key]
 
     user.starry_fish = new_backpack
-    user.starry_exhibition = new_exhibition
     user.items = new_items
     user.star_frames = current_frames + 1
     subset_count = len(subset_records)
-    mark_dirty(dirty, "starry_fish", "starry_exhibition", "items", "star_frames")
+    mark_dirty(dirty, "starry_fish", "items", "star_frames")
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [
@@ -590,9 +581,7 @@ def apply_try_claim_miracles(
     claims: list[dict] = []
     # 每次领取至少消耗一条流星鱼；默认上限由当前背包大小自然约束，
     # 仅用于防止异常数据造成无界循环，不限制星空框库存。
-    held_count = len(_ensure_list(user.starry_fish)) + len(
-        _ensure_list(user.starry_exhibition)
-    )
+    held_count = len(_ensure_list(user.starry_fish))
     held_count += sum(
         max(0, int(entry.get("count", 0)))
         for key, entry in _ensure_dict(getattr(user, "items", None)).items()

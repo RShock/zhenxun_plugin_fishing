@@ -36,7 +36,7 @@ def _brute_force_has_subset(values: list[int], target: int, mod_base: int) -> bo
 
 
 class TestMiracleSubsetSearch:
-    def test_old_exhibition_fish_participates_and_is_consumed(self):
+    def test_exhibition_fish_never_participates_or_gets_consumed(self):
         user = SimpleNamespace(
             starry_fish=[{"id": "999999"} for _ in range(7)],
             starry_exhibition=[{"id": "777784", "display_score": 9}],
@@ -47,13 +47,11 @@ class TestMiracleSubsetSearch:
 
         claim = apply_try_claim_miracle(user, dirty)
 
-        assert claim is not None
-        assert len(claim["consumed_ids"]) == 8
-        assert "777784" in claim["consumed_ids"]
-        assert user.starry_fish == []
-        assert user.starry_exhibition == []
-        assert user.star_frames == 1
-        assert {"starry_fish", "starry_exhibition", "star_frames"} <= dirty
+        assert claim is None
+        assert len(user.starry_fish) == 7
+        assert user.starry_exhibition == [{"id": "777784", "display_score": 9}]
+        assert user.star_frames == 0
+        assert dirty == set()
 
     def test_legacy_item_meteor_fish_participates_and_is_consumed(self):
         user = SimpleNamespace(
