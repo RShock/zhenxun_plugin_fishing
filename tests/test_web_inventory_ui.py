@@ -38,13 +38,17 @@ def test_starry_web_records_include_image_number_score_and_legacy_items():
         starry_fish=[{"id": "123456", "location_id": "11"}],
         starry_exhibition=[{"id": "654321", "location_id": "12"}],
     )
-    items = [{"item_id": "111111", "item_type": "meteor_fish", "count": 2}]
+    items = [{"item_id": "36786820", "item_type": "meteor_fish", "count": 2}]
 
     backpack, exhibition = _starry_web_records(user, items)
 
     assert len(backpack) == 3
     assert len(exhibition) == 1
     assert sum(record.get("legacy", False) for record in backpack) == 2
+    legacy_records = [record for record in backpack if record.get("legacy")]
+    assert all(record["numeric_id"] == "786820" for record in legacy_records)
+    assert all(isinstance(record["display_score"], int) for record in legacy_records)
+    assert all(isinstance(record["score"], float) for record in legacy_records)
     for record in backpack + exhibition:
         assert record["image_url"].endswith("%E6%B5%81%E6%98%9F%E9%B1%BC.png")
         assert len(record["numeric_id"]) == 6

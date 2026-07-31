@@ -76,6 +76,27 @@ class TestMiracleSubsetSearch:
         assert user.star_frames == 1
         assert "items" in dirty
 
+    def test_nine_digit_legacy_fish_can_join_mixed_miracle(self):
+        user = SimpleNamespace(
+            starry_fish=[{"id": "990957"}],
+            starry_exhibition=[],
+            items={
+                "36786820|meteor_fish": {
+                    "item_type": "meteor_fish",
+                    "count": 1,
+                }
+            },
+            star_frames=0,
+        )
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is not None
+        assert claim["consumed_ids"] == ["990957", "786820"]
+        assert user.starry_fish == []
+        assert "36786820|meteor_fish" not in user.items
+        assert user.star_frames == 1
+
     def test_miracle_max_exact_n_covers_practical_sizes(self):
         assert MIRACLE_MAX_EXACT_N >= max(BACKPACK_SIZES)
 

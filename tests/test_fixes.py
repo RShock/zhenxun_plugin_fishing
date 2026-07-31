@@ -727,15 +727,15 @@ class TestMeteorBackpackInventory:
         assert "111111" not in numbers  # exhibition never appears in backpack
         assert "000123" in numbers
         assert "000045" in numbers
-        assert numbers.count("87654321") == 2
+        assert numbers.count("654321") == 2
 
         backpack_item = next(m for m in items if m["number"] == "000123")
         assert backpack_item["in_exhibition"] is False
         assert backpack_item["display_score"] == 1
 
-        legacy = next(m for m in items if m["number"] == "87654321")
+        legacy = next(m for m in items if m["number"] == "654321")
         assert legacy["source"] == "legacy"
-        assert legacy["display_score"] is None
+        assert isinstance(legacy["display_score"], int)
 
         # starry first by score desc, then legacy
         assert numbers[0] == "000123"

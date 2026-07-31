@@ -136,12 +136,16 @@ def _starry_web_records(user, items_raw: list[dict]) -> tuple[list[dict], list[d
 
     image_url = "/api/resource/images/fish/%E6%B5%81%E6%98%9F%E9%B1%BC.png"
 
-    def build(record: dict, *, in_exhibition: bool = False) -> dict:
-        scored = score_starry_fish(record.get("id", 0))
+    def build(
+        record: dict, *, in_exhibition: bool = False, legacy: bool = False
+    ) -> dict:
+        score_id = int(record.get("id", 0)) % 1_000_000
+        scored = score_starry_fish(score_id)
+        numeric_id = scored.id_text
         return {
             **record,
-            "id": scored.id_text,
-            "numeric_id": scored.id_text,
+            "id": numeric_id,
+            "numeric_id": numeric_id,
             "fish_name": "流星鱼",
             "score": round(scored.raw_score, 3),
             "display_score": scored.display_score,
@@ -158,7 +162,7 @@ def _starry_web_records(user, items_raw: list[dict]) -> tuple[list[dict], list[d
         if item.get("item_type") != "meteor_fish":
             continue
         backpack.extend(
-            build({"id": item.get("item_id", 0), "legacy": True})
+            build({"id": item.get("item_id", 0), "legacy": True}, legacy=True)
             for _ in range(max(0, int(item.get("count", 0))))
         )
     return backpack, exhibition

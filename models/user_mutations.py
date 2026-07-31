@@ -536,7 +536,8 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
         return None
 
     index_set = set(indices)
-    subset_records = [candidates[i][1] for i in sorted(indices)]
+    subset_candidates = [candidates[i] for i in sorted(indices)]
+    subset_records = [item for _, item in subset_candidates]
     consumed_backpack_ids = {
         id(candidates[i][1]) for i in index_set if candidates[i][0] == "backpack"
     }
@@ -571,7 +572,8 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [
-        format_starry_fish_id(item.get("id", 0)) for item in subset_records
+        format_starry_fish_id(int(item.get("id", 0)) % 1_000_000)
+        for _source, item in subset_candidates
     ]
     return {
         "target": MIRACLE_TARGET,

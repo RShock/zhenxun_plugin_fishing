@@ -135,12 +135,15 @@ def build_meteor_inventory(
     for item in items_list or []:
         if item.get("item_type") != "meteor_fish" or item.get("count", 0) <= 0:
             continue
+        from ..core.starry_system import score_starry_fish
+
+        scored = score_starry_fish(int(item.get("item_id", 0)) % 1_000_000)
         for _ in range(int(item["count"])):
             meteor_items.append(
                 {
-                    "number": str(item.get("item_id", "")),
+                    "number": scored.id_text,
                     "count": 1,
-                    "display_score": None,
+                    "display_score": scored.display_score,
                     "source": "legacy",
                     "in_exhibition": False,
                 }
