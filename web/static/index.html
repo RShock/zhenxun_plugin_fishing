@@ -3,6 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+/* ── 移动端固定宽度缩放 ──────────────────────────────────────────
+   设计宽度 410px：足以容纳 4 列鱼卡（每列 ~90px + 间距 + 内边距）。
+   当物理屏幕 < 410px 时，通过 viewport meta 将布局视口锁定为 410px，
+   浏览器自动按 screen/410 比例缩放整个页面（字体、图片等全部等比缩小），
+   效果与 QQ 端完全一致。
+   桌面端不受影响，保持原有响应式布局。
+*/
+(function(){
+  var DESIGN_W = 410;
+  var sw = window.innerWidth || document.documentElement.clientWidth;
+  if (sw > 0 && sw <= 768 && sw < DESIGN_W) {
+    var s = (sw / DESIGN_W).toFixed(4);
+    var vp = document.querySelector('meta[name="viewport"]');
+    if (vp) vp.setAttribute('content',
+      'width=' + DESIGN_W +
+      ', initial-scale=' + s +
+      ', viewport-fit=cover');
+  }
+})();
+</script>
 <title>钓鱼游戏</title>
 <script src="/vendor/vue/vue.global.prod.js"></script>
 <link rel="stylesheet" href="/vendor/element-plus/index.css">
@@ -428,7 +449,8 @@ button { -webkit-tap-highlight-color: transparent; }
 .ach-item.done { color: var(--success); font-weight: 800; }
 .ach-item.pending { color: var(--muted); }
 .loading-tip { text-align: center; color: var(--sub); padding: 20px; }
-.inventory-card-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:10px 12px 12px; }
+/* 桌面端：自适应列数，面板越宽显示越多（最少80px/列 → 最多8+列） */
+.inventory-card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:6px; padding:10px 12px 12px; }
 .inventory-card { position:relative; min-height:82px; border:1px solid var(--border); border-radius:11px; overflow:hidden; background:linear-gradient(145deg,#fff,#edf8fa); cursor:pointer; user-select:none; }
 .inventory-card:hover, .inventory-card.active { border-color:var(--primary); box-shadow:0 0 0 2px rgba(31,155,180,.12); }
 .inventory-card img { display:block; width:100%; height:54px; object-fit:contain; padding:5px; }
@@ -554,16 +576,14 @@ button { -webkit-tap-highlight-color: transparent; }
   .bottom-bar button { min-height: 40px; padding: 0 16px; }
   .result-wrap { padding: 10px; }
   .modal { max-width: 94vw; min-width: 0; padding: 15px; }
+  /* 手机端固定4列：viewport 锁定 410px，抽屉 320px → 每列 ~75px */
   .inventory-card-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
   .inventory-menu { width:min(220px,calc(100vw - 16px)); }
   .market-grid { grid-template-columns:1fr; }
+  /* 图鉴弹窗在手机端缩小鱼名最小宽度 */
+  .col-fish .fish-name { min-width: 60px; }
 }
-@media (max-width: 430px) {
-  .header .right .compact-hide { display: none; }
-  .locs { grid-template-columns: 1fr; }
-  .metric-grid { grid-template-columns: 1fr; }
-  .metric-card.wide { grid-column: auto; }
-}
+/* 430px 断点不再需要，viewport 缩放已处理更窄的屏幕 */
 </style>
 </head>
 <body>
@@ -1131,13 +1151,16 @@ createApp({
         const naturalH = body.scrollHeight || 300;
         const containerW = getResultContentWidth();
         const strictRatio = isStrictRatioResult(doc);
+        var isMobile = window.innerWidth <= 768;
 
         iframe.style.width = containerW + 'px';
         body.style.transformOrigin = 'top left';
 
-        if (strictRatio) {
-          const scale = containerW / naturalW;
-          body.style.transform = scale !== 1 ? `scale(${scale})` : '';
+        // 移动端：所有 iframe 内容使用等比缩放（scale-to-fit），
+        // 保持与 QQ 端完全一致的布局比例，不拉伸、不溢出
+        if (strictRatio || isMobile) {
+          var scale = containerW / naturalW;
+          body.style.transform = scale !== 1 ? 'scale(' + scale + ')' : '';
           setTimeout(() => {
             iframe.style.height = Math.round(Math.max(naturalH * scale, 200) + 10) + 'px';
           }, 50);

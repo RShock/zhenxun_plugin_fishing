@@ -22,7 +22,12 @@ _RESOURCES_DIR = Path(__file__).parent.parent / "resources"
 
 _CLIENT_CSS = """
 <style>
-.fish-list{grid-template-columns:repeat(auto-fill,minmax(85px,1fr))!important}
+/* 默认 4 列：移动端 scale-to-fit 保持与 QQ 端一致 */
+.fish-list{grid-template-columns:repeat(4,1fr)!important}
+/* 桌面端拉伸时自动增加列数（minmax 140px → 8列@1250px） */
+@media (min-width:600px){
+.fish-list{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))!important}
+}
 .item,.upgrade-item{cursor:pointer!important;transition:all .15s!important}
 .item:hover,
 .upgrade-item:hover:not(.max){
@@ -76,9 +81,30 @@ def _inject_client_enhancements(html: str) -> str:
 # ── WebSocket 服务器 ──────────────────────────────────────────────────
 
 
+@web.middleware
+async def _cache_headers_middleware(request, handler):
+    """为静态资源添加 Cache-Control 头，避免浏览器重复请求鱼图片等。"""
+    response = await handler(request)
+    path = request.path
+    if path.startswith("/api/resource/"):
+        # 鱼图片等游戏资源——缓存 7 天，文件名不变则内容不变
+        response.headers.setdefault(
+            "Cache-Control", "public, max-age=604800, immutable"
+        )
+    elif path.startswith("/vendor/"):
+        # Vue / Element Plus 等第三方库——缓存 30 天
+        response.headers.setdefault(
+            "Cache-Control", "public, max-age=2592000, immutable"
+        )
+    elif path.startswith("/api/image/"):
+        # 临时渲染图片——缓存 10 分钟（与 TTL 一致）
+        response.headers.setdefault("Cache-Control", "public, max-age=600")
+    return response
+
+
 class WebSocketServer:
     def __init__(self):
-        self._app = web.Application()
+        self._app = web.Application(middlewares=[_cache_headers_middleware])
         self._runner: web.AppRunner | None = None
         self._task: asyncio.Task | None = None
         self._setup_routes()
