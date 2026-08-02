@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
-from nonebot import logger
+from zhenxun.services.log import logger
 from nonebot_plugin_apscheduler import scheduler
 
 from .models import FishingBuff
@@ -57,21 +57,25 @@ def _find_pg_dump() -> str | None:
 _web_started = False
 
 
-@scheduler.scheduled_job("cron", hour=0, minute=5)
+@scheduler.scheduled_job(
+    "cron", hour=0, minute=5, timezone="Asia/Shanghai", misfire_grace_time=3600
+)
 async def _scheduled_weekend_bonus():
     year = datetime.now().year
     created = await FishingBuff.generate_weekend_bonus(year)
     if created > 0:
-        logger.info(f"自动生成了 {created} 个周末奖励buff")
+        logger.info(f"自动生成了 {created} 个周末奖励buff", "钓鱼周末奖励")
 
 
-@scheduler.scheduled_job("cron", hour=23, minute=0, timezone="Asia/Shanghai")
+@scheduler.scheduled_job(
+    "cron", hour=23, minute=0, timezone="Asia/Shanghai", misfire_grace_time=3600
+)
 async def _scheduled_weather_generation():
     from .weather_service import ensure_weather_generated
 
     generated = await ensure_weather_generated()
     if generated:
-        logger.info("定时任务：自动生成了今日天气")
+        logger.info("定时任务：自动生成了今日天气", "钓鱼天气")
 
 
 @scheduler.scheduled_job("interval", hours=1)
@@ -83,7 +87,7 @@ def _backup_sqlite(parsed, now: datetime) -> Path | None:
     """SQLite 数据库备份：直接复制文件。"""
     db_path = Path(unquote(parsed.path).lstrip("/"))
     if not db_path.exists():
-        logger.warning(f"[钓鱼备份] 数据库文件 {db_path} 不存在，跳过")
+        logger.warning(f"数据库文件 {db_path} 不存在，跳过", "钓鱼备份")
         return None
 
     backup_name = f"zhenxun_backup_{now.strftime('%Y%m%d_%H%M%S')}.db"
@@ -96,7 +100,7 @@ def _backup_postgres(parsed, now: datetime) -> Path | None:
     """PostgreSQL 数据库备份：使用 pg_dump 导出钓鱼相关表。"""
     pg_dump = _find_pg_dump()
     if not pg_dump:
-        logger.error("[钓鱼备份] 未找到 pg_dump，跳过 PostgreSQL 备份")
+        logger.error("未找到 pg_dump，跳过 PostgreSQL 备份", "钓鱼备份")
         return None
 
     host = parsed.hostname or "127.0.0.1"
@@ -126,19 +130,26 @@ def _backup_postgres(parsed, now: datetime) -> Path | None:
         env=env,
     )
     if result.returncode != 0:
-        logger.error(f"[钓鱼备份] pg_dump 失败: {result.stderr[:500]}")
+        logger.error(f"pg_dump 失败: {result.stderr[:500]}", "钓鱼备份")
         return None
 
     backup_path.write_text(result.stdout, encoding="utf-8")
     return backup_path
 
 
-@scheduler.scheduled_job("interval", hours=12)
+@scheduler.scheduled_job(
+    "cron",
+    hour="0,12",
+    minute=0,
+    timezone="Asia/Shanghai",
+    misfire_grace_time=3600,
+)
 async def _scheduled_backup_fishing_db():
     from zhenxun.configs.config import BotConfig
 
     db_url = BotConfig.db_url
     if not db_url:
+        logger.warning("BotConfig.db_url 为空，跳过备份", "钓鱼备份")
         return
 
     parsed = urlparse(db_url)
@@ -151,15 +162,16 @@ async def _scheduled_backup_fishing_db():
         elif parsed.scheme in ("postgres", "postgresql"):
             backup_path = await asyncio.to_thread(_backup_postgres, parsed, now)
         else:
-            logger.warning(f"[钓鱼备份] 暂不支持 {parsed.scheme} 数据库备份，跳过")
+            logger.warning(f"暂不支持 {parsed.scheme} 数据库备份，跳过", "钓鱼备份")
             return
 
         if backup_path:
             logger.info(
-                f"[钓鱼备份] 备份完成: {backup_path} ({backup_path.stat().st_size} bytes)"
+                f"备份完成: {backup_path} ({backup_path.stat().st_size} bytes)",
+                "钓鱼备份",
             )
     except Exception as e:
-        logger.error(f"[钓鱼备份] 备份失败: {e}")
+        logger.error("备份失败", "钓鱼备份", e=e)
         return
 
     cutoff = now - timedelta(days=3)
@@ -167,16 +179,16 @@ async def _scheduled_backup_fishing_db():
         try:
             if f.stat().st_mtime < cutoff.timestamp():
                 f.unlink()
-                logger.info(f"[钓鱼备份] 已删除过期备份: {f.name}")
+                logger.info(f"已删除过期备份: {f.name}", "钓鱼备份")
         except Exception as e:
-            logger.warning(f"[钓鱼备份] 删除过期备份失败 {f.name}: {e}")
+            logger.warning(f"删除过期备份失败 {f.name}", "钓鱼备份", e=e)
     for f in BACKUP_DIR.glob("zhenxun_backup_*.db"):
         try:
             if f.stat().st_mtime < cutoff.timestamp():
                 f.unlink()
-                logger.info(f"[钓鱼备份] 已删除过期备份: {f.name}")
+                logger.info(f"已删除过期备份: {f.name}", "钓鱼备份")
         except Exception as e:
-            logger.warning(f"[钓鱼备份] 删除过期备份失败 {f.name}: {e}")
+            logger.warning(f"删除过期备份失败 {f.name}", "钓鱼备份", e=e)
 
 
 @scheduler.scheduled_job(
@@ -195,14 +207,14 @@ async def _start_web_servers():
 
     try:
         start_status_server()
-        logger.info("[钓鱼插件] 状态API服务器已启动(端口4158)")
+        logger.info("状态API服务器已启动(端口4158)", "钓鱼插件")
     except Exception as e:
-        logger.error(f"[钓鱼插件] 状态API服务器启动失败: {e}")
+        logger.error("状态API服务器启动失败", "钓鱼插件", e=e)
 
     from .web.websocket_server import get_ws_server
 
     try:
         await get_ws_server().start()
-        logger.info("[钓鱼插件] WebSocket网页服务器已启动(端口4159)")
+        logger.info("WebSocket网页服务器已启动(端口4159)", "钓鱼插件")
     except Exception as e:
-        logger.error(f"[钓鱼插件] WebSocket网页服务器启动失败: {e}")
+        logger.error("WebSocket网页服务器启动失败", "钓鱼插件", e=e)
