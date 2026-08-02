@@ -146,17 +146,11 @@ async def _resolve_fragment_upgrades(
                 )
                 if not ok:
                     break
+                # 碎片合成获得的奖池不受究极展品3次限制，直接使用目标池
                 upgrade_pool = spec["upgrade_pool"]
-                if upgrade_pool == "ultimate":
-                    exhibition = await FishingUser.get_user_starry_exhibition(user_id)
-                    upgrade_pool = limit_ultimate_reward_pool(
-                        upgrade_pool, exhibition
-                    )
                 drawn = draw_starry_reward(upgrade_pool)
                 if not drawn:
                     break
-                if upgrade_pool != spec["upgrade_pool"]:
-                    drawn["downgraded_from"] = spec["upgrade_pool"]
                 drawn["upgrade_from"] = spec["name"]
                 if fish_id is not None:
                     fid = str(fish_id)

@@ -439,7 +439,7 @@ def apply_fragment_upgrades_on_user(
 ) -> list[dict]:
     """碎片够 5 个时在本杆立刻结算，可连锁到更高等级。"""
     from .starry_rewards import _FRAGMENT_SPECS
-    from .starry_system import draw_starry_reward, limit_ultimate_reward_pool
+    from .starry_system import draw_starry_reward
 
     granted: list[dict] = []
     for _ in range(40):
@@ -457,14 +457,11 @@ def apply_fragment_upgrades_on_user(
                 )
                 if not ok:
                     break
-                upgrade_pool = limit_ultimate_reward_pool(
-                    spec["upgrade_pool"], user.starry_exhibition or []
-                )
+                # 碎片合成获得的奖池不受究极展品3次限制，直接使用目标池
+                upgrade_pool = spec["upgrade_pool"]
                 drawn = draw_starry_reward(upgrade_pool)
                 if not drawn:
                     break
-                if upgrade_pool != spec["upgrade_pool"]:
-                    drawn["downgraded_from"] = spec["upgrade_pool"]
                 drawn["upgrade_from"] = spec["name"]
                 if fish_id is not None:
                     fid = str(fish_id)
