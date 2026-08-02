@@ -623,7 +623,7 @@ class TestBlackMarketExchange:
         assert should_parse_market_exchange("123 456 ") is True
         assert should_parse_market_exchange("只是聊一下黑商") is False
 
-    def test_market_exchange_id_parse_requires_two_three_digit_ids(self):
+    def test_market_exchange_id_parse_requires_two_ids(self):
         parsed = parse_market_exchange("111 112 ")
         assert parsed.should_reply is True
         assert parsed.parsed is not None
@@ -636,6 +636,41 @@ class TestBlackMarketExchange:
         silent = parse_market_exchange("随便看看")
         assert silent.should_reply is False
         assert silent.reason == "not_exchange_like"
+
+    def test_market_exchange_id_parse_handles_s1_fish_ids(self):
+        """猫猫乐园(s1XX)鱼ID不应被误识别为1图鱼。"""
+        # s101 = 橘座鲫鱼(N), s105 = 橘座鲫鱼(UR)
+        assert should_parse_market_exchange("s101 s105") is True
+        parsed = parse_market_exchange("s101 s105")
+        assert parsed.should_reply is True
+        assert parsed.parsed is not None
+        src_name, src_rarity, dst_name, dst_rarity = parsed.parsed
+        assert src_name == "橘座鲫鱼"
+        assert src_rarity == "N"
+        assert dst_name == "橘座鲫鱼"
+        assert dst_rarity == "UR"
+
+        # 混合：s101(猫猫乐园) + 111(1图小鲫鱼N)
+        mixed = parse_market_exchange("s101 111")
+        assert mixed.should_reply is True
+        assert mixed.parsed is not None
+        m_src, m_src_r, m_dst, m_dst_r = mixed.parsed
+        assert m_src == "橘座鲫鱼"
+        assert m_src_r == "N"
+        assert m_dst == "小鲫鱼"
+        assert m_dst_r == "N"
+
+        # 大写 S 前缀也能识别
+        upper = parse_market_exchange("S101 S105")
+        assert upper.should_reply is True
+        assert upper.parsed is not None
+
+    def test_market_exchange_id_parse_handles_four_digit_ids(self):
+        """10-15图鱼的4位数字ID应能被正确解析。"""
+        # 1011 = map10 鱼索引1 N, 1012 = map10 鱼索引1 R
+        parsed = parse_market_exchange("1011 1012")
+        assert parsed.should_reply is True
+        assert parsed.parsed is not None
 
     def test_can_exchange_allows_same_scene_and_rarity(self):
         source = find_fish_target("小鲫鱼", "N")

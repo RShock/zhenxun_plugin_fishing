@@ -24,7 +24,8 @@ _BLACK_MARKET_PITY_THRESHOLD = 4
 BLACK_MARKET_USAGE = (
     "黑商用法：黑商 鱼名字稀有度 鱼名字稀有度 / 黑商 鱼ID 鱼ID\n"
     "也可以使用：黑商交换 鱼名字稀有度 鱼名字稀有度\n"
-    "例如：黑商 鲤鱼UR 草鱼SSR / 黑商交换 123 456\n"
+    "例如：黑商 鲤鱼UR 草鱼SSR / 黑商交换 123 456 / 黑商交换 s101 s105\n"
+    "鱼ID：1-9图为3位数字、10-15图为4位数字、猫猫乐园为 s1 开头（如 s101）\n"
     "来源鱼的场景等级和稀有度必须都不低于目标鱼；若稀有度相同，有 70% 概率改为获得目标鱼所在场景中相同稀有度的其他鱼。"
 )
 SMART_BLACK_MARKET_USAGE = (
@@ -41,9 +42,16 @@ _EXCHANGE_RE = re.compile(
 _NAME_EXCHANGE_TRIGGER_RE = re.compile(
     rf".+?(?:{_RARITY_RE}).+?(?:{_RARITY_RE})", re.IGNORECASE
 )
-_ID_EXCHANGE_TRIGGER_RE = re.compile(r"(?<!\d)\d{3}(?!\d)\D+(?<!\d)\d{3}(?!\d)")
+# 鱼数字编号 token：
+# - 猫猫乐园(S1): s1 + 1位索引 + 1位稀有度，如 s101
+# - 1-9图: 3位数字，如 111
+# - 10-15图: 4位数字，如 1011
+_FISH_ID = r"(?:[sS]1\d{2}(?!\d)|(?<!\d)\d{3,4}(?!\d))"
+# 分隔符用 \W+（非字母数字）而非原来的 \D+（非数字），
+# 否则 s1XX 的 s 会被 \D 吞掉，导致猫猫乐园鱼被误识别为1图鱼。
+_ID_EXCHANGE_TRIGGER_RE = re.compile(rf"{_FISH_ID}\W+{_FISH_ID}")
 _ID_EXCHANGE_RE = re.compile(
-    r"^\D*(?P<src_id>(?<!\d)\d{3}(?!\d))\D+" r"(?P<dst_id>(?<!\d)\d{3}(?!\d))\D*$"
+    rf"^\W*(?P<src_id>{_FISH_ID})\W+(?P<dst_id>{_FISH_ID})\W*$"
 )
 _MARKET_PREFIX_RE = re.compile(
     r"^\s*(?:黑商|黑市|白商|白市)(?:交换)?\s*", re.IGNORECASE
