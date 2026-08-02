@@ -30,16 +30,48 @@ _MUTEX_POTION_BUFFS = (
 )
 
 
-async def _get_active_mutex_potion_name(
-    user_id: str, current_buff_type: str
-) -> str | None:
-    """同类药水允许续时，但三种核心药水之间不能同时生效。"""
-    for buff_type, potion_name in _MUTEX_POTION_BUFFS:
-        if buff_type == current_buff_type:
-            continue
-        if await FishingBuff.get_active_user_buff(user_id, buff_type):
-            return potion_name
-    return None
+async def _resolve_mutex_potion_timing(
+    user_id: str, buff_type: str
+) -> tuple[str, "FishingBuff | None", datetime | None, str | None]:
+    """确定新药水的生效时机。
+
+    三种核心药水（多多/幸运/闪光）之间不重叠生效。当已有其他药水覆盖时，
+    新药水的 start_time 延后到所有互斥 buff 中最晚的 end_time 之后，
+    确保新药水拥有完整的 8 小时可用区间。
+
+    返回 (mode, extend_buff, delayed_start, active_potion_name):
+    - ("extend", buff, None, None): 同类型 buff 已存在（含未来排期），延长 end_time
+    - ("delay", None, start_time, potion_name): 有其他互斥药水生效中/已排期，
+      新 buff 的 start_time 应设为所有互斥 buff 中最晚的 end_time
+    - ("immediate", None, None, None): 无任何互斥 buff，立即生效
+    """
+    now = datetime.now()
+    all_mutex_types = [bt for bt, _ in _MUTEX_POTION_BUFFS]
+    # 查询所有未过期的互斥药水 buff（含当前生效和未来排期）
+    all_buffs = await FishingBuff.filter(
+        target_type=BuffEffect.TARGET_TYPE_USER,
+        target_id=user_id,
+        buff_type__in=all_mutex_types,
+        end_time__gt=now,
+    ).order_by("-end_time").all()
+
+    if not all_buffs:
+        return "immediate", None, None, None
+
+    # 同类型：延长最晚结束的那个
+    same_type = [b for b in all_buffs if b.buff_type == buff_type]
+    if same_type:
+        latest_same = max(same_type, key=lambda b: b.end_time)
+        return "extend", latest_same, None, None
+
+    # 异类型：取所有互斥 buff 中最晚的 end_time 作为新 buff 的起点
+    latest = max(all_buffs, key=lambda b: b.end_time)
+    latest_end = _make_naive(latest.end_time)
+    active_name = next(
+        (name for bt, name in _MUTEX_POTION_BUFFS if bt == latest.buff_type),
+        "其他药水",
+    )
+    return "delay", None, latest_end, active_name
 
 
 async def use_time_potion(
@@ -92,7 +124,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     - start_time 早于 24 小时前的鱼获（catch_time 为 None 或早于截止点）保留
     - 24 小时窗口内的鱼获被移除并重新结算
     - 鱼饵按鱼获比例退还（无法精确追踪每条鱼消耗的饵，用鱼数比例估算）
-    - 时光药水按每瓶使用时间戳精确退还：24h 内使用的退还，24h 前使用的不退
+    - 本次钓鱼期间使用过时光药水时不允许回档（避免时光药水模拟的鱼获与真实钓鱼混淆）
     """
     status_dict = await FishingUser.get_status(user_id)
     if not status_dict:
@@ -103,6 +135,13 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     potion_count = rollback_item["count"] if rollback_item else 0
     if potion_count < 1:
         return False, "回档药水不足，需要1瓶（当前0瓶）"
+
+    # 使用过时光药水的钓鱼会话不允许回档
+    time_potions_raw = normalize_time_potions(
+        status_dict.get("time_potions_used", [])
+    )
+    if time_potions_raw:
+        return False, "本次钓鱼期间使用过时光药水，无法使用回档药水"
 
     await FishingUser.remove_item(user_id, "回档药水", "potion", 1)
 
@@ -173,35 +212,8 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         total_bait_consumed * refund_ratio
     )
 
-    # ── 时光药水处理 ──
-    # 每瓶时光药水有独立时间戳，按 24h 窗口精确退还：
-    # 24h 内使用的退还，24h 前使用的不退。
-    # 旧数据（int 格式）转为 [None, ...]，None 视为 24h 前使用（不退还）。
-    time_potions_raw = normalize_time_potions(
-        status_dict.get("time_potions_used", [])
-    )
-    keep_time_potions: list = []
-    remove_time_potions: list = []
-    for ts_str in time_potions_raw:
-        if is_full_rollback:
-            # 全量回档：全部移除并退还
-            remove_time_potions.append(ts_str)
-        elif ts_str is None:
-            # 旧数据无时间戳：视为 24h 前使用，保留不退
-            keep_time_potions.append(ts_str)
-        else:
-            try:
-                ts = _make_naive(datetime.fromisoformat(ts_str))
-                if ts < rollback_cutoff:
-                    keep_time_potions.append(ts_str)
-                else:
-                    remove_time_potions.append(ts_str)
-            except (ValueError, TypeError):
-                keep_time_potions.append(ts_str)
-
-    refund_time_potions = len(remove_time_potions)
-
     # ── 构建回溯后的状态 ──
+    # time_potions_used 已在入口处检查为空，回档后保持空列表
     reset_status = {
         "location_id": status_dict["location_id"],
         "start_time": status_dict["start_time"],
@@ -216,17 +228,13 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "cat_eaten_fish": serialize_fish_caught(keep_cat_eaten),
         # 猫礼物无法按时间拆分，重置为默认值
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
-        "time_potions_used": keep_time_potions,
+        "time_potions_used": [],
         "bait_usage_log": new_bait_usage_log,
     }
     if status_dict.get("shadow_scene"):
         reset_status["shadow_scene"] = True
         reset_status["scene_instance_id"] = get_scene_instance_id(status_dict)
     await FishingUser.update_fishing_status(user_id, reset_status)
-    if refund_time_potions:
-        await FishingUser.add_item(
-            user_id, "time_potion", "potion", refund_time_potions
-        )
 
     # 构建回档提示消息，通过结算页面显示给玩家
     window_desc = (
@@ -235,8 +243,6 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         else f"最近{_ROLLBACK_WINDOW_HOURS}小时"
     )
     rollback_messages = [f"⏪ 回档药水生效，回溯{window_desc}"]
-    if refund_time_potions > 0:
-        rollback_messages.append(f"🎁 退还时光药水 {refund_time_potions} 瓶")
     if refunded_bait > 0:
         rollback_messages.append(f"🎁 退还鱼饵 {refunded_bait} 个")
 
@@ -251,7 +257,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     logger.info(
         f"用户 {user_id} 使用回档药水，回溯{window_desc}，"
         f"保留{len(keep_fish)}条鱼获，移除{len(remove_fish)}条，"
-        f"退还鱼饵 {refunded_bait} 个，退还时光药水 {refund_time_potions} 瓶"
+        f"退还鱼饵 {refunded_bait} 个"
     )
     await ledger_service.log_item_use(
         user_id,
@@ -265,7 +271,11 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
 
 
 async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
-    """使用幸运药水，叠加 count * 8 小时的幸运 buff。"""
+    """使用幸运药水，叠加 count * 8 小时的幸运 buff。
+
+    若其他互斥药水（多多/闪光）正在生效或已排期，幸运药水的 start_time
+    会延后到所有互斥 buff 结束之后，确保拥有完整的 8 小时区间。
+    """
     if count < 1:
         return False, "数量必须大于0"
 
@@ -278,27 +288,22 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
     if actual_count < 1:
         return False, "幸运药水不足，需要1瓶（当前0瓶）"
 
-    active_potion = await _get_active_mutex_potion_name(
-        user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
-    )
-    if active_potion:
-        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
-
     await FishingUser.remove_item(user_id, "幸运药水", "potion", actual_count)
-
     total_hours = actual_count * 8
 
-    # 时间堆叠：当前存在未过期的幸运buff则 end_time += total_hours，否则新建
-    existing = await FishingBuff.get_active_user_buff(
-        user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
+    mode, extend_buff, delayed_start, active_name = (
+        await _resolve_mutex_potion_timing(
+            user_id, BuffEffect.BUFF_TYPE_LUCKY_BOOST
+        )
     )
-    if existing:
-        existing.end_time = _make_naive(existing.end_time) + timedelta(
+
+    if mode == "extend":
+        extend_buff.end_time = _make_naive(extend_buff.end_time) + timedelta(
             hours=total_hours
         )
-        await existing.save(update_fields=["end_time"])
+        await extend_buff.save(update_fields=["end_time"])
         logger.info(
-            f"用户 {user_id} 使用{actual_count}瓶幸运药水，时间堆叠至 {existing.end_time}（+{total_hours}h）"
+            f"用户 {user_id} 使用{actual_count}瓶幸运药水，时间堆叠至 {extend_buff.end_time}（+{total_hours}h）"
         )
         await ledger_service.log_item_use(
             user_id, item_id="幸运药水", item_type="potion",
@@ -308,16 +313,22 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
             True,
             f"幸运药水生效！钓鱼变得幸运 ⭐，剩余时间+{total_hours}小时（使用{actual_count}瓶）",
         )
-    else:
-        await FishingBuff.add_user_buff(
-            user_id=user_id,
+
+    if mode == "delay":
+        start = delayed_start
+        end = start + timedelta(hours=total_hours)
+        await FishingBuff.add_buff(
             buff_type=BuffEffect.BUFF_TYPE_LUCKY_BOOST,
-            duration_minutes=total_hours * 60,
+            start_time=start,
+            end_time=end,
             value=1,
             description="幸运药水：钓鱼变得幸运",
+            target_type=BuffEffect.TARGET_TYPE_USER,
+            target_id=user_id,
         )
         logger.info(
-            f"用户 {user_id} 使用{actual_count}瓶幸运药水，获得幸运buff（{total_hours}小时）"
+            f"用户 {user_id} 使用{actual_count}瓶幸运药水，延后至 {start} 生效（{total_hours}h），"
+            f"因{active_name}正在生效"
         )
         await ledger_service.log_item_use(
             user_id, item_id="幸运药水", item_type="potion",
@@ -325,12 +336,37 @@ async def use_lucky_potion(user_id: str, count: int = 1) -> tuple[bool, str]:
         )
         return (
             True,
-            f"幸运药水生效！钓鱼变得幸运 ⭐，持续{total_hours}小时（使用{actual_count}瓶）",
+            f"幸运药水将在{active_name}结束后生效"
+            f"（预计{start.strftime('%m-%d %H:%M')}开始，持续{total_hours}小时，使用{actual_count}瓶）",
         )
+
+    # immediate：无互斥 buff，立即生效
+    await FishingBuff.add_user_buff(
+        user_id=user_id,
+        buff_type=BuffEffect.BUFF_TYPE_LUCKY_BOOST,
+        duration_minutes=total_hours * 60,
+        value=1,
+        description="幸运药水：钓鱼变得幸运",
+    )
+    logger.info(
+        f"用户 {user_id} 使用{actual_count}瓶幸运药水，获得幸运buff（{total_hours}小时）"
+    )
+    await ledger_service.log_item_use(
+        user_id, item_id="幸运药水", item_type="potion",
+        item_name="幸运药水", count=actual_count, context="use_lucky_potion",
+    )
+    return (
+        True,
+        f"幸运药水生效！钓鱼变得幸运 ⭐，持续{total_hours}小时（使用{actual_count}瓶）",
+    )
 
 
 async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool, str]:
-    """真多多药水：8h内鱼竿等级-1，钓到的鱼数量翻倍；重复使用延长时间。"""
+    """真多多药水：8h内鱼竿等级-1，钓到的鱼数量翻倍；重复使用延长时间。
+
+    若其他互斥药水（幸运/闪光）正在生效或已排期，多多药水的 start_time
+    会延后到所有互斥 buff 结束之后，确保拥有完整的 8 小时区间。
+    """
     if count < 1:
         return False, "数量必须大于0"
 
@@ -343,23 +379,20 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
     if potion_count < count:
         count = potion_count
 
-    active_potion = await _get_active_mutex_potion_name(
-        user_id, BuffEffect.BUFF_TYPE_DUODUO
-    )
-    if active_potion:
-        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
-
     await FishingUser.remove_item(user_id, "真多多药水", "potion", count)
 
     duration = timedelta(hours=8 * count)
-    existing = await FishingBuff.get_active_user_buff(
-        user_id, BuffEffect.BUFF_TYPE_DUODUO
+    mode, extend_buff, delayed_start, active_name = (
+        await _resolve_mutex_potion_timing(
+            user_id, BuffEffect.BUFF_TYPE_DUODUO
+        )
     )
-    if existing:
-        existing.end_time = _make_naive(existing.end_time) + duration
-        await existing.save(update_fields=["end_time"])
+
+    if mode == "extend":
+        extend_buff.end_time = _make_naive(extend_buff.end_time) + duration
+        await extend_buff.save(update_fields=["end_time"])
         logger.info(
-            f"用户 {user_id} 使用{count}瓶真多多药水，时间堆叠至 {existing.end_time}"
+            f"用户 {user_id} 使用{count}瓶真多多药水，时间堆叠至 {extend_buff.end_time}"
         )
         await ledger_service.log_item_use(
             user_id, item_id="真多多药水", item_type="potion",
@@ -370,6 +403,33 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
             f"真多多药水生效！鱼竿等级-1，鱼获数量翻倍，剩余时间+{8 * count}小时",
         )
 
+    if mode == "delay":
+        start = delayed_start
+        end = start + duration
+        await FishingBuff.add_buff(
+            buff_type=BuffEffect.BUFF_TYPE_DUODUO,
+            start_time=start,
+            end_time=end,
+            value=1,
+            description="真多多药水：鱼竿等级-1，钓到的鱼数量翻倍",
+            target_type=BuffEffect.TARGET_TYPE_USER,
+            target_id=user_id,
+        )
+        logger.info(
+            f"用户 {user_id} 使用{count}瓶真多多药水，延后至 {start} 生效（{8*count}h），"
+            f"因{active_name}正在生效"
+        )
+        await ledger_service.log_item_use(
+            user_id, item_id="真多多药水", item_type="potion",
+            item_name="真多多药水", count=count, context="use_duoduo_potion",
+        )
+        return (
+            True,
+            f"真多多药水将在{active_name}结束后生效"
+            f"（预计{start.strftime('%m-%d %H:%M')}开始，持续{8 * count}小时）",
+        )
+
+    # immediate：无互斥 buff，立即生效
     await FishingBuff.add_user_buff(
         user_id=user_id,
         buff_type=BuffEffect.BUFF_TYPE_DUODUO,
@@ -380,6 +440,10 @@ async def use_duoduo_potion(user_id: str, count: int = 1, **kwargs) -> tuple[boo
 
     logger.info(
         f"用户 {user_id} 使用{count}瓶真多多药水，获得多多buff（{8 * count}小时）"
+    )
+    await ledger_service.log_item_use(
+        user_id, item_id="真多多药水", item_type="potion",
+        item_name="真多多药水", count=count, context="use_duoduo_potion",
     )
     return True, f"真多多药水生效！鱼竿等级-1，鱼获数量翻倍，持续{8 * count}小时"
 
@@ -473,6 +537,8 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
     """使用闪光药水，叠加 count * 8 小时的伽马射线暴 buff。
 
     生效期间视为同时拥有太阳风、流星雨、恒纪元，并使流星鱼掉率翻倍。
+    若其他互斥药水（多多/幸运）正在生效或已排期，闪光药水的 start_time
+    会延后到所有互斥 buff 结束之后，确保拥有完整的 8 小时区间。
     """
     if count < 1:
         return False, "数量必须大于0"
@@ -484,25 +550,22 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
     if actual_count < 1:
         return False, "闪光药水不足，需要1瓶（当前0瓶）"
 
-    active_potion = await _get_active_mutex_potion_name(
-        user_id, BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
-    )
-    if active_potion:
-        return False, f"同一时间只有1种药水可以生效（{active_potion}生效中）"
-
     await FishingUser.remove_item(user_id, "闪光药水", "potion", actual_count)
     total_hours = actual_count * 8
 
-    existing = await FishingBuff.get_active_user_buff(
-        user_id, BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
+    mode, extend_buff, delayed_start, active_name = (
+        await _resolve_mutex_potion_timing(
+            user_id, BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST
+        )
     )
-    if existing:
-        existing.end_time = _make_naive(existing.end_time) + timedelta(
+
+    if mode == "extend":
+        extend_buff.end_time = _make_naive(extend_buff.end_time) + timedelta(
             hours=total_hours
         )
-        await existing.save(update_fields=["end_time"])
+        await extend_buff.save(update_fields=["end_time"])
         logger.info(
-            f"用户 {user_id} 使用{actual_count}瓶闪光药水，时间堆叠至 {existing.end_time}（+{total_hours}h）"
+            f"用户 {user_id} 使用{actual_count}瓶闪光药水，时间堆叠至 {extend_buff.end_time}（+{total_hours}h）"
         )
         return (
             True,
@@ -510,6 +573,33 @@ async def use_flash_potion(user_id: str, count: int = 1, **kwargs) -> tuple[bool
             f"（太阳风+流星雨+恒纪元，流星鱼掉率翻倍，使用{actual_count}瓶）",
         )
 
+    if mode == "delay":
+        start = delayed_start
+        end = start + timedelta(hours=total_hours)
+        await FishingBuff.add_buff(
+            buff_type=BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST,
+            start_time=start,
+            end_time=end,
+            value=1,
+            description="闪光药水：伽马射线暴（三重天气，流星鱼掉率翻倍）",
+            target_type=BuffEffect.TARGET_TYPE_USER,
+            target_id=user_id,
+        )
+        logger.info(
+            f"用户 {user_id} 使用{actual_count}瓶闪光药水，延后至 {start} 生效（{total_hours}h），"
+            f"因{active_name}正在生效"
+        )
+        await ledger_service.log_item_use(
+            user_id, item_id="闪光药水", item_type="potion",
+            item_name="闪光药水", count=actual_count, context="use_flash_potion",
+        )
+        return (
+            True,
+            f"💥 闪光药水将在{active_name}结束后生效"
+            f"（预计{start.strftime('%m-%d %H:%M')}开始，持续{total_hours}小时，使用{actual_count}瓶）",
+        )
+
+    # immediate：无互斥 buff，立即生效
     await FishingBuff.add_user_buff(
         user_id=user_id,
         buff_type=BuffEffect.BUFF_TYPE_GAMMA_RAY_BURST,

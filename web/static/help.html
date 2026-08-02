@@ -752,9 +752,9 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">木框</span><p class="cmd-desc">全局速度 buff，1-10 图和 S1 每个提供 +5%，独立 50% 上限。满后继续使用木框会循环延长已有 buff（每个+8h），每次最多使用 10 个。也可用于升级展示框。不可出售。</p></div>
       <div class="cmd-card"><span class="cmd-name">猫框</span><p class="cmd-desc">用于猫猫展示框（3 倍签到收益），也可在 11-20 星空图打窝加速（独立 50% 进度条，不与玉米共用，每次最多使用 10 个，满后可循环延长已有 buff）。不可出售。</p></div>
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
-      <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水、闪光药水互斥。</p></div>
-      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、木框、猫框也有效。与真多多药水、闪光药水互斥。</p></div>
-      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">回溯最近 24 小时的钓鱼结果并重新结算该时段；24 小时之前的鱼获保留不变。鱼饵按被移除鱼获的比例退还，24 小时内使用的时光药水也会退还（通过结算页面提示退还数量）。会话不足 24 小时时退化为全额回档。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
+      <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水、闪光药水不同时生效：已有其他药水覆盖时，新药水自动延后到覆盖结束后生效，拥有完整 8 小时区间。</p></div>
+      <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、木框、猫框也有效。与真多多药水、闪光药水不同时生效：已有其他药水覆盖时，新药水自动延后到覆盖结束后生效，拥有完整 8 小时区间。</p></div>
+      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">回溯最近 24 小时的钓鱼结果并重新结算该时段；24 小时之前的鱼获保留不变。鱼饵按被移除鱼获的比例退还。本次钓鱼期间使用过时光药水时不允许回档。会话不足 24 小时时退化为全额回档。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
@@ -842,7 +842,7 @@ code, .ic {
       <li class="warn"><code>卖鱼</code> 不带参数时默认排除 UTR，需明确写 <code>卖鱼 UTR</code> 或 <code>卖鱼 全部</code> 才会处理 UTR。</li>
       <li>收杆相关签到次数每天 12 点刷新；天气每天 11 点刷新。</li>
       <li>锁定的鱼也可以赠送和交换，锁定仅防止误卖。</li>
-      <li class="warn">幸运药水与真多多药水互斥：同一时间只能生效一种，一种生效中使用另一种会被拒绝（不消耗道具）。</li>
+      <li class="warn">幸运药水、真多多药水、闪光药水三种药水不同时生效：在一种药水生效期间使用另一种，新药水会自动延后到当前药水结束后生效，确保拥有完整的 8 小时区间（道具照常消耗）。</li>
       <li>时光药水结算时不受多多和幸运药水影响，但其他 buff 依然有效。</li>
     </ul>
   </div>
@@ -1956,10 +1956,10 @@ code, .ic {
     <div class="sec-h">闪光药水</div>
     <div class="cmd-card">
       <span class="cmd-name">钓鱼使用 闪光药水 [数量]</span>
-      <p class="cmd-desc">激活伽马射线暴 buff（持续 8 小时），同时触发太阳风 + 流星雨 + 恒纪元三种天气效果，并让流星鱼最终掉落概率翻倍，无需在天气栏显示。与真多多/幸运药水互斥，不与时光药水联动。</p>
+      <p class="cmd-desc">激活伽马射线暴 buff（持续 8 小时），同时触发太阳风 + 流星雨 + 恒纪元三种天气效果，并让流星鱼最终掉落概率翻倍，无需在天气栏显示。与真多多/幸运药水不同时生效，已有其他药水覆盖时自动延后；不与时光药水联动。</p>
     </div>
     <div class="callout tip" style="margin-top:10px">
-      闪光药水是流星鱼收集的核心道具：先计算基础、鱼竿与太阳风加成，再将最终流星鱼掉落概率翻倍。生效期间不能使用真多多或幸运药水；使用时光药水模拟钓鱼时不会享受闪光效果。
+      闪光药水是流星鱼收集的核心道具：先计算基础、鱼竿与太阳风加成，再将最终流星鱼掉落概率翻倍。生效期间使用真多多或幸运药水会自动延后到闪光结束后生效；使用时光药水模拟钓鱼时不会享受闪光效果。
     </div>
   </div>
 
@@ -2001,7 +2001,7 @@ code, .ic {
   <div class="card">
     <div class="sec-h">星空专属物品</div>
     <div class="grid-2">
-      <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果并使流星鱼最终掉落概率翻倍；与真多多/幸运药水互斥。</p></div>
+      <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果并使流星鱼最终掉落概率翻倍；与真多多/幸运药水不同时生效，已有其他药水覆盖时自动延后。</p></div>
       <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR）。</p></div>
       <div class="cmd-card"><span class="cmd-name">星空框</span><p class="cmd-desc">通过奇迹获得，用于升级星空展示框；持有数量不设上限，升满共需 55 个。</p></div>
       <div class="cmd-card"><span class="cmd-name">星空展示框</span><p class="cmd-desc">消耗星空框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>

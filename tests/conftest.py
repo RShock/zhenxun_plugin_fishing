@@ -292,6 +292,9 @@ def _patch_models(db, monkeypatch):
     )
 
     monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingBuff.add_buff", db.buff_add_buff
+    )
+    monkeypatch.setattr(
         f"{FISHING_PKG}.models.FishingBuff.add_user_buff", db.buff_add_user_buff
     )
     monkeypatch.setattr(
@@ -321,7 +324,10 @@ def _patch_models(db, monkeypatch):
         f"{FISHING_PKG}.models.FishingBuff.get_active_user_buff",
         db.buff_get_active_user_buff,
     )
-    monkeypatch.setattr(f"{FISHING_PKG}.models.FishingBuff.filter", MagicMock())
+    # FishingBuff.filter 使用真正查询 _buffs 的 mock，支持 order_by
+    monkeypatch.setattr(
+        f"{FISHING_PKG}.models.FishingBuff.filter", db.make_buff_filter_mock()
+    )
     monkeypatch.setattr(f"{FISHING_PKG}.models.FishingUser.filter", MagicMock())
 
     mock_wq = MagicMock()
@@ -353,7 +359,7 @@ def _patch_models(db, monkeypatch):
     mock_query.values = AsyncMock(return_value=[])
     mock_query.exists = AsyncMock(return_value=False)
 
-    for model_name in ["FishingBuff", "FishingUser"]:
+    for model_name in ["FishingUser"]:
         monkeypatch.setattr(
             f"{FISHING_PKG}.models.{model_name}.filter",
             MagicMock(return_value=mock_query),

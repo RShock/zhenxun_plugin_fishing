@@ -819,6 +819,31 @@ class MockDB:
         u.collection = {}
 
     # --- FishingBuff ---
+    async def buff_add_buff(
+        self,
+        buff_type,
+        start_time,
+        end_time,
+        value=1,
+        description="",
+        target_type="user",
+        target_id="",
+        source_user_id=None,
+    ):
+        b = InMemoryBuff(
+            target_type,
+            target_id,
+            buff_type,
+            start_time,
+            end_time,
+            value,
+            description,
+            source_user_id,
+        )
+        b.id = self._gen_id()
+        self._buffs.append(b)
+        return b
+
     async def buff_add_user_buff(
         self, user_id, buff_type, duration_minutes, value=1, description=""
     ):
@@ -984,7 +1009,10 @@ class MockDB:
         self._buffs = [b for b in self._buffs if b.end_time >= cutoff]
 
     def make_buff_filter_mock(self):
-        """创建一个真正查询 self._buffs 的 filter mock，用于测试 buff 延长逻辑。"""
+        """创建一个真正查询 self._buffs 的 filter mock，用于测试 buff 延长逻辑。
+
+        支持 order_by：字段名前缀 "-" 表示降序，否则升序。
+        """
 
         def _filter_fn(**kwargs):
             filtered = list(self._buffs)
@@ -1002,15 +1030,30 @@ class MockDB:
                 elif key == "start_time__lte":
                     filtered = [b for b in filtered if b.start_time <= val]
 
-            sorted_filtered = sorted(filtered, key=lambda b: b.end_time)
-            chain = MagicMock()
-            chain.order_by = MagicMock(return_value=chain)
-            chain.all = AsyncMock(return_value=sorted_filtered)
-            chain.first = AsyncMock(
-                return_value=sorted_filtered[0] if sorted_filtered else None
-            )
-            chain.filter = MagicMock(return_value=chain)
-            return chain
+            def make_chain(data):
+                chain = MagicMock()
+
+                def order_by_fn(field):
+                    if field.startswith("-"):
+                        fname = field[1:]
+                        result = sorted(
+                            data, key=lambda b: getattr(b, fname, b.end_time), reverse=True
+                        )
+                    else:
+                        result = sorted(
+                            data, key=lambda b: getattr(b, field, b.end_time)
+                        )
+                    return make_chain(result)
+
+                chain.order_by = MagicMock(side_effect=order_by_fn)
+                chain.all = AsyncMock(return_value=list(data))
+                chain.first = AsyncMock(
+                    return_value=data[0] if data else None
+                )
+                chain.filter = MagicMock(side_effect=_filter_fn)
+                return chain
+
+            return make_chain(filtered)
 
         return MagicMock(side_effect=_filter_fn)
 

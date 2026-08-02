@@ -746,11 +746,11 @@ async def white_market_exchange(
     pay_fish, get_fish = source, target
     fish = await FishingUser.get_fish_by_numeric_id(user_id, pay_fish.numeric_id)
     if not fish or fish.get("count", 0) < 1:
-        # 尝试反方向
+        # 尝试反方向：source 和 target 都在背包里找一遍，但只提示第一个编号
         pay_fish, get_fish = target, source
         fish = await FishingUser.get_fish_by_numeric_id(user_id, pay_fish.numeric_id)
         if not fish or fish.get("count", 0) < 1:
-            return False, f"背包里没有 {source.name}({source.rarity}) 或 {target.name}({target.rarity})", True
+            return False, f"没有在背包里找到{source.name}", True
 
     # 查找黑商source=获得鱼的有效记录
     records = await FishingExchangeRecord.find_active_by_source_numeric_id(

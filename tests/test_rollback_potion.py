@@ -52,6 +52,7 @@ async def test_fishing_status_omits_accumulated_starry_score(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatch):
+    """会话不足 24h 时全额回档（不使用时光药水的场景）。"""
     user_id = "rollback-potion-full-period"
     user, _ = await FishingUser.get_or_create_user(user_id, "回档测试用户")
     user.frame_pity_counter = 11
@@ -76,7 +77,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
             "utr_pity": 97,
             "cat_eaten_fish": [{"fish_id": "草鱼", "rarity": "R", "count": 1}],
             "cat_gifts": {"gold": 100},
-            "time_potions_used": 3,
+            "time_potions_used": [],
             "shadow_scene": True,
         },
     )
@@ -127,8 +128,6 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert bait_item is not None
     assert bait_item["count"] == 19  # 10 原有 + 9 退还
     assert await FishingUser.get_item(user_id, "回档药水", "potion") is None
-    refunded = await FishingUser.get_item(user_id, "time_potion", "potion")
-    assert refunded == {"item_id": "time_potion", "item_type": "potion", "count": 3}
 
 
 @pytest.mark.asyncio
@@ -140,7 +139,6 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     - 24h 内的鱼获被移除
     - last_settle_time 设为 24h 前（不是 start_time）
     - 鱼饵按比例退还（不是全额）
-    - 时光药水按时间戳精确退还：24h 前用的不退，24h 内用的退还
     """
     user_id = "rollback-potion-24h-limit"
     user, _ = await FishingUser.get_or_create_user(user_id, "24h回档测试")
@@ -155,8 +153,6 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     start_30h_ago = (now - timedelta(hours=30)).isoformat()
     fish_25h_ago = (now - timedelta(hours=25)).isoformat()
     fish_1h_ago = (now - timedelta(hours=1)).isoformat()
-    tp_25h_ago = (now - timedelta(hours=25)).isoformat()
-    tp_1h_ago = (now - timedelta(hours=1)).isoformat()
 
     await FishingUser.update_fishing_status(
         user_id,
@@ -179,8 +175,7 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
                 {"fish_id": "麦穗鱼", "rarity": "N", "count": 2, "catch_time": fish_1h_ago},
             ],
             "cat_gifts": {"gold": 100},
-            # 1瓶 25h 前用（不退）+ 1瓶 1h 前用（退还）
-            "time_potions_used": [tp_25h_ago, tp_1h_ago],
+            "time_potions_used": [],
         },
     )
 
@@ -226,16 +221,6 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     assert len(kept_cat_eaten) == 1
     assert kept_cat_eaten[0]["fish_id"] == "草鱼"
 
-    # 时光药水：25h 前用的保留，1h 前用的退还
-    assert observed_status["time_potions_used"] == [tp_25h_ago]
-    time_potion_item = await FishingUser.get_item(user_id, "time_potion", "potion")
-    assert time_potion_item is not None
-    assert time_potion_item["count"] == 1  # 退还1瓶
-
-    # 退还提示消息通过结算页面传递
-    assert observed_messages is not None
-    assert any("退还时光药水 1 瓶" in msg for msg in observed_messages)
-
     # 鱼饵按比例退还：被移除鱼数=3+2=5，总鱼数=5+3+1+2=11，比例≈0.4545
     # refund = round(8 * 0.4545) = round(3.636) = 4
     # new_bait_usage_log = {"1": 8 - 4} = {"1": 4}
@@ -246,3 +231,78 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
 
     # 回档药水已消耗
     assert await FishingUser.get_item(user_id, "回档药水", "potion") is None
+
+
+@pytest.mark.asyncio
+async def test_rollback_rejected_when_time_potion_used(db, monkeypatch):
+    """使用过时光药水的钓鱼会话不允许回档。"""
+    user_id = "rollback-blocked-by-tp"
+    user, _ = await FishingUser.get_or_create_user(user_id, "时光阻止回档")
+    await user.save()
+    await FishingUser.add_item(user_id, "回档药水", "potion", 1)
+
+    now = datetime.now()
+    tp_1h_ago = (now - timedelta(hours=1)).isoformat()
+    await FishingUser.update_fishing_status(
+        user_id,
+        {
+            "location_id": "1",
+            "start_time": (now - timedelta(hours=3)).isoformat(),
+            "last_settle_time": (now - timedelta(minutes=5)).isoformat(),
+            "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 5}],
+            "bait_consumed": 5,
+            "bait_usage_log": {"1": 5},
+            "frame_pity": 10,
+            "cat_frame_pity": 0,
+            "utr_pity": 0,
+            "cat_eaten_fish": [],
+            "cat_gifts": {"gold": 100},
+            "time_potions_used": [tp_1h_ago],
+        },
+    )
+
+    success, msg = await use_rollback_potion(user_id)
+
+    assert success is False
+    assert "时光药水" in msg
+    # 回档药水未被消耗
+    item = await FishingUser.get_item(user_id, "回档药水", "potion")
+    assert item is not None
+    assert item["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_rollback_rejected_when_old_format_time_potion_used(db, monkeypatch):
+    """旧格式 time_potions_used（int）也阻止回档。"""
+    user_id = "rollback-blocked-by-tp-old"
+    user, _ = await FishingUser.get_or_create_user(user_id, "旧格式时光阻止")
+    await user.save()
+    await FishingUser.add_item(user_id, "回档药水", "potion", 1)
+
+    now = datetime.now()
+    await FishingUser.update_fishing_status(
+        user_id,
+        {
+            "location_id": "1",
+            "start_time": (now - timedelta(hours=3)).isoformat(),
+            "last_settle_time": (now - timedelta(minutes=5)).isoformat(),
+            "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 5}],
+            "bait_consumed": 5,
+            "bait_usage_log": {"1": 5},
+            "frame_pity": 10,
+            "cat_frame_pity": 0,
+            "utr_pity": 0,
+            "cat_eaten_fish": [],
+            "cat_gifts": {"gold": 100},
+            # 旧格式：int 表示使用过 2 瓶时光药水
+            "time_potions_used": 2,
+        },
+    )
+
+    success, msg = await use_rollback_potion(user_id)
+
+    assert success is False
+    assert "时光药水" in msg
+    item = await FishingUser.get_item(user_id, "回档药水", "potion")
+    assert item is not None
+    assert item["count"] == 1
