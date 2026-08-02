@@ -358,6 +358,7 @@ class _SceneSnapshot:
     weathers: dict[str, dict]
     global_frame_count: int
     starry_bonus_count: int
+    cat_nest_count: int
 
 
 def _count_fishers(users: list) -> dict[str, int]:
@@ -374,11 +375,14 @@ async def _load_scene_snapshot() -> _SceneSnapshot:
     locations = ConfigManager.get_locations()
     users = await FishingUser.all()
     location_ids = [location.id for location in locations]
-    location_buffs, weathers, frame_count, starry_count = await asyncio.gather(
-        _get_location_buffs_batch(location_ids),
-        _get_raw_weathers(),
-        FishingBuff.get_global_buff_count(BuffEffect.BUFF_TYPE_FRAME),
-        get_starry_bonus_count(),
+    location_buffs, weathers, frame_count, starry_count, cat_nest_count = (
+        await asyncio.gather(
+            _get_location_buffs_batch(location_ids),
+            _get_raw_weathers(),
+            FishingBuff.get_global_buff_count(BuffEffect.BUFF_TYPE_FRAME),
+            get_starry_bonus_count(),
+            FishingBuff.get_global_buff_count(BuffEffect.BUFF_TYPE_CAT_NEST),
+        )
     )
     return _SceneSnapshot(
         locations,
@@ -388,6 +392,7 @@ async def _load_scene_snapshot() -> _SceneSnapshot:
         weathers,
         frame_count,
         starry_count,
+        cat_nest_count,
     )
 
 
@@ -400,6 +405,9 @@ def _location_buffs(snapshot: _SceneSnapshot, location_id: str) -> dict[str, int
             **buffs,
             BuffEffect.BUFF_TYPE_STARRY_BONUS: snapshot.starry_bonus_count,
         }
+    # 猫框打窝是全局 buff，仅对 11-20 星空图生效
+    if is_starry_location(location_id) and snapshot.cat_nest_count > 0:
+        buffs = {**buffs, BuffEffect.BUFF_TYPE_CAT_NEST: snapshot.cat_nest_count}
     return buffs
 
 
