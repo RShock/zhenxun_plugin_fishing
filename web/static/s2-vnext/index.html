@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#142331">
+  <meta name="description" content="星穹矿脉 S2 vNext 浏览器原型">
+  <title>星穹矿脉 · S2 vNext</title>
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+  <div class="app-shell" id="app">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">S2</div>
+        <div>
+          <p class="eyebrow">猫群深空工程</p>
+          <h1>星穹矿脉</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="cache-state" id="cacheState"><i></i>缓存已启用</span>
+        <button class="icon-btn" id="saveBtn" type="button" title="保存存档" aria-label="保存存档">↓</button>
+        <button class="icon-btn" id="loadBtn" type="button" title="读取存档" aria-label="读取存档">↥</button>
+        <button class="icon-btn danger" id="resetBtn" type="button" title="重置测试存档" aria-label="重置测试存档">↻</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="overview panel">
+        <div class="overview-copy">
+          <div class="section-kicker"><span class="live-dot"></span><span id="runState">暂停中</span><span class="slash">/</span><span id="eraName">基础工程</span></div>
+          <h2>把这颗星球挖穿</h2>
+          <p class="muted">固定时长结算矿物、矿币和深度。科技升级不受测试消息次数限制，达到 3 级后会永久自动采购。</p>
+          <div class="depth-readout">
+            <strong id="depthValue">0</strong>
+            <span>/ <b id="targetDepth">6e11</b> 深度单位</span>
+          </div>
+          <div class="progress-track" aria-label="当前星球挖掘进度"><span id="depthProgress"></span></div>
+          <div class="progress-meta"><span id="progressLabel">0.00%</span><span id="speedLabel">推进 ×1.00</span></div>
+        </div>
+        <div class="planet-stage" aria-label="当前星球可视化">
+          <svg class="planet-art" viewBox="0 0 260 220" role="img" aria-label="带有钻孔轨迹的行星">
+            <defs>
+              <radialGradient id="planetFill" cx="32%" cy="28%" r="75%">
+                <stop offset="0" stop-color="#83c5c8"/>
+                <stop offset="0.55" stop-color="#397a91"/>
+                <stop offset="1" stop-color="#183c55"/>
+              </radialGradient>
+              <linearGradient id="ringStroke" x1="0" x2="1">
+                <stop offset="0" stop-color="#f4c96b" stop-opacity="0"/>
+                <stop offset=".5" stop-color="#f4c96b"/>
+                <stop offset="1" stop-color="#f4c96b" stop-opacity="0"/>
+              </linearGradient>
+              <clipPath id="planetClip"><circle cx="130" cy="104" r="72"/></clipPath>
+            </defs>
+            <ellipse cx="130" cy="123" rx="112" ry="30" fill="none" stroke="url(#ringStroke)" stroke-width="3" transform="rotate(-12 130 123)"/>
+            <circle cx="130" cy="104" r="72" fill="url(#planetFill)" stroke="#9bdee0" stroke-opacity=".35"/>
+            <g clip-path="url(#planetClip)" fill="none" stroke="#c8f1e3" stroke-opacity=".22" stroke-width="2">
+              <path d="M45 79c38 20 74-18 116 2s62 11 103-16"/>
+              <path d="M34 121c35-25 62 32 98 4s65-25 122 6"/>
+              <path d="M65 158c26-29 64 3 87-10s47-31 94-16"/>
+              <path d="M130 32v145" stroke-dasharray="5 8"/>
+            </g>
+            <g id="drillBeam" opacity=".9"><path d="M126 101L246 54" stroke="#f4c96b" stroke-width="3" stroke-linecap="round"/><circle cx="126" cy="101" r="6" fill="#f4c96b"/></g>
+            <circle cx="130" cy="104" r="78" fill="none" stroke="#eafcfa" stroke-opacity=".08" stroke-width="10"/>
+          </svg>
+          <div class="planet-caption"><span id="planetCount">0</span> 颗星球已爆破 <span class="dot-sep">·</span> <span id="coreCount">0</span> 核心</div>
+        </div>
+      </section>
+
+      <section class="command-bar panel">
+        <div class="command-main">
+          <button class="primary-action" id="runBtn" type="button"><span id="runIcon">▶</span><span id="runText">开始自动挖矿</span></button>
+          <button class="secondary-action" id="tickBtn" type="button"><span>＋</span>推进 1 小时</button>
+          <button class="secondary-action" id="dayBtn" type="button"><span>↪</span>跳到下一天</button>
+        </div>
+        <div class="speed-control" role="group" aria-label="自动模拟速度">
+          <span>自动频率</span>
+          <button class="speed-btn active" data-speed="1" type="button">×1</button>
+          <button class="speed-btn" data-speed="10" type="button">×10</button>
+          <button class="speed-btn" data-speed="60" type="button">×60</button>
+          <button class="speed-btn" data-speed="600" type="button">×600</button>
+        </div>
+      </section>
+
+      <section class="resource-strip" id="resourceStrip"></section>
+
+      <div class="content-grid">
+        <section class="tech-panel panel">
+          <div class="panel-header tech-header">
+            <div>
+              <div class="section-kicker">科技树 <span class="slash">/</span> 本地升级</div>
+              <h2>选择你的挖掘路线</h2>
+            </div>
+            <div class="tech-count" id="techCount">0 / 124</div>
+          </div>
+          <div class="tech-toolbar">
+            <div class="era-tabs" id="eraTabs" role="tablist"></div>
+            <label class="search-box"><span aria-hidden="true">⌕</span><input id="techSearch" type="search" placeholder="搜索科技" autocomplete="off"></label>
+          </div>
+          <div class="tech-summary" id="techSummary"></div>
+          <div class="tech-list" id="techList"></div>
+        </section>
+
+        <aside class="side-column">
+          <section class="panel core-panel">
+            <div class="panel-header compact">
+              <div><div class="section-kicker">重生边界</div><h2>星球核心</h2></div>
+              <div class="core-value" id="coreValue">0</div>
+            </div>
+            <p class="muted small">爆破后保留核心与永久科技。本原型不限制手动升级消息，方便测试路线。</p>
+            <div class="core-list" id="coreList"></div>
+          </section>
+
+          <section class="panel events-panel">
+            <div class="panel-header compact"><div><div class="section-kicker">运行记录</div><h2>最近事件</h2></div><button class="text-btn" id="clearLogBtn" type="button">清空</button></div>
+            <div class="event-log" id="eventLog"></div>
+          </section>
+
+          <details class="panel test-panel" open>
+            <summary><span><span class="section-kicker">开发工具</span><strong>作弊与存档测试</strong></span><span class="chevron">⌄</span></summary>
+            <div class="test-grid">
+              <button type="button" data-cheat="hour">推进 1 小时</button>
+              <button type="button" data-cheat="day">跳到下天</button>
+              <button type="button" data-cheat="week">快进 7 天</button>
+              <button type="button" data-cheat="depth">跳至 50%</button>
+              <button type="button" data-cheat="planet">直接爆破</button>
+              <button type="button" data-cheat="resources">补满资源</button>
+              <button type="button" data-cheat="cores">+100 核心</button>
+              <button type="button" data-cheat="tech">解锁全部科技</button>
+            </div>
+            <div class="save-row"><button id="exportBtn" type="button">导出 JSON</button><label class="import-btn">导入 JSON<input id="importInput" type="file" accept="application/json"></label></div>
+            <p class="muted tiny" id="saveMeta">本地缓存尚未写入</p>
+          </details>
+        </aside>
+      </div>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js?v=1.0.0"></script>
+</body>
+</html>
