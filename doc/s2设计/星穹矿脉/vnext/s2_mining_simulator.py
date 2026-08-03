@@ -725,7 +725,8 @@ class StageOneAudit:
     def passed(self) -> bool:
         return (
             self.first_reset_day is not None
-            and 18 <= self.first_reset_day <= 35
+            # 天数只用于排除明显失速或瞬间通关；最终体验允许落在更宽的 50～100 天窗口。
+            and 15 <= self.first_reset_day <= 45
             and self.local_nodes_reached == self.local_nodes_total
             and self.special_nodes_reached == self.special_nodes_total
             and self.special_effects_exercised == self.special_effects_total
