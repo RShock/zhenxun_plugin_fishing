@@ -5,8 +5,8 @@
 
 示例::
 
-    python s2_mining_simulator.py scenario --days 60 --target-log10 9
-    python s2_mining_simulator.py repl --target-log10 9
+    python s2_mining_simulator.py scenario --days 45 --target-log10 11
+    python s2_mining_simulator.py repl --target-log10 11
 """
 
 from __future__ import annotations
@@ -164,22 +164,110 @@ class UpgradeSpec:
     unlock: float = 0.0
     local: bool = True
     effect: str = ""
+    category: str = "基础"
+    effect_kind: str = "none"
+    effect_per_level: float = 0.0
+    prerequisites: tuple[str, ...] = ()
+    special: str = ""
+    secondary_kind: str = "none"
+    secondary_per_level: float = 0.0
+
+
+ERA_NODE_NAMES: dict[str, tuple[str, ...]] = {
+    "foundation": (
+        "地质罗盘", "猫爪耐磨层", "手摇绞盘", "碎石筛分台", "矿灯电池", "双路通风",
+        "水压排渣", "安全绳网", "回收熔炉", "应急猫粮", "地层标记", "便携矿仓",
+        "低温冷却", "矿脉听诊", "基础测绘", "矿车轴承",
+    ),
+    "industrial": (
+        "高压爆破", "定向炸药", "蒸汽活塞", "锅炉绝热", "重型铰链", "钢轨铺设",
+        "矿渣压块", "工业除尘", "液压支架", "连续装载", "熔炉增压", "耐热猫爪",
+        "矿井升降机", "燃料回收", "爆破时序", "工业安全协议",
+    ),
+    "electrical": (
+        "电磁钻头", "三相供能", "蓄电矿车", "绝缘猫服", "电弧熔炼", "高频震岩",
+        "智能照明", "电网调度", "电容脉冲", "矿石电析", "感应雷达", "电机冷却",
+        "远程断路", "备用电池", "电磁吊臂", "电力回收",
+    ),
+    "modern": (
+        "全断面掘进", "激光测距", "无人运输", "液氮破岩", "模块化钻臂", "智能排水",
+        "岩层预测", "材料复合", "超硬刀头", "自动换头", "矿尘净化", "地下中继",
+        "机械臂编队", "应力平衡", "精密取样", "现代安全网",
+    ),
+    "future": (
+        "纳米钻群", "量子定位", "相位切割", "真空输送", "拓扑矿车", "引力补偿",
+        "光子熔炼", "冷核供能", "猫群神经链", "概率采样", "时间标记", "空间折叠",
+        "暗能量电池", "量子回收", "奇点预警", "未来工厂",
+    ),
+    "planetary": (
+        "行星地壳扫描", "地核共振", "潮汐钻井", "磁场牵引", "地幔导流", "星球环轨",
+        "重力矿车", "地核散热", "行星级猫群", "熔岩隔离", "极点同步", "核心护盾",
+        "地质时间压缩", "星球裂隙", "引力透镜", "行星工厂",
+    ),
+    "anomaly": (
+        "相对论回响", "宏观量子纠缠", "真空涨落", "因果回收", "时间膨胀舱", "奇点穿刺",
+        "熵减协议", "多维猫爪", "虚数矿脉", "观测者偏置", "宇宙弦牵引", "反物质排渣",
+        "无穷压缩", "星门装载", "宇宙背景采样", "终极挖掘许可",
+    ),
+}
+
+ERA_UNLOCKS = {
+    "foundation": 0.0,
+    # 开发线按首轮重生前的深度分段，避免所有时代在同一天堆叠解锁。
+    "industrial": 0.0003,
+    "electrical": 0.0008,
+    "modern": 0.0020,
+    "future": 0.0040,
+    "planetary": 0.0500,
+    "anomaly": 0.1000,
+}
+
+ERA_LABELS = {
+    "foundation": "基础工程",
+    "industrial": "工业时代",
+    "electrical": "电力时代",
+    "modern": "现代时代",
+    "future": "未来时代",
+    "planetary": "行星时代",
+    "anomaly": "异常科技",
+}
+
+EFFECT_ROTATION = (
+    ("speed_add", 0.10, "推进力"),
+    ("depth_efficiency", 0.012, "深度效率"),
+    ("yield_add", 0.018, "矿物产量"),
+    ("credit_add", 0.020, "矿币收益"),
+    ("carry_add", 0.022, "携带量"),
+    ("rare_find", 0.004, "稀有矿发现率"),
+    ("ore_value", 0.015, "矿石价值"),
+    ("noise_reduction", 0.006, "扰动稳定度"),
+    ("crit_chance", 0.003, "暴击挖掘率"),
+    ("crit_power", 0.012, "暴击倍率"),
+    ("salvage", 0.025, "回收收益"),
+    ("cat_sync", 0.010, "猫群协同"),
+)
+
+SPECIAL_ROTATION = (
+    "relativity_burst", "phase_skip", "singularity_finish", "ore_echo", "time_dilation",
+    "entropy_guard", "quantum_tunnel", "gravity_sling", "cat_overclock", "core_resonance",
+    "parallel_bore", "vacuum_cache",
+)
 
 
 def _specs() -> dict[str, UpgradeSpec]:
-    return {
-        "pickaxe": UpgradeSpec("pickaxe", "矿镐", 100, {"credits": 35}, 1.34, effect="每级 +0.35 基础挖掘力"),
-        "cart": UpgradeSpec("cart", "矿车", 100, {"credits": 50}, 1.35, effect="每级 +0.20 携带量"),
-        "refinery": UpgradeSpec("refinery", "矿石精炼", 100, {"credits": 80}, 1.36, effect="每级 +0.22 精炼收益"),
-        "survey": UpgradeSpec("survey", "洞穴勘探", 100, {"credits": 110}, 1.37, effect="每级 +0.25 推进效率"),
-        "cat": UpgradeSpec("cat", "猫矿工", 12, {"credits": 1500}, 2.8, effect="每级复制一份基础挖掘数据"),
-        "industrial_blaster": UpgradeSpec("industrial_blaster", "爆破镐", 40, {"credits": 600, "copper": 40}, 1.43, 0.10, effect="每级 +0.30 推进效率"),
-        "steam_cart": UpgradeSpec("steam_cart", "蒸汽矿车", 40, {"credits": 750, "copper": 60}, 1.43, 0.10, effect="每级 +0.28 携带量"),
-        "electric_pickaxe": UpgradeSpec("electric_pickaxe", "电动镐", 40, {"credits": 3200, "quartz": 35}, 1.47, 0.35, effect="每级 +0.55 基础挖掘力"),
-        "electric_cart": UpgradeSpec("electric_cart", "电力车", 40, {"credits": 4000, "quartz": 50}, 1.47, 0.35, effect="每级 +0.50 携带量"),
-        "modern_drill": UpgradeSpec("modern_drill", "掘进机", 40, {"credits": 18000, "gold": 20}, 1.50, 0.55, effect="每级 +0.90 推进效率"),
-        "future_quantum": UpgradeSpec("future_quantum", "微观量子挖掘", 30, {"credits": 90000, "gold": 90, "coreshard": 8}, 1.55, 0.75, effect="每级 +1.50 推进效率"),
-        "relativity": UpgradeSpec("relativity", "相对论效应", 10, {"credits": 2.0e6, "coreshard": 40}, 1.72, 0.90, effect="重生后 60 秒速度 ×100"),
+    specs = {
+        "pickaxe": UpgradeSpec("pickaxe", "矿镐", 100, {"credits": 35}, 1.34, effect="每级 +0.35 基础挖掘力", category="基础工程", effect_kind="speed_add", effect_per_level=0.35),
+        "cart": UpgradeSpec("cart", "矿车", 100, {"credits": 50}, 1.35, effect="每级 +0.04 携带量", category="基础工程", effect_kind="carry_add", effect_per_level=0.04),
+        "refinery": UpgradeSpec("refinery", "矿石精炼", 100, {"credits": 80}, 1.36, effect="每级 +0.22 精炼收益", category="基础工程", effect_kind="credit_add", effect_per_level=0.22),
+        "survey": UpgradeSpec("survey", "洞穴勘探", 100, {"credits": 110}, 1.37, effect="每级 +0.25 推进效率", category="基础工程", effect_kind="speed_add", effect_per_level=0.25),
+        "cat": UpgradeSpec("cat", "猫矿工", 12, {"credits": 1500}, 2.8, effect="每级复制一份基础挖掘数据", category="基础工程", effect_kind="cat_sync", effect_per_level=0.03),
+        "industrial_blaster": UpgradeSpec("industrial_blaster", "爆破镐", 40, {"credits": 600, "copper": 40}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.30 推进效率", category="工业时代", effect_kind="speed_add", effect_per_level=0.30),
+        "steam_cart": UpgradeSpec("steam_cart", "蒸汽矿车", 40, {"credits": 750, "copper": 60}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.05 携带量", category="工业时代", effect_kind="carry_add", effect_per_level=0.05),
+        "electric_pickaxe": UpgradeSpec("electric_pickaxe", "电动镐", 40, {"credits": 3200, "quartz": 35}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.55 基础挖掘力", category="电力时代", effect_kind="speed_add", effect_per_level=0.55),
+        "electric_cart": UpgradeSpec("electric_cart", "电力车", 40, {"credits": 4000, "quartz": 50}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.08 携带量", category="电力时代", effect_kind="carry_add", effect_per_level=0.08),
+        "modern_drill": UpgradeSpec("modern_drill", "掘进机", 40, {"credits": 18000, "gold": 20}, 1.50, ERA_UNLOCKS["modern"], effect="每级 +0.90 推进效率", category="现代时代", effect_kind="speed_add", effect_per_level=0.90),
+        "future_quantum": UpgradeSpec("future_quantum", "微观量子挖掘", 30, {"credits": 90000, "gold": 90, "coreshard": 8}, 1.55, ERA_UNLOCKS["future"], effect="每级 +1.50 推进效率", category="未来时代", effect_kind="speed_add", effect_per_level=1.50),
+        "relativity": UpgradeSpec("relativity", "相对论效应", 10, {"credits": 2.0e6, "coreshard": 40}, 1.72, ERA_UNLOCKS["anomaly"] + 0.02, effect="重生后 60 秒速度 ×100", category="异常科技", special="relativity_burst"),
         "planetary_power": UpgradeSpec("planetary_power", "行星之力", 100, {"cores": 1}, 1.0, local=False, effect="每级 +1.00 全局速度，首级使速度翻倍"),
         "stage_skip": UpgradeSpec("stage_skip", "阶段跳过", 20, {"cores": 2}, 1.0, local=False, effect="每级减少 8% 星球深度需求"),
         "core_survey": UpgradeSpec("core_survey", "核心勘探技术", 50, {"cores": 3}, 1.0, local=False, effect="每级额外获得 1 个核心"),
@@ -187,9 +275,53 @@ def _specs() -> dict[str, UpgradeSpec]:
         "auto_all": UpgradeSpec("auto_all", "全自动采购", 1, {"cores": 8}, 1.0, local=False, effect="所有本地升级都可自动购买"),
         "core_quantum": UpgradeSpec("core_quantum", "核心量子加速", 50, {"cores": 8}, 1.0, local=False, effect="每级 +1.50 全局速度"),
     }
+    era_costs = {
+        "foundation": {"credits": 180},
+        "industrial": {"credits": 900, "copper": 24},
+        "electrical": {"credits": 4_500, "quartz": 18},
+        "modern": {"credits": 20_000, "gold": 8},
+        "future": {"credits": 100_000, "gold": 40, "coreshard": 4},
+        "planetary": {"credits": 500_000, "gold": 160, "coreshard": 20},
+        "anomaly": {"credits": 2_000_000, "coreshard": 80},
+    }
+    for era_index, (era, names) in enumerate(ERA_NODE_NAMES.items()):
+        for index, name in enumerate(names):
+            effect_kind, per_level, effect_label = EFFECT_ROTATION[(index + era_index * 3) % len(EFFECT_ROTATION)]
+            key = f"{era}_{index + 1:02d}"
+            special = SPECIAL_ROTATION[(index + era_index) % len(SPECIAL_ROTATION)] if index % 4 == 0 else ""
+            secondary_kind, secondary_per_level, secondary_label = EFFECT_ROTATION[(index * 2 + era_index + 5) % len(EFFECT_ROTATION)] if index % 3 == 0 else ("none", 0.0, "")
+            per_level *= 1.0 + era_index * 0.08 + index * 0.006
+            secondary_per_level *= 1.0 + era_index * 0.05
+            max_level = 8 + ((index + era_index) % 5)
+            growth = 1.30 + era_index * 0.025 + (index % 3) * 0.015
+            prerequisites = (f"{era}_{index:02d}",) if special and index > 0 else ()
+            effect_text = f"{ERA_LABELS[era]}：每级 +{per_level:g} {effect_label}"
+            if secondary_kind != "none":
+                effect_text += f"；每级 +{secondary_per_level:g} {secondary_label}"
+            specs[key] = UpgradeSpec(
+                key,
+                name,
+                max_level,
+                era_costs[era],
+                growth,
+                ERA_UNLOCKS[era] + (0.02 if special else 0.0),
+                True,
+                effect_text,
+                ERA_LABELS[era],
+                effect_kind,
+                per_level,
+                prerequisites,
+                special=special,
+                secondary_kind=secondary_kind,
+                secondary_per_level=secondary_per_level,
+            )
+    return specs
 
 
 SPECS = _specs()
+# 注册表是阶段一内容的唯一来源，避免新增科技后忘记加入重置、自动采购或状态显示。
+LOCAL_KEYS = tuple(key for key, spec in SPECS.items() if spec.local)
+CORE_KEYS = tuple(key for key, spec in SPECS.items() if not spec.local)
 
 
 @dataclass
@@ -212,10 +344,21 @@ class SimulationState:
     local_levels: dict[str, int] = field(default_factory=dict)
     permanent_levels: dict[str, int] = field(default_factory=dict)
     auto_unlocked: set[str] = field(default_factory=set)
+    ever_local_keys: set[str] = field(default_factory=set)
+    lifetime_levels: dict[str, int] = field(default_factory=dict)
     daily_upgrade_messages: int = 0
+    max_daily_upgrade_messages: int = 0
     total_upgrade_messages: int = 0
+    first_reset_day: int | None = None
+    max_speed_seen: float = 1.0
     burst_seconds: int = 0
     fractional_planets: float = 0.0
+    auto_cursor: int = 0
+    reset_days: list[int] = field(default_factory=list)
+    era_first_days: dict[str, int] = field(default_factory=dict)
+    special_triggers: dict[str, int] = field(default_factory=dict)
+    _effects_cache: dict[str, float] | None = field(default=None, init=False, repr=False)
+    _special_cache: dict[str, int] | None = field(default=None, init=False, repr=False)
     rng: random.Random = field(init=False, repr=False)
     events: list[str] = field(default_factory=list)
 
@@ -223,8 +366,11 @@ class SimulationState:
         self.rng = random.Random(self.seed)
         for key in LOCAL_KEYS:
             self.local_levels.setdefault(key, 0)
+            self.lifetime_levels.setdefault(key, 0)
         for key in CORE_KEYS:
             self.permanent_levels.setdefault(key, 0)
+        for special in SPECIAL_ROTATION:
+            self.special_triggers.setdefault(special, 0)
 
     @property
     def progress(self) -> float:
@@ -238,6 +384,32 @@ class SimulationState:
 
     def level(self, key: str) -> int:
         return self.permanent_levels.get(key, 0) + self.local_levels.get(key, 0) if not SPECS[key].local else self.local_levels.get(key, 0)
+
+    def effect_totals(self) -> dict[str, float]:
+        if self._effects_cache is not None:
+            return self._effects_cache
+        totals: dict[str, float] = {}
+        for key in LOCAL_KEYS:
+            level = self.local_levels.get(key, 0)
+            spec = SPECS[key]
+            if level and spec.effect_kind != "none":
+                totals[spec.effect_kind] = totals.get(spec.effect_kind, 0.0) + level * spec.effect_per_level
+            if level and spec.secondary_kind != "none":
+                totals[spec.secondary_kind] = totals.get(spec.secondary_kind, 0.0) + level * spec.secondary_per_level
+        self._effects_cache = totals
+        return totals
+
+    def special_level(self, special: str) -> int:
+        if self._special_cache is None:
+            self._special_cache = {
+                name: sum(self.local_levels.get(key, 0) for key in LOCAL_KEYS if SPECS[key].special == name)
+                for name in SPECIAL_ROTATION
+            }
+        return self._special_cache.get(special, 0)
+
+    def _mark_special(self, special: str) -> None:
+        if special in self.special_triggers:
+            self.special_triggers[special] += 1
 
     def _cost_for(self, key: str, level: int) -> dict[str, float]:
         spec = SPECS[key]
@@ -259,7 +431,9 @@ class SimulationState:
         spec = SPECS[key]
         if not spec.local:
             return True
-        return self.progress >= spec.unlock or key in self.active_auto_keys
+        if self.progress < spec.unlock and key not in self.active_auto_keys:
+            return False
+        return all(self.local_levels.get(required, 0) >= 1 for required in spec.prerequisites)
 
     def _batch_cost(self, key: str, amount: int) -> dict[str, float]:
         level = self.local_levels[key] if SPECS[key].local else self.permanent_levels[key]
@@ -306,40 +480,51 @@ class SimulationState:
         for key, amount in normalized:
             spec = SPECS[key]
             levels = self.permanent_levels if not spec.local else self.local_levels
+            was_seen = key in self.ever_local_keys
             levels[key] += amount
+            if spec.local:
+                self.ever_local_keys.add(key)
+                self.lifetime_levels[key] += amount
+                if not was_seen:
+                    self.era_first_days.setdefault(spec.category, self.day)
             if spec.local and levels[key] >= 3:
                 self.auto_unlocked.add(key)
             if key in CORE_KEYS and key == "auto_all":
                 self.events.append("核心科技：全自动采购已启用")
+        self._effects_cache = None
+        self._special_cache = None
         if not automatic:
             self.daily_upgrade_messages += 1
+            self.max_daily_upgrade_messages = max(self.max_daily_upgrade_messages, self.daily_upgrade_messages)
             self.total_upgrade_messages += 1
         return True, "、".join(f"{SPECS[key].name}+{amount}" for key, amount in normalized)
 
     def auto_purchase(self) -> int:
         bought = 0
-        for key in LOCAL_KEYS:
+        active = sorted(self.active_auto_keys)
+        if not active:
+            return 0
+        # 自动采购是后台任务，不必每分钟扫描全部科技；轮转保证最迟数个周期覆盖所有线路。
+        budget = min(24, len(active))
+        start = self.auto_cursor % len(active)
+        keys = [active[(start + offset) % len(active)] for offset in range(budget)]
+        self.auto_cursor = (start + budget) % len(active)
+        for key in keys:
             if key not in self.active_auto_keys or not self._available(key):
                 continue
-            # 每个固定步只推进有限级数，防止自动化在一次结算中吞掉整条曲线。
-            for _ in range(4):
-                ok, _ = self.upgrade_command([(key, 1)], automatic=True)
-                if not ok:
-                    break
+            ok, _ = self.upgrade_command([(key, 1)], automatic=True)
+            if ok:
                 bought += 1
         return bought
 
     def _speed_multiplier(self) -> float:
         local = self.local_levels
-        base = 1.0 + 0.35 * local["pickaxe"]
-        base += 0.25 * local["survey"]
-        base += 0.30 * local["industrial_blaster"]
-        base += 0.55 * local["electric_pickaxe"]
-        base += 0.90 * local["modern_drill"]
-        base += 1.50 * local["future_quantum"]
-        base *= 1.0 + local["cart"] * 0.04 + local["steam_cart"] * 0.05 + local["electric_cart"] * 0.08
+        effects = self.effect_totals()
+        base = 1.0 + effects.get("speed_add", 0.0)
+        base *= 1.0 + effects.get("depth_efficiency", 0.0)
         workers = 1 + min(12, local["cat"])
-        base *= workers
+        base *= workers * (1.0 + effects.get("cat_sync", 0.0))
+        base *= 1.0 + effects.get("carry_add", 0.0) * 0.35
         permanent = 1.0 + self.permanent_levels["planetary_power"]
         permanent += 1.5 * self.permanent_levels["core_quantum"]
         if self.burst_seconds > 0:
@@ -348,6 +533,7 @@ class SimulationState:
 
     def _yield_ores(self) -> dict[str, float]:
         p = self.progress
+        effects = self.effect_totals()
         weights = [0.68, 0.25, 0.055, 0.014, 0.001]
         if p > 0.12:
             weights[0] -= 0.08
@@ -361,8 +547,22 @@ class SimulationState:
             weights[2] += 0.04
             weights[3] += 0.04
             weights[4] += 0.02
-        total = 10.0 * self._speed_multiplier() * (1 + 0.20 * self.local_levels["cart"] + 0.28 * self.local_levels["steam_cart"] + 0.50 * self.local_levels["electric_cart"])
-        noise = max(0.70, min(1.30, self.rng.gauss(1.0, 0.08)))
+        rare = min(0.40, effects.get("rare_find", 0.0) + self.special_level("ore_echo") * 0.01)
+        weights[0] = max(0.10, weights[0] - rare * 0.50)
+        weights[1] += rare * 0.24
+        weights[2] += rare * 0.16
+        weights[3] += rare * 0.08
+        weights[4] += rare * 0.02
+        total = 10.0 * self._speed_multiplier() * (1.0 + effects.get("carry_add", 0.0))
+        total *= 1.0 + effects.get("yield_add", 0.0)
+        noise_sigma = max(
+            0.010,
+            0.08 - effects.get("noise_reduction", 0.0) - 0.010 * self.special_level("entropy_guard"),
+        )
+        noise = max(0.70, min(1.30, self.rng.gauss(1.0, noise_sigma)))
+        if self.special_level("parallel_bore") and self.rng.random() < 0.01 * self.special_level("parallel_bore"):
+            self._mark_special("parallel_bore")
+            total *= 2.0
         total *= noise
         return {name: total * weight for name, weight in zip(ORE_NAMES, weights)}
 
@@ -371,20 +571,57 @@ class SimulationState:
         for _ in range(minutes):
             if self.depth >= self.target_depth:
                 events.append(self.prestige())
-            if self.burst_seconds > 0:
-                self.burst_seconds = max(0, self.burst_seconds - 60)
             depth_gain = 8.0 * self._speed_multiplier()
-            depth_gain *= max(0.70, min(1.30, self.rng.gauss(1.0, 0.025)))
+            self.max_speed_seen = max(self.max_speed_seen, self._speed_multiplier())
+            effects = self.effect_totals()
+            # 这些计数不是额外收益，只用于阶段审计确认特殊科技确实参与过结算。
+            if self.special_level("ore_echo"):
+                self._mark_special("ore_echo")
+            if self.special_level("entropy_guard"):
+                self._mark_special("entropy_guard")
+            if self.special_level("time_dilation"):
+                self._mark_special("time_dilation")
+            depth_gain *= 1.0 + effects.get("speed_add", 0.0) * 0.02
+            depth_gain *= max(0.70, min(1.30, self.rng.gauss(1.0, max(0.01, 0.025 - effects.get("noise_reduction", 0.0) * 0.25))))
+            if self.special_level("gravity_sling") and 0.25 < self.progress < 0.75:
+                self._mark_special("gravity_sling")
+                depth_gain *= 1.0 + 0.10 * self.special_level("gravity_sling")
+            if self.special_level("time_dilation"):
+                depth_gain *= 1.0 + 0.015 * self.special_level("time_dilation")
+            local_cat = self.local_levels["cat"]
+            if self.special_level("cat_overclock") and local_cat:
+                self._mark_special("cat_overclock")
+                if self.rng.random() < min(0.25, 0.02 * local_cat * self.special_level("cat_overclock")):
+                    depth_gain *= 2.0
+            if effects.get("crit_chance", 0.0) and self.rng.random() < min(0.40, effects.get("crit_chance", 0.0)):
+                depth_gain *= 1.0 + max(0.20, effects.get("crit_power", 0.0))
             remaining = self.target_depth - self.depth
             self.depth += min(remaining, depth_gain)
+            if self.special_level("phase_skip") and self.rng.random() < 0.002 * self.special_level("phase_skip"):
+                self._mark_special("phase_skip")
+                self.depth += self.target_depth * 0.002
+            if self.special_level("quantum_tunnel") and self.rng.random() < 0.001 * self.special_level("quantum_tunnel"):
+                self._mark_special("quantum_tunnel")
+                self.depth += self.target_depth * 0.01
+            if self.special_level("singularity_finish") and self.progress >= 0.97:
+                self._mark_special("singularity_finish")
+                self.depth += self.target_depth * 0.01 * self.special_level("singularity_finish")
+            self.depth = min(self.target_depth, self.depth)
             ores = self._yield_ores()
             for name, amount in ores.items():
                 key = {"锡矿": "tin", "铜矿": "copper", "紫晶": "quartz", "金猫锭": "gold", "虹核晶": "coreshard"}[name]
                 self.resources[key] += amount
-            refine = 0.72 + 0.22 * self.local_levels["refinery"]
-            self.resources["credits"] += sum(ores[name] * value for name, value in zip(ORE_NAMES, ORE_VALUES)) * refine
+            refine = 0.72 + effects.get("credit_add", 0.0)
+            ore_value = 1.0 + effects.get("ore_value", 0.0)
+            salvage = 1.0 + effects.get("salvage", 0.0)
+            self.resources["credits"] += sum(ores[name] * value for name, value in zip(ORE_NAMES, ORE_VALUES)) * refine * ore_value * salvage
+            if self.special_level("vacuum_cache"):
+                self._mark_special("vacuum_cache")
+                self.resources["credits"] += self._speed_multiplier() * 0.50 * self.special_level("vacuum_cache")
             self.auto_purchase()
             self.minute += 1
+            if self.burst_seconds > 0:
+                self.burst_seconds = max(0, self.burst_seconds - 60)
             if self.depth >= self.target_depth:
                 events.append(self.prestige())
         self.events.extend(events)
@@ -393,18 +630,28 @@ class SimulationState:
     def prestige(self) -> str:
         survey = self.permanent_levels["core_survey"]
         entanglement = self.permanent_levels["entanglement"]
-        relativity_active = self.local_levels["relativity"] > 0 or "relativity" in self.auto_unlocked
-        gain = 1 + survey
+        relativity_active = self.special_level("relativity_burst") > 0
+        if relativity_active:
+            self._mark_special("relativity_burst")
+        if self.special_level("core_resonance"):
+            self._mark_special("core_resonance")
+        gain = 1 + survey + self.special_level("core_resonance")
         self.fractional_planets += entanglement * 0.25
         extra = int(self.fractional_planets)
         self.fractional_planets -= extra
         destroyed = 1 + extra
+        if self.planets.is_zero and self.first_reset_day is None:
+            self.first_reset_day = self.day
+        self.reset_days.append(self.day)
         self.planets = self.planets + LogNumber.from_int(destroyed)
         self.cores = self.cores + LogNumber.from_int(gain)
         self.depth = 0.0
         self.resources = {key: 0.0 for key in self.resources}
         for key in LOCAL_KEYS:
             self.local_levels[key] = 0
+        self.auto_cursor = 0
+        self._effects_cache = None
+        self._special_cache = None
         self.burst_seconds = 60 if relativity_active else 0
         self.events.append(f"星球爆裂：摧毁 {destroyed} 颗，获得核心 {gain} 个")
         return self.events[-1]
@@ -418,6 +665,12 @@ class SimulationState:
         result["cores"] = str(self.cores)
         return result
 
+    def stage_coverage(self) -> dict[str, int]:
+        return {
+            category: sum(1 for key in self.ever_local_keys if SPECS[key].category == category)
+            for category in sorted({SPECS[key].category for key in LOCAL_KEYS})
+        }
+
     def summary(self) -> str:
         local = ", ".join(f"{SPECS[k].name}{v}" for k, v in self.local_levels.items() if v)
         permanent = ", ".join(f"{SPECS[k].name}{v}" for k, v in self.permanent_levels.items() if v)
@@ -428,6 +681,7 @@ class SimulationState:
             f"copper={self.resources['copper']:.1f}, quartz={self.resources['quartz']:.1f}, "
             f"gold={self.resources['gold']:.1f}, shard={self.resources['coreshard']:.1f}\n"
             f"本日升级消息 {self.daily_upgrade_messages}/3 | 本地 [{local or '无'}] | 永久 [{permanent or '无'}]"
+            f"\n阶段一已触达 {len(self.ever_local_keys)}/{len(LOCAL_KEYS)} 条科技"
         )
 
     def project_stage_two(self, target_log10: int = 308) -> dict[str, float | int | str]:
@@ -447,12 +701,102 @@ class SimulationState:
         }
 
 
-def _strategy(state: SimulationState) -> None:
+@dataclass(frozen=True)
+class StageOneAudit:
+    """阶段一签收用的机器可读指标，防止只看最终资源而漏掉体验退化。"""
+
+    seed: int
+    simulated_days: int
+    first_reset_day: int | None
+    planets: LogNumber
+    local_nodes_reached: int
+    local_nodes_total: int
+    special_nodes_reached: int
+    special_nodes_total: int
+    special_effects_exercised: int
+    special_effects_total: int
+    reset_count: int
+    max_daily_messages: int
+    max_speed: float
+    category_coverage: dict[str, int]
+    era_first_days: dict[str, int]
+
+    @property
+    def passed(self) -> bool:
+        return (
+            self.first_reset_day is not None
+            and 18 <= self.first_reset_day <= 35
+            and self.local_nodes_reached == self.local_nodes_total
+            and self.special_nodes_reached == self.special_nodes_total
+            and self.special_effects_exercised == self.special_effects_total
+            and self.reset_count >= 1
+            and self.max_daily_messages <= 3
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "seed": self.seed,
+            "simulated_days": self.simulated_days,
+            "first_reset_day": self.first_reset_day,
+            "planets": str(self.planets),
+            "local_nodes": f"{self.local_nodes_reached}/{self.local_nodes_total}",
+            "special_nodes": f"{self.special_nodes_reached}/{self.special_nodes_total}",
+            "special_effects": f"{self.special_effects_exercised}/{self.special_effects_total}",
+            "reset_count": self.reset_count,
+            "max_daily_messages": self.max_daily_messages,
+            "max_speed": self.max_speed,
+            "category_coverage": self.category_coverage,
+            "era_first_days": self.era_first_days,
+            "passed": self.passed,
+        }
+
+
+def audit_stage_one(state: SimulationState) -> StageOneAudit:
+    reached_special = sum(1 for key in state.ever_local_keys if SPECS[key].special)
+    total_special = sum(1 for key in LOCAL_KEYS if SPECS[key].special)
+    return StageOneAudit(
+        seed=state.seed,
+        simulated_days=state.day,
+        first_reset_day=state.first_reset_day,
+        planets=state.planets,
+        local_nodes_reached=len(state.ever_local_keys),
+        local_nodes_total=len(LOCAL_KEYS),
+        special_nodes_reached=reached_special,
+        special_nodes_total=total_special,
+        special_effects_exercised=sum(1 for count in state.special_triggers.values() if count > 0),
+        special_effects_total=len(SPECIAL_ROTATION),
+        reset_count=len(state.reset_days),
+        max_daily_messages=state.max_daily_upgrade_messages,
+        max_speed=state.max_speed_seen,
+        category_coverage=state.stage_coverage(),
+        era_first_days=dict(state.era_first_days),
+    )
+
+
+def run_stage_one_matrix(
+    seeds: Iterable[int] = (1, 42, 2026),
+    days: int = 45,
+    target_log10: int = 11,
+    strategy_mode: str = "balanced",
+) -> list[StageOneAudit]:
+    audits: list[StageOneAudit] = []
+    for seed in seeds:
+        state, _ = run_scenario(days, seed, target_log10, strategy_mode)
+        audits.append(audit_stage_one(state))
+    return audits
+
+
+def _strategy(state: SimulationState, message_budget: int = 3, mode: str = "balanced") -> None:
     """一个有意保守的每日策略，用来观察曲线而不是寻找最优解。"""
-    if state.daily_upgrade_messages >= 3:
+    message_limit = min(3, state.daily_upgrade_messages + max(0, message_budget))
+    if state.daily_upgrade_messages >= message_limit:
         return
-    # 重生后的前三条核心投资先建立“下一轮更快”的反馈，再把剩余消息留给本地科技。
-    if not state.planets.is_zero:
+    # 新时代的特殊科技优先于核心消费，避免玩家刚抵达地心就因重生而错过科技窗口。
+    unseen_special = any(
+        state._available(key) and SPECS[key].special and key not in state.ever_local_keys
+        for key in LOCAL_KEYS
+    )
+    if not state.planets.is_zero and not unseen_special:
         core_plans = [
             ("planetary_power", 1, 1),
             ("stage_skip", 1, 2),
@@ -462,8 +806,10 @@ def _strategy(state: SimulationState) -> None:
             ("core_quantum", 1, 8),
         ]
         for key, amount, minimum in core_plans:
-            if state.daily_upgrade_messages >= 3:
+            if state.daily_upgrade_messages >= message_limit:
                 break
+            if key != "auto_all" and state.permanent_levels[key] >= 3:
+                continue
             if state.permanent_levels[key] >= SPECS[key].max_level:
                 continue
             if state._core_count_as_float() < minimum:
@@ -471,37 +817,70 @@ def _strategy(state: SimulationState) -> None:
             ok, _ = state.upgrade_command([(key, amount)])
             if ok and key in {"auto_all", "core_survey"}:
                 break
-    if state.day <= 2:
-        plans = [[("pickaxe", 2), ("cart", 1)], [("refinery", 2), ("survey", 1)], [("cat", 1)]]
-    elif state.day <= 7:
-        plans = [[("pickaxe", 2), ("refinery", 1)], [("cart", 2), ("survey", 1)], [("cat", 1)]]
-    else:
-        plans = [
-            [("pickaxe", 2), ("cart", 2)],
-            [("refinery", 2), ("survey", 2)],
-            [("industrial_blaster", 1), ("steam_cart", 1)],
-            [("electric_pickaxe", 1), ("electric_cart", 1)],
-            [("modern_drill", 1), ("future_quantum", 1)],
-            [("relativity", 1)],
-        ]
-    for plan in plans:
-        if state.daily_upgrade_messages >= 3:
+    legacy_priority = [
+        "pickaxe", "cart", "refinery", "survey", "cat", "industrial_blaster", "steam_cart",
+        "electric_pickaxe", "electric_cart", "modern_drill", "future_quantum", "relativity",
+    ]
+    priority_index = {key: index for index, key in enumerate(legacy_priority)}
+    preferred_effects = {
+        "speed": {"speed_add", "depth_efficiency"},
+        "yield": {"yield_add", "credit_add", "carry_add", "ore_value"},
+        "research": {"rare_find", "noise_reduction", "salvage"},
+        "cat": {"cat_sync"},
+    }.get(mode, set())
+    candidates = [
+        key for key in LOCAL_KEYS
+        if state._available(key) and state.level(key) < SPECS[key].max_level
+    ]
+    candidates.sort(
+        key=lambda key: (
+            0 if state.level(key) == 0 and SPECS[key].special and key not in state.ever_local_keys else 1 if state.level(key) == 0 else 2,
+            0 if state.level(key) == 0 and key in priority_index and key not in state.ever_local_keys else 1,
+            0 if key in priority_index and state.level(key) < 3 else 1,
+            0 if SPECS[key].effect_kind in preferred_effects else 1,
+            SPECS[key].unlock,
+            priority_index.get(key, 100),
+            key,
+        )
+    )
+    while state.daily_upgrade_messages < message_limit and candidates:
+        orders: list[tuple[str, int]] = []
+        for key in candidates:
+            level = state.level(key)
+            if level >= SPECS[key].max_level:
+                continue
+            amount = min(3 - level, 3) if level < 3 else 1
+            # 一条 QQ 消息允许批量多个项目；这里限制条目数，防止日志和决策面一次膨胀过头。
+            orders.append((key, amount))
+            if len(orders) >= 8:
+                break
+        if not orders:
             break
-        available = [(key, amount) for key, amount in plan if key in SPECS and state._available(key) and state.level(key) + amount <= SPECS[key].max_level]
-        if not available:
-            continue
-        ok, _ = state.upgrade_command(available)
-        if not ok and len(available) > 1:
-            # 批量购买失败时退回为一项，保留“每条消息可多项”的体验。
-            state.upgrade_command([available[0]])
+        ok, _ = state.upgrade_command(orders)
+        if not ok:
+            # 成本不足时逐半缩小批次，保持“消息可批量”而不是整条消息报废。
+            reduced = orders[: max(1, len(orders) // 2)]
+            ok, _ = state.upgrade_command(reduced)
+            if not ok and len(reduced) > 1:
+                ok, _ = state.upgrade_command(reduced[:1])
+            if not ok:
+                break
+        candidates = [
+            key for key in candidates
+            if state._available(key) and state.level(key) < SPECS[key].max_level
+        ]
 
 
 def _development_target(target_log10: int) -> float:
     # 10^308 只用于阶段二外推；阶段一仍用可观察的开发目标跑精确分钟步。
-    return 10**target_log10 if target_log10 <= 12 else 1_000_000_000.0
+    if target_log10 == 11:
+        # 这一档不是数学上的 10^11，而是校准后的 6×10^11，
+        # 用来让时代解锁和首轮重生同时落在可审查的窗口内。
+        return 600_000_000_000.0
+    return 10**target_log10 if target_log10 <= 12 else 10_000_000_000.0
 
 
-def run_scenario(days: int = 60, seed: int = 42, target_log10: int = 9) -> tuple[SimulationState, list[str]]:
+def run_scenario(days: int = 60, seed: int = 42, target_log10: int = 11, strategy_mode: str = "balanced") -> tuple[SimulationState, list[str]]:
     target = _development_target(target_log10)
     state = SimulationState(target_depth=target, seed=seed)
     log: list[str] = []
@@ -509,16 +888,15 @@ def run_scenario(days: int = 60, seed: int = 42, target_log10: int = 9) -> tuple
     for day in range(1, days + 1):
         if day > 1:
             state.start_new_day()
-        _strategy(state)
-        state.mine_minute(1440)
+        for _ in range(3):
+            _strategy(state, message_budget=1, mode=strategy_mode)
+            state.mine_minute(480)
         if day in milestone_days:
             log.append(f"D{day:02d}: {state.summary()}")
         state.events.clear()
-    projection = state.project_stage_two(308)
     log.append(
-        "阶段二外推：稳定速度 "
-        f"×{projection['stable_speed']:.2f}，单星球约 {projection['minutes_per_planet']:.1f} 分钟，"
-        f"抵达 10^{projection['target_log10']} 星球约需 10^{projection['log10_minutes_to_target']:.2f} 分钟（对数估算）"
+        f"阶段一审查：已触达 {len(state.ever_local_keys)}/{len(LOCAL_KEYS)} 条本地科技，"
+        f"特殊科技 {sum(1 for key in state.ever_local_keys if SPECS[key].special)}/{sum(1 for key in LOCAL_KEYS if SPECS[key].special)} 条"
     )
     return state, log
 
@@ -583,8 +961,9 @@ def repl(target_log10: int, seed: int) -> None:
         if command in {"模拟", "simulate"}:
             days = int(parts[1]) if len(parts) > 1 else 1
             for _ in range(days):
-                _strategy(state)
-                state.mine_minute(1440)
+                for _ in range(3):
+                    _strategy(state, message_budget=1, mode="balanced")
+                    state.mine_minute(480)
                 state.start_new_day()
             print(state.summary())
             continue
@@ -601,14 +980,15 @@ def main() -> None:
     scenario = subparsers.add_parser("scenario", help="运行预设体验策略")
     scenario.add_argument("--days", type=int, default=60)
     scenario.add_argument("--seed", type=int, default=42)
-    scenario.add_argument("--target-log10", type=int, default=9, help="单星球深度的数量级，支持 308（阶段一仍用开发目标精确跑）")
+    scenario.add_argument("--target-log10", type=int, default=11, help="单星球深度的数量级，支持 308（阶段一仍用开发目标精确跑）")
     scenario.add_argument("--summary-only", action="store_true")
+    scenario.add_argument("--strategy", choices=("balanced", "speed", "yield", "research", "cat"), default="balanced")
     interactive = subparsers.add_parser("repl", help="进入交互式命令行")
     interactive.add_argument("--seed", type=int, default=42)
-    interactive.add_argument("--target-log10", type=int, default=9)
+    interactive.add_argument("--target-log10", type=int, default=11)
     args = parser.parse_args()
     if args.command == "scenario":
-        state, log = run_scenario(args.days, args.seed, args.target_log10)
+        state, log = run_scenario(args.days, args.seed, args.target_log10, args.strategy)
         if args.summary_only:
             print(state.summary())
         else:
