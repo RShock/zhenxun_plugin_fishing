@@ -79,13 +79,16 @@ def choose_upgrades(state: SimulationState) -> list[tuple[str, int]]:
     candidates = candidates[:5]
 
     # 先筛出单项买得起的节点，再尝试批量；不能因为优先级第一项暂时太贵而饿死后面的路线。
-    affordable: list[str] = []
+    affordable: list[tuple[str, int]] = []
     for key in candidates:
-        costs = state._batch_cost(key, 1)
+        level = state.level(key)
+        # 主线设备用批量升级尽快进入自动化；时代节点先逐项探路，避免测试策略一口气铺满整棵树。
+        amount = min(3 - level, 3) if key in PRIORITY and level < 3 else 1
+        costs = state._batch_cost(key, amount)
         if all(state.resources.get(resource, 0.0) + 1e-9 >= cost for resource, cost in costs.items()):
-            affordable.append(key)
+            affordable.append((key, amount))
     for size in range(len(affordable), 0, -1):
-        orders = [(key, 1) for key in affordable[:size]]
+        orders = affordable[:size]
         ok, _ = state.upgrade_command(orders)
         if ok:
             return orders

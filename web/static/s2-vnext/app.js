@@ -20,6 +20,7 @@
     { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.08 },
   ];
   const SPECIAL_UNLOCK_DELAY = 0.00002;
+  const SPECIAL_BURST_THRESHOLD = 0.005;
   const SPECIALS = [
     "relativity_burst", "phase_skip", "singularity_finish", "ore_echo", "time_dilation",
     "entropy_guard", "quantum_tunnel", "gravity_sling", "cat_overclock", "core_resonance",
@@ -256,7 +257,7 @@
     if (specialLevel("cat_overclock") && state.localLevels.cat && Math.random() < Math.min(.25, .02 * state.localLevels.cat * specialLevel("cat_overclock"))) gain *= 2;
     if ((effects.crit_chance || 0) && Math.random() < Math.min(.4, effects.crit_chance)) gain *= 1 + Math.max(.2, effects.crit_power || 0);
     state.depth = Math.min(state.targetDepth, state.depth + gain);
-    const burstReady = progress() >= .01;
+    const burstReady = progress() >= SPECIAL_BURST_THRESHOLD;
     if (burstReady && specialLevel("phase_skip") && Math.random() < .001 * specialLevel("phase_skip")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .0005);
     if (burstReady && specialLevel("quantum_tunnel") && Math.random() < .0002 * specialLevel("quantum_tunnel")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .001);
     if (specialLevel("singularity_finish") && progress() >= .97) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .01 * specialLevel("singularity_finish"));

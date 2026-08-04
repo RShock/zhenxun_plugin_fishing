@@ -224,6 +224,8 @@ ERA_UNLOCKS = {
 
 # 特殊节点只延后到约 0.002% 深度；普通科技树不会因等待特殊门槛而出现空操作。
 SPECIAL_UNLOCK_DELAY = 0.00002
+# 跳跃型效果在基础成长完成一个小段后才介入；0.5% 足以避免 D3 突跳。
+SPECIAL_BURST_THRESHOLD = 0.005
 
 ERA_LABELS = {
     "foundation": "基础工程",
@@ -622,21 +624,21 @@ class SimulationState:
             remaining = self.target_depth - self.depth
             self.depth += min(remaining, depth_gain)
             phase_level = self.special_level("phase_skip")
-            if phase_level and self.progress >= 0.01:
-                chance = 0.001 * phase_level
+            if phase_level and self.progress >= SPECIAL_BURST_THRESHOLD:
                 if self.deterministic:
-                    self._mark_special("phase_skip")
-                    self.depth += self.target_depth * 0.0005 * chance
-                elif self.rng.random() < chance:
+                    if self.minute % 60 == 0:
+                        self._mark_special("phase_skip")
+                        self.depth += self.target_depth * 0.0005 * phase_level
+                elif self.rng.random() < 0.001 * phase_level:
                     self._mark_special("phase_skip")
                     self.depth += self.target_depth * 0.0005
             quantum_level = self.special_level("quantum_tunnel")
-            if quantum_level and self.progress >= 0.01:
-                chance = 0.0002 * quantum_level
+            if quantum_level and self.progress >= SPECIAL_BURST_THRESHOLD:
                 if self.deterministic:
-                    self._mark_special("quantum_tunnel")
-                    self.depth += self.target_depth * 0.001 * chance
-                elif self.rng.random() < chance:
+                    if self.minute % 60 == 0:
+                        self._mark_special("quantum_tunnel")
+                        self.depth += self.target_depth * 0.001 * quantum_level
+                elif self.rng.random() < 0.0002 * quantum_level:
                     self._mark_special("quantum_tunnel")
                     self.depth += self.target_depth * 0.001
             if self.special_level("singularity_finish") and self.progress >= 0.97:
