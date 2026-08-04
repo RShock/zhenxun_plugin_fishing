@@ -9,6 +9,7 @@ keeping the tests independent from a running bot.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass
 import sys
 from types import ModuleType, SimpleNamespace
@@ -111,6 +112,26 @@ class DummyMessageSegment:
     @staticmethod
     def at(value=""):
         return f"@{value}"
+
+
+class DummyUniMessage(list):
+    @classmethod
+    def at(cls, user_id: str):
+        return cls([("at", user_id)])
+
+    @classmethod
+    def image(cls, *, raw: bytes | None = None, **kwargs):
+        return cls([("image", raw)])
+
+    @classmethod
+    def text(cls, text: str):
+        return cls([("text", text)])
+
+    async def send(self, *args, **kwargs):
+        return None
+
+    async def finish(self, *args, **kwargs):
+        return None
 
 
 class DummyEvent:
@@ -228,6 +249,7 @@ def _install_nonebot() -> None:
 
     matcher = _module("nonebot.matcher", force=True)
     matcher.Matcher = DummyMatcher
+    matcher.current_event = ContextVar("current_event")
 
     params = _module("nonebot.params", force=True)
     params.Arg = lambda *args, **kwargs: None
@@ -284,6 +306,9 @@ def _install_nonebot_plugins() -> None:
     htmlrender.html_to_pic = AsyncMock(return_value=b"FAKE_IMAGE_BYTES")
 
     _module("nonebot_plugin_session")
+
+    alconna = _module("nonebot_plugin_alconna")
+    alconna.UniMessage = DummyUniMessage
 
 
 def _install_zhenxun_shims() -> None:

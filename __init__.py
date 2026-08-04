@@ -22,6 +22,7 @@ from nonebot.plugin import PluginMetadata
 
 require("nonebot_plugin_apscheduler")
 require("nonebot_plugin_session")
+require("nonebot_plugin_alconna")
 
 from zhenxun.configs.utils import Command, PluginCdBlock, PluginExtraData
 

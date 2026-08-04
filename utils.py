@@ -7,9 +7,11 @@
 - render 相关: 路径常量、渲染函数 re-export（供外部便捷引用）
 """
 
+import asyncio
+
 from nonebot.adapters import Event
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
-from nonebot.matcher import Matcher
+from nonebot.matcher import Matcher, current_event
+from nonebot_plugin_alconna import UniMessage
 
 from .render import (
     FISH_IMAGES_PATH,
@@ -54,8 +56,11 @@ def _get_at_list(event) -> list[str]:
     at_list = []
     if hasattr(event, "get_message"):
         for seg in event.get_message():
-            if seg.type == "at":
-                at_list.append(seg.data.get("qq") or seg.data.get("user_id", ""))
+            if getattr(seg, "type", None) not in {"at", "mention_user"}:
+                continue
+            target = seg.data.get("qq") or seg.data.get("user_id")
+            if target:
+                at_list.append(str(target))
     return at_list
 
 
@@ -77,6 +82,49 @@ def _is_private_chat(event: Event) -> bool:
     return not hasattr(event, "group_id") or getattr(event, "group_id", None) is None
 
 
+_MESSAGE_SEND_TIMEOUT_SECONDS = 30.0
+_ROUTE2_ORIGINAL_USER_ID_ATTR = "_route2_original_user_id"
+
+
+def _transport_user_id(user_id: str, event: Event | None = None) -> str:
+    if event is None:
+        try:
+            event = current_event.get()
+        except LookupError:
+            return user_id
+    # route2 replaces the business user ID with the bound legacy QQ number, but
+    # adapter mentions must still use the official OpenID kept on the event.
+    original = getattr(event, _ROUTE2_ORIGINAL_USER_ID_ATTR, None)
+    return str(original or user_id)
+
+
+def _build_image_message(
+    image: bytes,
+    text: str = "",
+    user_id: str = "",
+    is_private: bool = False,
+) -> UniMessage:
+    """Build a message that UniMessage can export for the active adapter."""
+    msg = UniMessage()
+    if user_id and not is_private:
+        msg += UniMessage.at(user_id)
+    msg += UniMessage.image(raw=image)
+    if text:
+        msg += UniMessage.text("\n" + text)
+    return msg
+
+
+def _build_text_message(
+    text: str, user_id: str = "", is_private: bool = False
+) -> UniMessage:
+    """Build a message that UniMessage can export for the active adapter."""
+    msg = UniMessage()
+    if user_id and not is_private:
+        msg += UniMessage.at(user_id)
+    msg += UniMessage.text(text)
+    return msg
+
+
 async def _send_image(
     matcher: Matcher,
     image: bytes,
@@ -84,23 +132,21 @@ async def _send_image(
     user_id: str = "",
     is_private: bool = False,
 ):
-    msg = Message()
-    if user_id and not is_private:
-        msg += MessageSegment.at(user_id)
-    msg += MessageSegment.image(image)
-    if text:
-        msg += MessageSegment.text("\n" + text)
-    await matcher.send(msg)
+    del matcher  # UniMessage exports through the bot and event in the active context.
+    msg = _build_image_message(
+        image, text, _transport_user_id(user_id), is_private
+    )
+    async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
+        await msg.send()
 
 
 async def _send_text(
     matcher: Matcher, text: str, user_id: str = "", is_private: bool = False
 ):
-    msg = Message()
-    if user_id and not is_private:
-        msg += MessageSegment.at(user_id)
-    msg += MessageSegment.text(text)
-    await matcher.finish(msg)
+    del matcher
+    msg = _build_text_message(text, _transport_user_id(user_id), is_private)
+    async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
+        await msg.finish()
 
 
 __all__ = [

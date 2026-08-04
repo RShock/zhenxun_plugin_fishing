@@ -8,9 +8,10 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from functools import wraps
 from time import monotonic
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 from nonebot.adapters import Event
+from nonebot.matcher import Matcher
 
 from zhenxun.services.log import logger
 
@@ -38,6 +39,28 @@ _held_owner: ContextVar[asyncio.Task[Any] | None] = ContextVar(
 )
 
 _WARNING_WAIT_SECONDS = 0.5
+_LOCK_WAIT_TIMEOUT_SECONDS = 3.0
+_BUSY_MESSAGE = "上一个钓鱼操作仍在处理中，请稍后再试。"
+
+
+class UserOperationBusyError(TimeoutError):
+    """同一用户的前一项操作在限定时间内没有结束。"""
+
+    def __init__(
+        self,
+        user_id: str,
+        feature: str,
+        holder_feature: str | None,
+        waited: float,
+    ):
+        self.user_id = user_id
+        self.feature = feature
+        self.holder_feature = holder_feature
+        self.waited = waited
+        super().__init__(
+            f"user={user_id}, feature={feature}, "
+            f"holder_feature={holder_feature or 'unknown'}, waited={waited:.3f}s"
+        )
 
 
 def _task_name() -> str:
@@ -62,7 +85,7 @@ def event_user_and_at_ids(
     user_ids = [event.get_user_id()]
     if hasattr(event, "get_message"):
         for segment in event.get_message():
-            if getattr(segment, "type", None) != "at":
+            if getattr(segment, "type", None) not in {"at", "mention_user"}:
                 continue
             target = segment.data.get("qq") or segment.data.get("user_id")
             if target:
@@ -74,9 +97,16 @@ def event_user_and_at_ids(
 class user_operation_lock:
     """按稳定顺序持有一个或多个用户锁，并在退出后回收空闲条目。"""
 
-    def __init__(self, user_ids: list[str], feature: str):
+    def __init__(
+        self,
+        user_ids: list[str],
+        feature: str,
+        *,
+        wait_timeout: float | None = _LOCK_WAIT_TIMEOUT_SECONDS,
+    ):
         self.user_ids = sorted({str(user_id) for user_id in user_ids if user_id})
         self.feature = feature
+        self.wait_timeout = wait_timeout
         self._entries: list[tuple[str, _UserLockEntry]] = []
         self._token = None
         self._owner_token = None
@@ -119,7 +149,25 @@ class user_operation_lock:
                     else 0.0
                 )
                 contended = entry.lock.locked()
-                await entry.lock.acquire()
+                try:
+                    if self.wait_timeout is None:
+                        await entry.lock.acquire()
+                    else:
+                        async with asyncio.timeout(max(self.wait_timeout, 0.0)):
+                            await entry.lock.acquire()
+                except TimeoutError as exc:
+                    waited = monotonic() - wait_started
+                    logger.warning(
+                        "钓鱼用户锁等待超时: "
+                        f"user={user_id}, feature={self.feature}, "
+                        f"waited={waited:.3f}s, "
+                        f"holder_feature={holder_feature or 'unknown'}, "
+                        f"holder_task={holder_task or 'unknown'}, "
+                        f"holder_seconds={holder_seconds:.3f}s"
+                    )
+                    raise UserOperationBusyError(
+                        user_id, self.feature, holder_feature, waited
+                    ) from exc
                 acquired.add(user_id)
                 waited = monotonic() - wait_started
                 if contended:
@@ -192,8 +240,18 @@ def with_user_lock(
             if event is None:
                 raise RuntimeError(f"用户锁入口缺少 Event: feature={feature}")
             user_ids = resolver(event, args, kwargs)
-            async with user_operation_lock(user_ids, feature):
-                return await func(*args, **kwargs)
+            try:
+                async with user_operation_lock(user_ids, feature):
+                    return await func(*args, **kwargs)
+            except UserOperationBusyError:
+                matcher = next(
+                    (arg for arg in args if isinstance(arg, Matcher)),
+                    kwargs.get("matcher"),
+                )
+                if matcher is None:
+                    raise
+                await matcher.finish(_BUSY_MESSAGE)
+                return cast(R, None)
 
         return wrapped
 

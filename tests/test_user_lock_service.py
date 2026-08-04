@@ -10,6 +10,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.services import (
     user_lock_service as lock_service,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.services.user_lock_service import (
+    UserOperationBusyError,
     active_user_lock_count,
     event_user_and_at_ids,
     user_operation_lock,
@@ -202,6 +203,27 @@ class _AtEvent:
 
 def test_event_user_and_at_ids_uses_sender_and_first_receiver():
     assert event_user_and_at_ids(_AtEvent(), (), {}) == ["sender", "receiver"]
+
+
+class _QQMentionEvent:
+    def get_user_id(self):
+        return "sender-open-id"
+
+    def get_message(self):
+        return [
+            type(
+                "Segment",
+                (),
+                {"type": "mention_user", "data": {"user_id": "receiver-open-id"}},
+            )()
+        ]
+
+
+def test_event_user_and_at_ids_supports_qq_mention_segment():
+    assert event_user_and_at_ids(_QQMentionEvent(), (), {}) == [
+        "sender-open-id",
+        "receiver-open-id",
+    ]
 
 
 def test_backpack_asset_handlers_have_expected_locks():
@@ -457,4 +479,55 @@ async def test_cancelled_business_releases_lock_and_entry():
             pass
 
     await asyncio.wait_for(retry_after_cancel(), timeout=1)
+    assert active_user_lock_count() == 0
+
+
+async def test_wait_timeout_does_not_leave_waiter_or_entry_behind():
+    holder_entered = asyncio.Event()
+    release_holder = asyncio.Event()
+
+    async def holder():
+        async with user_operation_lock(["u1"], "holder"):
+            holder_entered.set()
+            await release_holder.wait()
+
+    holder_task = asyncio.create_task(holder(), name="timeout-holder")
+    await holder_entered.wait()
+
+    with pytest.raises(UserOperationBusyError) as exc_info:
+        async with user_operation_lock(
+            ["u1"], "timed-waiter", wait_timeout=0.01
+        ):
+            pass
+
+    assert exc_info.value.user_id == "u1"
+    assert exc_info.value.holder_feature == "holder"
+    release_holder.set()
+    await holder_task
+    assert active_user_lock_count() == 0
+
+
+async def test_multi_lock_timeout_releases_partially_acquired_lock():
+    blocker_entered = asyncio.Event()
+    release_blocker = asyncio.Event()
+
+    async def blocker():
+        async with user_operation_lock(["u2"], "second-lock-holder"):
+            blocker_entered.set()
+            await release_blocker.wait()
+
+    blocker_task = asyncio.create_task(blocker(), name="second-lock-holder")
+    await blocker_entered.wait()
+
+    with pytest.raises(UserOperationBusyError):
+        async with user_operation_lock(
+            ["u1", "u2"], "multi-lock-waiter", wait_timeout=0.01
+        ):
+            pass
+
+    async with user_operation_lock(["u1"], "partial-lock-check"):
+        pass
+
+    release_blocker.set()
+    await blocker_task
     assert active_user_lock_count() == 0

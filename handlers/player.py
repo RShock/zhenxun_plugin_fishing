@@ -6,7 +6,6 @@ import random
 from datetime import datetime
 
 from nonebot.adapters import Event
-from nonebot.adapters.onebot.v11 import Message, MessageSegment
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 
@@ -175,9 +174,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     custom_text = group[0] if group and group[0] else ""
     try:
         image = await render_emoji_test(custom_text)
-        msg = Message()
-        msg += MessageSegment.image(image)
-        await matcher.send(msg)
+        await _send_image(matcher, image, is_private=_is_private_chat(event))
     except Exception as e:
         await matcher.finish(f"渲染测试失败: {e}")
 
