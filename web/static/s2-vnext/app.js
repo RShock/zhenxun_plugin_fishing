@@ -12,13 +12,14 @@
   ];
   const ERA_LIST = [
     { key: "foundation", name: "基础工程", short: "基础", unlock: 0 },
-    { key: "industrial", name: "工业时代", short: "工业", unlock: 0.0003 },
-    { key: "electrical", name: "电力时代", short: "电力", unlock: 0.0008 },
-    { key: "modern", name: "现代时代", short: "现代", unlock: 0.002 },
-    { key: "future", name: "未来时代", short: "未来", unlock: 0.004 },
-    { key: "planetary", name: "行星时代", short: "行星", unlock: 0.05 },
-    { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.1 },
+    { key: "industrial", name: "工业时代", short: "工业", unlock: 0.00001 },
+    { key: "electrical", name: "电力时代", short: "电力", unlock: 0.00003 },
+    { key: "modern", name: "现代时代", short: "现代", unlock: 0.00007 },
+    { key: "future", name: "未来时代", short: "未来", unlock: 0.00015 },
+    { key: "planetary", name: "行星时代", short: "行星", unlock: 0.02 },
+    { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.08 },
   ];
+  const SPECIAL_UNLOCK_DELAY = 0.00002;
   const SPECIALS = [
     "relativity_burst", "phase_skip", "singularity_finish", "ore_echo", "time_dilation",
     "entropy_guard", "quantum_tunnel", "gravity_sling", "cat_overclock", "core_resonance",
@@ -57,18 +58,19 @@
   ];
 
   const baseSpecs = [
-    ["pickaxe", "矿镐", 100, { credits: 35 }, 1.34, 0, "speed_add", 0.35, "每级 +0.35 基础挖掘力"],
-    ["cart", "矿车", 100, { credits: 50 }, 1.35, 0, "carry_add", 0.04, "每级 +0.04 携带量"],
-    ["refinery", "矿石精炼", 100, { credits: 80 }, 1.36, 0, "credit_add", 0.22, "每级 +0.22 精炼收益"],
-    ["survey", "洞穴勘探", 100, { credits: 110 }, 1.37, 0, "speed_add", 0.25, "每级 +0.25 推进效率"],
+    // 初始资源只支持做出一条明确选择；达到 3 级后自动采购再接管成长，避免 D1 手动刷满四条基础线。
+    ["pickaxe", "矿镐", 100, { credits: 500 }, 1.34, 0, "speed_add", 0.35, "每级 +0.35 基础挖掘力"],
+    ["cart", "矿车", 100, { credits: 750 }, 1.35, 0, "carry_add", 0.04, "每级 +0.04 携带量"],
+    ["refinery", "矿石精炼", 100, { credits: 1100 }, 1.36, 0, "credit_add", 0.22, "每级 +0.22 精炼收益"],
+    ["survey", "洞穴勘探", 100, { credits: 1500 }, 1.37, 0, "speed_add", 0.25, "每级 +0.25 推进效率"],
     ["cat", "猫矿工", 12, { credits: 1500 }, 2.8, 0, "cat_sync", 0.03, "每级复制一份基础挖掘数据"],
-    ["industrial_blaster", "爆破镐", 40, { credits: 600, copper: 40 }, 1.43, 0.0003, "speed_add", 0.30, "每级 +0.30 推进效率"],
-    ["steam_cart", "蒸汽矿车", 40, { credits: 750, copper: 60 }, 1.43, 0.0003, "carry_add", 0.05, "每级 +0.05 携带量"],
-    ["electric_pickaxe", "电动镐", 40, { credits: 3200, quartz: 35 }, 1.47, 0.0008, "speed_add", 0.55, "每级 +0.55 基础挖掘力"],
-    ["electric_cart", "电力车", 40, { credits: 4000, quartz: 50 }, 1.47, 0.0008, "carry_add", 0.08, "每级 +0.08 携带量"],
-    ["modern_drill", "掘进机", 40, { credits: 18000, gold: 20 }, 1.50, 0.002, "speed_add", 0.90, "每级 +0.90 推进效率"],
-    ["future_quantum", "微观量子挖掘", 30, { credits: 90000, gold: 90, coreshard: 8 }, 1.55, 0.004, "speed_add", 1.50, "每级 +1.50 推进效率"],
-    ["relativity", "相对论效应", 10, { credits: 2e6, coreshard: 40 }, 1.72, 0.12, "none", 0, "重生后 60 秒速度 ×100", "relativity_burst"],
+    ["industrial_blaster", "爆破镐", 40, { credits: 12000, copper: 50000 }, 1.43, 0.00001, "speed_add", 0.30, "每级 +0.30 推进效率"],
+    ["steam_cart", "蒸汽矿车", 40, { credits: 15000, copper: 65000 }, 1.43, 0.00001, "carry_add", 0.05, "每级 +0.05 携带量"],
+    ["electric_pickaxe", "电动镐", 40, { credits: 80000, quartz: 80000 }, 1.47, 0.00003, "speed_add", 0.55, "每级 +0.55 基础挖掘力"],
+    ["electric_cart", "电力车", 40, { credits: 90000, quartz: 90000 }, 1.47, 0.00003, "carry_add", 0.08, "每级 +0.08 携带量"],
+    ["modern_drill", "掘进机", 40, { credits: 500000, gold: 50000 }, 1.50, 0.00007, "speed_add", 0.90, "每级 +0.90 推进效率"],
+    ["future_quantum", "微观量子挖掘", 30, { credits: 4000000, gold: 200000, coreshard: 20000 }, 1.55, 0.00015, "speed_add", 1.50, "每级 +1.50 推进效率"],
+    ["relativity", "相对论效应", 10, { credits: 2e6, coreshard: 40 }, 1.72, 0.080005, "none", 0, "重生后 60 秒速度 ×100", "relativity_burst"],
   ];
 
   const specs = {};
@@ -89,10 +91,11 @@
       const perLevel = basePer * (1 + eraIndex * .08 + index * .006);
       specs[key] = {
         key, name, max: 8 + ((index + eraIndex) % 5), cost: eraCost(era.key), growth: 1.30 + eraIndex * .025 + (index % 3) * .015,
-        unlock: era.unlock + (special ? .02 : 0), era: era.key, effectKind, perLevel,
+        unlock: era.unlock + (special ? SPECIAL_UNLOCK_DELAY : 0), era: era.key, effectKind, perLevel,
         effect: `每级 +${trim(perLevel)} ${label}${secondary ? `；+${trim(secondary[1] * (1 + eraIndex * .05))} ${secondary[2]}` : ""}`,
         special, secondaryKind: secondary ? secondary[0] : "none", secondaryPerLevel: secondary ? secondary[1] * (1 + eraIndex * .05) : 0,
-        prerequisites: special && index > 0 ? [`${era.key}_${String(index).padStart(2, "0")}`] : [],
+        // 顺序由时代门槛和资源成本表达；特殊节点不能把同一时代的科技树截断成前三项。
+        prerequisites: [],
       };
       localKeys.push(key);
     });
@@ -100,9 +103,9 @@
 
   function eraCost(era) {
     return {
-      foundation: { credits: 180 }, industrial: { credits: 900, copper: 24 }, electrical: { credits: 4500, quartz: 18 },
-      modern: { credits: 20000, gold: 8 }, future: { credits: 100000, gold: 40, coreshard: 4 },
-      planetary: { credits: 500000, gold: 160, coreshard: 20 }, anomaly: { credits: 2000000, coreshard: 80 },
+      foundation: { credits: 180, tin: 500 }, industrial: { credits: 12000, copper: 50000 }, electrical: { credits: 80000, quartz: 80000 },
+      modern: { credits: 500000, gold: 50000 }, future: { credits: 4000000, gold: 200000, coreshard: 20000 },
+      planetary: { credits: 50000000, gold: 1000000, coreshard: 100000 }, anomaly: { credits: 500000000, coreshard: 500000 },
     }[era];
   }
   function trim(value) { return Number(value.toFixed(3)).toString(); }
@@ -253,8 +256,9 @@
     if (specialLevel("cat_overclock") && state.localLevels.cat && Math.random() < Math.min(.25, .02 * state.localLevels.cat * specialLevel("cat_overclock"))) gain *= 2;
     if ((effects.crit_chance || 0) && Math.random() < Math.min(.4, effects.crit_chance)) gain *= 1 + Math.max(.2, effects.crit_power || 0);
     state.depth = Math.min(state.targetDepth, state.depth + gain);
-    if (specialLevel("phase_skip") && Math.random() < .002 * specialLevel("phase_skip")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .002);
-    if (specialLevel("quantum_tunnel") && Math.random() < .001 * specialLevel("quantum_tunnel")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .01);
+    const burstReady = progress() >= .01;
+    if (burstReady && specialLevel("phase_skip") && Math.random() < .001 * specialLevel("phase_skip")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .0005);
+    if (burstReady && specialLevel("quantum_tunnel") && Math.random() < .0002 * specialLevel("quantum_tunnel")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .001);
     if (specialLevel("singularity_finish") && progress() >= .97) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .01 * specialLevel("singularity_finish"));
     const yields = oreYield(); const refine = .72 + (effects.credit_add || 0); const value = 1 + (effects.ore_value || 0); const salvage = 1 + (effects.salvage || 0);
     yields.forEach((amount, index) => { const ore = ORES[index]; state.resources[ore.key] += amount; state.resources.credits += amount * ore.value * refine * value * salvage; });
@@ -262,7 +266,8 @@
     state.totalMinutes += 1;
     state.maxSpeed = Math.max(state.maxSpeed, speedMultiplier());
     if (state.burstSeconds > 0) state.burstSeconds = Math.max(0, state.burstSeconds - 60);
-    autoPurchase();
+    // 固定步进测试每 10 分钟结算一次自动采购；玩家的小时决策不阻塞后台成长。
+    if (state.totalMinutes % 10 === 0) autoPurchase();
     if (state.depth >= state.targetDepth) prestige();
   }
   function simulateMinutes(minutes) {

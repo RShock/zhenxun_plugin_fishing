@@ -213,14 +213,17 @@ ERA_NODE_NAMES: dict[str, tuple[str, ...]] = {
 
 ERA_UNLOCKS = {
     "foundation": 0.0,
-    # 开发线按首轮重生前的深度分段，避免所有时代在同一天堆叠解锁。
-    "industrial": 0.0003,
-    "electrical": 0.0008,
-    "modern": 0.0020,
-    "future": 0.0040,
-    "planetary": 0.0500,
-    "anomaly": 0.1000,
+    # 前十天需要持续有新选择；行星级之后再把跨度拉开。
+    "industrial": 0.00001,
+    "electrical": 0.00003,
+    "modern": 0.00007,
+    "future": 0.00015,
+    "planetary": 0.0200,
+    "anomaly": 0.0800,
 }
+
+# 特殊节点只延后到约 0.002% 深度；普通科技树不会因等待特殊门槛而出现空操作。
+SPECIAL_UNLOCK_DELAY = 0.00002
 
 ERA_LABELS = {
     "foundation": "基础工程",
@@ -256,17 +259,18 @@ SPECIAL_ROTATION = (
 
 def _specs() -> dict[str, UpgradeSpec]:
     specs = {
-        "pickaxe": UpgradeSpec("pickaxe", "矿镐", 100, {"credits": 35}, 1.34, effect="每级 +0.35 基础挖掘力", category="基础工程", effect_kind="speed_add", effect_per_level=0.35),
-        "cart": UpgradeSpec("cart", "矿车", 100, {"credits": 50}, 1.35, effect="每级 +0.04 携带量", category="基础工程", effect_kind="carry_add", effect_per_level=0.04),
-        "refinery": UpgradeSpec("refinery", "矿石精炼", 100, {"credits": 80}, 1.36, effect="每级 +0.22 精炼收益", category="基础工程", effect_kind="credit_add", effect_per_level=0.22),
-        "survey": UpgradeSpec("survey", "洞穴勘探", 100, {"credits": 110}, 1.37, effect="每级 +0.25 推进效率", category="基础工程", effect_kind="speed_add", effect_per_level=0.25),
+        # 初始资源只支持做出一条明确选择；达到 3 级后自动采购再接管成长，避免 D1 手动刷满四条基础线。
+        "pickaxe": UpgradeSpec("pickaxe", "矿镐", 100, {"credits": 500}, 1.34, effect="每级 +0.35 基础挖掘力", category="基础工程", effect_kind="speed_add", effect_per_level=0.35),
+        "cart": UpgradeSpec("cart", "矿车", 100, {"credits": 750}, 1.35, effect="每级 +0.04 携带量", category="基础工程", effect_kind="carry_add", effect_per_level=0.04),
+        "refinery": UpgradeSpec("refinery", "矿石精炼", 100, {"credits": 1100}, 1.36, effect="每级 +0.22 精炼收益", category="基础工程", effect_kind="credit_add", effect_per_level=0.22),
+        "survey": UpgradeSpec("survey", "洞穴勘探", 100, {"credits": 1500}, 1.37, effect="每级 +0.25 推进效率", category="基础工程", effect_kind="speed_add", effect_per_level=0.25),
         "cat": UpgradeSpec("cat", "猫矿工", 12, {"credits": 1500}, 2.8, effect="每级复制一份基础挖掘数据", category="基础工程", effect_kind="cat_sync", effect_per_level=0.03),
-        "industrial_blaster": UpgradeSpec("industrial_blaster", "爆破镐", 40, {"credits": 600, "copper": 40}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.30 推进效率", category="工业时代", effect_kind="speed_add", effect_per_level=0.30),
-        "steam_cart": UpgradeSpec("steam_cart", "蒸汽矿车", 40, {"credits": 750, "copper": 60}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.05 携带量", category="工业时代", effect_kind="carry_add", effect_per_level=0.05),
-        "electric_pickaxe": UpgradeSpec("electric_pickaxe", "电动镐", 40, {"credits": 3200, "quartz": 35}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.55 基础挖掘力", category="电力时代", effect_kind="speed_add", effect_per_level=0.55),
-        "electric_cart": UpgradeSpec("electric_cart", "电力车", 40, {"credits": 4000, "quartz": 50}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.08 携带量", category="电力时代", effect_kind="carry_add", effect_per_level=0.08),
-        "modern_drill": UpgradeSpec("modern_drill", "掘进机", 40, {"credits": 18000, "gold": 20}, 1.50, ERA_UNLOCKS["modern"], effect="每级 +0.90 推进效率", category="现代时代", effect_kind="speed_add", effect_per_level=0.90),
-        "future_quantum": UpgradeSpec("future_quantum", "微观量子挖掘", 30, {"credits": 90000, "gold": 90, "coreshard": 8}, 1.55, ERA_UNLOCKS["future"], effect="每级 +1.50 推进效率", category="未来时代", effect_kind="speed_add", effect_per_level=1.50),
+        "industrial_blaster": UpgradeSpec("industrial_blaster", "爆破镐", 40, {"credits": 12_000, "copper": 50_000}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.30 推进效率", category="工业时代", effect_kind="speed_add", effect_per_level=0.30),
+        "steam_cart": UpgradeSpec("steam_cart", "蒸汽矿车", 40, {"credits": 15_000, "copper": 65_000}, 1.43, ERA_UNLOCKS["industrial"], effect="每级 +0.05 携带量", category="工业时代", effect_kind="carry_add", effect_per_level=0.05),
+        "electric_pickaxe": UpgradeSpec("electric_pickaxe", "电动镐", 40, {"credits": 80_000, "quartz": 80_000}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.55 基础挖掘力", category="电力时代", effect_kind="speed_add", effect_per_level=0.55),
+        "electric_cart": UpgradeSpec("electric_cart", "电力车", 40, {"credits": 90_000, "quartz": 90_000}, 1.47, ERA_UNLOCKS["electrical"], effect="每级 +0.08 携带量", category="电力时代", effect_kind="carry_add", effect_per_level=0.08),
+        "modern_drill": UpgradeSpec("modern_drill", "掘进机", 40, {"credits": 500_000, "gold": 50_000}, 1.50, ERA_UNLOCKS["modern"], effect="每级 +0.90 推进效率", category="现代时代", effect_kind="speed_add", effect_per_level=0.90),
+        "future_quantum": UpgradeSpec("future_quantum", "微观量子挖掘", 30, {"credits": 4_000_000, "gold": 200_000, "coreshard": 20_000}, 1.55, ERA_UNLOCKS["future"], effect="每级 +1.50 推进效率", category="未来时代", effect_kind="speed_add", effect_per_level=1.50),
         "relativity": UpgradeSpec("relativity", "相对论效应", 10, {"credits": 2.0e6, "coreshard": 40}, 1.72, ERA_UNLOCKS["anomaly"] + 0.02, effect="重生后 60 秒速度 ×100", category="异常科技", special="relativity_burst"),
         "planetary_power": UpgradeSpec("planetary_power", "行星之力", 100, {"cores": 1}, 1.0, local=False, effect="每级 +1.00 全局速度，首级使速度翻倍"),
         "stage_skip": UpgradeSpec("stage_skip", "阶段跳过", 20, {"cores": 2}, 1.0, local=False, effect="每级减少 8% 星球深度需求"),
@@ -276,13 +280,14 @@ def _specs() -> dict[str, UpgradeSpec]:
         "core_quantum": UpgradeSpec("core_quantum", "核心量子加速", 50, {"cores": 8}, 1.0, local=False, effect="每级 +1.50 全局速度"),
     }
     era_costs = {
-        "foundation": {"credits": 180},
-        "industrial": {"credits": 900, "copper": 24},
-        "electrical": {"credits": 4_500, "quartz": 18},
-        "modern": {"credits": 20_000, "gold": 8},
-        "future": {"credits": 100_000, "gold": 40, "coreshard": 4},
-        "planetary": {"credits": 500_000, "gold": 160, "coreshard": 20},
-        "anomaly": {"credits": 2_000_000, "coreshard": 80},
+        # 每个时代绑定一种主要矿物；这样矿物会改变升级路线，而不是只作为展示数字。
+        "foundation": {"credits": 180, "tin": 500},
+        "industrial": {"credits": 12_000, "copper": 50_000},
+        "electrical": {"credits": 80_000, "quartz": 80_000},
+        "modern": {"credits": 500_000, "gold": 50_000},
+        "future": {"credits": 4_000_000, "gold": 200_000, "coreshard": 20_000},
+        "planetary": {"credits": 50_000_000, "gold": 1_000_000, "coreshard": 100_000},
+        "anomaly": {"credits": 500_000_000, "coreshard": 500_000},
     }
     for era_index, (era, names) in enumerate(ERA_NODE_NAMES.items()):
         for index, name in enumerate(names):
@@ -294,7 +299,8 @@ def _specs() -> dict[str, UpgradeSpec]:
             secondary_per_level *= 1.0 + era_index * 0.05
             max_level = 8 + ((index + era_index) % 5)
             growth = 1.30 + era_index * 0.025 + (index % 3) * 0.015
-            prerequisites = (f"{era}_{index:02d}",) if special and index > 0 else ()
+            # 科技树的顺序由时代和资源成本表达；特殊效果不再要求玩家先点某个无关节点。
+            prerequisites = ()
             effect_text = f"{ERA_LABELS[era]}：每级 +{per_level:g} {effect_label}"
             if secondary_kind != "none":
                 effect_text += f"；每级 +{secondary_per_level:g} {secondary_label}"
@@ -304,7 +310,7 @@ def _specs() -> dict[str, UpgradeSpec]:
                 max_level,
                 era_costs[era],
                 growth,
-                ERA_UNLOCKS[era] + (0.02 if special else 0.0),
+                ERA_UNLOCKS[era] + (SPECIAL_UNLOCK_DELAY if special else 0.0),
                 True,
                 effect_text,
                 ERA_LABELS[era],
@@ -328,6 +334,8 @@ CORE_KEYS = tuple(key for key, spec in SPECS.items() if not spec.local)
 class SimulationState:
     target_depth: float = 1_000_000.0
     seed: int = 42
+    deterministic: bool = False
+    enforce_daily_limit: bool = True
     day: int = 1
     minute: int = 0
     depth: float = 0.0
@@ -445,7 +453,7 @@ class SimulationState:
 
     def upgrade_command(self, orders: Iterable[tuple[str, int]], *, automatic: bool = False) -> tuple[bool, str]:
         """一次消息可买多个项目；手动消息每天最多三条。"""
-        if not automatic and self.daily_upgrade_messages >= 3:
+        if not automatic and self.enforce_daily_limit and self.daily_upgrade_messages >= 3:
             return False, "今天的升级消息已用完（3/3）"
         normalized: list[tuple[str, int]] = []
         for key, amount in orders:
@@ -559,10 +567,16 @@ class SimulationState:
             0.010,
             0.08 - effects.get("noise_reduction", 0.0) - 0.010 * self.special_level("entropy_guard"),
         )
-        noise = max(0.70, min(1.30, self.rng.gauss(1.0, noise_sigma)))
-        if self.special_level("parallel_bore") and self.rng.random() < 0.01 * self.special_level("parallel_bore"):
-            self._mark_special("parallel_bore")
-            total *= 2.0
+        noise = 1.0 if self.deterministic else max(0.70, min(1.30, self.rng.gauss(1.0, noise_sigma)))
+        parallel_level = self.special_level("parallel_bore")
+        if parallel_level:
+            chance = min(0.25, 0.01 * parallel_level)
+            if self.deterministic:
+                # 固定序列取期望收益，不掷骰子也保留特殊科技的长期价值。
+                total *= 1.0 + chance
+            elif self.rng.random() < chance:
+                self._mark_special("parallel_bore")
+                total *= 2.0
         total *= noise
         return {name: total * weight for name, weight in zip(ORE_NAMES, weights)}
 
@@ -582,27 +596,49 @@ class SimulationState:
             if self.special_level("time_dilation"):
                 self._mark_special("time_dilation")
             depth_gain *= 1.0 + effects.get("speed_add", 0.0) * 0.02
-            depth_gain *= max(0.70, min(1.30, self.rng.gauss(1.0, max(0.01, 0.025 - effects.get("noise_reduction", 0.0) * 0.25))))
+            if not self.deterministic:
+                depth_gain *= max(0.70, min(1.30, self.rng.gauss(1.0, max(0.01, 0.025 - effects.get("noise_reduction", 0.0) * 0.25))))
             if self.special_level("gravity_sling") and 0.25 < self.progress < 0.75:
                 self._mark_special("gravity_sling")
                 depth_gain *= 1.0 + 0.10 * self.special_level("gravity_sling")
             if self.special_level("time_dilation"):
                 depth_gain *= 1.0 + 0.015 * self.special_level("time_dilation")
             local_cat = self.local_levels["cat"]
-            if self.special_level("cat_overclock") and local_cat:
+            cat_overclock_level = self.special_level("cat_overclock")
+            if cat_overclock_level and local_cat:
                 self._mark_special("cat_overclock")
-                if self.rng.random() < min(0.25, 0.02 * local_cat * self.special_level("cat_overclock")):
+                chance = min(0.25, 0.02 * local_cat * cat_overclock_level)
+                if self.deterministic:
+                    depth_gain *= 1.0 + chance
+                elif self.rng.random() < chance:
                     depth_gain *= 2.0
-            if effects.get("crit_chance", 0.0) and self.rng.random() < min(0.40, effects.get("crit_chance", 0.0)):
-                depth_gain *= 1.0 + max(0.20, effects.get("crit_power", 0.0))
+            crit_chance = min(0.40, effects.get("crit_chance", 0.0))
+            if crit_chance:
+                crit_power = max(0.20, effects.get("crit_power", 0.0))
+                if self.deterministic:
+                    depth_gain *= 1.0 + crit_chance * crit_power
+                elif self.rng.random() < crit_chance:
+                    depth_gain *= 1.0 + crit_power
             remaining = self.target_depth - self.depth
             self.depth += min(remaining, depth_gain)
-            if self.special_level("phase_skip") and self.rng.random() < 0.002 * self.special_level("phase_skip"):
-                self._mark_special("phase_skip")
-                self.depth += self.target_depth * 0.002
-            if self.special_level("quantum_tunnel") and self.rng.random() < 0.001 * self.special_level("quantum_tunnel"):
-                self._mark_special("quantum_tunnel")
-                self.depth += self.target_depth * 0.01
+            phase_level = self.special_level("phase_skip")
+            if phase_level and self.progress >= 0.01:
+                chance = 0.001 * phase_level
+                if self.deterministic:
+                    self._mark_special("phase_skip")
+                    self.depth += self.target_depth * 0.0005 * chance
+                elif self.rng.random() < chance:
+                    self._mark_special("phase_skip")
+                    self.depth += self.target_depth * 0.0005
+            quantum_level = self.special_level("quantum_tunnel")
+            if quantum_level and self.progress >= 0.01:
+                chance = 0.0002 * quantum_level
+                if self.deterministic:
+                    self._mark_special("quantum_tunnel")
+                    self.depth += self.target_depth * 0.001 * chance
+                elif self.rng.random() < chance:
+                    self._mark_special("quantum_tunnel")
+                    self.depth += self.target_depth * 0.001
             if self.special_level("singularity_finish") and self.progress >= 0.97:
                 self._mark_special("singularity_finish")
                 self.depth += self.target_depth * 0.01 * self.special_level("singularity_finish")
@@ -618,14 +654,22 @@ class SimulationState:
             if self.special_level("vacuum_cache"):
                 self._mark_special("vacuum_cache")
                 self.resources["credits"] += self._speed_multiplier() * 0.50 * self.special_level("vacuum_cache")
-            self.auto_purchase()
             self.minute += 1
             if self.burst_seconds > 0:
                 self.burst_seconds = max(0, self.burst_seconds - 60)
+            # 固定步进测试每 10 分钟结算一次自动采购；玩家的小时决策不阻塞后台成长。
+            if self.minute % 10 == 0:
+                self.auto_purchase()
             if self.depth >= self.target_depth:
                 events.append(self.prestige())
         self.events.extend(events)
         return events
+
+    def mine_block(self, minutes: int = 10) -> list[str]:
+        """按原型测试的固定步长结算；用整块步进减少测试开销但不跳过中间自动采购。"""
+        if minutes != 10:
+            raise ValueError("原型测试固定使用 10 分钟步长")
+        return self.mine_minute(minutes)
 
     def prestige(self) -> str:
         survey = self.permanent_levels["core_survey"]
