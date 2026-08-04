@@ -50,6 +50,7 @@ from .render import (
     render_user_status,
 )
 from .services import get_or_create_user
+from .services.user_lock_service import defer_user_lock_send
 
 
 def _get_at_list(event) -> list[str]:
@@ -136,15 +137,29 @@ async def _send_image(
     msg = _build_image_message(
         image, text, _transport_user_id(user_id), is_private
     )
-    async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-        await msg.send()
+
+    async def send():
+        async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
+            await msg.send()
+
+    if defer_user_lock_send(send):
+        return
+    await send()
 
 
 async def _send_text(
     matcher: Matcher, text: str, user_id: str = "", is_private: bool = False
 ):
-    del matcher
     msg = _build_text_message(text, _transport_user_id(user_id), is_private)
+
+    async def send():
+        async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
+            await msg.send()
+
+    if defer_user_lock_send(send):
+        # ??????? matcher???????????????????
+        await matcher.finish()
+        return
     async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
         await msg.finish()
 

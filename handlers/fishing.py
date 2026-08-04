@@ -2,8 +2,8 @@
 钓鱼核心指令 handler — 钓鱼/抛竿、收杆、钓鱼状态。
 """
 
-import re
 from datetime import date
+import re
 
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
@@ -21,8 +21,7 @@ from ..core.actions import run_post_settlement
 from ..matchers import fishing_matcher, status_matcher, stop_fishing_matcher
 from ..models import FishingUser
 from ..render import render_fishing_result, render_location_select
-from ..services import get_or_create_user, get_user
-from ..services.user_lock_service import with_user_lock
+from ..services import get_or_create_user
 from ..services.limit_service import (
     is_group_action_limit_enabled,
     is_last_status_view,
@@ -30,6 +29,7 @@ from ..services.limit_service import (
     max_status_views,
     remaining_stop_actions,
 )
+from ..services.user_lock_service import with_user_lock
 from ..utils import (
     _ensure_user,
     _get_nickname,
@@ -138,9 +138,8 @@ async def _(event: Event, matcher: Matcher, location=Arg("location")):
             await matcher.finish()
 
 
-@stop_fishing_matcher.handle()
 @with_user_lock("收杆结算")
-async def _(event: Event, matcher: Matcher):
+async def _settle_stop_fishing(event: Event, matcher: Matcher):
     user_id, nickname = await _ensure_user(event)
     is_private = _is_private_chat(event)
     group_id = str(event.group_id) if hasattr(event, "group_id") else None
@@ -206,6 +205,15 @@ async def _(event: Event, matcher: Matcher):
 
     # 共用后半段结算：自动锁鱼、自动卖鱼、自动卖猫乐园材料
     hints = await run_post_settlement(user_id, is_private=is_private, messages=hints)
+
+    return render_data, hints, is_private, user_id
+
+
+@stop_fishing_matcher.handle()
+async def _(event: Event, matcher: Matcher):
+    render_data, hints, is_private, user_id = await _settle_stop_fishing(
+        event, matcher
+    )
 
     image = await render_fishing_result(
         render_data["user_id"],

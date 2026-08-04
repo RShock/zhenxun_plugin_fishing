@@ -4,6 +4,7 @@ import ast
 import asyncio
 from pathlib import Path
 
+from nonebot.adapters import Event
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.services import (
@@ -12,8 +13,10 @@ from zhenxun.plugins.zhenxun_plugin_fishing.services import (
 from zhenxun.plugins.zhenxun_plugin_fishing.services.user_lock_service import (
     UserOperationBusyError,
     active_user_lock_count,
+    defer_user_lock_send,
     event_user_and_at_ids,
     user_operation_lock,
+    with_user_lock,
 )
 
 
@@ -530,4 +533,111 @@ async def test_multi_lock_timeout_releases_partially_acquired_lock():
 
     release_blocker.set()
     await blocker_task
+    assert active_user_lock_count() == 0
+
+
+class _LockTestEvent(Event):
+    def get_type(self) -> str:
+        return "message"
+
+    def get_event_name(self) -> str:
+        return "lock-test"
+
+    def get_event_description(self) -> str:
+        return "lock-test"
+
+    def get_user_id(self) -> str:
+        return "u1"
+
+    def get_session_id(self) -> str:
+        return "u1"
+
+    def is_tome(self) -> bool:
+        return True
+
+
+async def test_deferred_send_runs_after_user_lock_is_released():
+    lock_counts_during_send: list[int] = []
+
+    async def send():
+        lock_counts_during_send.append(active_user_lock_count())
+        async with user_operation_lock(
+            ["u1"], "send-phase-check", wait_timeout=0.01
+        ):
+            pass
+
+    @with_user_lock("business-phase")
+    async def handler(event: Event):
+        assert active_user_lock_count() == 1
+        assert defer_user_lock_send(send)
+        return "done"
+
+    assert await handler(event=_LockTestEvent()) == "done"
+    assert lock_counts_during_send == [0]
+    assert active_user_lock_count() == 0
+
+
+async def test_failed_business_does_not_send_queued_reply():
+    sent = False
+
+    async def send():
+        nonlocal sent
+        sent = True
+
+    @with_user_lock("failed-business")
+    async def handler(event: Event):
+        assert defer_user_lock_send(send)
+        raise ValueError("failed")
+
+    with pytest.raises(ValueError, match="failed"):
+        await handler(event=_LockTestEvent())
+
+    assert not sent
+    assert active_user_lock_count() == 0
+
+
+def test_stop_result_rendering_is_outside_settlement_lock():
+    handlers_path = Path(__file__).parents[1] / "handlers" / "fishing.py"
+    tree = ast.parse(handlers_path.read_text(encoding="utf-8"))
+    settlement = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.AsyncFunctionDef)
+        and any(
+            isinstance(decorator, ast.Call)
+            and isinstance(decorator.func, ast.Name)
+            and decorator.func.id == "with_user_lock"
+            and decorator.args
+            and isinstance(decorator.args[0], ast.Constant)
+            and decorator.args[0].value == "\u6536\u6746\u7ed3\u7b97"
+            for decorator in node.decorator_list
+        )
+    )
+    settlement_calls = {
+        child.func.id
+        for child in ast.walk(settlement)
+        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+    }
+
+    assert "stop_fishing" in settlement_calls
+    assert "run_post_settlement" in settlement_calls
+    assert "render_fishing_result" not in settlement_calls
+    assert "_send_image" not in settlement_calls
+
+
+async def test_finished_handler_flushes_reply_after_lock_release():
+    lock_counts_during_send: list[int] = []
+
+    async def send():
+        lock_counts_during_send.append(active_user_lock_count())
+
+    @with_user_lock("finishing-business")
+    async def handler(event: Event):
+        assert defer_user_lock_send(send)
+        raise lock_service.FinishedException
+
+    with pytest.raises(lock_service.FinishedException):
+        await handler(event=_LockTestEvent())
+
+    assert lock_counts_during_send == [0]
     assert active_user_lock_count() == 0

@@ -11,6 +11,7 @@ from time import monotonic
 from typing import Any, ParamSpec, TypeVar, cast
 
 from nonebot.adapters import Event
+from nonebot.exception import FinishedException
 from nonebot.matcher import Matcher
 
 from zhenxun.services.log import logger
@@ -41,6 +42,31 @@ _held_owner: ContextVar[asyncio.Task[Any] | None] = ContextVar(
 _WARNING_WAIT_SECONDS = 0.5
 _LOCK_WAIT_TIMEOUT_SECONDS = 3.0
 _BUSY_MESSAGE = "上一个钓鱼操作仍在处理中，请稍后再试。"
+
+
+@dataclass
+class _DeferredSendQueue:
+    owner: asyncio.Task[Any] | None
+    callbacks: list[Callable[[], Awaitable[Any]]]
+
+
+_deferred_sends: ContextVar[_DeferredSendQueue | None] = ContextVar(
+    "fishing_deferred_sends", default=None
+)
+
+
+def defer_user_lock_send(callback: Callable[[], Awaitable[Any]]) -> bool:
+    """???????????????????????????"""
+    queue = _deferred_sends.get()
+    if queue is None or queue.owner is not asyncio.current_task():
+        return False
+    queue.callbacks.append(callback)
+    return True
+
+
+async def _flush_deferred_sends(queue: _DeferredSendQueue):
+    for callback in queue.callbacks:
+        await callback()
 
 
 class UserOperationBusyError(TimeoutError):
@@ -240,18 +266,47 @@ def with_user_lock(
             if event is None:
                 raise RuntimeError(f"用户锁入口缺少 Event: feature={feature}")
             user_ids = resolver(event, args, kwargs)
+
+            inherited_queue = _deferred_sends.get()
+            owns_queue = (
+                inherited_queue is None
+                or inherited_queue.owner is not asyncio.current_task()
+            )
+            queue = (
+                _DeferredSendQueue(asyncio.current_task(), [])
+                if owns_queue
+                else inherited_queue
+            )
+            queue_token = _deferred_sends.set(queue) if owns_queue else None
+            finished: FinishedException | None = None
             try:
-                async with user_operation_lock(user_ids, feature):
-                    return await func(*args, **kwargs)
-            except UserOperationBusyError:
-                matcher = next(
-                    (arg for arg in args if isinstance(arg, Matcher)),
-                    kwargs.get("matcher"),
-                )
-                if matcher is None:
+                try:
+                    async with user_operation_lock(user_ids, feature):
+                        result = await func(*args, **kwargs)
+                except UserOperationBusyError:
+                    matcher = next(
+                        (arg for arg in args if isinstance(arg, Matcher)),
+                        kwargs.get("matcher"),
+                    )
+                    if matcher is None:
+                        raise
+                    await matcher.finish(_BUSY_MESSAGE)
+                    return cast(R, None)
+            except FinishedException as exc:
+                if not owns_queue:
                     raise
-                await matcher.finish(_BUSY_MESSAGE)
-                return cast(R, None)
+                finished = exc
+                result = cast(R, None)
+            finally:
+                if queue_token is not None:
+                    _deferred_sends.reset(queue_token)
+
+            if owns_queue:
+                # QQ API ?????????????????????????????
+                await _flush_deferred_sends(queue)
+            if finished is not None:
+                raise finished
+            return result
 
         return wrapped
 
