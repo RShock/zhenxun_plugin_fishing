@@ -9,8 +9,11 @@
 6. 统一道具注册表 — 标量/JSON 道具的增删查
 """
 
-import pytest
+import asyncio
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -98,6 +101,80 @@ def ledger(db, monkeypatch):
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. 金币服务测试
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+async def test_gold_transaction_reuses_same_task_scope(monkeypatch):
+    from tortoise import Tortoise, transactions
+
+    from zhenxun.plugins.zhenxun_plugin_fishing.services.gold_service import (
+        _gold_transaction,
+    )
+
+    connection = object()
+    enter_count = 0
+
+    @asynccontextmanager
+    async def fake_in_transaction():
+        nonlocal enter_count
+        enter_count += 1
+        yield connection
+
+    monkeypatch.setattr(Tortoise, "_inited", True)
+    monkeypatch.setattr(transactions, "in_transaction", fake_in_transaction)
+
+    async with _gold_transaction() as outer:
+        async with _gold_transaction() as inner:
+            assert outer is connection
+            assert inner is outer
+
+    assert enter_count == 1
+
+
+async def test_gold_transaction_does_not_reuse_scope_in_child_task(monkeypatch):
+    from tortoise import Tortoise, transactions
+
+    from zhenxun.plugins.zhenxun_plugin_fishing.services.gold_service import (
+        _gold_transaction,
+    )
+
+    enter_count = 0
+
+    @asynccontextmanager
+    async def fake_in_transaction():
+        nonlocal enter_count
+        enter_count += 1
+        yield object()
+
+    monkeypatch.setattr(Tortoise, "_inited", True)
+    monkeypatch.setattr(transactions, "in_transaction", fake_in_transaction)
+
+    async def child_transaction():
+        async with _gold_transaction():
+            pass
+
+    async with _gold_transaction():
+        await asyncio.create_task(child_transaction())
+
+    assert enter_count == 2
+
+
+async def test_gold_transaction_propagates_business_exception(monkeypatch):
+    from tortoise import Tortoise, transactions
+
+    from zhenxun.plugins.zhenxun_plugin_fishing.services.gold_service import (
+        _gold_transaction,
+    )
+
+    @asynccontextmanager
+    async def fake_in_transaction():
+        yield object()
+
+    monkeypatch.setattr(Tortoise, "_inited", True)
+    monkeypatch.setattr(transactions, "in_transaction", fake_in_transaction)
+
+    with pytest.raises(ValueError, match="rollback me"):
+        async with _gold_transaction():
+            raise ValueError("rollback me")
 
 
 class TestGoldService:

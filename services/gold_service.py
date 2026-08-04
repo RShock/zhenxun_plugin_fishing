@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -22,25 +24,47 @@ from ..models import FishingUser
 from . import ledger_service
 
 
+@dataclass(frozen=True)
+class _GoldTransactionScope:
+    owner: asyncio.Task[Any] | None
+    connection: Any
+
+
+_gold_transaction_scope: ContextVar[_GoldTransactionScope | None] = ContextVar(
+    "fishing_gold_transaction_scope", default=None
+)
+
+
 @asynccontextmanager
 async def _gold_transaction():
-    """金币操作事务上下文。
+    """金币操作事务上下文；同一 Task 内重入时复用已有事务。"""
+    current_task = asyncio.current_task()
+    inherited = _gold_transaction_scope.get()
+    if inherited is not None and inherited.owner is current_task:
+        yield inherited.connection
+        return
 
-    金币保存与账本记录必须在同一事务中，避免中途异常导致金币已改但账本未记。
-    Tortoise 的 in_transaction 支持嵌套（savepoint），即使调用方已在事务中也安全。
-    测试/未初始化 ORM 时退化为空上下文。
-    """
     try:
         from tortoise import Tortoise
         from tortoise.transactions import in_transaction as _in_tx
-
-        if getattr(Tortoise, "_inited", False):
-            async with _in_tx() as conn:
-                yield conn
-                return
     except Exception:
-        pass
-    yield None
+        yield None
+        return
+
+    if not getattr(Tortoise, "_inited", False):
+        yield None
+        return
+
+    async with _in_tx() as connection:
+        # 自动卖鱼会形成 sell_fish -> earn_gold -> Model.get_or_create 三层事务。
+        # Tortoise 的嵌套事务锁不可重入，第二层必须复用本事务，给 ORM 自己留一层。
+        token = _gold_transaction_scope.set(
+            _GoldTransactionScope(current_task, connection)
+        )
+        try:
+            yield connection
+        finally:
+            _gold_transaction_scope.reset(token)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
