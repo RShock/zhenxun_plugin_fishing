@@ -64,6 +64,7 @@ class StepResult:
             "corn": 0,
             "bait_id": "",
             "bait_count": 0,
+            "bait_gifts": {},
             "cat_frames": 0,
             "fish_name": "",
             "fish_rarity": "",
@@ -126,24 +127,23 @@ def merge_fish(
     *fish_lists: list[tuple],
     as_dict: bool = False,
 ) -> list[tuple[FishData, str, int, datetime | None]] | dict[tuple[str, str], tuple[FishData, str, int, datetime | None]]:
-    """合并多个鱼获列表，按 (fish_id, rarity) 去重并累加数量。
+    """合并多个鱼获列表，按 (fish_id, rarity, catch_time) 去重并累加数量。
 
-    合并时保留最早的 catch_time（回档药水据此判断哪些鱼在24小时窗口内）。
+    合并键包含 catch_time，不同时间捕获的同种鱼不会合并，
+    保留时间粒度供回档药水按24小时窗口精确筛选。
     兼容3元组和4元组输入。
     """
-    merged: dict[tuple[str, str], tuple[FishData, str, int, datetime | None]] = {}
+    merged: dict[tuple, tuple[FishData, str, int, datetime | None]] = {}
     for fish_list in fish_lists:
         for item in fish_list:
             fish = item[0]
             rarity = item[1]
             count = item[2]
             catch_time = item[3] if len(item) > 3 else None
-            key = (fish.id, rarity)
+            # 合并键包含 catch_time，避免不同时间的同种鱼被合并后回档整批错判
+            key = (fish.id, rarity, catch_time)
             if key in merged:
                 f, r, c, ct = merged[key]
-                # 保留最早的 catch_time；None 视为最旧（旧数据）
-                if catch_time is not None and (ct is None or catch_time < ct):
-                    ct = catch_time
                 merged[key] = (f, r, c + count, ct)
             else:
                 merged[key] = (fish, rarity, count, catch_time)

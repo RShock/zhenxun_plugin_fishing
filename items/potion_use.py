@@ -62,6 +62,18 @@ async def _resolve_mutex_potion_timing(
     same_type = [b for b in all_buffs if b.buff_type == buff_type]
     if same_type:
         latest_same = max(same_type, key=lambda b: b.end_time)
+        # 检查是否有异类型 buff 排期更晚（start_time 在同类型 end_time 之后）
+        # 如果有，延长同类型会导致跨类型时间重叠，应改为延后模式
+        other_type = [b for b in all_buffs if b.buff_type != buff_type]
+        if other_type:
+            latest_other = max(other_type, key=lambda b: b.end_time)
+            if latest_other.end_time > latest_same.end_time:
+                latest_end = _make_naive(latest_other.end_time)
+                active_name = next(
+                    (name for bt, name in _MUTEX_POTION_BUFFS if bt == latest_other.buff_type),
+                    "其他药水",
+                )
+                return "delay", None, latest_end, active_name
         return "extend", latest_same, None, None
 
     # 异类型：取所有互斥 buff 中最晚的 end_time 作为新 buff 的起点

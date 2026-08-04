@@ -326,7 +326,9 @@ def _bait_info(bait, new_consumed: int, total_consumed: int) -> str:
 
 def _is_lucky_active(buffs: list | None, now: datetime) -> bool:
     return bool(buffs) and any(
-        buff.buff_type == "lucky_double" and _to_local_naive(buff.end_time) > now
+        buff.buff_type == "lucky_double"
+        and _to_local_naive(buff.start_time) <= now
+        and _to_local_naive(buff.end_time) > now
         for buff in buffs
     )
 

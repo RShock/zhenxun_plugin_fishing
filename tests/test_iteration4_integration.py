@@ -175,6 +175,53 @@ def test_status_timeline_preserves_key_structure_and_clips_boundaries():
     assert fishing_status._build_buff_timeline([], start, start) is None
 
 
+def test_status_timeline_includes_future_buffs_and_elapsed_overlay():
+    """延后模式产生的未开始 buff 也应显示在时间轴上，且已过区间有 current_time_pct。"""
+    now = datetime(2026, 1, 1, 12, 0)
+    fishing_start = now - timedelta(hours=1)
+
+    # 一个已经结束的 buff、一个正在生效的 buff、一个尚未开始的 buff（延后模式）
+    past_buff = SimpleNamespace(
+        buff_type="duoduo",
+        value=2,
+        start_time=now - timedelta(hours=2),
+        end_time=now - timedelta(minutes=30),
+    )
+    active_buff = SimpleNamespace(
+        buff_type="lucky_double",
+        value=1,
+        start_time=now - timedelta(minutes=30),
+        end_time=now + timedelta(hours=4),
+    )
+    future_buff = SimpleNamespace(
+        buff_type="flash",
+        value=1,
+        start_time=now + timedelta(hours=2),
+        end_time=now + timedelta(hours=6),
+    )
+
+    # end_time=None → 钓鱼状态模式：窗口 [fishing_start-1h, now+8h]
+    timeline = fishing_status._build_buff_timeline(
+        [past_buff, active_buff, future_buff],
+        fishing_start,
+        now,
+    )
+
+    assert timeline is not None
+    # current_time_pct 应有值（用于已过区间蒙版宽度）
+    assert timeline["current_time_pct"] is not None
+    assert 0 < timeline["current_time_pct"] < 100
+
+    # 收集所有 segment 的 left_pct，验证未来 buff 出现在时间轴后半段
+    all_segments = []
+    for row in timeline["rows"]:
+        all_segments.extend(row["segments"])
+
+    # 未来 buff 的 segment 的 left_pct 应大于 current_time_pct
+    future_segments = [s for s in all_segments if s["left_pct"] > timeline["current_time_pct"]]
+    assert len(future_segments) > 0, "未来 buff 应在时间轴中显示"
+
+
 @pytest.mark.asyncio
 async def test_status_and_scene_endpoints_keep_output_contract(monkeypatch):
     now = datetime.now()

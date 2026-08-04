@@ -35,22 +35,31 @@ async def render_fishing_start(
 def _build_cat_gifts_data(cat_gifts: dict) -> dict:
     from ..core.cat_gift import extract_fish_gifts
 
+    # 鱼饵礼物：优先使用新格式 bait_gifts，向后兼容旧格式
+    bait_gifts = cat_gifts.get("bait_gifts", {})
+    if not bait_gifts:
+        old_bid = cat_gifts.get("bait_id", "")
+        old_count = cat_gifts.get("bait_count", 0)
+        if old_bid and old_count > 0:
+            bait_gifts = {old_bid: old_count}
+
+    bait_names = []
+    total_bait_count = 0
+    for bid, count in bait_gifts.items():
+        if count > 0 and bid:
+            bait_data = ConfigManager.get_bait(bid)
+            name = bait_data.name if bait_data else bid
+            bait_names.append(f"{name}×{count}")
+            total_bait_count += count
+
     result = {
         "gold": cat_gifts.get("gold", 0),
         "corn": cat_gifts.get("corn", 0),
-        "bait_count": cat_gifts.get("bait_count", 0),
+        "bait_count": total_bait_count,
+        "bait_name": "、".join(bait_names) if bait_names else "",
         "cat_frames": cat_gifts.get("cat_frames", 0),
         "fish_gifts": [],
     }
-    bait_id = cat_gifts.get("bait_id", "")
-    if bait_id:
-        bait_data = ConfigManager.get_bait(bait_id)
-        if bait_data:
-            result["bait_name"] = bait_data.name
-        else:
-            result["bait_name"] = bait_id
-    else:
-        result["bait_name"] = ""
 
     fish_gift_list = []
     for gift in extract_fish_gifts(cat_gifts):

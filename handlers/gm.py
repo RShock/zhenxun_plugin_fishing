@@ -86,6 +86,7 @@ async def _(event: Event, matcher: Matcher):
         "corn": 0,
         "bait_id": "",
         "bait_count": 0,
+        "bait_gifts": {},
         "cat_frames": 0,
         "fish_name": "",
         "fish_rarity": "",

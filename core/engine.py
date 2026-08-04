@@ -926,6 +926,7 @@ async def _initialize_simulation_state(
             "corn": 0,
             "bait_id": "",
             "bait_count": 0,
+            "bait_gifts": {},
             "cat_frames": 0,
             "fish_gifts": [],
             "cat_frame_pity": cat_frame_pity,

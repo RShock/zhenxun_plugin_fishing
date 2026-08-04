@@ -670,7 +670,10 @@ def apply_consume_bait_incremental(
     buff_messages: list[str],
     dirty: set[str] | None = None,
 ) -> None:
-    """渐增消耗鱼饵并更新 bait_id。"""
+    """渐增消耗鱼饵并更新 bait_id。
+
+    仅当当前鱼饵耗尽后才切换到最佳鱼饵，遵循"耗尽后切换"语义。
+    """
     from ..config import ConfigManager
 
     for bait_id_str, consumed in bait_usage.items():
@@ -685,5 +688,11 @@ def apply_consume_bait_incremental(
                 f"🪱 使用了{consumed}个{bait_data.name}（剩余{remaining}个）"
             )
 
+    # 仅当当前鱼饵耗尽时才切换到最佳鱼饵，避免未耗尽时被无条件替换
+    current_bait_id = str(user.bait_id)
+    if current_bait_id and current_bait_id != "0":
+        current_item = get_item_on_user(user, current_bait_id, "bait")
+        if current_item and current_item["count"] > 0:
+            return  # 当前鱼饵仍有库存，不切换
     best_bait_id, _ = select_best_bait_on_user(user)
     apply_set_bait_id(user, str(best_bait_id), dirty)

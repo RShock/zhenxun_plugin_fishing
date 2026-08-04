@@ -503,13 +503,19 @@ async def check_fishing_status(
     )
     bait = ConfigManager.get_bait(user.bait_id)
 
-    active_buffs = await FishingBuff.get_active_buffs_for_fishing(
+    # 加载包含未来排期 buff（延后模式产生的未开始 buff）用于时间轴显示；
+    # get_effects_at_time 内部已按 target_time 过滤，未来 buff 不影响效果计算
+    now = datetime.now()
+    display_end = now + timedelta(hours=8)
+    all_buffs = await FishingBuff.get_active_buffs_for_fishing(
         user_id,
         location.id,
         start_time,
-        datetime.now(),
+        display_end,
         location_buff_target_id=get_scene_instance_id(status_dict, location.id),
     )
+    # 仅当前已开始的 buff 用于效果计算和星空艇加成提取
+    active_buffs = [b for b in all_buffs if _make_naive(b.start_time) <= now]
     effects = None
     if active_buffs:
         effects = FishingBuffCalculator.get_effects_at_time(
@@ -571,7 +577,6 @@ async def check_fishing_status(
         starry_bonus=starry_bonus_value,
     )
 
-    now = datetime.now()
     weather_info = await get_location_weather(location.id, user_id)
 
     # 合并 buff_messages 和外部传入的额外消息（如回档药水退还提示）
@@ -593,7 +598,7 @@ async def check_fishing_status(
         buff_messages=render_messages,
         fishing_power=user.rod_level - location.difficulty,
         rod_level=user.rod_level,
-        buffs=active_buffs,
+        buffs=all_buffs,
         fishing_start_time=start_time,
         now_time=now,
         fishing_interval=fishing_interval,
@@ -1148,11 +1153,19 @@ async def _record_fishing_ledger(
                     {"item_id": "corn", "item_type": "corn",
                      "count": cat_gifts["corn"], "source": "cat_gift"}
                 )
-            if cat_gifts.get("bait_count", 0) > 0 and cat_gifts.get("bait_id"):
-                items_gained.append(
-                    {"item_id": cat_gifts["bait_id"], "item_type": "bait",
-                     "count": cat_gifts["bait_count"], "source": "cat_gift"}
-                )
+            # 鱼饵礼物：优先使用新格式 bait_gifts，向后兼容旧格式
+            bait_gifts = cat_gifts.get("bait_gifts", {})
+            if not bait_gifts:
+                old_bid = cat_gifts.get("bait_id", "")
+                old_count = cat_gifts.get("bait_count", 0)
+                if old_bid and old_count > 0:
+                    bait_gifts = {old_bid: old_count}
+            for bid, count in bait_gifts.items():
+                if count > 0 and bid:
+                    items_gained.append(
+                        {"item_id": bid, "item_type": "bait",
+                         "count": count, "source": "cat_gift"}
+                    )
 
         # 星空鱼奖励
         starry_rewards = render_data.get("starry_rewards") or []

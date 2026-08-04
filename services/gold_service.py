@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -19,6 +20,27 @@ from zhenxun.services.log import logger
 
 from ..models import FishingUser
 from . import ledger_service
+
+
+@asynccontextmanager
+async def _gold_transaction():
+    """金币操作事务上下文。
+
+    金币保存与账本记录必须在同一事务中，避免中途异常导致金币已改但账本未记。
+    Tortoise 的 in_transaction 支持嵌套（savepoint），即使调用方已在事务中也安全。
+    测试/未初始化 ORM 时退化为空上下文。
+    """
+    try:
+        from tortoise import Tortoise
+        from tortoise.transactions import in_transaction as _in_tx
+
+        if getattr(Tortoise, "_inited", False):
+            async with _in_tx() as conn:
+                yield conn
+                return
+    except Exception:
+        pass
+    yield None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -40,22 +62,23 @@ async def spend_gold(
     """
     if amount <= 0:
         return True
-    user = await FishingUser.get_user(user_id)
-    gold_before = int(user.gold or 0)
-    if gold_before < amount:
-        return False
-    user.gold = gold_before - amount
-    gold_after = user.gold
-    await user.save(update_fields=["gold"])
-    await ledger_service.log_gold_change(
-        user_id,
-        operation=operation,
-        amount=-amount,
-        gold_before=gold_before,
-        gold_after=gold_after,
-        reason=reason,
-        details=details,
-    )
+    async with _gold_transaction():
+        user = await FishingUser.get_user(user_id)
+        gold_before = int(user.gold or 0)
+        if gold_before < amount:
+            return False
+        user.gold = gold_before - amount
+        gold_after = user.gold
+        await user.save(update_fields=["gold"])
+        await ledger_service.log_gold_change(
+            user_id,
+            operation=operation,
+            amount=-amount,
+            gold_before=gold_before,
+            gold_after=gold_after,
+            reason=reason,
+            details=details,
+        )
     return True
 
 
@@ -68,26 +91,28 @@ async def earn_gold(
 ) -> None:
     """获得金币并记录账本。
 
+    金币保存与账本记录在同一事务中，确保原子性。
     operation 示例: "sell_fish", "sell_bait", "fishing_income",
                    "display_income", "cat_gift", "achievement",
                    "gm_add", "gift_reward", "cat_park_material"
     """
     if amount <= 0:
         return
-    user = await FishingUser.get_user(user_id)
-    gold_before = int(user.gold or 0)
-    user.gold = gold_before + amount
-    gold_after = user.gold
-    await user.save(update_fields=["gold"])
-    await ledger_service.log_gold_change(
-        user_id,
-        operation=operation,
-        amount=amount,
-        gold_before=gold_before,
-        gold_after=gold_after,
-        reason=reason,
-        details=details,
-    )
+    async with _gold_transaction():
+        user = await FishingUser.get_user(user_id)
+        gold_before = int(user.gold or 0)
+        user.gold = gold_before + amount
+        gold_after = user.gold
+        await user.save(update_fields=["gold"])
+        await ledger_service.log_gold_change(
+            user_id,
+            operation=operation,
+            amount=amount,
+            gold_before=gold_before,
+            gold_after=gold_after,
+            reason=reason,
+            details=details,
+        )
 
 
 async def set_gold(

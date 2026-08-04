@@ -46,9 +46,10 @@ def process_cat_gift(
             shop = ConfigManager.get_shop()
             if shop.baits:
                 effective_bait_id = str(shop.baits[0].id)
-        if effective_bait_id and not cat_gifts.get("bait_id"):
-            cat_gifts["bait_id"] = effective_bait_id
-        cat_gifts["bait_count"] += 3
+        if effective_bait_id:
+            # 使用 bait_gifts 字典按鱼饵ID分别记录，避免跨鱼饵合并时丢失来源
+            bait_gifts = cat_gifts.setdefault("bait_gifts", {})
+            bait_gifts[effective_bait_id] = bait_gifts.get(effective_bait_id, 0) + 3
     elif roll < 0.9:
         cat_gifts["corn"] += 1
     else:

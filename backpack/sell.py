@@ -12,6 +12,7 @@ from ..config import (
 )
 from ..models import FishingUser
 from ..services import earn_gold, get_or_create_user
+from ..services.gold_service import _gold_transaction
 from .selection import FishSelection, parse_fish_selection
 
 _BAIT_SELL_RATIO = 1.0
@@ -45,23 +46,25 @@ async def sell_fish(
         user_id, fish_list
     )
 
-    await FishingUser.delete_fish_entries(user_id, fish_list)
-    await earn_gold(
-        user_id,
-        total_coins,
-        "sell_fish",
-        f"卖出{len(fish_list)}种鱼",
-        details={
-            "selection": fish_input,
-            "exclude_utr": exclude_utr,
-            "species_count": len(ledger_items),
-            "fish_count": sum(item["count"] for item in ledger_items),
-            "items": ledger_items,
-            "total": total_coins,
-        },
-    )
-    if not is_private:
-        await FishingUser.increment_sell_count(user_id)
+    # 删鱼、金币入账、次数累加必须在同一事务中，避免中途异常导致资源消失但收益未到账
+    async with _gold_transaction():
+        await FishingUser.delete_fish_entries(user_id, fish_list)
+        await earn_gold(
+            user_id,
+            total_coins,
+            "sell_fish",
+            f"卖出{len(fish_list)}种鱼",
+            details={
+                "selection": fish_input,
+                "exclude_utr": exclude_utr,
+                "species_count": len(ledger_items),
+                "fish_count": sum(item["count"] for item in ledger_items),
+                "items": ledger_items,
+                "total": total_coins,
+            },
+        )
+        if not is_private:
+            await FishingUser.increment_sell_count(user_id)
 
     detail_str = "\n".join(sold_details[:6])
     if len(sold_details) > 6:
@@ -195,18 +198,20 @@ async def sell_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
     sell_price = max(1, int(bait.price * _BAIT_SELL_RATIO))
     total_coins = sell_price * count
 
-    await FishingUser.remove_item(user_id, str(bait.id), "bait", count)
-    await earn_gold(user_id, total_coins, "sell_bait", f"卖出{count}个{bait.name}")
+    # 扣饵、金币入账、鱼饵字段更新必须在同一事务中
+    async with _gold_transaction():
+        await FishingUser.remove_item(user_id, str(bait.id), "bait", count)
+        await earn_gold(user_id, total_coins, "sell_bait", f"卖出{count}个{bait.name}")
 
-    user = await FishingUser.get_user(user_id)
-    if user.preferred_bait_id == str(bait.id):
-        user.preferred_bait_id = "0"
-        await user.save(update_fields=["preferred_bait_id"])
+        user = await FishingUser.get_user(user_id)
+        if user.preferred_bait_id == str(bait.id):
+            user.preferred_bait_id = "0"
+            await user.save(update_fields=["preferred_bait_id"])
 
-    if user.bait_id == str(bait.id):
-        best_bait_id, _ = await select_best_bait_after_sell(user_id)
-        user.bait_id = str(best_bait_id)
-        await user.save(update_fields=["bait_id"])
+        if user.bait_id == str(bait.id):
+            best_bait_id, _ = await select_best_bait_after_sell(user_id)
+            user.bait_id = str(best_bait_id)
+            await user.save(update_fields=["bait_id"])
 
     hint = await _get_bait_inventory_hint(user_id)
     logger.info(f"用户 {user_id} 卖出 {count} 个{bait.name}，获得 {total_coins} 钓鱼币")

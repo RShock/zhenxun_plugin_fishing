@@ -61,11 +61,20 @@ def apply_distribute_cat_gifts_on_user(
     if cat_gifts.get("corn", 0) > 0:
         mut.apply_add_corn(user, cat_gifts["corn"], dirty)
         messages.append(f"🐱 猫送了{cat_gifts['corn']}个玉米")
-    if cat_gifts.get("bait_count", 0) > 0 and cat_gifts.get("bait_id", ""):
-        mut.apply_add_item(
-            user, cat_gifts["bait_id"], "bait", cat_gifts["bait_count"], dirty
-        )
-        messages.append(f"🐱 猫送了{cat_gifts['bait_count']}个鱼饵")
+    # 鱼饵礼物：优先使用新格式 bait_gifts，向后兼容旧格式
+    bait_gifts = cat_gifts.get("bait_gifts", {})
+    if not bait_gifts:
+        old_bid = cat_gifts.get("bait_id", "")
+        old_count = cat_gifts.get("bait_count", 0)
+        if old_bid and old_count > 0:
+            bait_gifts = {old_bid: old_count}
+    total_bait_count = 0
+    for bid, count in bait_gifts.items():
+        if count > 0 and bid:
+            mut.apply_add_item(user, bid, "bait", count, dirty)
+            total_bait_count += count
+    if total_bait_count > 0:
+        messages.append(f"🐱 猫送了{total_bait_count}个鱼饵")
 
     for gift in extract_fish_gifts(cat_gifts):
         gift_fish_name = gift.get("fish_name", "")

@@ -1,6 +1,9 @@
 {% macro buff_timeline(timeline_data) %}
 <div class="buff-timeline">
     <div class="timeline-rows">
+        {% if timeline_data.current_time_pct is not none and timeline_data.current_time_pct > 0 %}
+        <div class="timeline-elapsed-overlay" style="width:{{ timeline_data.current_time_pct }}%;"></div>
+        {% endif %}
         {% for row in timeline_data.rows %}
         <div class="timeline-row">
             {% for seg in row.segments %}

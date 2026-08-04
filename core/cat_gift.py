@@ -4,6 +4,7 @@ def default_cat_gifts() -> dict:
         "corn": 0,
         "bait_id": "",
         "bait_count": 0,
+        "bait_gifts": {},
         "cat_frames": 0,
         "fish_gifts": [],
     }
@@ -35,11 +36,24 @@ def merge_cat_gifts(
     new_cat_gifts = new_cat_gifts or {}
     existing_fish_gifts = extract_fish_gifts(existing_cat_gifts)
     new_fish_gifts = extract_fish_gifts(new_cat_gifts)
+
+    # 合并 bait_gifts 字典（新格式，按鱼饵ID分别记录）
+    merged_bait_gifts: dict[str, int] = dict(existing_cat_gifts.get("bait_gifts", {}))
+    for bid, count in new_cat_gifts.get("bait_gifts", {}).items():
+        merged_bait_gifts[bid] = merged_bait_gifts.get(bid, 0) + count
+    # 向后兼容：旧格式 bait_id/bait_count 合并进 bait_gifts
+    for src in (existing_cat_gifts, new_cat_gifts):
+        old_bid = src.get("bait_id", "")
+        old_count = src.get("bait_count", 0)
+        if old_bid and old_count > 0 and not src.get("bait_gifts"):
+            merged_bait_gifts[old_bid] = merged_bait_gifts.get(old_bid, 0) + old_count
+
     return {
         "gold": existing_cat_gifts.get("gold", 0) + new_cat_gifts.get("gold", 0),
         "corn": existing_cat_gifts.get("corn", 0) + new_cat_gifts.get("corn", 0),
         "bait_id": new_cat_gifts.get("bait_id", "") or existing_cat_gifts.get("bait_id", ""),
         "bait_count": existing_cat_gifts.get("bait_count", 0) + new_cat_gifts.get("bait_count", 0),
+        "bait_gifts": merged_bait_gifts,
         "cat_frames": existing_cat_gifts.get("cat_frames", 0) + new_cat_gifts.get("cat_frames", 0),
         "fish_gifts": existing_fish_gifts + new_fish_gifts,
         "cat_frame_pity": cat_frame_pity,
@@ -73,14 +87,22 @@ async def distribute_cat_gifts(
     if cat_gifts.get("corn", 0) > 0:
         await FishingUser.add_corn(user_id, cat_gifts["corn"])
         messages.append(f"🐱 猫送了{cat_gifts['corn']}个玉米")
-    if cat_gifts.get("bait_count", 0) > 0 and cat_gifts.get("bait_id", ""):
-        await FishingUser.add_item(
-            user_id,
-            cat_gifts["bait_id"],
-            "bait",
-            cat_gifts["bait_count"],
-        )
-        messages.append(f"🐱 猫送了{cat_gifts['bait_count']}个鱼饵")
+
+    # 鱼饵礼物：优先使用新格式 bait_gifts（按鱼饵ID分别记录），
+    # 向后兼容旧格式 bait_id/bait_count
+    bait_gifts = cat_gifts.get("bait_gifts", {})
+    if not bait_gifts:
+        old_bid = cat_gifts.get("bait_id", "")
+        old_count = cat_gifts.get("bait_count", 0)
+        if old_bid and old_count > 0:
+            bait_gifts = {old_bid: old_count}
+    total_bait_count = 0
+    for bid, count in bait_gifts.items():
+        if count > 0 and bid:
+            await FishingUser.add_item(user_id, bid, "bait", count)
+            total_bait_count += count
+    if total_bait_count > 0:
+        messages.append(f"🐱 猫送了{total_bait_count}个鱼饵")
 
     for gift in extract_fish_gifts(cat_gifts):
         gift_fish_name = gift.get("fish_name", "")

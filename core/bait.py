@@ -41,7 +41,13 @@ async def select_bait_with_preference(user_id: str) -> tuple[int, int]:
 
 
 async def set_preferred_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
-    """设定优先使用的鱼饵。bait_input 为数字ID或名称，'0'或'取消'清除设定。"""
+    """设定优先使用的鱼饵。bait_input 为数字ID或名称，'0'或'取消'清除设定。
+
+    【特性，非bug】设定优先鱼饵时同时写入 bait_id，使钓鱼中切换鱼饵立即生效。
+    这是有意设计：玩家在钓鱼过程中设定优先鱼饵，期望下次结算即使用新鱼饵的
+    速度/消耗/掉率，而非等到当前鱼饵耗尽后才切换。结算从 last_settle_time
+    开始重新计算整个未结算区间，使用当前 bait_id 对应的鱼饵属性。
+    """
     if bait_input in ("0", "取消", "自动", "清除"):
         user = await FishingUser.get_user(user_id)
         user.preferred_bait_id = "0"
@@ -69,7 +75,10 @@ async def consume_bait_incremental(
     bait_usage: dict[str, int],
     buff_messages: list[str],
 ) -> None:
-    """渐增消耗鱼饵并更新消息。"""
+    """渐增消耗鱼饵并更新消息。
+
+    仅当当前鱼饵耗尽后才切换到最佳鱼饵，遵循"耗尽后切换"语义。
+    """
     for bait_id_str, consumed in bait_usage.items():
         if consumed <= 0:
             continue
@@ -82,6 +91,12 @@ async def consume_bait_incremental(
                 f"🪱 使用了{consumed}个{bait_data.name}（剩余{remaining}个）"
             )
 
+    # 仅当当前鱼饵耗尽时才切换到最佳鱼饵，避免未耗尽时被无条件替换
+    current_bait_id = str(user.bait_id)
+    if current_bait_id and current_bait_id != "0":
+        current_item = await FishingUser.get_item(user_id, current_bait_id, "bait")
+        if current_item and current_item["count"] > 0:
+            return  # 当前鱼饵仍有库存，不切换
     best_bait_id, _ = await select_best_bait(user_id)
     user.bait_id = str(best_bait_id)
     await user.save(update_fields=["bait_id"])
