@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#142331">
   <meta name="description" content="星穹矿脉 S2 vNext 浏览器原型">
   <title>星穹矿脉 · S2 vNext</title>
-  <link rel="stylesheet" href="style.css?v=1.0.0">
+  <link rel="stylesheet" href="style.css?v=1.0.1">
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -22,7 +22,7 @@
         <span class="cache-state" id="cacheState"><i></i>缓存已启用</span>
         <button class="icon-btn" id="saveBtn" type="button" title="保存存档" aria-label="保存存档">↓</button>
         <button class="icon-btn" id="loadBtn" type="button" title="读取存档" aria-label="读取存档">↥</button>
-        <button class="icon-btn danger" id="resetBtn" type="button" title="重置测试存档" aria-label="重置测试存档">↻</button>
+        <button class="danger-action" id="resetBtn" type="button" title="清除浏览器中的 S2 测试存档">删档</button>
       </div>
     </header>
 
@@ -85,6 +85,7 @@
       </section>
 
       <section class="resource-strip" id="resourceStrip"></section>
+      <p class="resource-guide">矿币用于全部本地科技；锡矿用于基础科技，铜矿用于工业科技，紫晶用于电力科技，金猫锭用于现代与未来科技，虹核晶用于未来、行星与异常科技。</p>
 
       <div class="content-grid">
         <section class="tech-panel panel">
@@ -138,6 +139,6 @@
     </main>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="app.js?v=1.0.0"></script>
+  <script src="app.js?v=1.0.1"></script>
 </body>
 </html>

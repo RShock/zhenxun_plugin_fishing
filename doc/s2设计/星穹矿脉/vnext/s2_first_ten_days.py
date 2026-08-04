@@ -1,7 +1,7 @@
-"""S2 原型前十天的可复现验收序列。
+"""S2 原型前十天的可复现操作时间线。
 
-每个游戏小时先做一次批量升级决策，再用六个 10 分钟块推进；测试模式关闭随机扰动和每日消息限制，
-专门检查网页原型的资源/科技节奏，不代替 QQ 规则的三条消息单元测试。
+每天在 00:00、08:00、16:00 各提供一次批量升级窗口，严格执行每日最多三条升级消息。
+挖矿仍按 10 分钟固定步长推进，达到 3 级的科技由后台自动采购，并记录每个采购时点。
 """
 
 from __future__ import annotations
@@ -9,7 +9,9 @@ from __future__ import annotations
 import argparse
 import pathlib
 import sys
+from collections import Counter
 from dataclasses import dataclass
+from typing import Literal
 
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
@@ -19,26 +21,23 @@ if str(MODULE_DIR) not in sys.path:
 from s2_mining_simulator import (  # noqa: E402
     ERA_LABELS,
     ERA_UNLOCKS,
+    LOCAL_KEYS,
     SPECS,
     SimulationState,
     _development_target,
+    _strategy,
 )
 
 
-PRIORITY = (
-    "pickaxe",
-    "cart",
-    "refinery",
-    "survey",
-    "cat",
-    "industrial_blaster",
-    "steam_cart",
-    "electric_pickaxe",
-    "electric_cart",
-    "modern_drill",
-    "future_quantum",
-    "relativity",
-)
+DECISION_WINDOWS = (0, 8 * 60, 16 * 60)
+
+
+@dataclass(frozen=True)
+class UpgradeEvent:
+    day: int
+    minute: int
+    source: Literal["manual", "auto"]
+    orders: tuple[tuple[str, int], ...]
 
 
 @dataclass(frozen=True)
@@ -46,144 +45,249 @@ class DaySnapshot:
     day: int
     depth: float
     progress: float
-    credits: float
-    copper: float
-    quartz: float
-    gold: float
-    coreshard: float
+    resources: dict[str, float]
     eras: tuple[str, ...]
-    levels: dict[str, int]
     nodes_reached: int
-    purchases: int
+    auto_nodes: int
+    manual_messages: int
+    manual_levels: int
+    auto_levels: int
+    planets: str
 
 
 def unlocked_eras(state: SimulationState) -> tuple[str, ...]:
     return tuple(era for era, threshold in ERA_UNLOCKS.items() if state.progress >= threshold)
 
 
-def choose_upgrades(state: SimulationState) -> list[tuple[str, int]]:
-    """每小时只发一条批量决策；一次最多碰 5 个节点，给玩家留下取舍。"""
-    priority_index = {key: index for index, key in enumerate(PRIORITY)}
-    candidates = [
-        key for key in state.local_levels
-        if state.level(key) < SPECS[key].max_level and state._available(key)
-    ]
-    candidates.sort(
-        key=lambda key: (
-            0 if state.level(key) == 0 else 1,
-            SPECS[key].unlock,
-            priority_index.get(key, 100),
-            key,
-        )
+def level_diff(before: dict[str, int], state: SimulationState) -> tuple[tuple[str, int], ...]:
+    return tuple(
+        (key, state.local_levels[key] - before[key])
+        for key in LOCAL_KEYS
+        if state.local_levels[key] > before[key]
     )
-    candidates = candidates[:5]
-
-    # 先筛出单项买得起的节点，再尝试批量；不能因为优先级第一项暂时太贵而饿死后面的路线。
-    affordable: list[tuple[str, int]] = []
-    for key in candidates:
-        level = state.level(key)
-        # 主线设备用批量升级尽快进入自动化；时代节点先逐项探路，避免测试策略一口气铺满整棵树。
-        amount = min(3 - level, 3) if key in PRIORITY and level < 3 else 1
-        costs = state._batch_cost(key, amount)
-        if all(state.resources.get(resource, 0.0) + 1e-9 >= cost for resource, cost in costs.items()):
-            affordable.append((key, amount))
-    for size in range(len(affordable), 0, -1):
-        orders = affordable[:size]
-        ok, _ = state.upgrade_command(orders)
-        if ok:
-            return orders
-    return []
 
 
-def run(days: int = 10, seed: int = 42) -> tuple[SimulationState, list[DaySnapshot], list[str]]:
+def run(
+    days: int = 10,
+    seed: int = 42,
+) -> tuple[SimulationState, list[DaySnapshot], list[UpgradeEvent]]:
+    """运行真实消息限制下的三个每日决策窗口。
+
+    随机数使用固定种子，所以结果可重复；不启用 deterministic 期望值模式，因为特殊科技
+    在期望值模式下会按小时强制触发，不代表玩家实际经历的一条随机路径。
+    """
     state = SimulationState(
         target_depth=_development_target(11),
         seed=seed,
-        deterministic=True,
-        enforce_daily_limit=False,
+        deterministic=False,
+        enforce_daily_limit=True,
     )
     snapshots: list[DaySnapshot] = []
-    decisions: list[str] = []
+    events: list[UpgradeEvent] = []
     previous_depth = 0.0
     previous_planets = state.planets
-    for day in range(1, days + 1):
-        if day > 1:
+
+    for current_day in range(1, days + 1):
+        if current_day > 1:
             state.start_new_day()
-        day_purchases = 0
-        for hour in range(24):
-            orders = choose_upgrades(state)
-            day_purchases += len(orders)
-            if orders:
-                decisions.append(
-                    f"D{day:02d} {hour:02d}:00 "
-                    + " ".join(f"{key}+{amount}" for key, amount in orders)
-                )
-            for _ in range(6):
+        day_events_start = len(events)
+
+        for window_start in DECISION_WINDOWS:
+            before = dict(state.local_levels)
+            _strategy(state, message_budget=1, mode="balanced")
+            manual_orders = level_diff(before, state)
+            if manual_orders:
+                events.append(UpgradeEvent(current_day, window_start, "manual", manual_orders))
+
+            for block in range(1, 49):
+                before = dict(state.local_levels)
                 state.mine_block(10)
-        eras = unlocked_eras(state)
+                auto_orders = level_diff(before, state)
+                if auto_orders:
+                    # 24:00 保留为当日结算边界，不伪装成下一天尚未执行的 00:00 手动窗口。
+                    minute = window_start + block * 10
+                    events.append(UpgradeEvent(current_day, minute, "auto", auto_orders))
+
+        day_events = events[day_events_start:]
+        manual_levels = sum(
+            amount for event in day_events if event.source == "manual" for _, amount in event.orders
+        )
+        auto_levels = sum(
+            amount for event in day_events if event.source == "auto" for _, amount in event.orders
+        )
         snapshots.append(
             DaySnapshot(
-                day=day,
+                day=current_day,
                 depth=state.depth,
                 progress=state.progress,
-                credits=state.resources["credits"],
-                copper=state.resources["copper"],
-                quartz=state.resources["quartz"],
-                gold=state.resources["gold"],
-                coreshard=state.resources["coreshard"],
-                eras=eras,
-                levels={key: state.level(key) for key in PRIORITY if state.level(key)},
+                resources=dict(state.resources),
+                eras=unlocked_eras(state),
                 nodes_reached=len(state.ever_local_keys),
-                purchases=day_purchases,
+                auto_nodes=len(state.auto_unlocked),
+                manual_messages=state.daily_upgrade_messages,
+                manual_levels=manual_levels,
+                auto_levels=auto_levels,
+                planets=str(state.planets),
             )
         )
         if state.depth <= previous_depth and state.planets == previous_planets:
-            raise AssertionError(f"D{day} 深度没有前进")
+            raise AssertionError(f"D{current_day} 深度没有前进")
         previous_depth = state.depth
         previous_planets = state.planets
-    return state, snapshots, decisions
+
+    return state, snapshots, events
 
 
-def format_snapshot(snapshot: DaySnapshot) -> str:
-    era_text = ",".join(ERA_LABELS[era] for era in snapshot.eras)
-    level_text = " ".join(f"{key}={level}" for key, level in snapshot.levels.items()) or "无"
-    return (
-        f"D{snapshot.day:02d} depth={snapshot.depth:.0f} ({snapshot.progress:.4%}) "
-        f"credits={snapshot.credits:.0f} Cu={snapshot.copper:.0f} Qz={snapshot.quartz:.0f} "
-        f"Au={snapshot.gold:.0f} shard={snapshot.coreshard:.0f} "
-        f"eras=[{era_text}] purchases={snapshot.purchases} levels=[{level_text}]"
-    )
-
-
-def audit_first_ten_days(snapshots: list[DaySnapshot]) -> None:
-    """前十天的体验闸门：自动化可吞掉当天决策，但深度和科技时代不能断档。"""
+def audit_first_ten_days(snapshots: list[DaySnapshot], events: list[UpgradeEvent]) -> None:
+    """前十天闸门只约束交互规则和时代不断档，不把具体数值当最终平衡。"""
     if len(snapshots) < 10:
         raise AssertionError("前十天验收必须至少运行 10 天")
-    if sum(snapshot.purchases for snapshot in snapshots[:10]) <= 0:
-        raise AssertionError("十天内没有产生任何手动升级决策")
+    if any(snapshot.manual_messages > 3 for snapshot in snapshots[:10]):
+        raise AssertionError("出现超过每日 3 条的手动升级消息")
+    if not any(event.source == "manual" for event in events):
+        raise AssertionError("十天内没有产生手动升级")
+    if not any(event.source == "auto" for event in events):
+        raise AssertionError("十天内没有产生自动升级")
     if snapshots[-1].nodes_reached <= snapshots[0].nodes_reached:
         raise AssertionError("十天内没有新增科技节点")
     expected = {"industrial": 3, "electrical": 5, "modern": 7, "future": 9}
     for era, deadline in expected.items():
         if not any(era in snapshot.eras for snapshot in snapshots[:deadline]):
             raise AssertionError(f"{era} 在 D{deadline} 前没有解锁")
-    if len(snapshots[-1].levels) < 10:
-        raise AssertionError("D10 可观察的升级线路过少")
+
+
+def format_clock(minute: int) -> str:
+    if minute == 1440:
+        return "24:00"
+    return f"{minute // 60:02d}:{minute % 60:02d}"
+
+
+def format_orders(orders: tuple[tuple[str, int], ...]) -> str:
+    return "、".join(f"{SPECS[key].name}+{amount}" for key, amount in orders)
+
+
+def format_snapshot(snapshot: DaySnapshot) -> str:
+    era_text = "、".join(ERA_LABELS[era] for era in snapshot.eras)
+    resources = snapshot.resources
+    return (
+        f"D{snapshot.day:02d} 进度={snapshot.progress:.4%} 星球={snapshot.planets} "
+        f"消息={snapshot.manual_messages}/3 手动+{snapshot.manual_levels}级 自动+{snapshot.auto_levels}级 "
+        f"节点={snapshot.nodes_reached}/{len(LOCAL_KEYS)} 自动线={snapshot.auto_nodes} "
+        f"矿币={resources['credits']:.0f} Sn={resources['tin']:.0f} Cu={resources['copper']:.0f} "
+        f"Qz={resources['quartz']:.0f} Au={resources['gold']:.0f} ◇={resources['coreshard']:.0f} "
+        f"时代=[{era_text}]"
+    )
+
+
+def event_groups(events: list[UpgradeEvent], day: int, source: str) -> list[UpgradeEvent]:
+    return [event for event in events if event.day == day and event.source == source]
+
+
+def render_markdown(
+    snapshots: list[DaySnapshot],
+    events: list[UpgradeEvent],
+    seed: int,
+) -> str:
+    lines = [
+        "# S2 前十天操作时间线",
+        "",
+        f"固定随机种子：`{seed}`。每天在 `00:00`、`08:00`、`16:00` 各检查一次手动批量升级，全天最多三条升级消息；自动采购每 10 分钟结算。",
+        "",
+        "| 天数 | 星球进度 | 手动消息 | 手动等级 | 自动等级 | 已触达节点 | 自动线路 |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for snapshot in snapshots:
+        lines.append(
+            f"| D{snapshot.day} | {snapshot.progress:.4%} | {snapshot.manual_messages}/3 | "
+            f"{snapshot.manual_levels} | {snapshot.auto_levels} | {snapshot.nodes_reached}/{len(LOCAL_KEYS)} | {snapshot.auto_nodes} |"
+        )
+
+    for snapshot in snapshots:
+        manual = event_groups(events, snapshot.day, "manual")
+        automatic = event_groups(events, snapshot.day, "auto")
+        totals: Counter[str] = Counter()
+        for event in automatic:
+            totals.update(dict(event.orders))
+        lines.extend(
+            [
+                "",
+                f"## D{snapshot.day}",
+                "",
+                f"日终进度 `{snapshot.progress:.4%}`，手动消息 `{snapshot.manual_messages}/3`，自动升级 `{snapshot.auto_levels}` 级。",
+                "",
+                "**手动升级**",
+                "",
+            ]
+        )
+        if manual:
+            lines.extend(f"- `{format_clock(event.minute)}` {format_orders(event.orders)}" for event in manual)
+        else:
+            lines.append("- 无：三个检查点都没有足够资源或没有合适的新路线。")
+        lines.extend(["", "**自动升级汇总**", ""])
+        if totals:
+            lines.append("- " + "、".join(f"{SPECS[key].name}+{amount}" for key, amount in totals.items()))
+        else:
+            lines.append("- 无")
+        lines.extend(
+            [
+                "",
+                f"<details><summary>展开 {len(automatic)} 个自动采购时点</summary>",
+                "",
+            ]
+        )
+        lines.extend(f"- `{format_clock(event.minute)}` {format_orders(event.orders)}" for event in automatic)
+        lines.extend(["", "</details>"])
+
+    lines.extend(
+        [
+            "",
+            "## 当前观察",
+            "",
+            "- 一条手动消息最多会批量选择 8 个科技，并尽量把未自动化的路线直接升到 3 级。",
+            "- 因此消息数量很低，但 D2 之后单条消息的决策密度很高；这是下一轮需要由体验判断的重点。",
+            "- 自动采购日志很密集，但它不占 QQ 消息额度；正式展示应聚合成阶段报告，而不是逐条发送。",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="运行 S2 原型前十天固定步长验收")
+    parser = argparse.ArgumentParser(description="运行 S2 前十天真实三消息规则验收")
     parser.add_argument("--days", type=int, default=10)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--trace-output",
+        type=pathlib.Path,
+        default=MODULE_DIR / "FIRST_TEN_DAYS_TRACE.md",
+    )
+    parser.add_argument("--no-write-trace", action="store_true")
     args = parser.parse_args()
-    state, snapshots, decisions = run(args.days, args.seed)
-    audit_first_ten_days(snapshots)
+
+    state, snapshots, events = run(args.days, args.seed)
+    if args.days >= 10:
+        audit_first_ten_days(snapshots, events)
     for snapshot in snapshots:
         print(format_snapshot(snapshot))
-    print("\n最近 12 条小时决策:")
-    print("\n".join(decisions[-12:]) or "无")
+
+    print("\n手动升级时间线:")
+    for event in events:
+        if event.source == "manual":
+            print(f"D{event.day:02d} {format_clock(event.minute)} {format_orders(event.orders)}")
+
+    print("\n每日自动采购:")
+    for snapshot in snapshots:
+        automatic = event_groups(events, snapshot.day, "auto")
+        totals: Counter[str] = Counter()
+        for event in automatic:
+            totals.update(dict(event.orders))
+        names = "、".join(f"{SPECS[key].name}+{amount}" for key, amount in totals.most_common(12)) or "无"
+        print(f"D{snapshot.day:02d} {len(automatic)} 个时点 / +{snapshot.auto_levels}级：{names}")
+
+    if not args.no_write_trace:
+        args.trace_output.write_text(render_markdown(snapshots, events, args.seed), encoding="utf-8")
+        print(f"\n完整时间线已写入: {args.trace_output}")
     print(
-        f"\n验收结果: days={args.days} depth={state.depth:.0f} "
+        f"验收结果: days={args.days} depth={state.depth:.0f} "
         f"local_nodes={len(state.ever_local_keys)}/{len(state.local_levels)}"
     )
 

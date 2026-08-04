@@ -4,11 +4,11 @@
   const SAVE_KEY = "s2-vnext-browser-save-v1";
   const TARGET_DEPTH = 600_000_000_000;
   const ORES = [
-    { key: "tin", name: "锡矿", icon: "Sn", color: "tin", value: 1 },
-    { key: "copper", name: "铜矿", icon: "Cu", color: "copper", value: 2.8 },
-    { key: "quartz", name: "紫晶", icon: "Qz", color: "quartz", value: 9 },
-    { key: "gold", name: "金猫锭", icon: "Au", color: "gold", value: 32 },
-    { key: "coreshard", name: "虹核晶", icon: "◇", color: "coreshard", value: 120 },
+    { key: "tin", name: "锡矿", icon: "Sn", color: "tin", value: 1, use: "基础工程材料" },
+    { key: "copper", name: "铜矿", icon: "Cu", color: "copper", value: 2.8, use: "工业科技材料" },
+    { key: "quartz", name: "紫晶", icon: "Qz", color: "quartz", value: 9, use: "电力科技材料" },
+    { key: "gold", name: "金猫锭", icon: "Au", color: "gold", value: 32, use: "现代与未来科技材料" },
+    { key: "coreshard", name: "虹核晶", icon: "◇", color: "coreshard", value: 120, use: "未来、行星与异常科技材料" },
   ];
   const ERA_LIST = [
     { key: "foundation", name: "基础工程", short: "基础", unlock: 0 },
@@ -287,8 +287,8 @@
   }
 
   function renderResources() {
-    const list = [{ key: "credits", name: "矿币", icon: "¢", color: "credits" }, ...ORES];
-    els.resourceStrip.innerHTML = list.map((item) => `<div class="resource-chip ${item.color}"><span class="resource-name"><i class="resource-icon">${item.icon}</i>${item.name}</span><strong class="resource-value">${formatNumber(resourceTotal(item.key), 1)}</strong></div>`).join("");
+    const list = [{ key: "credits", name: "矿币", icon: "¢", color: "credits", use: "全部本地科技的通用货币" }, ...ORES];
+    els.resourceStrip.innerHTML = list.map((item) => `<div class="resource-chip ${item.color}" title="${item.name}：${item.use}"><span class="resource-name"><i class="resource-icon">${item.icon}</i>${item.name}</span><strong class="resource-value">${formatNumber(resourceTotal(item.key), 1)}</strong></div>`).join("");
   }
   function renderOverview() {
     const p = progress(); const era = currentEra(); const speed = speedMultiplier();
@@ -334,7 +334,7 @@
     const raw = localStorage.getItem(SAVE_KEY); if (!raw) { if (manual) toast("没有找到浏览器存档"); return false; }
     try { const incoming = JSON.parse(raw); const fresh = newState(); state = Object.assign(fresh, incoming, { running: false }); state.localLevels = Object.assign(fresh.localLevels, incoming.localLevels || {}); state.permanentLevels = Object.assign(fresh.permanentLevels, incoming.permanentLevels || {}); state.resources = Object.assign(fresh.resources, incoming.resources || {}); render(); if (manual) toast("存档已读取"); return true; } catch (error) { if (manual) toast("存档格式无法读取"); return false; }
   }
-  function resetState() { if (!window.confirm("确定清除浏览器存档并重置原型吗？")) return; stopRunning(); state = newState(); localStorage.removeItem(SAVE_KEY); els.saveMeta.textContent = "本地缓存尚未写入"; pushEvent("新的矿工档案已建立", "good"); render(); toast("已重置测试档案"); }
+  function resetState() { if (!window.confirm("确定删档吗？当前浏览器中的 S2 测试进度将全部清除。")) return; stopRunning(); clearTimeout(saveTimer); saveTimer = null; state = newState(); localStorage.removeItem(SAVE_KEY); els.cacheState.innerHTML = "<i></i>缓存已清空"; els.saveMeta.textContent = "本地缓存尚未写入"; pushEvent("新的矿工档案已建立", "good"); render(); toast("测试档案已删除，可以重新开始"); }
   function stopRunning() { state.running = false; if (window.runTimer) { clearInterval(window.runTimer); window.runTimer = null; } render(); }
   function toggleRunning() {
     state.running = !state.running;
