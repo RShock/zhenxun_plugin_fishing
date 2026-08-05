@@ -91,7 +91,7 @@ async def _scheduled_clear_expired_buffs():
     id="_scheduled_fishing_menu",
 )
 async def _scheduled_fishing_menu():
-    """每小时整点向活跃群推送钓鱼菜单，方便玩家快速查看可用指令。"""
+    """每小时整点向有QQ官方Bot的活跃群推送钓鱼按钮菜单。"""
     from .handlers.menu import broadcast_menu_to_active_groups
 
     try:
