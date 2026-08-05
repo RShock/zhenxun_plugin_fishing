@@ -132,7 +132,7 @@ def test_qq_mention_display_name_is_preserved():
     assert _get_at_display_name(event) == "échouer"
 
 
-def test_official_group_reply_uses_author_id_and_keeps_name_fallback():
+def test_official_group_reply_uses_name_even_when_author_id_exists():
     event = type(
         "QQEvent",
         (),
@@ -151,10 +151,7 @@ def test_official_group_reply_uses_author_id_and_keeps_name_fallback():
         },
     )()
 
-    assert _outgoing_recipient("953368178", event) == (
-        "mention-open-id",
-        "天天开心",
-    )
+    assert _outgoing_recipient("953368178", event) == ("", "天天开心")
 
 
 def test_official_group_reply_never_falls_back_to_member_openid():

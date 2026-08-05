@@ -130,11 +130,6 @@ def _is_official_qq_group_event(event: Event | None) -> bool:
     return bool(getattr(event, "group_openid", None) and author is not None)
 
 
-def _official_group_mention_id(event: Event | None) -> str:
-    author = getattr(event, "author", None) if event is not None else None
-    return str(getattr(author, "id", "") or "")
-
-
 def _outgoing_recipient(
     user_id: str, event: Event | None = None
 ) -> tuple[str, str]:
@@ -144,9 +139,9 @@ def _outgoing_recipient(
         except LookupError:
             return user_id, ""
     if _is_official_qq_group_event(event):
-        # QQ 群聊真正的 @ 只接受 author.id；member_openid 仅用于角色身份绑定。
-        # 取不到传输 ID 时宁可显示昵称，也不能发送会原样显示的 <@member_openid>。
-        return _official_group_mention_id(event), _get_nickname(event)
+        # QQ 群事件只提供开放平台内部身份，实测群聊发送接口会把 <@内部ID>
+        # 原样展示；这里固定使用昵称，避免把任何 OpenID 暴露给玩家。
+        return "", _get_nickname(event)
     return _transport_user_id(user_id, event), ""
 
 
