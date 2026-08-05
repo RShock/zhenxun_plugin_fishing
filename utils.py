@@ -127,10 +127,12 @@ _ROUTE2_ORIGINAL_USER_ID_ATTR = "_route2_original_user_id"
 
 def _is_official_qq_group_event(event: Event | None) -> bool:
     author = getattr(event, "author", None) if event is not None else None
-    return bool(
-        getattr(event, "group_openid", None)
-        and getattr(author, "member_openid", None)
-    )
+    return bool(getattr(event, "group_openid", None) and author is not None)
+
+
+def _official_group_mention_id(event: Event | None) -> str:
+    author = getattr(event, "author", None) if event is not None else None
+    return str(getattr(author, "id", "") or "")
 
 
 def _outgoing_recipient(
@@ -142,9 +144,9 @@ def _outgoing_recipient(
         except LookupError:
             return user_id, ""
     if _is_official_qq_group_event(event):
-        # Official mentions require the transport OpenID, not the legacy QQ ID.
-        # Keep the nickname so callers can still fall back when no OpenID exists.
-        return _transport_user_id(user_id, event), _get_nickname(event)
+        # QQ 群聊真正的 @ 只接受 author.id；member_openid 仅用于角色身份绑定。
+        # 取不到传输 ID 时宁可显示昵称，也不能发送会原样显示的 <@member_openid>。
+        return _official_group_mention_id(event), _get_nickname(event)
     return _transport_user_id(user_id, event), ""
 
 

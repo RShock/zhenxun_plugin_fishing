@@ -132,7 +132,7 @@ def test_qq_mention_display_name_is_preserved():
     assert _get_at_display_name(event) == "échouer"
 
 
-def test_official_group_reply_uses_openid_mention_and_keeps_name_fallback():
+def test_official_group_reply_uses_author_id_and_keeps_name_fallback():
     event = type(
         "QQEvent",
         (),
@@ -142,18 +142,49 @@ def test_official_group_reply_uses_openid_mention_and_keeps_name_fallback():
                 "Author",
                 (),
                 {
-                    "member_openid": "sender-open-id",
+                    "id": "mention-open-id",
+                    "member_openid": "member-open-id",
                     "username": "天天开心",
                 },
             )(),
-            "_route2_original_user_id": "sender-open-id",
+            "_route2_original_user_id": "member-open-id",
         },
     )()
 
     assert _outgoing_recipient("953368178", event) == (
-        "sender-open-id",
+        "mention-open-id",
         "天天开心",
     )
+
+
+def test_official_group_reply_never_falls_back_to_member_openid():
+    event = type(
+        "QQEvent",
+        (),
+        {
+            "group_openid": "group-open-id",
+            "author": type(
+                "Author",
+                (),
+                {
+                    "id": "",
+                    "member_openid": "member-open-id",
+                    "username": "天天开心",
+                },
+            )(),
+            "_route2_original_user_id": "member-open-id",
+        },
+    )()
+
+    assert _outgoing_recipient("953368178", event) == ("", "天天开心")
+    assert list(
+        _build_text_message(
+            "钓鱼成功",
+            user_id="",
+            is_private=False,
+            display_name="天天开心",
+        )
+    ) == [("text", "天天开心，"), ("text", "钓鱼成功")]
 
 
 def test_malformed_onebot_card_falls_back_to_sender_nickname():
