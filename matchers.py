@@ -47,7 +47,8 @@ auto_sell_matcher = on_fishing_command("自动卖鱼")
 auto_lock_matcher = on_fishing_command("自动锁鱼")
 rename_matcher = on_fishing_command("改名")
 skin_matcher = on_fishing_command("更换皮肤")
-# GM 指令仅超管使用，统一走 on_command 前缀匹配（与其它插件一致），避免正则/激活预筛漏匹配
+# GM 指令仅超管使用，统一走 on_command 前缀匹配，
+# 避免正则/激活预筛漏匹配。
 gm_reset_matcher = on_command(
     "清空钓鱼数据", permission=SUPERUSER, priority=5, block=True
 )
@@ -93,10 +94,18 @@ gm_check_achievements_matcher = on_command(
     "gm补成就", permission=SUPERUSER, priority=5, block=True
 )
 gm_limit_on_matcher = on_command(
-    "gm限流开启", permission=SUPERUSER, priority=5, block=True
+    "gm限流开启",
+    aliases={"gm限流 开启"},
+    permission=SUPERUSER,
+    priority=5,
+    block=True,
 )
 gm_limit_off_matcher = on_command(
-    "gm限流关闭", permission=SUPERUSER, priority=5, block=True
+    "gm限流关闭",
+    aliases={"gm限流 关闭"},
+    permission=SUPERUSER,
+    priority=5,
+    block=True,
 )
 test_render_matcher = on_regex(
     r"^\s*测试渲染(?:\s+(.+))?\s*$", permission=SUPERUSER, priority=5, block=True
