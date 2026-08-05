@@ -142,9 +142,9 @@ def _outgoing_recipient(
         except LookupError:
             return user_id, ""
     if _is_official_qq_group_event(event):
-        # QQ开放平台偶尔会把<@OpenID>原样展示；官方群聊改用可读昵称称呼，
-        # 避免把迁移层身份键暴露给玩家。真正的业务身份仍使用绑定后的QQ号。
-        return "", _get_nickname(event)
+        # Official mentions require the transport OpenID, not the legacy QQ ID.
+        # Keep the nickname so callers can still fall back when no OpenID exists.
+        return _transport_user_id(user_id, event), _get_nickname(event)
     return _transport_user_id(user_id, event), ""
 
 
@@ -165,11 +165,14 @@ def _build_image_message(
     text: str = "",
     user_id: str = "",
     is_private: bool = False,
+    display_name: str = "",
 ) -> UniMessage:
     """Build a message that UniMessage can export for the active adapter."""
     msg = UniMessage()
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
+    elif display_name and not is_private:
+        msg += UniMessage.text(f"{display_name}，\n")
     msg += UniMessage.image(raw=image)
     if text:
         msg += UniMessage.text("\n" + text)
@@ -177,12 +180,17 @@ def _build_image_message(
 
 
 def _build_text_message(
-    text: str, user_id: str = "", is_private: bool = False
+    text: str,
+    user_id: str = "",
+    is_private: bool = False,
+    display_name: str = "",
 ) -> UniMessage:
     """Build a message that UniMessage can export for the active adapter."""
     msg = UniMessage()
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
+    elif display_name and not is_private:
+        msg += UniMessage.text(f"{display_name}，")
     msg += UniMessage.text(text)
     return msg
 
@@ -223,8 +231,14 @@ async def _send_image(
     is_private: bool = False,
 ):
     del matcher  # UniMessage exports through the bot and event in the active context.
-    mention_id, _ = _outgoing_recipient(user_id)
-    msg = _build_image_message(image, text, mention_id, is_private)
+    mention_id, display_name = _outgoing_recipient(user_id)
+    msg = _build_image_message(
+        image,
+        text,
+        mention_id,
+        is_private,
+        display_name=display_name if not mention_id else "",
+    )
 
     async def send():
         async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
@@ -239,16 +253,19 @@ async def _send_text(
     matcher: Matcher, text: str, user_id: str = "", is_private: bool = False
 ):
     mention_id, display_name = _outgoing_recipient(user_id)
-    if display_name and not is_private:
-        text = f"{display_name}，{text}"
-    msg = _build_text_message(text, mention_id, is_private)
+    msg = _build_text_message(
+        text,
+        mention_id,
+        is_private,
+        display_name=display_name if not mention_id else "",
+    )
 
     async def send():
         async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
             await _deliver_universal_message(msg)
 
     if defer_user_lock_send(send):
-        # ??????? matcher???????????????????
+        # The deferred sender owns delivery; stop this matcher to avoid a second send.
         await matcher.finish()
         return
     async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):

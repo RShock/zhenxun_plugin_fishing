@@ -26,12 +26,46 @@ def test_image_message_uses_universal_segments():
     ]
 
 
+def test_image_message_can_show_name_when_mention_is_unavailable():
+    message = _build_image_message(
+        b"image-bytes",
+        "result",
+        is_private=False,
+        display_name="FinalLone.",
+    )
+
+    assert list(message) == [
+        ("text", "FinalLone.，\n"),
+        ("image", b"image-bytes"),
+        ("text", "\nresult"),
+    ]
+
+
 def test_private_text_message_does_not_prepend_at():
     message = _build_text_message(
         "done", user_id="user-open-id", is_private=True
     )
 
     assert list(message) == [("text", "done")]
+
+
+def test_text_message_prefers_real_mention_over_name_fallback():
+    message = _build_text_message(
+        "done",
+        user_id="user-open-id",
+        is_private=False,
+        display_name="FinalLone.",
+    )
+
+    assert list(message) == [("at", "user-open-id"), ("text", "done")]
+
+
+def test_text_message_can_show_name_when_mention_is_unavailable():
+    message = _build_text_message(
+        "done", is_private=False, display_name="FinalLone."
+    )
+
+    assert list(message) == [("text", "FinalLone.，"), ("text", "done")]
 
 
 def test_route_binding_keeps_official_openid_for_mentions():
@@ -98,7 +132,7 @@ def test_qq_mention_display_name_is_preserved():
     assert _get_at_display_name(event) == "échouer"
 
 
-def test_official_group_reply_uses_readable_name_instead_of_openid_mention():
+def test_official_group_reply_uses_openid_mention_and_keeps_name_fallback():
     event = type(
         "QQEvent",
         (),
@@ -116,7 +150,10 @@ def test_official_group_reply_uses_readable_name_instead_of_openid_mention():
         },
     )()
 
-    assert _outgoing_recipient("953368178", event) == ("", "天天开心")
+    assert _outgoing_recipient("953368178", event) == (
+        "sender-open-id",
+        "天天开心",
+    )
 
 
 def test_malformed_onebot_card_falls_back_to_sender_nickname():

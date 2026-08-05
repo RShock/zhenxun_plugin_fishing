@@ -21,6 +21,29 @@ USER_ID = "test_user_001"
 LOCATION_1 = "1"
 
 
+class TestLocationReplyNormalization:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("1", "1"),
+            (" 12 ", "12"),
+            ("s1", "S1"),
+            ("S1", "S1"),
+            ("-11", "-11"),
+            ("我要是输入1，会怎样？", None),
+            ("地图1", None),
+            ("? 1", None),
+            ("", None),
+        ],
+    )
+    def test_only_complete_location_ids_are_accepted(self, raw, expected):
+        from zhenxun.plugins.zhenxun_plugin_fishing.handlers.fishing import (
+            normalize_location_reply,
+        )
+
+        assert normalize_location_reply(raw) == expected
+
+
 class TestBlackMarketHint:
     @pytest.mark.parametrize(
         ("black_market_count", "available_date", "expected"),

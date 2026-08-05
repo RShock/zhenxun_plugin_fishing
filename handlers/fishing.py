@@ -39,6 +39,15 @@ from ..utils import (
 )
 
 
+def normalize_location_reply(text: str) -> str | None:
+    value = text.strip()
+    if value.lower() == "s1":
+        return "S1"
+    if re.fullmatch(r"-?\d+", value):
+        return value
+    return None
+
+
 def should_show_black_market_hint(
     black_market_count: int,
     smart_black_market_available_date: date | None,
@@ -115,16 +124,12 @@ async def _(event: Event, matcher: Matcher, location=Arg("location")):
     group_id = str(event.group_id) if hasattr(event, "group_id") else None
     is_private = _is_private_chat(event)
 
-    location_input = location.extract_plain_text().strip() if location else ""
-    if not location_input:
+    raw_location = location.extract_plain_text() if location else ""
+    location_input = normalize_location_reply(raw_location)
+    # A pending map choice must not consume ordinary conversation merely because
+    # it contains a number. Invalid replies end this choice without side effects.
+    if location_input is None:
         await matcher.finish()
-
-    if location_input.lower() == "s1":
-        location_input = "S1"
-    else:
-        match = re.search(r"-?\d+", location_input)
-        if match:
-            location_input = match.group()
 
     image, success, hint = await start_fishing(
         user_id, location_input, nickname, group_id=group_id
