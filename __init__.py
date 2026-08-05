@@ -33,6 +33,7 @@ __plugin_meta__ = PluginMetadata(
     description="钓鱼模拟游戏，抛竿垂钓，收集图鉴",
     usage="""
     指令列表：
+        钓鱼菜单                   查看快捷指令菜单
         钓鱼/抛竿 [地点编号]       开始钓鱼
         收杆                      收杆查看结果
         钓鱼状态                   查看当前状态
@@ -92,6 +93,7 @@ from .matchers import (
     exchange_matcher,
     fishing_announcement_matcher,
     fishing_matcher,
+    fishing_menu_matcher,
     gift_fish_matcher,
     gm_add_item_matcher,
     gm_add_skin_matcher,

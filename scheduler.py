@@ -83,6 +83,28 @@ async def _scheduled_clear_expired_buffs():
     await FishingBuff.clear_expired_buffs()
 
 
+@scheduler.scheduled_job(
+    "cron",
+    minute=0,
+    timezone="Asia/Shanghai",
+    misfire_grace_time=300,
+    id="_scheduled_fishing_menu",
+)
+async def _scheduled_fishing_menu():
+    """每小时整点向活跃群推送钓鱼菜单，方便玩家快速查看可用指令。"""
+    from .handlers.menu import broadcast_menu_to_active_groups
+
+    try:
+        success, fail = await broadcast_menu_to_active_groups()
+        if success > 0:
+            logger.info(
+                f"钓鱼菜单定时推送完成: 成功 {success} 个群, 失败 {fail} 个群",
+                "钓鱼菜单",
+            )
+    except Exception as e:
+        logger.error("钓鱼菜单定时推送失败", "钓鱼菜单", e=e)
+
+
 def _backup_sqlite(parsed, now: datetime) -> Path | None:
     """SQLite 数据库备份：直接复制文件。"""
     db_path = Path(unquote(parsed.path).lstrip("/"))

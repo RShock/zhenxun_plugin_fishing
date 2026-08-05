@@ -698,6 +698,7 @@ code, .ic {
       <table>
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼菜单</code></td><td>查看快捷指令菜单。QQ官方Bot群聊中显示为可点击按钮菜单，其他平台为文本菜单。每小时整点自动向活跃群推送。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。不填地图按当前流程选择；支持 1-20 和 S1。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。金币流水会按钓鱼结算、出售、奖励、购买、升级等大类记录，便于统计收支。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
@@ -998,7 +999,7 @@ code, .ic {
       UTR 自选券是特殊道具，可直接兑换指定 UTR 鱼。
     </p>
     <ul class="clean">
-      <li>兑换条件：玩家已解锁该地图至少一条 UTR 鱼</li>
+      <li>兑换条件：玩家已解锁该地图至少一条 UTR 鱼，且该图全部 UR 已收集齐</li>
       <li>兑换时通过交互对话选择目标鱼</li>
       <li>获得的鱼走统一添加流程，会自动检查图鉴解锁</li>
     </ul>
@@ -1745,7 +1746,7 @@ code, .ic {
       <strong>积分显示：</strong>结算页"本次积分"左侧显示流星鱼番型基础分，右侧以金色标签额外标注抽奖获得的积分（如"加0.5"）。
     </div>
     <div class="callout info" style="margin-top:8px">
-      <strong>实验室模拟：</strong>收杆直接获得的究极鱼前 3 次正常抽取究极奖池，第 4 次起改抽高级奖池；鱼本身仍保留究极评分，并计入展馆。碎片合成获得的究极奖池不受此 3 次限制。
+      <strong>3 次限制：</strong>收杆直接获得的究极鱼（11-15 分）前 3 次正常抽取究极奖池，第 4 次起改抽高级奖池；鱼本身仍保留究极评分，并计入展馆。<strong>16 分及以上的流星鱼永远触发究极奖池，不受 3 次限制，也不计入计数。</strong>碎片合成获得的究极奖池不受此 3 次限制。
     </div>
   </div>
 
@@ -2008,7 +2009,7 @@ code, .ic {
     <div class="sec-h">星空专属物品</div>
     <div class="grid-2">
       <div class="cmd-card"><span class="cmd-name">闪光药水</span><p class="cmd-desc">激活伽马射线暴 buff（8 小时），同时触发三种星空天气效果并使流星鱼最终掉落概率翻倍；与真多多/幸运药水不同时生效，已有其他药水覆盖时自动延后。</p></div>
-      <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR）。</p></div>
+      <div class="cmd-card"><span class="cmd-name">UTR 自选券</span><p class="cmd-desc">选择已解锁地图的 UTR 鱼（需已解锁该图至少一条 UTR，且该图全部 UR 已收集齐）。</p></div>
       <div class="cmd-card"><span class="cmd-name">星空框</span><p class="cmd-desc">通过奇迹获得，用于升级星空展示框；持有数量不设上限，升满共需 55 个。</p></div>
       <div class="cmd-card"><span class="cmd-name">星空展示框</span><p class="cmd-desc">消耗星空框升级，4 倍展示收益，最多 10 个。需已建设星空艇。</p></div>
     </div>

@@ -146,3 +146,4 @@ fishing_announcement_matcher = on_command(
 )
 set_bait_matcher = on_fishing_command("设定鱼饵")
 sell_bait_matcher = on_fishing_command("卖出鱼饵")
+fishing_menu_matcher = on_fishing_command("钓鱼菜单")

@@ -61,6 +61,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"建设星空艇", "建设星空艇", "build_starry_ship_matcher", ("建设星空艇",)),
     CommandDef(r"(?:设定鱼饵|设置鱼饵|选择鱼饵)\s*(.*)", "设定鱼饵", "set_bait_matcher", ("设定鱼饵",)),
     CommandDef(r"(?:卖出鱼饵|卖鱼饵)\s+(.+)", "卖出鱼饵", "sell_bait_matcher", ("卖出鱼饵",)),
+    CommandDef(r"(?:钓鱼菜单|钓鱼指令|指令菜单)", "钓鱼菜单", "fishing_menu_matcher", ("钓鱼菜单", "钓鱼指令", "指令菜单"), web=False),
     CommandDef(r"(?:钓鱼公告|钓鱼广播)\s+(.+)", "钓鱼公告", "fishing_announcement_matcher", ("钓鱼公告",), web=False),
 )
 
