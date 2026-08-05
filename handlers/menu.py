@@ -5,6 +5,10 @@ QQ官方Bot群聊中发送 Markdown + 消息按钮(Keyboard)，玩家点击按�
 OneBot等其他适配器回退为纯文本菜单。
 定时推送采用智能防刷策略：仅向有QQ官方Bot的活跃群推送，且要求该群累计消息>20条
 （说明上一次公告已被刷走）且距上次推送超过1小时，才会再次推送。
+
+支持两种群类型：
+1. 共享群（OneBot + QQ官方Bot同时在场）：通过 route2 桥接映射查找
+2. QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，直接用任意已连接的QQ官方Bot发送
 """
 
 from __future__ import annotations
@@ -44,8 +48,9 @@ _MENU_ROWS: tuple[tuple[tuple[str, str], ...], ...] = (
 # ─────────────────────────────────────────────────────────────────────────────
 # 消息计数器 — 用于防刷屏推送判断
 #
-# 仅统计有QQ官方Bot映射的群消息（共享群通过OneBot事件计数，
-# QQ官方Bot独有群通过QQ事件计数），key 与 FishingActiveGroup.group_id 一致。
+# 统计所有有QQ官方Bot在场的群消息：
+# - 共享群：OneBot 事件触发计数（route2 放行 OneBot 事件），key 为数字群号
+# - QQ官方Bot独有群：QQ 事件触发计数（route2 不拦截），key 为 group_openid
 # 推送条件：累计消息 > _PUSH_MSG_THRESHOLD 且距上次推送 > _PUSH_TIME_THRESHOLD
 # ─────────────────────────────────────────────────────────────────────────────
 _group_msg_counter: dict[str, dict] = {}
@@ -54,7 +59,11 @@ _PUSH_TIME_THRESHOLD = timedelta(hours=1)
 
 
 def _get_event_group_id(event: Event) -> str:
-    """从事件中提取群标识（OneBot group_id 或 QQ group_openid）。"""
+    """从事件中提取群标识。
+
+    OneBot 事件：event.group_id 为数字群号
+    QQ官方Bot事件：event.group_id 即 group_openid（字母开头）
+    """
     gid = str(getattr(event, "group_id", "") or "")
     if gid:
         return gid
@@ -62,10 +71,10 @@ def _get_event_group_id(event: Event) -> str:
 
 
 def _is_countable_group_msg(event: Event, bot: Bot) -> bool:
-    """Rule: 事件是群消息且有 QQ 官方 Bot 映射。
+    """Rule: 事件是群消息且该群有 QQ 官方 Bot 在场。
 
-    共享群通过 OneBot 事件触发（route2 放行 OneBot 事件）；
-    QQ官方Bot独有群通过 QQ 事件触发（route2 不拦截）。
+    共享群（OneBot + QQ官方Bot）：OneBot 事件通过 bridge.get_target 查到映射 → 计数
+    QQ官方Bot独有群（无OneBot）：QQ 事件直接计数（bot 本身就是 QQ 官方 Bot）
     """
     gid = _get_event_group_id(event)
     if not gid:
@@ -75,13 +84,12 @@ def _is_countable_group_msg(event: Event, bot: Bot) -> bool:
             official_route_bridge as bridge,
         )
 
-        # 共享群：group_id 是 OneBot 群号，bridge 直接能查到
+        # 共享群：group_id 是 OneBot 数字群号，bridge 直接能查到
         if bridge.get_target(gid):
             return True
-        # QQ官方Bot独有群：group_id 实际是 group_openid，
-        # 反查 OneBot 群号后再正向确认
-        mapped = bridge.get_group_id_for_official(str(bot.self_id), gid)
-        if mapped and bridge.get_target(mapped):
+        # QQ官方Bot独有群：bot 本身就是 QQ 官方 Bot，事件直接到达
+        # 此时 group_id 即 group_openid，无需 route2 映射
+        if str(bot.self_id) in bridge.official_bot_ids:
             return True
         return False
     except Exception:
@@ -188,16 +196,48 @@ async def _(bot: Bot, event: Event, matcher: Matcher):
         await _send_text(matcher, _build_menu_text(), user_id)
 
 
+def _find_qq_bot_for_group(
+    group_id: str, bridge, bots: dict
+) -> tuple[Bot, str] | None:
+    """查找可向指定群发送消息的 QQ 官方 Bot 及其 group_openid。
+
+    返回 (bot, group_openid) 或 None。
+
+    两种群类型：
+    1. 共享群：group_id 是 OneBot 数字群号，通过 bridge.get_target 查找
+    2. QQ官方Bot独有群：group_id 即 group_openid（非纯数字），用任意已连接QQ官方Bot发送
+    """
+    # 1. 共享群：通过 route2 映射查找
+    target = bridge.get_target(group_id)
+    if target and target.bot_id in bots:
+        bot = bots[target.bot_id]
+        if hasattr(bot, "send_to_group"):
+            return bot, target.group_openid
+
+    # 2. QQ官方Bot独有群：group_id 是 group_openid（非纯数字字符串）
+    #    用任意已连接的、配置了 prefer_send 的 QQ 官方 Bot 发送
+    if not group_id.isdigit():
+        for bot_id in bridge.preferred_bot_ids or bridge.official_bot_ids:
+            if bot_id in bots:
+                bot = bots[bot_id]
+                if hasattr(bot, "send_to_group"):
+                    return bot, group_id
+
+    return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 定时推送菜单 — 供 scheduler.py 调用
 # ─────────────────────────────────────────────────────────────────────────────
 async def broadcast_menu_to_active_groups() -> tuple[int, int]:
     """向有 QQ 官方 Bot 的活跃群推送钓鱼按钮菜单（智能防刷）。
 
-    仅通过 route2 桥接查找有 QQ 官方 Bot 映射的群，
-    且要求该群自上次推送后累计消息 > 20 条（公告已被刷走）且距上次推送 > 1 小时。
-    两个条件同时满足才推送，推送后重置计数器。
-    没有 QQ 官方 Bot 的群直接跳过。
+    支持两种群类型：
+    - 共享群（OneBot + QQ官方Bot）：通过 route2 映射查找 QQ 官方 Bot
+    - QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，直接用已连接的 QQ 官方 Bot 发送
+
+    推送条件：累计消息 > 20 条（公告已被刷走）且距上次推送 > 1 小时。
+    推送后重置计数器。没有 QQ 官方 Bot 的群直接跳过。
 
     Returns:
         (success_count, fail_count)
@@ -206,7 +246,7 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
     if not group_ids:
         return 0, 0
 
-    # route2 桥接提供 OneBot 群号 → QQ 官方 Bot 群映射
+    # route2 桥接提供 QQ 官方 Bot 配置和群映射
     bridge = None
     try:
         from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
@@ -226,10 +266,11 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
     now = datetime.now()
 
     for group_id in group_ids:
-        # 仅向有 QQ 官方 Bot 映射的群发送
-        target = bridge.get_target(group_id)
-        if not target or target.bot_id not in bots:
+        # 查找可向该群发送的 QQ 官方 Bot
+        result = _find_qq_bot_for_group(group_id, bridge, bots)
+        if result is None:
             continue
+        qq_bot, group_openid = result
 
         # 防刷屏判断：累计消息 > 阈值 且 距上次推送 > 时间阈值
         entry = _group_msg_counter.get(group_id)
@@ -248,9 +289,8 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
         try:
             if qq_keyboard_msg is None:
                 qq_keyboard_msg = _build_qq_keyboard_message("🎣")
-            qq_bot = bots[target.bot_id]
             await qq_bot.send_to_group(
-                group_openid=target.group_openid,
+                group_openid=group_openid,
                 message=qq_keyboard_msg,
                 msg_seq=seq,
             )
