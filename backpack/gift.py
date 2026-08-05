@@ -2,6 +2,8 @@
 赠送系统 — gift_fish, 赠送成就应用。
 """
 
+import re
+
 from zhenxun.services.log import logger
 
 from ..config import DAILY_GIFT_LIMIT, ConfigManager, calculate_fish_price
@@ -11,7 +13,28 @@ from ..services import earn_gold, get_or_create_user
 from ..services.white_market_service import WHITE_MARKET_LIMIT_MESSAGE
 
 
-async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool, str]:
+def _safe_target_name(
+    target_id: str, nickname: str | None, mention_name: str | None
+) -> str:
+    for candidate in (nickname, mention_name):
+        name = str(candidate or "").strip()
+        if not name or name == str(target_id):
+            continue
+        # 旧错误角色可能把QQ号或OpenID写进昵称；玩家消息中不能再次暴露身份键。
+        if (name.isdigit() and len(name) >= 5) or re.fullmatch(
+            r"[0-9A-Fa-f]{24,64}", name
+        ):
+            continue
+        return name
+    return "对方玩家"
+
+
+async def gift_fish(
+    user_id: str,
+    target_id: str,
+    numeric_id: str,
+    target_display_name: str | None = None,
+) -> tuple[bool, str]:
     numeric_id = numeric_id.strip()
 
     # 最先检查：目标是否已解锁该鱼图鉴
@@ -53,7 +76,12 @@ async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool
         if fish_data:
             # UTR 解锁型赠送奖励：发送者获得 2 倍 UTR 基础价格金币
             reward_coins = 2 * calculate_fish_price(fish_data, "UTR", 0)
-            await earn_gold(user_id, reward_coins, "gift_utr_unlock", f"UTR解锁赠送奖励: {fish['fish_name']}")
+            await earn_gold(
+                user_id,
+                reward_coins,
+                "gift_utr_unlock",
+                f"UTR解锁赠送奖励: {fish['fish_name']}",
+            )
         else:
             logger.warning(
                 f"赠送 UTR 鱼时未找到鱼配置: {fish['fish_name']}，"
@@ -61,7 +89,9 @@ async def gift_fish(user_id: str, target_id: str, numeric_id: str) -> tuple[bool
             )
 
     target_user = await get_or_create_user(target_id)
-    target_name = target_user.nickname or target_id
+    target_name = _safe_target_name(
+        target_id, target_user.nickname, target_display_name
+    )
 
     messages = []
     messages.extend(result["messages"])

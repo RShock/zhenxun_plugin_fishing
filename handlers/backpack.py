@@ -46,7 +46,14 @@ from ..matchers import (
     white_market_exchange_matcher,
     white_market_matcher,
 )
-from ..utils import _ensure_user, _get_at_list, _is_private_chat, _send_image, _send_text
+from ..utils import (
+    _ensure_user,
+    _get_at_display_name,
+    _get_at_list,
+    _is_private_chat,
+    _send_image,
+    _send_text,
+)
 
 
 LOG_COMMAND = "钓鱼黑白商"
@@ -142,7 +149,10 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         await _send_text(matcher, f"请@要赠送的人！{gift_usage}", user_id)
 
     target_id = str(at_list[0])
-    success, message = await gift_fish(user_id, target_id, fish_id)
+    target_display_name = _get_at_display_name(event)
+    success, message = await gift_fish(
+        user_id, target_id, fish_id, target_display_name=target_display_name
+    )
     await _send_text(matcher, message, user_id)
 
 

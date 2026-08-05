@@ -613,7 +613,7 @@ code, .ic {
       群消息有个人和总体次数限制，超过后不回复；私聊没有限制。主机器人每天额外提供 100 条钓鱼消息容量，繁忙时会自动分配可用机器人。网页端仅为备用渠道，详见本页后文 <a href="#web-backup">网页端（备用）</a>。
     </div>
     <div class="callout info" style="margin-top:10px">
-      <strong>从旧机器人迁移：</strong>第一次使用QQ官方机器人时，发送 <code>@机器人 绑定qq账号 你的QQ号</code>（<code>QQ</code> 大小写均可，也可使用“绑定qq角色”）。绑定成功后会自动继承原来的钓鱼角色、背包和进度，之后游戏内@玩家也会正常，无需重新开始。
+      <strong>从旧机器人迁移：</strong>第一次使用QQ官方机器人时，发送 <code>@机器人 绑定qq账号 你的QQ号</code>（<code>QQ</code> 大小写均可，也可使用“绑定qq角色”）。绑定成功后会自动继承原来的钓鱼角色、背包和进度；通过平台真实@选择其他已绑定玩家时，也会自动识别对方原角色，不会显示或新建一串角色ID。
     </div>
 
     <div class="flow-diagram" aria-label="钓鱼、收杆、获得图鉴、解锁装备组成的环形流程图">
@@ -703,7 +703,7 @@ code, .ic {
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>背包</code></td><td>查看鱼、鱼饵、药水、展示框、素材等库存。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>卖鱼 [筛选]</code></td><td>卖出鱼。不带参数默认排除 UTR。支持稀有度、鱼 ID、全部等筛选；每次出售都会记录鱼种、数量、单价和小计，便于核对收入。</td></tr>
-          <tr><td><span class="tag t-basic">背包</span></td><td><code>赠送 鱼ID @用户</code></td><td>赠送鱼给其他用户（需平台真实 @）。</td></tr>
+          <tr><td><span class="tag t-basic">背包</span></td><td><code>赠送 鱼ID @用户</code></td><td>赠送鱼给其他用户（需平台真实 @）。已绑定玩家会自动使用原角色，结果只显示玩家昵称，不显示角色ID。</td></tr>
           <tr><td><span class="tag t-basic">图鉴</span></td><td><code>图鉴</code> / <code>图鉴1</code> / <code>图鉴2</code></td><td>图鉴1 为普通地图和 S1，图鉴2 为星空地图。</td></tr>
           <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店</code></td><td>查看鱼饵、升级、展示框等可购买项目。</td></tr>
           <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店购买/买鱼饵 物品名 [数量]</code></td><td>购买鱼饵或商店物品（药水不在鱼店出售）。“买鱼饵”为别名，用法与“卖出鱼饵 鱼饵名”对称，如 <code>买鱼饵 蚯蚓鱼饵 10</code>。</td></tr>

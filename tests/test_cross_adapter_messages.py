@@ -6,7 +6,9 @@ from pathlib import Path
 from zhenxun.plugins.zhenxun_plugin_fishing.utils import (
     _build_image_message,
     _build_text_message,
+    _get_at_display_name,
     _get_at_list,
+    _outgoing_recipient,
     _transport_user_id,
 )
 
@@ -69,3 +71,48 @@ def test_runtime_senders_do_not_construct_onebot_messages():
             if isinstance(node, ast.ImportFrom) and node.module
         }
         assert "nonebot.adapters.onebot.v11" not in imported_modules
+
+
+def test_qq_mention_display_name_is_preserved():
+    event = type(
+        "QQEvent",
+        (),
+        {
+            "get_message": lambda _self: [
+                type(
+                    "Segment",
+                    (),
+                    {
+                        "type": "mention_user",
+                        "data": {
+                            "user_id": "legacy-qq-id",
+                            "username": "échouer",
+                        },
+                    },
+                )()
+            ]
+        },
+    )()
+
+    assert _get_at_display_name(event) == "échouer"
+
+
+def test_official_group_reply_uses_readable_name_instead_of_openid_mention():
+    event = type(
+        "QQEvent",
+        (),
+        {
+            "group_openid": "group-open-id",
+            "author": type(
+                "Author",
+                (),
+                {
+                    "member_openid": "sender-open-id",
+                    "username": "天天开心",
+                },
+            )(),
+            "_route2_original_user_id": "sender-open-id",
+        },
+    )()
+
+    assert _outgoing_recipient("953368178", event) == ("", "天天开心")

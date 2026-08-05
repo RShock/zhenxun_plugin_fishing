@@ -537,6 +537,35 @@ class TestGiftFish:
         ok, msg = await gift_fish(USER_ID, TARGET_ID, fish["numeric_id"])
         assert isinstance(ok, bool)
 
+    async def test_gift_uses_mention_name_without_exposing_target_id(self, db):
+        fish_list = await _setup_user_with_fish(db, USER_ID)
+        if not fish_list:
+            pytest.skip("No fish caught")
+        fish = fish_list[0]
+
+        ok, msg = await gift_fish(
+            USER_ID,
+            TARGET_ID,
+            fish["numeric_id"],
+            target_display_name="échouer",
+        )
+
+        assert ok is True
+        assert "échouer" in msg
+        assert TARGET_ID not in msg
+
+    async def test_gift_without_readable_name_uses_generic_label(self, db):
+        fish_list = await _setup_user_with_fish(db, USER_ID)
+        if not fish_list:
+            pytest.skip("No fish caught")
+        fish = fish_list[0]
+
+        ok, msg = await gift_fish(USER_ID, TARGET_ID, fish["numeric_id"])
+
+        assert ok is True
+        assert "对方玩家" in msg
+        assert TARGET_ID not in msg
+
     async def test_gift_locked_fish(self, db):
         """锁定的鱼也可以赠送（锁定仅防止误卖，不阻止赠送）"""
         fish_list = await _setup_user_with_fish(db, USER_ID)
