@@ -63,12 +63,18 @@ def _import_matchers():
 
 
 def _extract_image_data(seg_data: dict) -> bytes | None:
-    """从消息段数据中提取图片字节。"""
+    """Extract image bytes from either OneBot or UniMessage segment data."""
+    raw = seg_data.get("raw")
+    if isinstance(raw, bytes):
+        return raw
+
     file_val = seg_data.get("file")
     if not file_val:
         return None
     if isinstance(file_val, bytes):
         return file_val
+    if not isinstance(file_val, str):
+        return None
     if file_val.startswith("base64://"):
         try:
             return base64.b64decode(file_val[len("base64://") :])
@@ -176,12 +182,16 @@ class CommandRouter:
         result = []
         for msg in messages:
             for seg in msg:
-                if seg.type == "text":
-                    text = seg.data.get("text", "")
+                seg_type = getattr(seg, "type", "")
+                seg_data = getattr(seg, "data", {})
+                if not isinstance(seg_data, dict):
+                    continue
+                if seg_type == "text":
+                    text = seg_data.get("text", "")
                     if text.strip():
                         result.append({"type": "text", "content": text})
-                elif seg.type == "image":
-                    image_bytes = _extract_image_data(seg.data)
+                elif seg_type == "image":
+                    image_bytes = _extract_image_data(seg_data)
                     if image_bytes:
                         h = hashlib.md5(image_bytes, usedforsecurity=False).hexdigest()
                         cached_html = pop_cached_html(h)
@@ -189,8 +199,14 @@ class CommandRouter:
                             result.append({"type": "html", "content": cached_html})
                         else:
                             result.append({"type": "image", "data": image_bytes})
-                elif seg.type == "at":
-                    result.append({"type": "at", "user_id": seg.data.get("qq", "")})
+                elif seg_type == "at":
+                    target = (
+                        seg_data.get("qq")
+                        or seg_data.get("user_id")
+                        or seg_data.get("target")
+                        or ""
+                    )
+                    result.append({"type": "at", "user_id": str(target)})
         return result
 
 

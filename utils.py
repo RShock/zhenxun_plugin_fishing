@@ -10,6 +10,8 @@
 import asyncio
 
 from nonebot.adapters import Event
+from nonebot.exception import FinishedException
+from nonebot.internal.matcher import current_bot
 from nonebot.matcher import Matcher, current_event
 from nonebot_plugin_alconna import UniMessage
 
@@ -185,6 +187,34 @@ def _build_text_message(
     return msg
 
 
+async def _deliver_universal_message(
+    message: UniMessage, *, finish: bool = False
+):
+    """Send through the active adapter or collect directly for the internal web route."""
+    try:
+        bot = current_bot.get()
+    except LookupError:
+        bot = None
+
+    # FakeWebBot has no protocol adapter, so UniMessage.export() cannot run.
+    # Inspect the class to avoid Bot.__getattr__ treating this capability as an API.
+    collector = (
+        getattr(type(bot), "_collect_universal_message", None)
+        if bot is not None
+        else None
+    )
+    if collector is not None:
+        await collector(bot, message)
+        if finish:
+            raise FinishedException
+        return
+
+    if finish:
+        await message.finish()
+    else:
+        await message.send()
+
+
 async def _send_image(
     matcher: Matcher,
     image: bytes,
@@ -198,7 +228,7 @@ async def _send_image(
 
     async def send():
         async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-            await msg.send()
+            await _deliver_universal_message(msg)
 
     if defer_user_lock_send(send):
         return
@@ -215,14 +245,14 @@ async def _send_text(
 
     async def send():
         async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-            await msg.send()
+            await _deliver_universal_message(msg)
 
     if defer_user_lock_send(send):
         # ??????? matcher???????????????????
         await matcher.finish()
         return
     async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-        await msg.finish()
+        await _deliver_universal_message(msg, finish=True)
 
 
 __all__ = [

@@ -51,11 +51,15 @@ class FakeWebBot(BaseBot):
 
     def __init__(self):
         super().__init__(adapter=None, self_id="web_bot")
-        self._responses: list[Message] = []
+        self._responses: list[Any] = []
 
     def reset(self):
         """清空已收集的响应消息。"""
         self._responses.clear()
+
+    async def _collect_universal_message(self, message: Any):
+        """Collect UniMessage without pretending the web route is a real adapter."""
+        self._responses.append(message)
 
     async def send(
         self,
@@ -73,5 +77,5 @@ class FakeWebBot(BaseBot):
         return None
 
     @property
-    def responses(self) -> list[Message]:
+    def responses(self) -> list[Any]:
         return self._responses
