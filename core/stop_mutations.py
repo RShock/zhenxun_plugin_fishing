@@ -648,13 +648,23 @@ def apply_process_fish_results_on_user(
     mut.mark_dirty(dirty, "frame_pity_counter", "utr_pity_counter")
 
     visible_fish: list[tuple[FishData, str, int]] = []
-    materials: list[tuple[str, str, int]] = []
+    # 材料按名称聚合，避免 catch_time 合并键导致同一材料分多条显示
+    materials_agg: dict[str, tuple[str, int]] = {}
     for fish, rarity, count, *_ in merged.values():
         if fish.id.startswith(f"{CAT_PARK_MATERIAL_TYPE}:"):
             material_name = fish.id.split(":", 1)[1]
-            materials.append((material_name, rarity, count))
+            if material_name in materials_agg:
+                materials_agg[material_name] = (
+                    rarity,
+                    materials_agg[material_name][1] + count,
+                )
+            else:
+                materials_agg[material_name] = (rarity, count)
         else:
             visible_fish.append((fish, rarity, count))
+    materials: list[tuple[str, str, int]] = [
+        (name, rarity, count) for name, (rarity, count) in materials_agg.items()
+    ]
     return (
         result["fish_coins"],
         result["achievement_messages"],

@@ -27,8 +27,14 @@ async def collect_scene_players(
             from nonebot import get_bot
 
             bot = get_bot()
+            # QQ 频道群的 group_id 是非数字字符串（如 C0060EB3...），无法转 int；
+            # 仅 OneBot V11 的数字群号才调用 get_group_member_list
+            try:
+                numeric_group_id = int(group_id)
+            except (ValueError, TypeError):
+                raise ValueError(f"非数字群号，跳过成员过滤: {group_id}")
             members = await bot.call_api(
-                "get_group_member_list", group_id=int(group_id)
+                "get_group_member_list", group_id=numeric_group_id
             )
             group_member_ids = {str(m["user_id"]) for m in members}
             fisher_ids = [fid for fid in fisher_ids if fid in group_member_ids]
