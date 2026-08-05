@@ -505,6 +505,7 @@ def apply_grant_rewards_for_starry_fish_on_user(
         pool,
         user.starry_exhibition or [],
         current_fish_id=scored.id_text,
+        current_display_score=scored.display_score,
     )
     drawn = draw_starry_reward(reward_pool)
     if not drawn:

@@ -659,13 +659,33 @@ async def _location_has_any_utr(user_id: str, location_id: str) -> bool:
     return False
 
 
+async def _location_missing_ur(user_id: str, location_id: str) -> list[str]:
+    """返回该地图中尚未收集 UR 的鱼名列表；全部收集齐时返回空列表。
+
+    特性：仅凭他人赠送解锁 UTR 图鉴但不曾自行钓齐 UR 的玩家，
+    无法使用自选券兑换该图 UTR——需自行收集齐该图全部 UR 后方可兑换。
+    """
+    from ..config import ConfigManager
+
+    loc = ConfigManager.get_location(location_id)
+    if not loc:
+        return []
+    collected = await FishingUser.get_user_collected(user_id)
+    missing = [
+        fish_name
+        for fish_name in loc.fish_pool
+        if (fish_name, "UR") not in collected
+    ]
+    return missing
+
+
 async def use_utr_select_ticket(
     user_id: str, count: int = 1, **kwargs
 ) -> tuple[bool, str]:
     """使用 UTR 自选券兑换指定 UTR 鱼。
 
     用法：钓鱼使用 UTR自选券 鱼名
-    条件：目标鱼所在地图已解锁至少 1 条 UTR。
+    条件：目标鱼所在地图已解锁至少 1 条 UTR，且该图全部 UR 已收集齐。
     """
     fish_name = _normalize_utr_fish_name(
         str(kwargs.get("arg") or kwargs.get("extra") or kwargs.get("target") or "")
@@ -705,6 +725,15 @@ async def use_utr_select_ticket(
             False,
             f"无法兑换：需要先在【{target.location_name}】解锁至少 1 条 UTR 鱼后，"
             f"才能用自选券兑换该图的 UTR（目标：{target.name}）",
+        )
+
+    missing_ur = await _location_missing_ur(user_id, target.location_id)
+    if missing_ur:
+        return (
+            False,
+            f"无法兑换：需先收集齐【{target.location_name}】的全部 UR 鱼"
+            f"（还差 {len(missing_ur)} 条：{'、'.join(missing_ur)}），"
+            f"才能用自选券兑换该图的 UTR",
         )
 
     ok = await FishingUser.remove_item(user_id, "utr_select_ticket", "ticket", 1)

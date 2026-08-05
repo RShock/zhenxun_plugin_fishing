@@ -91,6 +91,8 @@ S2_TICKET_SCORE_THRESHOLD = 1200.0
 EXHIBITION_MIN_SCORE = 4
 EXHIBITION_LIMIT = 10
 ULTIMATE_EXHIBITION_REWARD_LIMIT = 3
+# 16分及以上的流星鱼不受究极奖池3次限制，且不计入3次计数
+ULTIMATE_UNLIMITED_SCORE_THRESHOLD = 16
 
 CN_FAMILY = {
     "same_run": "同号连段",
@@ -697,14 +699,19 @@ def get_reward_pool(display_score: int) -> str:
 
 
 def count_ultimate_starry_exhibition(records: Iterable[dict]) -> int:
-    """按当前评分规则统计展馆中的究极鱼；仅在准备抽究极池时调用。"""
+    """按当前评分规则统计展馆中计入3次限制的究极鱼。
+
+    特性：16分及以上的流星鱼虽然属于究极奖池，但不计入3次限制计数，
+    也永远能触发究极奖池。只有11-15分的究极鱼才占用3次名额。
+    """
     count = 0
     for record in records:
         fish_id = record.get("id") if isinstance(record, dict) else None
         if fish_id is None:
             continue
         try:
-            if score_starry_fish(fish_id).reward_pool == "ultimate":
+            scored = score_starry_fish(fish_id)
+            if scored.reward_pool == "ultimate" and scored.display_score < ULTIMATE_UNLIMITED_SCORE_THRESHOLD:
                 count += 1
         except (TypeError, ValueError):
             continue
@@ -716,6 +723,7 @@ def limit_ultimate_reward_pool(
     exhibition: Iterable[dict],
     *,
     current_fish_id: int | str | None = None,
+    current_display_score: int | None = None,
 ) -> str:
     """已有3条究极展品后，将后续究极抽奖降为高级池。
 
@@ -723,20 +731,30 @@ def limit_ultimate_reward_pool(
     使前三条究极鱼仍能各取得一次究极奖励。
     注意：此限制仅适用于收杆直接获得的究极奖池；
     碎片合成路径不调用此函数，不受3次限制。
+    特性：16分及以上的流星鱼永远触发究极奖池，不受3次限制，也不计入计数。
     """
     if pool != "ultimate":
+        return pool
+    # 16分以上的鱼永远触发究极奖池，不受3次限制
+    if current_display_score is not None and current_display_score >= ULTIMATE_UNLIMITED_SCORE_THRESHOLD:
         return pool
     records = list(exhibition)
     ultimate_count = count_ultimate_starry_exhibition(records)
     if current_fish_id is not None:
         current_id = format_starry_fish_id(current_fish_id)
-        if any(
-            isinstance(record, dict)
-            and str(record.get("id", "")).zfill(DIGITS) == current_id
-            and score_starry_fish(record.get("id", 0)).reward_pool == "ultimate"
-            for record in records
-        ):
-            ultimate_count -= 1
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            if str(record.get("id", "")).zfill(DIGITS) != current_id:
+                continue
+            # 仅当当前鱼是11-15分究极鱼时才从计数中排除（16分以上未计入）
+            try:
+                scored = score_starry_fish(record.get("id", 0))
+            except (TypeError, ValueError):
+                continue
+            if scored.reward_pool == "ultimate" and scored.display_score < ULTIMATE_UNLIMITED_SCORE_THRESHOLD:
+                ultimate_count -= 1
+            break
     if ultimate_count >= ULTIMATE_EXHIBITION_REWARD_LIMIT:
         return "high"
     return pool

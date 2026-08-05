@@ -187,6 +187,7 @@ async def grant_starry_pool_reward(
             pool,
             exhibition,
             current_fish_id=fish_id if limit_current_ultimate_fish else None,
+            current_display_score=display_score,
         )
     drawn = draw_starry_reward(reward_pool)
     if not drawn:
