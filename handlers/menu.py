@@ -206,6 +206,10 @@ def _find_qq_bot_for_group(
     两种群类型：
     1. 共享群：group_id 是 OneBot 数字群号，通过 bridge.get_target 查找
     2. QQ官方Bot独有群：group_id 即 group_openid（非纯数字），用任意已连接QQ官方Bot发送
+
+    特性：共享群在 OneBot 临时离线时，QQ官方Bot事件不被 route2 拦截，
+    会导致活跃群表同时存在数字群号和 group_openid 两条记录。
+    此函数对已映射到 OneBot 群号的 group_openid 返回 None，避免重复发送。
     """
     # 1. 共享群：通过 route2 映射查找
     target = bridge.get_target(group_id)
@@ -215,8 +219,13 @@ def _find_qq_bot_for_group(
             return bot, target.group_openid
 
     # 2. QQ官方Bot独有群：group_id 是 group_openid（非纯数字字符串）
-    #    用任意已连接的、配置了 prefer_send 的 QQ 官方 Bot 发送
     if not group_id.isdigit():
+        # 去重：如果该 group_openid 已在 route2 映射中（即共享群），
+        # 说明数字群号那条记录会处理推送，此处跳过避免重复发送
+        for bot_id in bridge.official_bot_ids:
+            if bridge.get_group_id_for_official(bot_id, group_id):
+                return None
+        # 真正的 QQ官方Bot独有群，用任意已连接的 QQ 官方 Bot 发送
         for bot_id in bridge.preferred_bot_ids or bridge.official_bot_ids:
             if bot_id in bots:
                 bot = bots[bot_id]
@@ -264,6 +273,7 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
     fail = 0
     seq = 0
     now = datetime.now()
+    sent_openids: set[str] = set()  # 已推送的 group_openid 集合，防止重复发送
 
     for group_id in group_ids:
         # 查找可向该群发送的 QQ 官方 Bot
@@ -271,6 +281,10 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
         if result is None:
             continue
         qq_bot, group_openid = result
+
+        # 去重：同一 group_openid 只发送一次（防止共享群双ID记录导致重复）
+        if group_openid in sent_openids:
+            continue
 
         # 防刷屏判断：累计消息 > 阈值 且 距上次推送 > 时间阈值
         entry = _group_msg_counter.get(group_id)
@@ -295,9 +309,10 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
                 msg_seq=seq,
             )
             success += 1
-            # 推送成功：重置计数器，记录推送时间
+            # 推送成功：重置计数器，记录推送时间，标记已发送
             entry["count"] = 0
             entry["last_push"] = now
+            sent_openids.add(group_openid)
         except Exception as e:
             logger.warning(f"[钓鱼菜单] 群 {group_id} 按钮推送失败: {e}")
             fail += 1
