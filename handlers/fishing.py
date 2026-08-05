@@ -155,12 +155,6 @@ async def _settle_stop_fishing(event: Event, matcher: Matcher):
     ):
         await matcher.finish()
 
-    # 记录活跃群（群聊收杆时记录）
-    if group_id and not is_private:
-        from ..models import FishingActiveGroup
-
-        await FishingActiveGroup.record_fishing(group_id, user_id, nickname)
-
     # ── 防闲置：收杆时若未在钓鱼且闲置超阈值，自动回到上次地图钓鱼再结算 ──
     auto_loc = None
     if not await FishingUser.is_fishing(user_id):
@@ -187,6 +181,20 @@ async def _settle_stop_fishing(event: Event, matcher: Matcher):
 
     if render_data is None:
         await _send_text(matcher, "你还没有开始钓鱼！", user_id, is_private=is_private)
+        return None
+
+    # 活跃群只是公告索引，必须在主结算成功后记录，且失败不能反向阻断玩家收杆。
+    if group_id and not is_private:
+        from zhenxun.services.log import logger
+
+        from ..models import FishingActiveGroup
+
+        try:
+            await FishingActiveGroup.record_fishing(group_id, user_id, nickname)
+        except Exception as e:
+            logger.warning(
+                f"记录钓鱼活跃群失败: user={user_id}, group={group_id}", e=e
+            )
 
     hints = list(buff_messages)
     user = await FishingUser.get_user(user_id)
@@ -211,9 +219,10 @@ async def _settle_stop_fishing(event: Event, matcher: Matcher):
 
 @stop_fishing_matcher.handle()
 async def _(event: Event, matcher: Matcher):
-    render_data, hints, is_private, user_id = await _settle_stop_fishing(
-        event, matcher
-    )
+    settlement = await _settle_stop_fishing(event, matcher)
+    if settlement is None:
+        return
+    render_data, hints, is_private, user_id = settlement
 
     image = await render_fishing_result(
         render_data["user_id"],

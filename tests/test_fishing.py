@@ -48,6 +48,60 @@ class TestBlackMarketHint:
         )
 
 
+class TestStopFishingHandlerBoundary:
+    async def test_active_group_failure_does_not_block_settlement(self, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing.handlers import fishing as handler
+        from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingActiveGroup
+
+        call_order = []
+
+        async def fake_stop_fishing(*args, **kwargs):
+            call_order.append("settlement")
+            return {"user_id": USER_ID}, [], False
+
+        async def broken_active_group_record(*args, **kwargs):
+            call_order.append("active_group")
+            raise RuntimeError("malformed nickname")
+
+        monkeypatch.setattr(
+            handler, "_ensure_user", AsyncMock(return_value=(USER_ID, "TestUser"))
+        )
+        monkeypatch.setattr(handler, "_is_private_chat", Mock(return_value=False))
+        monkeypatch.setattr(
+            handler, "is_group_action_limit_enabled", AsyncMock(return_value=False)
+        )
+        monkeypatch.setattr(FishingUser, "get_stop_count", AsyncMock(return_value=0))
+        monkeypatch.setattr(FishingUser, "get_status_count", AsyncMock(return_value=0))
+        monkeypatch.setattr(FishingUser, "is_fishing", AsyncMock(return_value=True))
+        monkeypatch.setattr(
+            FishingUser,
+            "get_user",
+            AsyncMock(
+                return_value=type(
+                    "User", (), {"smart_black_market_available_date": date.max}
+                )()
+            ),
+        )
+        monkeypatch.setattr(
+            FishingUser, "get_black_market_count", AsyncMock(return_value=1)
+        )
+        monkeypatch.setattr(handler, "stop_fishing", fake_stop_fishing)
+        monkeypatch.setattr(
+            FishingActiveGroup, "record_fishing", broken_active_group_record
+        )
+        monkeypatch.setattr(
+            handler,
+            "run_post_settlement",
+            AsyncMock(side_effect=lambda user_id, is_private, messages: messages),
+        )
+
+        event = type("GroupEvent", (), {"group_id": 161355983})()
+        result = await handler._settle_stop_fishing.__wrapped__(event, Mock())
+
+        assert result == ({"user_id": USER_ID}, [], False, USER_ID)
+        assert call_order == ["settlement", "active_group"]
+
+
 class TestStartFishing:
     async def test_start_fishing_creates_user(self, db):
         image, ok, hint = await start_fishing(USER_ID, LOCATION_1, "TestUser")

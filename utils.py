@@ -65,6 +65,16 @@ def _get_at_list(event) -> list[str]:
     return at_list
 
 
+def _clean_nickname_candidate(value) -> str:
+    """拒绝协议残片式昵称，避免控制字符进入消息或 PostgreSQL 文本字段。"""
+    if value is None:
+        return ""
+    nickname = str(value).strip()
+    if not nickname or any(ord(char) < 32 or ord(char) == 127 for char in nickname):
+        return ""
+    return nickname[:255]
+
+
 def _get_at_display_name(event) -> str:
     if not hasattr(event, "get_message"):
         return ""
@@ -74,8 +84,10 @@ def _get_at_display_name(event) -> str:
         data = getattr(seg, "data", {})
         if not isinstance(data, dict):
             continue
-        name = data.get("username") or data.get("name") or data.get("nickname")
-        if name and (name := str(name).strip()):
+        name = _clean_nickname_candidate(
+            data.get("username") or data.get("name") or data.get("nickname")
+        )
+        if name:
             return name
     return ""
 
@@ -90,12 +102,17 @@ async def _ensure_user(event) -> tuple[str, str]:
 def _get_nickname(event) -> str:
     sender = getattr(event, "sender", None)
     if sender is not None:
-        nickname = getattr(sender, "card", None) or getattr(sender, "nickname", None)
-        if nickname:
-            return str(nickname).strip()
+        # 部分 OneBot 群名片会误传 protobuf 二进制片段；card 不可信时回退 QQ 昵称。
+        for value in (
+            getattr(sender, "card", None),
+            getattr(sender, "nickname", None),
+        ):
+            if nickname := _clean_nickname_candidate(value):
+                return nickname
     author = getattr(event, "author", None)
-    nickname = getattr(author, "username", None) if author is not None else None
-    return str(nickname).strip() if nickname else ""
+    return _clean_nickname_candidate(
+        getattr(author, "username", None) if author is not None else None
+    )
 
 
 def _is_private_chat(event: Event) -> bool:

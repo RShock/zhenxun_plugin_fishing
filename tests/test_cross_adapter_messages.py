@@ -8,6 +8,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.utils import (
     _build_text_message,
     _get_at_display_name,
     _get_at_list,
+    _get_nickname,
     _outgoing_recipient,
     _transport_user_id,
 )
@@ -116,3 +117,32 @@ def test_official_group_reply_uses_readable_name_instead_of_openid_mention():
     )()
 
     assert _outgoing_recipient("953368178", event) == ("", "天天开心")
+
+
+def test_malformed_onebot_card_falls_back_to_sender_nickname():
+    event = type(
+        "OneBotEvent",
+        (),
+        {
+            "sender": type(
+                "Sender",
+                (),
+                {
+                    "card": "\x07$ÿĀ\x1c\x18\n\x08\x12\x06朽翁\x10\x00",
+                    "nickname": "酒肉穿肠做朽翁",
+                },
+            )()
+        },
+    )()
+
+    assert _get_nickname(event) == "酒肉穿肠做朽翁"
+
+
+def test_nickname_is_limited_to_database_field_length():
+    event = type(
+        "OneBotEvent",
+        (),
+        {"sender": type("Sender", (), {"card": "猫" * 300, "nickname": ""})()},
+    )()
+
+    assert _get_nickname(event) == "猫" * 255
