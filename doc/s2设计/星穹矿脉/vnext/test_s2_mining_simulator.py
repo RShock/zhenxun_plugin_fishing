@@ -95,9 +95,11 @@ def test_stage_one_45_day_integration_reaches_every_local_node():
 
 
 def test_first_ten_days_uses_real_message_limit_and_records_auto_purchases():
-    _, snapshots, events = run_first_ten_days(days=10, seed=42)
+    _, snapshots, events, checks = run_first_ten_days(days=10, seed=42)
 
     assert all(snapshot.manual_messages <= 3 for snapshot in snapshots)
+    assert all(snapshot.checks >= 20 for snapshot in snapshots)
+    assert any(not check.acted for check in checks)
     assert any(event.source == "manual" for event in events)
     assert any(event.source == "auto" for event in events)
     assert snapshots[-1].nodes_reached > snapshots[0].nodes_reached

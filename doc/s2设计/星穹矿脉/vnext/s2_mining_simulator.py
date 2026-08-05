@@ -213,17 +213,29 @@ ERA_NODE_NAMES: dict[str, tuple[str, ...]] = {
 
 ERA_UNLOCKS = {
     "foundation": 0.0,
-    # 前十天需要持续有新选择；行星级之后再把跨度拉开。
+    # 时代需要形成可感知的停留期。D10 前只应进入电力时代，不能连续跨越现代与未来。
     "industrial": 0.00001,
-    "electrical": 0.00003,
-    "modern": 0.00007,
-    "future": 0.00015,
-    "planetary": 0.0200,
-    "anomaly": 0.0800,
+    "electrical": 0.00020,
+    "modern": 0.00150,
+    "future": 0.00600,
+    "planetary": 0.0300,
+    "anomaly": 0.1500,
 }
 
-# 特殊节点只延后到约 0.002% 深度；普通科技树不会因等待特殊门槛而出现空操作。
-SPECIAL_UNLOCK_DELAY = 0.00002
+ERA_SEQUENCE = tuple(ERA_UNLOCKS)
+
+# 深度只代表抵达时代入口；还要实际接触前一时代的大部分科技，避免高速挖掘跳过内容。
+ERA_MASTERY_REQUIREMENTS = {
+    "industrial": 8,
+    "electrical": 15,
+    "modern": 15,
+    "future": 15,
+    "planetary": 15,
+    "anomaly": 15,
+}
+
+# 特殊节点在同一时代内略晚于普通节点，避免刚进入时代就触发跳跃效果。
+SPECIAL_UNLOCK_DELAY_RATIO = 0.03
 # 跳跃型效果在基础成长完成一个小段后才介入；0.5% 足以避免 D3 突跳。
 SPECIAL_BURST_THRESHOLD = 0.005
 
@@ -236,6 +248,8 @@ ERA_LABELS = {
     "planetary": "行星时代",
     "anomaly": "异常科技",
 }
+
+ERA_BY_CATEGORY = {label: era for era, label in ERA_LABELS.items()}
 
 EFFECT_ROTATION = (
     ("speed_add", 0.10, "推进力"),
@@ -306,13 +320,21 @@ def _specs() -> dict[str, UpgradeSpec]:
             effect_text = f"{ERA_LABELS[era]}：每级 +{per_level:g} {effect_label}"
             if secondary_kind != "none":
                 effect_text += f"；每级 +{secondary_per_level:g} {secondary_label}"
+            era_position = ERA_SEQUENCE.index(era)
+            era_end = ERA_UNLOCKS[ERA_SEQUENCE[era_position + 1]] if era_position + 1 < len(ERA_SEQUENCE) else 0.90
+            era_span = era_end - ERA_UNLOCKS[era]
+            # 16 个节点分布在整个时代，而不是在时代开启的一刻同时倾泻给玩家。
+            unlock_ratio = 0.05 + 0.82 * index / max(1, len(names) - 1)
+            unlock = ERA_UNLOCKS[era] + era_span * unlock_ratio
+            if special:
+                unlock += era_span * SPECIAL_UNLOCK_DELAY_RATIO
             specs[key] = UpgradeSpec(
                 key,
                 name,
                 max_level,
                 era_costs[era],
                 growth,
-                ERA_UNLOCKS[era] + (SPECIAL_UNLOCK_DELAY if special else 0.0),
+                unlock,
                 True,
                 effect_text,
                 ERA_LABELS[era],
@@ -437,12 +459,30 @@ class SimulationState:
             raise ValueError("核心不足")
         self.cores = LogNumber.from_int(max(0, int(current - amount)))
 
+    def era_mastery(self, era: str) -> int:
+        """返回曾经购买过的该时代科技数量，重生后不会丢失掌握记录。"""
+        category = ERA_LABELS[era]
+        return sum(1 for key in self.ever_local_keys if SPECS[key].category == category)
+
+    def era_unlocked(self, era: str) -> bool:
+        if era == "foundation":
+            return True
+        if self.progress < ERA_UNLOCKS[era]:
+            return False
+        era_index = ERA_SEQUENCE.index(era)
+        previous_era = ERA_SEQUENCE[era_index - 1]
+        return self.era_mastery(previous_era) >= ERA_MASTERY_REQUIREMENTS[era]
+
     def _available(self, key: str) -> bool:
         spec = SPECS[key]
         if not spec.local:
             return True
-        if self.progress < spec.unlock and key not in self.active_auto_keys:
-            return False
+        if key not in self.active_auto_keys:
+            era = ERA_BY_CATEGORY.get(spec.category)
+            if era is not None and not self.era_unlocked(era):
+                return False
+            if self.progress < spec.unlock:
+                return False
         return all(self.local_levels.get(required, 0) >= 1 for required in spec.prerequisites)
 
     def _batch_cost(self, key: str, amount: int) -> dict[str, float]:
@@ -771,7 +811,7 @@ class StageOneAudit:
     def passed(self) -> bool:
         return (
             self.first_reset_day is not None
-            # 天数只用于排除明显失速或瞬间通关；最终体验允许落在更宽的 50～100 天窗口。
+            # 这个窗口只审查当前开发曲线是否明显失速，不是正式游戏的通关期限。
             and 15 <= self.first_reset_day <= 45
             and self.local_nodes_reached == self.local_nodes_total
             and self.special_nodes_reached == self.special_nodes_total
@@ -833,11 +873,15 @@ def run_stage_one_matrix(
     return audits
 
 
-def _strategy(state: SimulationState, message_budget: int = 3, mode: str = "balanced") -> None:
-    """一个有意保守的每日策略，用来观察曲线而不是寻找最优解。"""
+def _strategy(
+    state: SimulationState,
+    message_budget: int = 1,
+    mode: str = "balanced",
+) -> tuple[tuple[str, int], ...]:
+    """模拟一次玩家检查，最多发送一条真正有价值的升级消息。"""
     message_limit = min(3, state.daily_upgrade_messages + max(0, message_budget))
     if state.daily_upgrade_messages >= message_limit:
-        return
+        return ()
     # 新时代的特殊科技优先于核心消费，避免玩家刚抵达地心就因重生而错过科技窗口。
     unseen_special = any(
         state._available(key) and SPECS[key].special and key not in state.ever_local_keys
@@ -861,9 +905,10 @@ def _strategy(state: SimulationState, message_budget: int = 3, mode: str = "bala
                 continue
             if state._core_count_as_float() < minimum:
                 continue
-            ok, _ = state.upgrade_command([(key, amount)])
-            if ok and key in {"auto_all", "core_survey"}:
-                break
+            orders = ((key, amount),)
+            ok, _ = state.upgrade_command(orders)
+            if ok:
+                return orders
     legacy_priority = [
         "pickaxe", "cart", "refinery", "survey", "cat", "industrial_blaster", "steam_cart",
         "electric_pickaxe", "electric_cart", "modern_drill", "future_quantum", "relativity",
@@ -877,45 +922,47 @@ def _strategy(state: SimulationState, message_budget: int = 3, mode: str = "bala
     }.get(mode, set())
     candidates = [
         key for key in LOCAL_KEYS
-        if state._available(key) and state.level(key) < SPECS[key].max_level
+        if state._available(key)
+        and state.level(key) < min(3, SPECS[key].max_level)
+        and key not in state.active_auto_keys
     ]
     candidates.sort(
         key=lambda key: (
-            0 if state.level(key) == 0 and SPECS[key].special and key not in state.ever_local_keys else 1 if state.level(key) == 0 else 2,
-            0 if state.level(key) == 0 and key in priority_index and key not in state.ever_local_keys else 1,
-            0 if key in priority_index and state.level(key) < 3 else 1,
+            0 if 0 < state.level(key) < 3 else 1,
+            0 if state.level(key) == 0 and SPECS[key].special and key not in state.ever_local_keys else 1,
+            -ERA_SEQUENCE.index(ERA_BY_CATEGORY[SPECS[key].category]),
+            0 if key in priority_index else 1,
             0 if SPECS[key].effect_kind in preferred_effects else 1,
             SPECS[key].unlock,
             priority_index.get(key, 100),
             key,
         )
     )
-    while state.daily_upgrade_messages < message_limit and candidates:
-        orders: list[tuple[str, int]] = []
-        for key in candidates:
-            level = state.level(key)
-            if level >= SPECS[key].max_level:
-                continue
-            amount = min(3 - level, 3) if level < 3 else 1
-            # 一条 QQ 消息允许批量多个项目；这里限制条目数，防止日志和决策面一次膨胀过头。
-            orders.append((key, amount))
-            if len(orders) >= 8:
-                break
-        if not orders:
-            break
-        ok, _ = state.upgrade_command(orders)
-        if not ok:
-            # 成本不足时逐半缩小批次，保持“消息可批量”而不是整条消息报废。
-            reduced = orders[: max(1, len(orders) // 2)]
-            ok, _ = state.upgrade_command(reduced)
-            if not ok and len(reduced) > 1:
-                ok, _ = state.upgrade_command(reduced[:1])
-            if not ok:
-                break
-        candidates = [
-            key for key in candidates
-            if state._available(key) and state.level(key) < SPECS[key].max_level
-        ]
+    for key in candidates:
+        level = state.level(key)
+        remaining = min(3, SPECS[key].max_level) - level
+        if remaining <= 0:
+            continue
+        desired = 1
+        if level == 1:
+            desired = 2
+        elif level == 0 and state.day >= 4:
+            batch_three = state._batch_cost(key, min(3, remaining))
+            ratios = [
+                state.resources.get(resource, 0.0) / cost
+                for resource, cost in batch_three.items()
+                if resource != "cores" and cost > 0
+            ]
+            if ratios and min(ratios) >= 8.0:
+                desired = min(3, remaining)
+            elif ratios and min(ratios) >= 3.0:
+                desired = min(2, remaining)
+        for amount in range(min(desired, remaining), 0, -1):
+            orders = ((key, amount),)
+            ok, _ = state.upgrade_command(orders)
+            if ok:
+                return orders
+    return ()
 
 
 def _development_target(target_log10: int) -> float:
@@ -927,7 +974,13 @@ def _development_target(target_log10: int) -> float:
     return 10**target_log10 if target_log10 <= 12 else 10_000_000_000.0
 
 
-def run_scenario(days: int = 60, seed: int = 42, target_log10: int = 11, strategy_mode: str = "balanced") -> tuple[SimulationState, list[str]]:
+def run_scenario(
+    days: int = 60,
+    seed: int = 42,
+    target_log10: int = 11,
+    strategy_mode: str = "balanced",
+    check_interval_minutes: int = 60,
+) -> tuple[SimulationState, list[str]]:
     target = _development_target(target_log10)
     state = SimulationState(target_depth=target, seed=seed)
     log: list[str] = []
@@ -935,9 +988,13 @@ def run_scenario(days: int = 60, seed: int = 42, target_log10: int = 11, strateg
     for day in range(1, days + 1):
         if day > 1:
             state.start_new_day()
-        for _ in range(3):
-            _strategy(state, message_budget=1, mode=strategy_mode)
-            state.mine_minute(480)
+        elapsed = 0
+        while elapsed < 1440:
+            block = min(check_interval_minutes, 1440 - elapsed)
+            state.mine_minute(block)
+            elapsed += block
+            if elapsed < 1440:
+                _strategy(state, message_budget=1, mode=strategy_mode)
         if day in milestone_days:
             log.append(f"D{day:02d}: {state.summary()}")
         state.events.clear()
