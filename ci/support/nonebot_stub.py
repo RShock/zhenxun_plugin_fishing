@@ -233,6 +233,7 @@ def _install_nonebot() -> None:
     nonebot.get_adapter = lambda *args, **kwargs: MagicMock()
     nonebot.on_regex = lambda *args, **kwargs: DummyMatcher
     nonebot.on_command = lambda *args, **kwargs: DummyMatcher
+    nonebot.on_message = lambda *args, **kwargs: DummyMatcher
     nonebot.load_plugin = lambda *args, **kwargs: MagicMock()
     nonebot.load_plugins = lambda *args, **kwargs: []
     nonebot.logger = MagicMock()

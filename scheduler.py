@@ -85,22 +85,23 @@ async def _scheduled_clear_expired_buffs():
 
 @scheduler.scheduled_job(
     "cron",
-    minute=0,
+    minute="*/5",
     timezone="Asia/Shanghai",
-    misfire_grace_time=300,
+    misfire_grace_time=120,
     id="_scheduled_fishing_menu",
 )
 async def _scheduled_fishing_menu():
-    """每小时整点向有QQ官方Bot的活跃群推送钓鱼按钮菜单。"""
+    """每5分钟检查一次，向满足条件的群推送钓鱼按钮菜单。
+
+    推送条件（broadcast_menu_to_active_groups 内判断）：
+    1. 该群有 QQ 官方 Bot 映射（route2 桥接）
+    2. 自上次推送后累计消息 > 20 条（公告已被刷走）
+    3. 距上次推送 > 1 小时
+    """
     from .handlers.menu import broadcast_menu_to_active_groups
 
     try:
-        success, fail = await broadcast_menu_to_active_groups()
-        if success > 0:
-            logger.info(
-                f"钓鱼菜单定时推送完成: 成功 {success} 个群, 失败 {fail} 个群",
-                "钓鱼菜单",
-            )
+        await broadcast_menu_to_active_groups()
     except Exception as e:
         logger.error("钓鱼菜单定时推送失败", "钓鱼菜单", e=e)
 
