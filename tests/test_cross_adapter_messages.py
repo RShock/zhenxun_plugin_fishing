@@ -2,10 +2,7 @@
 
 import ast
 from pathlib import Path
-import sys
-from types import ModuleType, SimpleNamespace
-
-from nonebot.internal.matcher import current_bot
+from types import SimpleNamespace
 
 from zhenxun.plugins.zhenxun_plugin_fishing.utils import (
     _build_image_message,
@@ -219,43 +216,41 @@ def test_nickname_is_limited_to_database_field_length():
 
 
 
-def _install_fake_route_bridge(monkeypatch, resolver):
-    package_name = "zhenxun.plugins.zhenxun_plugin_route2"
-    module_name = f"{package_name}.official_bridge"
-    package = ModuleType(package_name)
-    package.__path__ = []
-    module = ModuleType(module_name)
-    module.official_route_bridge = SimpleNamespace(
-        get_group_id_for_official=resolver
-    )
-    monkeypatch.setitem(sys.modules, package_name, package)
-    monkeypatch.setitem(sys.modules, module_name, module)
 
 
 def test_official_group_context_uses_shared_numeric_group(monkeypatch):
-    _install_fake_route_bridge(
-        monkeypatch,
+    monkeypatch.setitem(
+        _get_group_context_id.__globals__,
+        "_get_mapped_onebot_group_id",
         lambda bot_id, group_openid: (
             "1054188847"
             if (bot_id, group_openid) == ("1905351598", "OPEN_GROUP")
             else None
         ),
     )
-    token = current_bot.set(type("Bot", (), {"self_id": "1905351598"})())
-    try:
-        event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
-        assert _get_group_context_id(event) == "1054188847"
-    finally:
-        current_bot.reset(token)
+    monkeypatch.setitem(
+        _get_group_context_id.__globals__,
+        "current_bot",
+        SimpleNamespace(get=lambda: SimpleNamespace(self_id="1905351598")),
+    )
+
+    event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
+
+    assert _get_group_context_id(event) == "1054188847"
 
 
 def test_official_only_group_context_keeps_group_openid(monkeypatch):
-    _install_fake_route_bridge(
-        monkeypatch, lambda _bot_id, _group_openid: None
+    monkeypatch.setitem(
+        _get_group_context_id.__globals__,
+        "_get_mapped_onebot_group_id",
+        lambda _bot_id, _group_openid: None,
     )
-    token = current_bot.set(type("Bot", (), {"self_id": "1905351598"})())
-    try:
-        event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
-        assert _get_group_context_id(event) == "OPEN_GROUP"
-    finally:
-        current_bot.reset(token)
+    monkeypatch.setitem(
+        _get_group_context_id.__globals__,
+        "current_bot",
+        SimpleNamespace(get=lambda: SimpleNamespace(self_id="1905351598")),
+    )
+
+    event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
+
+    assert _get_group_context_id(event) == "OPEN_GROUP"
