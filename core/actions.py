@@ -258,7 +258,9 @@ async def start_fishing(
     user.bait_id = str(best_bait_id)
     await user.save(update_fields=["bait_id"])
 
-    status = await FishingUser.start_fishing(user_id, location.id)
+    status = await FishingUser.start_fishing(
+        user_id, location.id, group_id=group_id
+    )
     if shadow_scene:
         # ?????? 11 ????????????? -11 ???????
         status["shadow_scene"] = True
@@ -269,7 +271,9 @@ async def start_fishing(
     return image, True, ""
 
 
-async def try_auto_fish_on_idle(user_id: str, nickname: str = "") -> str | None:
+async def try_auto_fish_on_idle(
+    user_id: str, nickname: str = "", group_id: str | None = None
+) -> str | None:
     """防闲置：用户未在钓鱼且闲置超阈值时，自动回到上次地图开始钓鱼。
 
     利用懒计算——会话起始时间回溯到上次活跃时间（收杆时刻），收杆时由
@@ -321,7 +325,9 @@ async def try_auto_fish_on_idle(user_id: str, nickname: str = "") -> str | None:
     # 会话起始回溯到上次活跃时间（收杆时刻），让闲置期间无空档；
     # start_fishing 内部会更新 last_active_time = now
     auto_start = _make_naive(last_active_time)
-    await FishingUser.start_fishing(user_id, location.id, start_time=auto_start)
+    await FishingUser.start_fishing(
+        user_id, location.id, start_time=auto_start, group_id=group_id
+    )
 
     idle_min = round(idle_minutes)
     logger.info(

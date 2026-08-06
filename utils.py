@@ -121,6 +121,36 @@ def _is_private_chat(event: Event) -> bool:
     return not hasattr(event, "group_id") or getattr(event, "group_id", None) is None
 
 
+def _get_group_context_id(event: Event) -> str | None:
+    """返回玩法使用的稳定群标识；共享群统一使用 OneBot 数字群号。"""
+    group_id = str(
+        getattr(event, "group_id", "")
+        or getattr(event, "group_openid", "")
+        or ""
+    )
+    if not group_id:
+        return None
+    if group_id.isdigit():
+        return group_id
+
+    try:
+        bot_id = str(current_bot.get().self_id)
+        from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
+            official_route_bridge,
+        )
+
+        # 共享群的两种适配器标识不同；玩法数据必须归一到数字群号，
+        # 否则成员筛选和活跃群记录会被拆成两个互不相干的群。
+        mapped_group_id = official_route_bridge.get_group_id_for_official(
+            bot_id, group_id
+        )
+        if mapped_group_id:
+            return str(mapped_group_id)
+    except (ImportError, LookupError, AttributeError):
+        pass
+    return group_id
+
+
 _MESSAGE_SEND_TIMEOUT_SECONDS = 30.0
 _ROUTE2_ORIGINAL_USER_ID_ATTR = "_route2_original_user_id"
 

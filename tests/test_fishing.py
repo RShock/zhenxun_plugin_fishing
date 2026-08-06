@@ -140,6 +140,14 @@ class TestStartFishing:
         assert status is not None
         assert status["location_id"] == LOCATION_1
 
+    async def test_start_fishing_records_group_context(self, db):
+        await start_fishing(
+            USER_ID, LOCATION_1, "TestUser", group_id="1054188847"
+        )
+        status = await db.status_get(USER_ID)
+        assert status is not None
+        assert status["group_id"] == "1054188847"
+
     async def test_start_fishing_returns_image(self, db):
         image, ok, hint = await start_fishing(USER_ID, LOCATION_1)
         assert image is not None

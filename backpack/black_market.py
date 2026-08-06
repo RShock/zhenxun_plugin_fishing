@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from ..config import (
+    DAILY_GIFT_LIMIT,
     RARITY_COLORS,
     RARITY_INDEX,
     ConfigManager,
@@ -826,13 +827,27 @@ async def white_market_exchange(
 
 BLACK_MARKET_REVOKE_USAGE = (
     "黑商撤回用法：黑商撤回（查看当天可撤回记录）/ 黑商撤回 序号\n"
-    "仅可撤回当天的黑商交换，撤回后退还获得的鱼并返还消耗的鱼。"
+    "仅可撤回当天的黑商交换，撤回消耗每日赠送次数（与赠送/白商共享），"
+    "退还获得的鱼并返还消耗的鱼，但不返还当日黑商交换次数。"
 )
 
 
 async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
-    """执行单条黑商撤回：退目标鱼、返来源鱼、失效记录、回退次数/保底/券。"""
-    # 撤回前提：玩家仍持有黑商当时获得的目标鱼
+    """执行单条黑商撤回：退目标鱼、返来源鱼、失效记录、消耗赠送次数/回退保底/券。
+
+    撤回消耗每日赠送次数（与赠送/白商共享），不再返还当日黑商交换次数，
+    防止"交换→撤回→重试"无限刷黑商随机替换结果的漏洞。
+    """
+    # 撤回前提1：玩家有剩余赠送次数（与赠送/白商共享）
+    gift_count = await FishingUser.get_gift_count(user_id)
+    if gift_count >= DAILY_GIFT_LIMIT:
+        return (
+            False,
+            "今日赠送次数已用完，无法撤回。黑商撤回消耗赠送次数（与赠送/白商共享）。",
+            True,
+        )
+
+    # 撤回前提2：玩家仍持有黑商当时获得的目标鱼
     target_fish = await FishingUser.get_fish_by_numeric_id(
         user_id, record.target_numeric_id
     )
@@ -850,8 +865,8 @@ async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
         [(record.source_name, record.source_rarity, record.source_numeric_id, 1)],
     )
     await FishingExchangeRecord.revoke_record(record.id, user_id)
-    # 回退当日黑商交换计数
-    await FishingUser.decrement_black_market_count(user_id)
+    # 撤回消耗赠送次数，不再回退黑商交换次数（防止无限循环刷随机）
+    await FishingUser.increment_gift_count(user_id)
     # 回退保底计数器：只有被随机替换的失败交换曾令保底 +1，撤回时对应 -1
     if record.is_randomized:
         user = await FishingUser.get_user(user_id)
@@ -893,7 +908,7 @@ async def black_market_revoke(
     if not sel:
         if len(records) == 1:
             return await _do_revoke(user_id, records[0])
-        lines = ["今天有以下可撤回的黑商交换，回复「黑商撤回 序号」撤回："]
+        lines = ["今天有以下可撤回的黑商交换，回复「黑商撤回 序号」撤回（消耗赠送次数）："]
         for i, r in enumerate(records, 1):
             lines.append(
                 f"{i}. 退还 {r.target_name}({r.target_rarity}) "

@@ -384,7 +384,9 @@ class MockDB:
         }
 
     # --- FishingUser: Status (fishing_status JSONB) ---
-    async def status_start_fishing(self, user_id: str, location_id: str, start_time=None):
+    async def status_start_fishing(
+        self, user_id: str, location_id: str, start_time=None, group_id=None
+    ):
         u = await self.user_get(user_id)
         # start_time 用于防闲置回溯：会话起始设为过去时刻，懒计算在收杆时补算鱼获
         session_start = start_time or datetime.now()
@@ -400,6 +402,8 @@ class MockDB:
             "cat_frame_pity": u.cat_frame_pity_counter,
             "time_potions_used": [],
         }
+        if group_id:
+            u.fishing_status["group_id"] = str(group_id)
         # 防闲置记录：last_active_time 始终为真实操作时间（now），而非回溯的 start_time
         u.last_location_id = location_id
         u.last_active_time = datetime.now()

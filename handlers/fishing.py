@@ -32,6 +32,7 @@ from ..services.limit_service import (
 from ..services.user_lock_service import with_user_lock
 from ..utils import (
     _ensure_user,
+    _get_group_context_id,
     _get_nickname,
     _is_private_chat,
     _send_image,
@@ -69,7 +70,7 @@ def should_show_black_market_hint(
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)
-    group_id = str(event.group_id) if hasattr(event, "group_id") else None
+    group_id = _get_group_context_id(event)
     is_private = _is_private_chat(event)
 
     location_input = group[0] if group and group[0] else ""
@@ -96,7 +97,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         user = await get_or_create_user(user_id, nickname)
 
         # ── 防闲置：未在钓鱼但闲置超阈值，自动回到上次地图 ──
-        auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+        auto_loc = await try_auto_fish_on_idle(user_id, nickname, group_id=group_id)
         if auto_loc:
             status = await FishingUser.get_status(user_id)
             if status:
@@ -121,7 +122,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 @with_user_lock("钓鱼/确认地图")
 async def _(event: Event, matcher: Matcher, location=Arg("location")):
     user_id, nickname = await _ensure_user(event)
-    group_id = str(event.group_id) if hasattr(event, "group_id") else None
+    group_id = _get_group_context_id(event)
     is_private = _is_private_chat(event)
 
     raw_location = location.extract_plain_text() if location else ""
@@ -147,7 +148,7 @@ async def _(event: Event, matcher: Matcher, location=Arg("location")):
 async def _settle_stop_fishing(event: Event, matcher: Matcher):
     user_id, nickname = await _ensure_user(event)
     is_private = _is_private_chat(event)
-    group_id = str(event.group_id) if hasattr(event, "group_id") else None
+    group_id = _get_group_context_id(event)
 
     stop_count = await FishingUser.get_stop_count(user_id)
     status_count = await FishingUser.get_status_count(user_id)
@@ -163,7 +164,7 @@ async def _settle_stop_fishing(event: Event, matcher: Matcher):
     # ── 防闲置：收杆时若未在钓鱼且闲置超阈值，自动回到上次地图钓鱼再结算 ──
     auto_loc = None
     if not await FishingUser.is_fishing(user_id):
-        auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+        auto_loc = await try_auto_fish_on_idle(user_id, nickname, group_id=group_id)
 
     try:
         render_data, buff_messages, _ = await stop_fishing(
@@ -261,6 +262,7 @@ async def _(event: Event, matcher: Matcher):
     user_id = event.get_user_id()
     nickname = _get_nickname(event)
     is_private = _is_private_chat(event)
+    group_id = _get_group_context_id(event)
     limit_enabled = await is_group_action_limit_enabled()
     user = await get_or_create_user(user_id, nickname)
     stop_count = await FishingUser.get_stop_count(user_id)
@@ -272,7 +274,7 @@ async def _(event: Event, matcher: Matcher):
             await matcher.finish()
 
     # ── 防闲置：未在钓鱼但闲置超阈值，自动回到上次地图 ──
-    auto_loc = await try_auto_fish_on_idle(user_id, nickname)
+    auto_loc = await try_auto_fish_on_idle(user_id, nickname, group_id=group_id)
 
     try:
         if not await FishingUser.is_fishing(user_id):

@@ -3,11 +3,14 @@
 import ast
 from pathlib import Path
 
+from nonebot.internal.matcher import current_bot
+
 from zhenxun.plugins.zhenxun_plugin_fishing.utils import (
     _build_image_message,
     _build_text_message,
     _get_at_display_name,
     _get_at_list,
+    _get_group_context_id,
     _get_nickname,
     _outgoing_recipient,
     _transport_user_id,
@@ -211,3 +214,43 @@ def test_nickname_is_limited_to_database_field_length():
     )()
 
     assert _get_nickname(event) == "猫" * 255
+
+
+def test_official_group_context_uses_shared_numeric_group(monkeypatch):
+    from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
+        official_route_bridge,
+    )
+
+    monkeypatch.setattr(
+        official_route_bridge,
+        "get_group_id_for_official",
+        lambda bot_id, group_openid: (
+            "1054188847"
+            if (bot_id, group_openid) == ("1905351598", "OPEN_GROUP")
+            else None
+        ),
+    )
+    token = current_bot.set(type("Bot", (), {"self_id": "1905351598"})())
+    try:
+        event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
+        assert _get_group_context_id(event) == "1054188847"
+    finally:
+        current_bot.reset(token)
+
+
+def test_official_only_group_context_keeps_group_openid(monkeypatch):
+    from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
+        official_route_bridge,
+    )
+
+    monkeypatch.setattr(
+        official_route_bridge,
+        "get_group_id_for_official",
+        lambda _bot_id, _group_openid: None,
+    )
+    token = current_bot.set(type("Bot", (), {"self_id": "1905351598"})())
+    try:
+        event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
+        assert _get_group_context_id(event) == "OPEN_GROUP"
+    finally:
+        current_bot.reset(token)

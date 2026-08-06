@@ -1393,8 +1393,8 @@ class TestBlackMarketRevoke:
         assert should_reply is True
         assert "无法撤回" in msg
 
-    async def test_revoke_decrements_black_market_count(self, db):
-        """撤回后回退当日黑商交换计数。"""
+    async def test_revoke_consumes_gift_count_not_black_market_count(self, db):
+        """撤回消耗赠送次数，不回退黑商交换次数。"""
         source = find_fish_target("小鲫鱼", "UR")
         target = find_fish_target("小鲫鱼", "N")
         assert source is not None and target is not None
@@ -1409,6 +1409,29 @@ class TestBlackMarketRevoke:
 
         await black_market_revoke(USER_ID, "")
 
+        # 黑商交换次数不应回退
         user = await db.user_get(USER_ID)
-        count, _ = user._get_daily_counter("black_market")
-        assert count == 0
+        bm_count, _ = user._get_daily_counter("black_market")
+        assert bm_count == 1
+        # 赠送次数应被消耗
+        gift_count = await db.user_get_gift_count(USER_ID)
+        assert gift_count == 1
+
+    async def test_revoke_insufficient_gift_count_fails(self, db):
+        """赠送次数已用完时无法撤回。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.exchange_create_black_record(USER_ID, source, target)
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=1
+        )
+        # 耗尽赠送次数
+        for _ in range(DAILY_GIFT_LIMIT):
+            await db.user_increment_gift_count(USER_ID)
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+
+        assert ok is False
+        assert should_reply is True
+        assert "赠送次数已用完" in msg

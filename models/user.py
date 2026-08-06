@@ -1134,6 +1134,7 @@ class FishingUser(Model):
         user_id: str,
         location_id: str,
         start_time: datetime | None = None,
+        group_id: str | None = None,
     ) -> dict:
         user = await cls.get_user(user_id)
         # start_time 用于防闲置回溯：会话起始设为过去时刻，懒计算在收杆时补算鱼获
@@ -1150,6 +1151,8 @@ class FishingUser(Model):
             "cat_frame_pity": user.cat_frame_pity_counter,
             "time_potions_used": [],
         }
+        if group_id:
+            user.fishing_status["group_id"] = str(group_id)
         # 防闲置记录：last_active_time 始终为真实操作时间（now），而非回溯的 start_time
         user.last_location_id = location_id
         user.last_active_time = datetime.now()

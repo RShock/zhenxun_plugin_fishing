@@ -16,30 +16,57 @@ from .bait import get_bait_info
 from .probability import calculate_display_probabilities
 
 
+async def _filter_fishers_by_recorded_group(
+    fisher_ids: list[str], group_id: str, viewer_user_id: str | None
+) -> list[str]:
+    filtered: list[str] = []
+    for fisher_id in fisher_ids:
+        if viewer_user_id and fisher_id == viewer_user_id:
+            filtered.append(fisher_id)
+            continue
+        status = await FishingUser.get_status(fisher_id)
+        if status and str(status.get("group_id", "")) == group_id:
+            filtered.append(fisher_id)
+    return filtered
+
+
 async def collect_scene_players(
-    scene_instance_id: str, group_id: str | None
+    scene_instance_id: str,
+    group_id: str | None,
+    viewer_user_id: str | None = None,
 ) -> list[dict]:
     """收集同一钓场的在线玩家列表。"""
     fisher_ids = await FishingUser.get_location_fishers(scene_instance_id)
 
     if group_id:
-        try:
-            from nonebot import get_bot
-
-            bot = get_bot()
-            # QQ 频道群的 group_id 是非数字字符串（如 C0060EB3...），无法转 int；
-            # 仅 OneBot V11 的数字群号才调用 get_group_member_list
+        group_id = str(group_id)
+        member_filter_succeeded = False
+        if group_id.isdigit():
             try:
-                numeric_group_id = int(group_id)
-            except (ValueError, TypeError):
-                raise ValueError(f"非数字群号，跳过成员过滤: {group_id}")
-            members = await bot.call_api(
-                "get_group_member_list", group_id=numeric_group_id
+                from nonebot import get_bot
+
+                bot = get_bot()
+                members = await bot.call_api(
+                    "get_group_member_list", group_id=int(group_id)
+                )
+                group_member_ids = {str(member["user_id"]) for member in members}
+                fisher_ids = [
+                    fisher_id
+                    for fisher_id in fisher_ids
+                    if fisher_id in group_member_ids
+                ]
+                member_filter_succeeded = True
+            except Exception as e:
+                logger.warning(
+                    f"获取群成员列表失败，改按钓鱼来源群隔离玩家: {e}"
+                )
+
+        if not member_filter_succeeded:
+            # QQ官方群无成员列表接口；此时只能依靠开始钓鱼时记录的群标识做隔离，
+            # 宁可少显示旧会话玩家，也不能把其他群的玩家暴露到当前场景。
+            fisher_ids = await _filter_fishers_by_recorded_group(
+                fisher_ids, group_id, viewer_user_id
             )
-            group_member_ids = {str(m["user_id"]) for m in members}
-            fisher_ids = [fid for fid in fisher_ids if fid in group_member_ids]
-        except Exception as e:
-            logger.warning(f"获取群成员列表失败，显示所有同地图玩家: {e}")
 
     players = []
     now = datetime.now()
@@ -74,7 +101,9 @@ async def render_scene(
 
     status_dict = await FishingUser.get_status(user_id)
     scene_instance_id = get_scene_instance_id(status_dict, location.id)
-    players = await collect_scene_players(scene_instance_id, group_id)
+    players = await collect_scene_players(
+        scene_instance_id, group_id, viewer_user_id=user_id
+    )
     weather_info = await get_location_weather(location.id, user_id)
 
     # 迷途风互斥可见性
