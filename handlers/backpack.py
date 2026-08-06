@@ -280,7 +280,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not bait_input:
         await _send_text(
             matcher,
-            "格式：设定鱼饵 鱼饵ID/名称\n输入「设定鱼饵 取消」清除设定",
+            "格式：设定鱼饵 鱼饵ID(1-6)/名称\n输入「设定鱼饵 取消」清除设定",
             user_id,
             is_private=is_private,
         )
@@ -297,7 +297,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not bait_input:
         await _send_text(
             matcher,
-            "格式：卖出鱼饵 鱼饵ID/名称",
+            "格式：卖出鱼饵 鱼饵ID(1-6)/名称",
             user_id,
             is_private=is_private,
         )

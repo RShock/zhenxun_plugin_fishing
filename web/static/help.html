@@ -610,10 +610,7 @@ code, .ic {
     <p class="card-desc">在群里输入 <code>钓鱼 1</code>，开始游戏。之后钓鱼收杆拿鱼获，收集图鉴，再到鱼店解锁更好的装备。</p>
     <div class="callout info">
       <strong>推荐入门方式：</strong>① 在群里直接发送消息；② 私聊群里的真寻机器人。<br>
-      群消息有个人和总体次数限制，超过后不回复；私聊没有限制。主机器人每天额外提供 100 条钓鱼消息容量，繁忙时会自动分配可用机器人。网页端仅为备用渠道，详见本页后文 <a href="#web-backup">网页端（备用）</a>。<br>QQ官方群中的机器人回复会用“@昵称”文字标记当前玩家；这是醒目的昵称提示，不会触发QQ的系统@提醒。
-    </div>
-    <div class="callout info" style="margin-top:10px">
-      <strong>从旧机器人迁移：</strong>第一次使用QQ官方机器人时，发送 <code>@机器人 绑定qq账号 你的QQ号</code>（<code>QQ</code> 大小写均可，也可使用“绑定qq角色”）。绑定成功后会自动继承原来的钓鱼角色、背包和进度。如QQ号输入错误，可在首次绑定后3天内重复使用同一指令换绑（历史无时间记录的绑定统一截至2026年8月8日12:00）；通过平台真实@选择其他已绑定玩家时，也会自动识别对方原角色，不会显示或新建一串角色ID。
+      群聊有消息限制，超过不回复。QQ官方Bot在群内，或者私聊机器人，均没有消息限制。
     </div>
 
     <div class="flow-diagram" aria-label="钓鱼、收杆、获得图鉴、解锁装备组成的环形流程图">
@@ -682,14 +679,6 @@ code, .ic {
       <strong>防闲置：</strong>如果超过 15 分钟没有操作，下次输入 <code>钓鱼</code> 或 <code>收杆</code> 时，角色会自动回到上次钓鱼的地图开始钓鱼（从上次收杆的时刻算起，闲置期间无任何空档）。输入 <code>钓鱼</code> 会提示"请输入收杆"；输入 <code>收杆</code> 则直接结算鱼获。
     </div>
 
-    <div class="callout warn" style="margin-top:12px">
-      <strong>地图访问限制：</strong>输入 <code>钓鱼 [地图ID]</code> 时，若不满足该地图的进入条件，会提示原因并重新选择地图。1-10 图需鱼竿等级达到对应难度；11-20 星空图需已建设星空艇；S1 猫猫乐园需集齐两张普通地图的全部 UTR 图鉴。
-    </div>
-
-    <div class="callout tip" style="margin-top:12px">
-      <strong>选择地图：</strong>输入 <code>钓鱼</code> 打开地图列表后，下一条消息必须只填写地图编号，例如 <code>1</code>、<code>12</code> 或 <code>S1</code>。普通聊天里带有数字不会被当作地图选择。
-    </div>
-
     <div class="callout tip" style="margin-top:12px">
       <strong>重复指令保护：</strong>同一玩家同时发送收杆、卖鱼、购买、赠送、使用物品等会改变数据的指令时，系统会按顺序处理，避免重复扣除或覆盖结果；前一条较慢时，后一条可能稍后才回复，请勿反复发送。
     </div>
@@ -702,26 +691,23 @@ code, .ic {
       <table>
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
-          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼菜单</code></td><td>查看快捷指令菜单。QQ官方Bot群聊中显示为可点击按钮菜单（5行智能排版：2字标签4个一行、4字标签3个一行，确保完整显示），其他平台为文本菜单。定时推送采用防刷策略：仅向有QQ官方Bot的活跃群推送，当群内累计消息超过20条（公告已被刷走）且距上次推送超过1小时时才会再次推送。</td></tr>
-          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。不填地图按当前流程选择；支持 1-20 和 S1。</td></tr>
-          <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。金币流水会按钓鱼结算、出售、奖励、购买、升级等大类记录，便于统计收支。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼菜单</code></td><td>官方Bot可用此指令，会定时发送。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼 [地图ID]</code></td><td>开始钓鱼。</td></tr>
+          <tr><td><span class="tag t-basic">基础</span></td><td><code>收杆</code></td><td>结束并结算本轮钓鱼，自动扣除鱼饵、锁鱼、卖鱼。</td></tr>
           <tr><td><span class="tag t-basic">基础</span></td><td><code>钓鱼状态</code></td><td>查看钓鱼进度、Buff 和鱼获。每次查看都会结算并重置计时器。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>背包</code></td><td>查看鱼、鱼饵、药水、展示框、素材等库存。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>卖鱼 [筛选]</code></td><td>卖出鱼。不带参数默认排除 UTR。支持稀有度、鱼 ID、全部等筛选；每次出售都会记录鱼种、数量、单价和小计，便于核对收入。</td></tr>
           <tr><td><span class="tag t-basic">背包</span></td><td><code>赠送 鱼ID @用户</code></td><td>赠送鱼给其他用户（需平台真实 @）。已绑定玩家会自动使用原角色，结果只显示玩家昵称，不显示角色ID。</td></tr>
           <tr><td><span class="tag t-basic">图鉴</span></td><td><code>图鉴</code> / <code>图鉴1</code> / <code>图鉴2</code></td><td>图鉴1 为普通地图和 S1，图鉴2 为星空地图。</td></tr>
           <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店</code></td><td>查看鱼饵、升级、展示框等可购买项目。</td></tr>
-          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店购买/买鱼饵 物品名 [数量]</code></td><td>购买鱼饵或商店物品（药水不在鱼店出售）。“买鱼饵”为别名，用法与“卖出鱼饵 鱼饵名”对称，如 <code>买鱼饵 蚯蚓鱼饵 10</code>。</td></tr>
+          <tr><td><span class="tag t-basic">商店</span></td><td><code>鱼店购买/买鱼饵 物品名 [数量]</code></td><td>购买鱼饵或商店物品（药水不在鱼店出售）。"买鱼饵"为别名，用法与"卖出鱼饵 鱼饵名/ID"对称，如 <code>买鱼饵 蚯蚓鱼饵 10</code>。</td></tr>
           <tr><td><span class="tag t-basic">成长</span></td><td><code>升级鱼竿</code> / <code>升级鱼钩</code></td><td>提升地图进入能力或钓鱼速度。</td></tr>
-          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级展示栏</code> / <code>升级展示框</code> / <code>升级木框</code> / <code>升级星空展示框</code></td><td>万能升级：未满 10 的木框/猫框/星空框一并校验；材料够的全部升级扣框，否则报告各自还差多少。星空展示框消耗星空框（最贵鱼 4 倍收益）。四个指令互为别名，任一均可触发。</td></tr>
+          <tr><td><span class="tag t-basic">成长</span></td><td><code>升级展示栏</code> / <code>升级展示框</code> / <code>升级木框</code> / <code>升级星空展示框</code></td><td>这些指令名字均会触发所有类型的展示框升级。升级展示框并获得更多的每日收益。</td></tr>
           <tr><td><span class="tag t-basic">成长</span></td><td><code>钓鱼币兑换 [数量]</code></td><td>进行钓鱼币相关兑换。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>打窝 [层数]</code></td><td>消耗玉米给当前地点增加速度，每日 2 次。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 物品名 [数量]</code></td><td>使用药水、木框、猫框等道具。数量超出库存自动使用全部剩余。</td></tr>
           <tr><td><span class="tag t-basic">Buff</span></td><td><code>钓鱼使用 猫框 [数量]</code></td><td>仅 11-20 星空图可用：消耗猫框对全部星空图全局打窝加速。</td></tr>
-          <tr><td><span class="tag t-basic">鱼饵</span></td><td><code>设定鱼饵 鱼饵名</code></td><td>设置优先使用的鱼饵。<code>取消/0/自动/清除</code> 恢复自动选择。</td></tr>
           <tr><td><span class="tag t-basic">交换</span></td><td><code>黑商</code> / <code>黑商撤回</code> / <code>白商</code></td><td>鱼获交换、撤回与逆交换，详见黑商白商专页。</td></tr>
-          <tr><td><span class="tag t-basic">设置</span></td><td><code>自动卖鱼 [开启/关闭/稀有度]</code></td><td>收杆后自动卖出指定稀有度及以下未锁定鱼。</td></tr>
-          <tr><td><span class="tag t-basic">设置</span></td><td><code>自动锁鱼 [开启/关闭/通配符]</code></td><td>收杆后自动锁定匹配的鱼，优先级高于自动卖鱼。</td></tr>
           <tr><td><span class="tag t-basic">设置</span></td><td><code>钓鱼改名 名字</code> / <code>更换皮肤 ID</code></td><td>修改钓鱼昵称或切换已有皮肤。</td></tr>
           <tr><td><span class="tag t-basic">天气</span></td><td><code>天气</code> / <code>天气2</code></td><td>查看普通/S1 或星空地图天气，每天 11 点刷新。</td></tr>
         </tbody>
@@ -734,12 +720,28 @@ code, .ic {
     <p class="card-desc">这些功能能让整理背包和查找鱼获更方便，不使用也不影响正常钓鱼、收杆和升级。</p>
     <div class="grid-2">
       <div class="cmd-card">
-        <span class="cmd-name">详细图鉴</span>
-        <p class="cmd-desc"><code>详细图鉴</code> 或 <code>详细图鉴1</code> 查看普通地图和 S1，<code>详细图鉴2</code> 查看星空地图。每条鱼按稀有度分 5 行显示，解密 UTR 后为 6 行；每行左侧是鱼 ID，右侧是价格。查看第 2 页需要先修好星空艇。</p>
+        <span class="cmd-name">绑定qq账号</span>
+        <p class="cmd-desc">第一次使用QQ官方机器人时，发送 <code>@机器人 绑定qq账号 你的QQ号</code>（也可使用"绑定qq角色"）。绑定后自动继承原来的钓鱼角色、背包和进度。QQ号输入错误可在首次绑定后3天内换绑。</p>
       </div>
       <div class="cmd-card">
-        <span class="cmd-name">卖出不用的鱼饵</span>
-        <p class="cmd-desc">输入 <code>卖出鱼饵 鱼饵名</code>，可一次卖掉背包中该种鱼饵，并按购买价的 50% 回收。例如：<code>卖出鱼饵 蚯蚓鱼饵</code>。</p>
+        <span class="cmd-name">设定鱼饵</span>
+        <p class="cmd-desc"><code>设定鱼饵 鱼饵名/ID</code> 设置优先使用的鱼饵（鱼饵ID 1-6）。<code>取消/0/自动/清除</code> 恢复自动选择。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">自动卖鱼</span>
+        <p class="cmd-desc"><code>自动卖鱼 [开启/关闭/稀有度]</code>，收杆后自动卖出指定稀有度及以下未锁定鱼。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">自动锁鱼</span>
+        <p class="cmd-desc"><code>自动锁鱼 [开启/关闭/通配符]</code>，收杆后自动锁定匹配的鱼，优先级高于自动卖鱼。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">卖出鱼饵</span>
+        <p class="cmd-desc">输入 <code>卖出鱼饵 鱼饵名/ID</code>，可一次卖掉背包中该种鱼饵，按购买价 50% 回收。鱼饵ID：1=蚯蚓、2=虾米、3=拟饵、4=黄金、5=魔法、6=传说。例如：<code>卖出鱼饵 1</code>。</p>
+      </div>
+      <div class="cmd-card">
+        <span class="cmd-name">详细图鉴</span>
+        <p class="cmd-desc"><code>详细图鉴</code> 或 <code>详细图鉴1</code> 查看普通地图和 S1，<code>详细图鉴2</code> 查看星空地图。每条鱼按稀有度分 5 行显示，解密 UTR 后为 6 行；每行左侧是鱼 ID，右侧是价格。查看第 2 页需要先修好星空艇。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">鱼 ID 规则</span>
@@ -1009,42 +1011,6 @@ code, .ic {
     </ul>
   </div>
 
-  <!-- 黑商白商 -->
-  <div class="card">
-    <div class="sec-h">黑商与白商交换</div>
-    <div class="grid-2">
-      <div class="cmd-card">
-        <span class="cmd-name">黑商交换 来源鱼 目标鱼</span>
-        <p class="cmd-desc">用高级鱼换低级鱼。来源鱼的地图等级和稀有度都不能低于目标鱼。每天首次黑商交换免费，之后可消耗额外兑换券继续交换。</p>
-      </div>
-      <div class="cmd-card">
-        <span class="cmd-name">黑商撤回</span>
-        <p class="cmd-desc">撤回当天的黑商交换，退还获得的鱼并返还消耗的鱼。消耗每日赠送次数（与赠送/白商共享），不返还当日黑商交换次数和额外兑换券。仅限当天操作。</p>
-      </div>
-      <div class="cmd-card">
-        <span class="cmd-name">白商 / 白商交换 支付鱼 获得鱼</span>
-        <p class="cmd-desc">查看箭头列表并用同地图同稀有度的鱼交换黑商指定鱼。100% 成功，消耗赠送次数。</p>
-      </div>
-    </div>
-    <div class="sec-h" style="margin-top:14px">黑商规则细节</div>
-    <ul class="clean">
-      <li>来源鱼与目标鱼稀有度相同时，有 70% 概率交换失败，改为获得目标鱼所在场景中相同稀有度的其他鱼</li>
-      <li>来源鱼稀有度严格高于目标鱼时（高换低），必定成功且不消耗每日次数，黑商很高兴收到更稀有的鱼</li>
-      <li>锁定鱼也允许被交换消耗</li>
-      <li>S1 猫猫乐园视为 7 级图</li>
-      <li>交换失败后记录仍保留，白商列表中可看到反向交换选项</li>
-      <li>误操作后可用「黑商撤回」撤回当天交换，退还鱼获并回退保底计数，但消耗赠送次数且不返还当日黑商交换次数</li>
-      <li>滥用撤回漏洞（交换→撤回→重试刷随机）会被追溯惩罚：每天超出1次的部分按等量天数计入黑商过载冷却，冷却期间普通黑商完全不可用，智能黑商仍可使用每日免费次数或消耗额外券启动</li>
-    </ul>
-    <div class="sec-h" style="margin-top:14px">白商规则细节</div>
-    <ul class="clean">
-      <li>白商列表分两类：<strong>可以交换</strong>（绿色，背包已有同地图同稀有度的支付鱼）和<strong>有可能交换</strong>（琥珀色，鱼力足够但暂无支付鱼）</li>
-      <li>未解锁地图、鱼力不足、或缺少 UTR 成就的记录不显示</li>
-      <li>以箭头列表展示：左边为支付鱼，右边为获得鱼，箭头指向交换方向。同一目标的多个交换合并显示</li>
-      <li>白商交换成功后，对应黑商记录失效</li>
-    </ul>
-  </div>
-
   <!-- 保底系统 -->
   <div class="card">
     <div class="sec-h">保底计数器一览</div>
@@ -1089,9 +1055,7 @@ code, .ic {
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。每日首次免费，之后每次消耗 1 张额外兑换券；高稀有度换低稀有度不消耗次数。鱼可用「名称+稀有度」或数字 ID（1-9图为3位、10-15图为4位、猫猫乐园为 s1 开头如 s101）。</td></tr>
-          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。消耗赠送次数（与赠送/白商共享），不返还当日黑商交换次数和额外兑换券。多条记录时需指定序号。</td></tr>
-          <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可交换列表（箭头列表展示，左边为支付鱼，右边为获得鱼）。</td></tr>
           <tr><td><span class="tag t-utr">白商</span></td><td><code>白商交换 支付鱼 获得鱼</code></td><td>用与黑商目标同地图同稀有度的鱼，换回黑商当时交出的指定鱼。</td></tr>
         </tbody>
       </table>
@@ -1099,17 +1063,17 @@ code, .ic {
     <div class="grid-2" style="margin-top:12px">
       <div class="cmd-card">
         <span class="cmd-name">输入格式</span>
-        <p class="cmd-desc">示例：<code>黑商交换 锦鲤 UR 小虾 N</code> 或 <code>黑商交换 105 201</code>。若方向写反但背包只有目标鱼，系统会自动尝试对调。</p>
+        <p class="cmd-desc">示例：<code>黑商交换 锦鲤 UR 小虾 N</code> 或 <code>黑商交换 105 201</code>。<span hidden>若方向写反但背包只有目标鱼，系统会自动尝试对调。</span></p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">锁定鱼</span>
-        <p class="cmd-desc">锁定状态的鱼也可以被黑商/白商消耗，交换前请确认不会误换珍藏鱼。</p>
+        <p class="cmd-desc">锁定状态的鱼也可以被黑商/白商消耗。</p>
       </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="sec-h">进阶技巧</div>
+    <div class="sec-h">进阶用法</div>
     <p class="card-desc">普通黑商与白商已经可以完成鱼获交换；智能黑商用于减少同稀有度交换连续拿错鱼时的重复操作。</p>
     <div class="grid-2">
       <div class="cmd-card">
@@ -1117,20 +1081,8 @@ code, .ic {
         <p class="cmd-desc">输入 <code>智能黑商 来源鱼 目标鱼</code>。若黑商随机给了别的鱼，系统会把本次产物继续交换，直到得到指定目标，或产物离开背包。</p>
       </div>
       <div class="cmd-card">
-        <span class="cmd-name">停止条件</span>
-        <p class="cmd-desc">本次产物若触发首次图鉴解锁或自动放入展示栏，链式交换会立即停止，不会拿背包里的旧库存继续交换。</p>
-      </div>
-      <div class="cmd-card">
-        <span class="cmd-name">等待与兑换券</span>
-        <p class="cmd-desc">每天第一次黑商交换免费，智能黑商优先消耗这次免费次数；当天已经用过普通或智能黑商时，消耗 1 张额外兑换券再次启动智能黑商。链式交换每多尝试一次都会增加等待时间，剩余兑换券每张可再抵扣 1 天。等待时间仅限制普通黑商，不影响智能黑商使用免费次数。</p>
-      </div>
-      <div class="cmd-card">
         <span class="cmd-name">收竿提示</span>
         <p class="cmd-desc">收竿结果出现“黑商已可用”时，表示普通黑商或智能黑商至少有一个入口当前可用；黑商过载冷却期间不会显示该提示。</p>
-      </div>
-      <div class="cmd-card">
-        <span class="cmd-name">什么时候使用</span>
-        <p class="cmd-desc">适合补齐同稀有度的指定图鉴。若能用更高稀有度换低一档，普通黑商不会触发同稀有度随机，通常无需使用智能黑商。</p>
       </div>
     </div>
   </div>
@@ -1150,7 +1102,7 @@ code, .ic {
         <span class="cmd-name">同稀有度风险</span>
         <p class="cmd-desc">来源与目标稀有度相同时，有 70% 概率被随机改写为「目标场景同稀有度的其他鱼」；跨稀有度交换不会触发该随机。</p>
       </div>
-      <div class="cmd-card">
+      <div class="cmd-card" hidden>
         <span class="cmd-name">失败保底</span>
         <p class="cmd-desc">连续 4 次因同稀有度随机而「没拿到指定目标」后，下一次同稀有度交换必定拿到你指定的目标，保底计数清零。</p>
       </div>
@@ -1207,7 +1159,7 @@ code, .ic {
     <ul class="clean">
       <li><strong>补图鉴：</strong>用重复的高场景/高稀有度鱼，换本图缺失的低稀有度或指定目标。</li>
       <li><strong>规避 70% 风险：</strong>尽量用更高稀有度换低一档，避免同稀有度被随机改写。</li>
-      <li><strong>利用保底：</strong>若必须同稀有度硬换，可连续失败 4 次后用第 5 次保底锁定目标。</li>
+      <li hidden><strong>利用保底：</strong>若必须同稀有度硬换，可连续失败 4 次后用第 5 次保底锁定目标。</li>
       <li><strong>白商捡漏：</strong>别人黑商成功/随机后留下的记录，可能是你缺的图鉴捷径。先 <code>白商</code> 看「现在可交换」。</li>
       <li><strong>次数规划：</strong>每天第一次黑商免费，之后普通黑商每次消耗 1 张券；智能黑商若当天已用过黑商，启动也要 1 张券。白商会占赠送次数，注意与送鱼共享额度。</li>
       <li><strong>及时撤回：</strong>黑商误操作后当天可用「黑商撤回」恢复，消耗赠送次数但退还鱼获，跨日则无法撤回。</li>
@@ -1232,10 +1184,6 @@ code, .ic {
       <div class="cmd-card">
         <span class="cmd-name">拿到的不是指定目标</span>
         <p class="cmd-desc">同稀有度 70% 随机改写。记录仍会写入白商，别人可按实际结果逆交换。当天可用「黑商撤回」撤回（消耗赠送次数）。</p>
-      </div>
-      <div class="cmd-card">
-        <span class="cmd-name">提示「黑商将在X天后来」</span>
-        <p class="cmd-desc">黑商过载冷却中。滥用撤回漏洞（交换→撤回→重试刷随机）会触发追溯惩罚：每天超出1次免费额度的交换次数按等量天数累加为冷却期。冷却期间普通黑商完全不可用，智能黑商在当日已有黑商记录时可消耗额外券使用。</p>
       </div>
     </div>
   </div>

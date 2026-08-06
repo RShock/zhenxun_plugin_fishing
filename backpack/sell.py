@@ -162,27 +162,34 @@ async def _calculate_sell_total(
     return total_coins, sold_details, ledger_items
 
 
+def _bait_id_reference() -> str:
+    """返回所有鱼饵的ID对照文本，格式：1=蚯蚓鱼饵、2=虾米鱼饵…"""
+    shop = ConfigManager.get_shop()
+    return "、".join(f"{b.id}={b.name}" for b in shop.baits)
+
+
 async def _get_bait_inventory_hint(user_id: str) -> str:
-    """获取用户背包中鱼饵列表的提示文本，格式：ID:名称x数量。"""
+    """获取用户背包中鱼饵列表的提示文本，格式：ID:名称x数量，并附带完整ID对照。"""
     items = await FishingUser.get_user_items(user_id)
     bait_items = [i for i in items if i["item_type"] == "bait" and i["count"] > 0]
+    ref = f"鱼饵ID对照：{_bait_id_reference()}"
     if not bait_items:
-        return "背包中没有鱼饵"
+        return f"背包中没有鱼饵\n{ref}"
     parts = []
     for bi in bait_items:
         bait_data = ConfigManager.get_bait(bi["item_id"])
         if bait_data:
             parts.append(f"{bait_data.id}:{bait_data.name}x{bi['count']}")
     if not parts:
-        return "背包中没有鱼饵"
-    return "背包鱼饵：" + "、".join(parts)
+        return f"背包中没有鱼饵\n{ref}"
+    return f"背包鱼饵：{'、'.join(parts)}\n{ref}"
 
 
 async def sell_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
     """卖出用户所有指定的鱼饵，按购买价的50%回收。"""
     if not bait_input:
         hint = await _get_bait_inventory_hint(user_id)
-        return False, f"格式：卖出鱼饵 鱼饵ID/名称\n{hint}"
+        return False, f"格式：卖出鱼饵 鱼饵ID(1-6)/名称\n{hint}"
 
     bait = ConfigManager.get_bait(bait_input)
     if not bait:
