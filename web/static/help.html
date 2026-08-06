@@ -1029,6 +1029,7 @@ code, .ic {
     <div class="sec-h" style="margin-top:14px">黑商规则细节</div>
     <ul class="clean">
       <li>来源鱼与目标鱼稀有度相同时，有 70% 概率交换失败，改为获得目标鱼所在场景中相同稀有度的其他鱼</li>
+      <li>来源鱼稀有度严格高于目标鱼时（高换低），必定成功且不消耗每日次数，黑商很高兴收到更稀有的鱼</li>
       <li>锁定鱼也允许被交换消耗</li>
       <li>S1 猫猫乐园视为 7 级图</li>
       <li>交换失败后记录仍保留，白商列表中可看到反向交换选项</li>
@@ -1073,7 +1074,7 @@ code, .ic {
   <div class="card">
     <div class="sec-h">玩法总览</div>
     <p style="font-size:14px; line-height:1.7;">
-      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。每天首次黑商交换免费，之后可消耗额外兑换券继续使用普通或智能黑商。
+      <strong>黑商</strong>：用场景等级和稀有度都不低于目标的鱼，换成你想要的目标鱼。每天首次黑商交换免费，之后可消耗额外兑换券继续使用普通或智能黑商；高稀有度换低稀有度不消耗次数。
       <strong>白商</strong>：查看全服仍有效的黑商记录，用与黑商目标鱼<strong>同地图同稀有度</strong>的任意鱼，换回黑商当时<strong>交出</strong>的指定鱼。成功后该记录失效，并消耗赠送次数。
     </p>
     <div class="callout tip" style="margin-top:10px">
@@ -1087,7 +1088,7 @@ code, .ic {
       <table>
         <thead><tr><th>分类</th><th>指令</th><th>说明</th></tr></thead>
         <tbody>
-          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。每日首次免费，之后每次消耗 1 张额外兑换券。鱼可用「名称+稀有度」或数字 ID（1-9图为3位、10-15图为4位、猫猫乐园为 s1 开头如 s101）。</td></tr>
+          <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商交换 来源鱼 目标鱼</code></td><td>执行一次黑商交换。每日首次免费，之后每次消耗 1 张额外兑换券；高稀有度换低稀有度不消耗次数。鱼可用「名称+稀有度」或数字 ID（1-9图为3位、10-15图为4位、猫猫乐园为 s1 开头如 s101）。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商</code></td><td>不带参数时查看用法说明。</td></tr>
           <tr><td><span class="tag t-utr">黑商</span></td><td><code>黑商撤回</code> / <code>黑商撤回 序号</code></td><td>撤回当天的黑商交换。消耗赠送次数（与赠送/白商共享），不返还当日黑商交换次数和额外兑换券。多条记录时需指定序号。</td></tr>
           <tr><td><span class="tag t-utr">白商</span></td><td><code>白商</code></td><td>渲染当前可交换列表（箭头列表展示，左边为支付鱼，右边为获得鱼）。</td></tr>
@@ -1139,7 +1140,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">普通黑商每日次数</span>
-        <p class="cmd-desc">每天第一次普通黑商免费；当天继续使用普通黑商时，每次消耗 1 张黑商额外兑换券。智能黑商当天已经执行过，也会占用这次免费机会。</p>
+        <p class="cmd-desc">每天第一次普通黑商免费；当天继续使用普通黑商时，每次消耗 1 张黑商额外兑换券。智能黑商当天已经执行过，也会占用这次免费机会。<strong>高稀有度换低稀有度（如 UR→SSR）不消耗次数</strong>，黑商很高兴收到更稀有的鱼。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">同稀有度风险</span>

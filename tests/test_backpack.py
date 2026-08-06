@@ -752,7 +752,8 @@ class TestBlackMarketExchange:
         assert displays[0]["fish_name"] == target.name
         assert displays[0]["rarity"] == target.rarity
 
-    async def test_exchange_locked_fish_allowed_and_once_per_day(self, db):
+    async def test_exchange_locked_fish_allowed_and_high_to_low_free(self, db):
+        """锁定鱼可被黑商消耗，且高换低不消耗每日次数。"""
         source = find_fish_target("小鲫鱼", "UR")
         target = find_fish_target("小鲫鱼", "N")
         assert source is not None and target is not None
@@ -761,6 +762,7 @@ class TestBlackMarketExchange:
         )
         await lock_fish(USER_ID, source.numeric_id)
 
+        # 第一次交换：锁定鱼被消耗，N 自动展示，高换低免费
         ok, msg, should_reply = await black_market_exchange(
             USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
         )
@@ -768,24 +770,35 @@ class TestBlackMarketExchange:
         assert ok is True
         assert should_reply is True
         assert "自动展示" in msg
+        assert "黑商很高兴" in msg
         remaining = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
         assert remaining["count"] == 1
         received = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
         assert received is None
         displays = await db.display_get_user_displays(USER_ID)
         assert any(item["numeric_id"] == target.numeric_id for item in displays)
+
+        # 第二次交换：高换低仍然免费，不消耗次数也不需要兑换券
         second_ok, second_msg, second_should_reply = await black_market_exchange(
             USER_ID,
             f"{source.name} {source.rarity} {target.name} {target.rarity}",
         )
-        assert second_ok is False
+        assert second_ok is True
         assert second_should_reply is True
-        assert "继续交换需要 1 张" in second_msg
+        assert "黑商很高兴" in second_msg
+        assert "兑换券" not in second_msg
 
-    async def test_original_black_market_uses_ticket_after_free_exchange(self, db):
-        source = find_fish_target("小鲫鱼", "UR")
+    async def test_original_black_market_uses_ticket_after_free_exchange(
+        self, db, monkeypatch
+    ):
+        """同稀有度交换消耗每日次数，第二次需要额外兑换券。"""
+        source = find_fish_target("小鲫鱼", "N")
         target = find_fish_target("小鲫鱼", "N")
         assert source is not None and target is not None
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
+            lambda: 0.9,
+        )
         await db.backpack_add_fish(
             USER_ID, source.name, source.rarity, source.numeric_id, count=2
         )
@@ -807,11 +820,16 @@ class TestBlackMarketExchange:
         assert ticket is None
 
     async def test_original_black_market_rejects_extra_exchange_without_ticket(
-        self, db
+        self, db, monkeypatch
     ):
-        source = find_fish_target("小鲫鱼", "UR")
+        """同稀有度交换用完免费次数后，无券则拒绝。"""
+        source = find_fish_target("小鲫鱼", "N")
         target = find_fish_target("小鲫鱼", "N")
         assert source is not None and target is not None
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market.random.random",
+            lambda: 0.9,
+        )
         await db.backpack_add_fish(
             USER_ID, source.name, source.rarity, source.numeric_id, count=2
         )
@@ -845,6 +863,29 @@ class TestBlackMarketExchange:
         assert ok is False
         assert should_reply is True
         assert "天后来" in msg or "再来" in msg
+
+    async def test_high_to_low_exchange_does_not_consume_count(self, db):
+        """高稀有度换低稀有度可连续多次免费交换，不消耗每日次数。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=3
+        )
+
+        for _ in range(3):
+            ok, msg, _ = await black_market_exchange(
+                USER_ID,
+                f"{source.name} {source.rarity} {target.name} {target.rarity}",
+            )
+            assert ok is True
+            assert "黑商很高兴" in msg
+            assert "兑换券" not in msg
+
+        # 每日次数仍为 0：高换低不消耗次数
+        user = await db.user_get(USER_ID)
+        count, _ = user._get_daily_counter("black_market")
+        assert count == 0
 
     async def test_smart_black_market_chains_and_uses_tickets_for_cooldown(
         self, db, monkeypatch
@@ -884,7 +925,7 @@ class TestBlackMarketExchange:
     async def test_smart_black_market_uses_start_ticket_after_normal_exchange(
         self, db, monkeypatch
     ):
-        normal_source = find_fish_target("小鲫鱼", "UR")
+        normal_source = find_fish_target("小鲫鱼", "N")
         normal_target = find_fish_target("小鲫鱼", "N")
         smart_source = find_fish_target("橘座鲫鱼", "UR")
         smart_target = find_fish_target("小鲫鱼", "UR")

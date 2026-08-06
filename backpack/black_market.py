@@ -27,7 +27,8 @@ BLACK_MARKET_USAGE = (
     "也可以使用：黑商交换 鱼名字稀有度 鱼名字稀有度\n"
     "例如：黑商 鲤鱼UR 草鱼SSR / 黑商交换 123 456 / 黑商交换 s101 s105\n"
     "鱼ID：1-9图为3位数字、10-15图为4位数字、猫猫乐园为 s1 开头（如 s101）\n"
-    "来源鱼的场景等级和稀有度必须都不低于目标鱼；若稀有度相同，有 70% 概率改为获得目标鱼所在场景中相同稀有度的其他鱼。"
+    "来源鱼的场景等级和稀有度必须都不低于目标鱼；若稀有度相同，有 70% 概率改为获得目标鱼所在场景中相同稀有度的其他鱼。\n"
+    "高稀有度换低稀有度（如UR换SSR）必定成功且不消耗每日次数。"
 )
 SMART_BLACK_MARKET_USAGE = (
     "智能黑商用法：智能黑商 来源鱼 目标鱼 / 智能黑商交换 来源鱼 目标鱼\n"
@@ -486,7 +487,12 @@ async def black_market_exchange(
             True,
         )
 
-    used_count = await FishingUser.get_black_market_count(user_id)
+    # 特性：高换低免费——来源鱼稀有度严格高于目标鱼时，黑商很乐意接受这笔"划算"交易，
+    # 不消耗每日次数也不需要额外兑换券。只有同稀有度交换（有70%随机风险）才消耗次数。
+    is_high_to_low = RARITY_INDEX.get(source.rarity, 0) > RARITY_INDEX.get(
+        target.rarity, 0
+    )
+
     user = await FishingUser.get_user(user_id)
     today = date.today()
     # 黑商过载冷却：smart_black_market_available_date 在未来时，硬封禁普通黑商。
@@ -497,16 +503,18 @@ async def black_market_exchange(
         return False, f"黑商将在 {delta_days} 天后（{available_date.isoformat()}）再来。", True
 
     used_extra_ticket = False
-    if used_count >= DAILY_BLACK_MARKET_LIMIT:
-        used_extra_ticket = await FishingUser.remove_item(
-            user_id, "black_market_extra_ticket", "ticket", 1
-        )
-        if not used_extra_ticket:
-            return (
-                False,
-                "今天的免费黑商交换已经用完，继续交换需要 1 张黑商额外兑换券。",
-                True,
+    if not is_high_to_low:
+        used_count = await FishingUser.get_black_market_count(user_id)
+        if used_count >= DAILY_BLACK_MARKET_LIMIT:
+            used_extra_ticket = await FishingUser.remove_item(
+                user_id, "black_market_extra_ticket", "ticket", 1
             )
+            if not used_extra_ticket:
+                return (
+                    False,
+                    "今天的免费黑商交换已经用完，继续交换需要 1 张黑商额外兑换券。",
+                    True,
+                )
 
     # 黑商秘密保底：连续4次"失败"（被黑商随机替换目标鱼）后，下次必定获得指定目标
     pity_counter = user.black_market_pity_counter if user else 0
@@ -529,7 +537,8 @@ async def black_market_exchange(
 
     inherited_lock = bool(fish.get("locked", False))
     await FishingUser.remove_fish_by_numeric_id(user_id, source.numeric_id, 1)
-    await FishingUser.increment_black_market_count(user_id)
+    if not is_high_to_low:
+        await FishingUser.increment_black_market_count(user_id)
     # 黑商获得的目标鱼始终尝试自动上框；来源鱼的锁定状态仍在入包后独立继承。
     result = await add_fish_to_user(
         user_id,
@@ -566,6 +575,8 @@ async def black_market_exchange(
     )
     if randomized:
         msg += f"\n黑商动了手脚，目标从 {target.name} 变成了 {actual_target.name}。"
+    if is_high_to_low:
+        msg += "\n黑商很高兴，没有消耗次数。"
     if messages:
         msg += "\n" + "\n".join(messages)
     return True, msg, True
