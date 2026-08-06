@@ -619,11 +619,6 @@ async def smart_black_market_exchange(
     used_count = await FishingUser.get_black_market_count(user_id)
     user = await FishingUser.get_user(user_id)
     today = date.today()
-    available_date = getattr(user, "smart_black_market_available_date", None)
-    # 当天已有黑商记录时，额外券可直接支付本轮智能黑商的启动费用；
-    # 非当天产生的智能黑商冷却仍需正常等待，避免额外券跨日跳过既有冷却。
-    if available_date and available_date > today and used_count < DAILY_BLACK_MARKET_LIMIT:
-        return False, f"智能黑商将在 {available_date.isoformat()} 再来。", True
 
     start_ticket_used = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:

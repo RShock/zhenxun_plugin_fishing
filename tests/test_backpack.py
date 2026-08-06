@@ -887,6 +887,27 @@ class TestBlackMarketExchange:
         count, _ = user._get_daily_counter("black_market")
         assert count == 0
 
+    async def test_smart_black_market_uses_free_count_despite_cooldown(self, db):
+        """智能黑商有冷却时仍优先使用每日免费次数，不被冷却阻断。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        # 模拟前一天智能黑商产生的冷却
+        user = await db.user_get(USER_ID)
+        user.smart_black_market_available_date = date.today() + timedelta(days=3)
+
+        ok, msg, should_reply = await smart_black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert ok is True
+        assert should_reply is True
+        # 不应消耗兑换券（使用了免费次数）
+        assert "兑换券" not in msg
+
     async def test_smart_black_market_chains_and_uses_tickets_for_cooldown(
         self, db, monkeypatch
     ):
