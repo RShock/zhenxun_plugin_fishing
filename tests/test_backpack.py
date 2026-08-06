@@ -1454,3 +1454,27 @@ class TestBlackMarketRevoke:
         assert ok is False
         assert should_reply is True
         assert "赠送次数已用完" in msg
+
+    async def test_revoke_does_not_return_extra_ticket(self, db):
+        """撤回不返还消耗的额外兑换券。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        # 创建一条使用了额外券的黑商记录
+        await db.exchange_create_black_record(
+            USER_ID, source, target, used_extra_ticket=True
+        )
+        await db.backpack_add_fish(
+            USER_ID, target.name, target.rarity, target.numeric_id, count=1
+        )
+
+        ok, msg, should_reply = await black_market_revoke(USER_ID, "")
+
+        assert ok is True
+        assert "撤回成功" in msg
+        assert "兑换券" not in msg
+        # 验证没有返还额外券
+        ticket = await db.items_get_item(
+            USER_ID, "black_market_extra_ticket", "ticket"
+        )
+        assert ticket is None

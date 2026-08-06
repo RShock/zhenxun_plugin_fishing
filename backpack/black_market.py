@@ -836,7 +836,7 @@ async def white_market_exchange(
 BLACK_MARKET_REVOKE_USAGE = (
     "黑商撤回用法：黑商撤回（查看当天可撤回记录）/ 黑商撤回 序号\n"
     "仅可撤回当天的黑商交换，撤回消耗每日赠送次数（与赠送/白商共享），"
-    "退还获得的鱼并返还消耗的鱼，但不返还当日黑商交换次数。"
+    "退还获得的鱼并返还消耗的鱼，但不返还当日黑商交换次数和额外兑换券。"
 )
 
 
@@ -883,17 +883,14 @@ async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
                 0, user.black_market_pity_counter - 1
             )
             await user.save(update_fields=["black_market_pity_counter"])
-    # 返还额外券
-    ticket_hint = ""
-    if record.used_extra_ticket:
-        await FishingUser.add_item(user_id, "black_market_extra_ticket", "ticket", 1)
-        ticket_hint = "，已返还 1 张黑商额外兑换券"
+    # 撤回不返还额外券：额外券在黑商交换时已作为"透支次数"消耗，
+    # 撤回只退鱼获和保底，不退券，防止撤回后用退回的券再次透支。
 
     messages = list(result["messages"])
     messages.extend(result["achievement_messages"])
     msg = (
         f"黑商撤回成功：退还 {record.target_name}({record.target_rarity}) "
-        f"→ 取回 {record.source_name}({record.source_rarity}){ticket_hint}"
+        f"→ 取回 {record.source_name}({record.source_rarity})"
     )
     if messages:
         msg += "\n" + "\n".join(messages)
