@@ -30,19 +30,23 @@ from ..utils import _is_official_qq_group_event, _send_text
 # QQ官方Bot按钮在同一行内等宽分配，行内按钮越多每个越窄。
 # 2字标签放4个一行（每个1/4屏宽，2字轻松放下）；
 # 4字标签放3个一行（每个1/3屏宽，4字不会被截断）。
-# 冷门指令（如建设星空艇、升级展示栏）不设按钮，玩家手动输入即可。
+# 冷门指令（如建设星空艇、升级展示栏、黑商交换）不设按钮，玩家手动输入即可。
+#
+# 每个按钮三元组：(label, command, enter)
+# enter=True  → 点击后直接自动发送（适用于无参数指令）
+# enter=False → 仅插入输入框，待玩家补充参数后手动发送
 # ─────────────────────────────────────────────────────────────────────────────
-_MENU_ROWS: tuple[tuple[tuple[str, str], ...], ...] = (
+_MENU_ROWS: tuple[tuple[tuple[str, str, bool], ...], ...] = (
     # 第1行 — 核心操作（4个×2字）
-    (("钓鱼", "钓鱼"), ("收杆", "收杆"), ("背包", "背包"), ("卖鱼", "卖鱼")),
+    (("钓鱼", "钓鱼", False), ("收杆", "收杆", True), ("背包", "背包", True), ("卖鱼", "卖鱼", False)),
     # 第2行 — 常用功能（4个×2字）
-    (("鱼店", "鱼店"), ("图鉴", "图鉴"), ("天气", "天气"), ("打窝", "打窝")),
+    (("鱼店", "鱼店", True), ("图鉴", "图鉴", False), ("天气", "天气", False), ("打窝", "打窝", False)),
     # 第3行 — 交易设置（3个×2字）
-    (("锁鱼", "锁鱼"), ("白商", "白商"), ("赠送", "赠送")),
+    (("锁鱼", "锁鱼", False), ("白商", "白商", False), ("赠送", "赠送", False)),
     # 第4行 — 状态自动（3个×4字）
-    (("钓鱼状态", "钓鱼状态"), ("自动卖鱼", "自动卖鱼"), ("自动锁鱼", "自动锁鱼")),
-    # 第5行 — 升级交换（3个×4字）
-    (("升级钓竿", "升级钓竿"), ("升级鱼钩", "升级鱼钩"), ("黑商交换", "黑商交换")),
+    (("钓鱼状态", "钓鱼状态", True), ("自动卖鱼", "自动卖鱼", False), ("自动锁鱼", "自动锁鱼", False)),
+    # 第5行 — 升级排行（3个×4字）
+    (("升级钓竿", "升级钓竿", True), ("升级鱼钩", "升级鱼钩", True), ("星空排行", "星空排行", True)),
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -117,7 +121,7 @@ def _build_menu_text() -> str:
     """构建纯文本菜单，用于 OneBot 回退。"""
     lines = []
     for row in _MENU_ROWS:
-        labels = " | ".join(label for label, _ in row)
+        labels = " | ".join(label for label, _, _ in row)
         lines.append(labels)
     return "\n".join(lines)
 
@@ -146,7 +150,7 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
     rows = []
     for row_buttons in _MENU_ROWS:
         buttons = []
-        for label, command in row_buttons:
+        for label, command, enter in row_buttons:
             buttons.append(
                 Button(
                     render_data=RenderData(
@@ -157,7 +161,7 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
                     action=Action(
                         type=2,  # 指令按钮：自动在输入框插入 @bot data
                         data=command,
-                        enter=True,  # 点击后直接自动发送
+                        enter=enter,  # True=点击后直接自动发送，False=仅插入输入框
                         permission=Permission(type=2),  # 所有人可操作
                         unsupport_tips="请升级至最新版本",
                     ),
