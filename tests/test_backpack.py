@@ -827,6 +827,25 @@ class TestBlackMarketExchange:
         assert second[0] is False
         assert "继续交换需要 1 张" in second[1]
 
+    async def test_black_market_blocked_by_overload_cooldown(self, db):
+        """smart_black_market_available_date 在未来时，普通黑商被硬封禁。"""
+        source = find_fish_target("小鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        user = await db.user_get(USER_ID)
+        user.smart_black_market_available_date = date.today() + timedelta(days=5)
+
+        ok, msg, should_reply = await black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert ok is False
+        assert should_reply is True
+        assert "天后来" in msg or "再来" in msg
+
     async def test_smart_black_market_chains_and_uses_tickets_for_cooldown(
         self, db, monkeypatch
     ):

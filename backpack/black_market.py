@@ -487,6 +487,15 @@ async def black_market_exchange(
         )
 
     used_count = await FishingUser.get_black_market_count(user_id)
+    user = await FishingUser.get_user(user_id)
+    today = date.today()
+    # 黑商过载冷却：smart_black_market_available_date 在未来时，硬封禁普通黑商。
+    # 与智能黑商不同，普通黑商不允许用额外券绕过冷却——这是对滥用撤回漏洞的惩罚。
+    available_date = getattr(user, "smart_black_market_available_date", None)
+    if available_date and available_date > today:
+        delta_days = (available_date - today).days
+        return False, f"黑商将在 {delta_days} 天后（{available_date.isoformat()}）再来。", True
+
     used_extra_ticket = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:
         used_extra_ticket = await FishingUser.remove_item(
@@ -500,7 +509,6 @@ async def black_market_exchange(
             )
 
     # 黑商秘密保底：连续4次"失败"（被黑商随机替换目标鱼）后，下次必定获得指定目标
-    user = await FishingUser.get_user(user_id)
     pity_counter = user.black_market_pity_counter if user else 0
     pity_triggered = pity_counter >= _BLACK_MARKET_PITY_THRESHOLD
 

@@ -2,6 +2,8 @@
 
 import ast
 from pathlib import Path
+import sys
+from types import ModuleType, SimpleNamespace
 
 from nonebot.internal.matcher import current_bot
 
@@ -216,14 +218,23 @@ def test_nickname_is_limited_to_database_field_length():
     assert _get_nickname(event) == "猫" * 255
 
 
-def test_official_group_context_uses_shared_numeric_group(monkeypatch):
-    from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
-        official_route_bridge,
-    )
 
-    monkeypatch.setattr(
-        official_route_bridge,
-        "get_group_id_for_official",
+def _install_fake_route_bridge(monkeypatch, resolver):
+    package_name = "zhenxun.plugins.zhenxun_plugin_route2"
+    module_name = f"{package_name}.official_bridge"
+    package = ModuleType(package_name)
+    package.__path__ = []
+    module = ModuleType(module_name)
+    module.official_route_bridge = SimpleNamespace(
+        get_group_id_for_official=resolver
+    )
+    monkeypatch.setitem(sys.modules, package_name, package)
+    monkeypatch.setitem(sys.modules, module_name, module)
+
+
+def test_official_group_context_uses_shared_numeric_group(monkeypatch):
+    _install_fake_route_bridge(
+        monkeypatch,
         lambda bot_id, group_openid: (
             "1054188847"
             if (bot_id, group_openid) == ("1905351598", "OPEN_GROUP")
@@ -239,14 +250,8 @@ def test_official_group_context_uses_shared_numeric_group(monkeypatch):
 
 
 def test_official_only_group_context_keeps_group_openid(monkeypatch):
-    from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
-        official_route_bridge,
-    )
-
-    monkeypatch.setattr(
-        official_route_bridge,
-        "get_group_id_for_official",
-        lambda _bot_id, _group_openid: None,
+    _install_fake_route_bridge(
+        monkeypatch, lambda _bot_id, _group_openid: None
     )
     token = current_bot.set(type("Bot", (), {"self_id": "1905351598"})())
     try:
