@@ -140,7 +140,7 @@ def _outgoing_recipient(
             return user_id, ""
     if _is_official_qq_group_event(event):
         # QQ 群事件只提供开放平台内部身份，实测群聊发送接口会把 <@内部ID>
-        # 原样展示；这里固定使用昵称，避免把任何 OpenID 暴露给玩家。
+        # 原样展示；这里改用“@昵称”文本标记玩家，避免把任何 OpenID 暴露出去。
         return "", _get_nickname(event)
     return _transport_user_id(user_id, event), ""
 
@@ -169,7 +169,7 @@ def _build_image_message(
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
     elif display_name and not is_private:
-        msg += UniMessage.text(f"{display_name}，\n")
+        msg += UniMessage.text(f"@{display_name}，\n")
     msg += UniMessage.image(raw=image)
     if text:
         msg += UniMessage.text("\n" + text)
@@ -187,7 +187,7 @@ def _build_text_message(
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
     elif display_name and not is_private:
-        msg += UniMessage.text(f"{display_name}，")
+        msg += UniMessage.text(f"@{display_name}，")
     msg += UniMessage.text(text)
     return msg
 
