@@ -48,7 +48,7 @@ class TestBlackMarketHint:
     @pytest.mark.parametrize(
         ("black_market_count", "available_date", "expected"),
         [
-            (0, date(2026, 8, 1), True),
+            (0, date(2026, 8, 1), False),
             (1, date(2026, 7, 30), True),
             (1, None, True),
             (1, date(2026, 8, 1), False),

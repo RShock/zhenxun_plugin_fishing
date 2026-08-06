@@ -62,7 +62,12 @@ def should_show_black_market_hint(
         smart_black_market_available_date is None
         or smart_black_market_available_date <= current_date
     )
-    return original_available or smart_available
+    # 过载冷却期间普通黑商也被硬封禁，不能因为当天免费次数未使用就误报可用。
+    overload_cooldown_active = (
+        smart_black_market_available_date is not None
+        and smart_black_market_available_date > current_date
+    )
+    return not overload_cooldown_active and (original_available or smart_available)
 
 
 @fishing_matcher.handle()
@@ -207,7 +212,7 @@ async def _settle_stop_fishing(event: Event, matcher: Matcher):
     black_market_count = await FishingUser.get_black_market_count(user_id)
     available_date = getattr(user, "smart_black_market_available_date", None)
     if should_show_black_market_hint(black_market_count, available_date):
-        hints.insert(0, "今天黑商来了")
+        hints.insert(0, "黑商已可用")
     if auto_loc:
         hints.insert(0, f"你的角色自己去{auto_loc}钓鱼了")
     if (
