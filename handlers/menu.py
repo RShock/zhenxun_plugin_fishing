@@ -1,7 +1,8 @@
 """
 钓鱼菜单指令 handler — 展示常用指令快捷菜单。
 
-QQ官方Bot群聊中发送 Markdown + 消息按钮(Keyboard)，玩家点击按钮即可自动发送对应指令；
+QQ官方Bot群聊中发送 Markdown（内嵌 qqbot-cmd-enter / qqbot-cmd-input 标签），
+玩家点击链接即可直接发送指令或插入输入框；
 OneBot等其他适配器回退为纯文本菜单。
 定时推送采用智能防刷策略：仅向有QQ官方Bot的活跃群推送，且要求该群累计消息>20条
 （说明上一次公告已被刷走）且距上次推送超过1小时，才会再次推送。
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from nonebot import get_bots, logger, on_message
 from nonebot.adapters import Bot, Event
@@ -126,6 +128,40 @@ def _build_menu_text() -> str:
     return "\n".join(lines)
 
 
+def _build_qq_markdown_content() -> str:
+    """构建含 qqbot-cmd-enter / qqbot-cmd-input 标签的 Markdown 内容。
+
+    qqbot-cmd-enter：点击后直接发送指令（适用于无参数指令）
+    qqbot-cmd-input：点击后插入输入框，待玩家补充参数后手动发送
+    text/show 参数需 urlencode，QQ 客户端会自动解码显示原文。
+    """
+    lines = ["🎣 钓鱼菜单", ""]
+    for row_buttons in _MENU_ROWS:
+        parts = []
+        for label, command, enter in row_buttons:
+            encoded_cmd = quote(command)
+            if enter:
+                # 点击后直接自动发送，无需 show 参数（客户端展示解码后的 text）
+                parts.append(f'<qqbot-cmd-enter text="{encoded_cmd}" />')
+            else:
+                # 仅插入输入框，show 设为标签文本便于玩家识别
+                encoded_label = quote(label)
+                parts.append(
+                    f'<qqbot-cmd-input text="{encoded_cmd}" show="{encoded_label}" />'
+                )
+        lines.append(" ".join(parts))
+        lines.append("")  # 空行分隔每行
+    return "\n".join(lines)
+
+
+def _build_qq_markdown_message():
+    """构造仅含 Markdown（内嵌指令链接）的 QQ Message 对象。"""
+    from nonebot.adapters.qq import Message as QQMessage
+    from nonebot.adapters.qq import MessageSegment as QQMessageSegment
+
+    return QQMessage(QQMessageSegment.markdown(_build_qq_markdown_content()))
+
+
 def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
     """直接构造 QQ 官方 Bot 的 Message 对象（含 Markdown + Keyboard）。
 
@@ -178,26 +214,41 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
 async def _(bot: Bot, event: Event, matcher: Matcher):
     """处理"钓鱼菜单"指令。
 
-    QQ官方Bot群聊：直接构造并发送 Markdown + Keyboard 按钮菜单；
+    QQ官方Bot群聊：发送含 qqbot-cmd-enter 指令链接的 Markdown 菜单；
+    共享群中 OneBot 事件跳过（由 QQ 官方 Bot 统一发送，避免双发）；
     其他适配器(OneBot等)：发送纯文本菜单。
-    若 Markdown+按钮发送失败（如未开通权限），自动回退为纯文本。
+    若 Markdown 发送失败，回退为键盘按钮，再回退为纯文本。
     """
     user_id = event.get_user_id()
 
     if not _is_official_qq_group_event(event):
+        # OneBot 事件：共享群中 QQ 官方 Bot 会发送指令链接菜单，OneBot 不重复发送纯文本
+        gid = _get_event_group_id(event)
+        if gid:
+            try:
+                from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
+                    official_route_bridge as bridge,
+                )
+                if bridge.get_target(gid):
+                    return  # QQ 官方 Bot 会处理，跳过避免双发
+            except Exception:
+                pass
         await _send_text(matcher, _build_menu_text(), user_id)
         return
 
-    # QQ 官方 Bot：直接构造 QQ 原生 Message 并通过 bot.send 发送
-    # 特性：不用 UniMessage/Alconna 导出器，直接构造 InlineKeyboardRow
-    # 确保每行按钮独立排版，避免导出器合并行导致文字截断
+    # QQ 官方 Bot：优先发送含指令链接的 Markdown（点击即发送/插入输入框）
     try:
-        msg = _build_qq_keyboard_message()
+        msg = _build_qq_markdown_message()
         await bot.send(event, msg)
         await matcher.finish()
     except Exception:
-        # Markdown 权限未开通或发送失败时回退为纯文本
-        await _send_text(matcher, _build_menu_text(), user_id)
+        # Markdown 发送失败时回退为键盘按钮
+        try:
+            msg = _build_qq_keyboard_message()
+            await bot.send(event, msg)
+            await matcher.finish()
+        except Exception:
+            await _send_text(matcher, _build_menu_text(), user_id)
 
 
 def _find_qq_bot_for_group(
@@ -272,7 +323,7 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
         return 0, 0
 
     bots = get_bots()
-    qq_keyboard_msg = None  # 延迟构造，只在首次需要时创建
+    qq_menu_msg = None  # 延迟构造，只在首次需要时创建
     success = 0
     fail = 0
     seq = 0
@@ -305,11 +356,11 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
 
         seq += 1
         try:
-            if qq_keyboard_msg is None:
-                qq_keyboard_msg = _build_qq_keyboard_message("🎣")
+            if qq_menu_msg is None:
+                qq_menu_msg = _build_qq_markdown_message()
             await qq_bot.send_to_group(
                 group_openid=group_openid,
-                message=qq_keyboard_msg,
+                message=qq_menu_msg,
                 msg_seq=seq,
             )
             success += 1
@@ -318,7 +369,7 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
             entry["last_push"] = now
             sent_openids.add(group_openid)
         except Exception as e:
-            logger.warning(f"[钓鱼菜单] 群 {group_id} 按钮推送失败: {e}")
+            logger.warning(f"[钓鱼菜单] 群 {group_id} 推送失败: {e}")
             fail += 1
 
         await asyncio.sleep(0.3)
