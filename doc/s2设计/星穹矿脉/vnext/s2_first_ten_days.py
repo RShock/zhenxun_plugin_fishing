@@ -30,7 +30,20 @@ from s2_mining_simulator import (  # noqa: E402
 
 
 SETTLEMENT_MINUTES = 10
-DEFAULT_CHECK_INTERVAL_MINUTES = 60
+
+
+@dataclass(frozen=True)
+class PlayerProfile:
+    key: str
+    name: str
+    check_minutes: tuple[int, ...]
+
+
+PLAYER_PROFILES = {
+    "active": PlayerProfile("active", "活跃玩家", tuple(range(60, 1440, 60))),
+    "regular": PlayerProfile("regular", "普通玩家", tuple(range(180, 1440, 180))),
+    "low": PlayerProfile("low", "低频玩家", (480, 840, 1260)),
+}
 
 
 @dataclass(frozen=True)
@@ -87,11 +100,19 @@ def level_diff(before: dict[str, int], state: SimulationState) -> tuple[tuple[st
 def run(
     days: int = 10,
     seed: int = 42,
-    check_interval_minutes: int = DEFAULT_CHECK_INTERVAL_MINUTES,
+    check_interval_minutes: int | None = None,
+    profile: str = "active",
 ) -> tuple[SimulationState, list[DaySnapshot], list[UpgradeEvent], list[DecisionCheck]]:
     """运行按频率查看、每天最多三条成功升级消息的玩家路径。"""
-    if check_interval_minutes < SETTLEMENT_MINUTES or check_interval_minutes % SETTLEMENT_MINUTES:
-        raise ValueError("查看间隔必须是至少 10 分钟的 10 分钟整数倍")
+    if profile not in PLAYER_PROFILES:
+        raise ValueError(f"未知玩家画像: {profile}")
+    if check_interval_minutes is not None:
+        if check_interval_minutes < SETTLEMENT_MINUTES or check_interval_minutes % SETTLEMENT_MINUTES:
+            raise ValueError("查看间隔必须是至少 10 分钟的 10 分钟整数倍")
+        check_minutes = tuple(range(check_interval_minutes, 1440, check_interval_minutes))
+    else:
+        check_minutes = PLAYER_PROFILES[profile].check_minutes
+    check_minute_set = set(check_minutes)
 
     state = SimulationState(
         target_depth=_development_target(11),
@@ -121,8 +142,14 @@ def run(
                 events.append(UpgradeEvent(current_day, minute, "auto", auto_orders))
 
             # 24:00 是日结边界；下一次查看应发生在新一天经过实际游玩时间之后。
-            if minute < 1440 and minute % check_interval_minutes == 0:
-                orders = _strategy(state, message_budget=1, mode="balanced")
+            if minute in check_minute_set:
+                checks_remaining = sum(1 for check_minute in check_minutes if check_minute > minute)
+                orders = _strategy(
+                    state,
+                    message_budget=1,
+                    mode="balanced",
+                    checks_remaining=checks_remaining,
+                )
                 checks.append(DecisionCheck(current_day, minute, orders))
                 if orders:
                     events.append(UpgradeEvent(current_day, minute, "manual", orders))
@@ -204,14 +231,56 @@ def audit_first_ten_days(
         raise AssertionError("前十天应自然混合出现 +1、+2、+3")
     if all_amounts[3] > all_amounts[1] + all_amounts[2]:
         raise AssertionError("+3 升级占比过高，升级策略再次退化为机械批量购买")
+    direct_three_by_day = Counter(
+        event.day for event in manual if any(amount == 3 for _, amount in event.orders)
+    )
+    if any(count > 1 for count in direct_three_by_day.values()):
+        raise AssertionError("同一天连续直接 +3，策略没有给新科技留下体验空间")
+
+    last_message_by_day = {
+        day: max((event.minute for event in manual if event.day == day), default=0)
+        for day in range(1, 11)
+    }
+    if sum(minute >= 720 for minute in last_message_by_day.values()) < 5:
+        raise AssertionError("升级消息仍过度集中在凌晨，没有为白天的新路线保留机会")
+    if sum(minute <= 180 for minute in last_message_by_day.values()) > 1:
+        raise AssertionError("多数日期仍在前三小时机械用完升级消息")
 
     industrial_day = first_era_day(first_ten, "industrial")
-    if industrial_day is None or not 3 <= industrial_day <= 5:
-        raise AssertionError(f"工业时代应在 D4 左右进入，实际为 {industrial_day}")
+    if industrial_day is None or not 4 <= industrial_day <= 6:
+        raise AssertionError(f"工业时代应在 D4-D6 进入，实际为 {industrial_day}")
     if first_era_day(first_ten, "electrical") is not None:
         raise AssertionError("D10 仍应处于工业时代，D9 进入电力也属于过快")
     if any(check.acted and not check.orders for check in checks):
         raise AssertionError("查看记录状态不一致")
+
+
+def audit_profile_matrix(
+    results: dict[str, tuple[SimulationState, list[DaySnapshot], list[UpgradeEvent], list[DecisionCheck]]],
+) -> None:
+    """确认不同查看习惯只改变路线效率，不破坏前十天阶段结构。"""
+    for profile_key, (_, snapshots, events, _) in results.items():
+        profile = PLAYER_PROFILES[profile_key]
+        if len(snapshots) < 10:
+            raise AssertionError(f"{profile.name} 未完成前十天模拟")
+        if any(snapshot.manual_messages > 3 for snapshot in snapshots[:10]):
+            raise AssertionError(f"{profile.name} 超过每日三条升级消息")
+        if first_era_day(snapshots[:10], "electrical") is not None:
+            raise AssertionError(f"{profile.name} 在 D10 前过早进入电力时代")
+        industrial_day = first_era_day(snapshots[:10], "industrial")
+        if industrial_day is None or not 4 <= industrial_day <= 6:
+            raise AssertionError(f"{profile.name} 工业时代应在 D4-D6 进入，实际为 {industrial_day}")
+        if snapshots[9].nodes_reached < 12:
+            raise AssertionError(f"{profile.name} D10 科技接触量过低")
+        manual = [event for event in events if event.source == "manual" and event.day <= 10]
+        amounts = Counter(amount for event in manual for _, amount in event.orders)
+        if not amounts[1] or not amounts[2] or not amounts[3]:
+            raise AssertionError(f"{profile.name} 缺少 +1/+2/+3 的自然混合")
+        direct_three_by_day = Counter(
+            event.day for event in manual if any(amount == 3 for _, amount in event.orders)
+        )
+        if any(count > 1 for count in direct_three_by_day.values()):
+            raise AssertionError(f"{profile.name} 同一天多次直接 +3")
 
 
 def format_clock(minute: int) -> str:
@@ -247,17 +316,29 @@ def event_groups(events: list[UpgradeEvent], day: int, source: str) -> list[Upgr
     return [event for event in events if event.day == day and event.source == source]
 
 
+def run_profile_matrix(
+    days: int = 10,
+    seed: int = 42,
+) -> dict[str, tuple[SimulationState, list[DaySnapshot], list[UpgradeEvent], list[DecisionCheck]]]:
+    return {key: run(days, seed, profile=key) for key in PLAYER_PROFILES}
+
+
 def render_markdown(
     snapshots: list[DaySnapshot],
     events: list[UpgradeEvent],
     checks: list[DecisionCheck],
     seed: int,
-    check_interval_minutes: int,
+    profile: PlayerProfile,
+    profile_results: dict[
+        str,
+        tuple[SimulationState, list[DaySnapshot], list[UpgradeEvent], list[DecisionCheck]],
+    ]
+    | None = None,
 ) -> str:
     lines = [
         "# S2 前十天操作时间线",
         "",
-        f"固定随机种子：`{seed}`。活跃玩家每 `{check_interval_minutes}` 分钟查看一次；只有成功购买升级才消耗每天三条消息额度。挖矿与自动采购每 10 分钟结算。",
+        f"固定随机种子：`{seed}`。主时间线使用“{profile.name}”画像；只有成功购买升级才消耗每天三条消息额度。挖矿与自动采购每 10 分钟结算。",
         "",
         "| 天数 | 星球进度 | 查看次数 | 成功消息 | 手动等级 | +1/+2/+3 | 自动等级 | 新节点 | 当前时代 |",
         "|---:|---:|---:|---:|---:|---:|---:|---:|---|",
@@ -292,6 +373,19 @@ def render_markdown(
             lines.extend(f"- `{format_clock(event.minute)}` {format_orders(event.orders)}" for event in manual)
         else:
             lines.append("- 无：当天各次查看都没有足够资源或没有合适的新路线。")
+        lines.extend(
+            [
+                "",
+                f"<details><summary>展开 {len(day_checks)} 次查看记录</summary>",
+                "",
+            ]
+        )
+        lines.extend(
+            f"- `{format_clock(check.minute)}` "
+            + (format_orders(check.orders) if check.acted else "未升级：保留消息或暂无合适路线")
+            for check in day_checks
+        )
+        lines.extend(["", "</details>"])
         lines.extend(["", "**自动升级汇总**", ""])
         if totals:
             lines.append("- " + "、".join(f"{SPECS[key].name}+{amount}" for key, amount in totals.items()))
@@ -312,6 +406,27 @@ def render_markdown(
         ERA_LABELS[era]: first_era_day(snapshots, era)
         for era in ("industrial", "electrical", "modern")
     }
+    if profile_results:
+        lines.extend(
+            [
+                "",
+                "## 三种玩家画像对比",
+                "",
+                "| 画像 | 每日查看 | D1 首次升级 | 工业时代 | D10 节点 | D10 进度 | +1/+2/+3 |",
+                "|---|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
+        for key, (_, profile_snapshots, profile_events, profile_checks) in profile_results.items():
+            manual_events = [event for event in profile_events if event.source == "manual"]
+            first_manual = manual_events[0]
+            amounts = Counter(amount for event in manual_events for _, amount in event.orders)
+            check_count = len([check for check in profile_checks if check.day == 1])
+            industrial_day = first_era_day(profile_snapshots, "industrial")
+            lines.append(
+                f"| {PLAYER_PROFILES[key].name} | {check_count} | {format_clock(first_manual.minute)} | "
+                f"D{industrial_day} | {profile_snapshots[9].nodes_reached}/{len(LOCAL_KEYS)} | "
+                f"{profile_snapshots[9].progress:.4%} | {amounts[1]}/{amounts[2]}/{amounts[3]} |"
+            )
     lines.extend(
         [
             "",
@@ -333,7 +448,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="运行 S2 前十天真实三消息规则验收")
     parser.add_argument("--days", type=int, default=10)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--check-interval", type=int, default=DEFAULT_CHECK_INTERVAL_MINUTES)
+    parser.add_argument("--profile", choices=tuple(PLAYER_PROFILES), default="active")
+    parser.add_argument("--check-interval", type=int, default=None, help="覆盖画像，按固定分钟间隔查看")
     parser.add_argument(
         "--trace-output",
         type=pathlib.Path,
@@ -342,9 +458,27 @@ def main() -> None:
     parser.add_argument("--no-write-trace", action="store_true")
     args = parser.parse_args()
 
-    state, snapshots, events, checks = run(args.days, args.seed, args.check_interval)
-    if args.days >= 10 and args.check_interval == DEFAULT_CHECK_INTERVAL_MINUTES:
-        audit_first_ten_days(snapshots, events, checks)
+    profile_results = None
+    if args.days >= 10 and args.check_interval is None:
+        profile_results = run_profile_matrix(args.days, args.seed)
+        audit_profile_matrix(profile_results)
+        audit_first_ten_days(*profile_results["active"][1:])
+        state, snapshots, events, checks = profile_results[args.profile]
+        profile = PLAYER_PROFILES[args.profile]
+    else:
+        state, snapshots, events, checks = run(
+            args.days,
+            args.seed,
+            args.check_interval,
+            args.profile,
+        )
+        profile = PLAYER_PROFILES[args.profile]
+        if args.check_interval is not None:
+            profile = PlayerProfile(
+                "custom",
+                f"每 {args.check_interval} 分钟查看",
+                tuple(range(args.check_interval, 1440, args.check_interval)),
+            )
     for snapshot in snapshots:
         print(format_snapshot(snapshot))
 
@@ -364,7 +498,7 @@ def main() -> None:
 
     if not args.no_write_trace:
         args.trace_output.write_text(
-            render_markdown(snapshots, events, checks, args.seed, args.check_interval),
+            render_markdown(snapshots, events, checks, args.seed, profile, profile_results),
             encoding="utf-8",
         )
         print(f"\n完整时间线已写入: {args.trace_output}")

@@ -1,5 +1,9 @@
 from s2_mining_simulator import LOCAL_KEYS, SPECS, LogNumber, SimulationState, run_scenario
-from s2_first_ten_days import run as run_first_ten_days
+from s2_first_ten_days import (
+    first_era_day,
+    run as run_first_ten_days,
+    run_profile_matrix,
+)
 
 
 def test_batch_upgrade_uses_one_message_and_daily_limit_is_three():
@@ -103,3 +107,49 @@ def test_first_ten_days_uses_real_message_limit_and_records_auto_purchases():
     assert any(event.source == "manual" for event in events)
     assert any(event.source == "auto" for event in events)
     assert snapshots[-1].nodes_reached > snapshots[0].nodes_reached
+
+
+def test_active_profile_first_upgrade_and_message_timing_match_d1_d10_intent():
+    _, snapshots, events, _ = run_first_ten_days(days=10, seed=42, profile="active")
+    manual = [event for event in events if event.source == "manual"]
+
+    assert manual[0].day == 1
+    assert 30 <= manual[0].minute <= 180
+    last_message_by_day = {
+        day: max(event.minute for event in manual if event.day == day)
+        for day in range(1, 11)
+    }
+    assert sum(minute >= 720 for minute in last_message_by_day.values()) >= 5
+    assert sum(minute <= 180 for minute in last_message_by_day.values()) <= 1
+    assert all(snapshot.manual_messages <= 3 for snapshot in snapshots)
+
+
+def test_first_ten_days_limits_direct_plus_three_to_once_per_day():
+    _, _, events, _ = run_first_ten_days(days=10, seed=42, profile="active")
+    direct_three_days = [
+        event.day
+        for event in events
+        if event.source == "manual" and any(amount == 3 for _, amount in event.orders)
+    ]
+
+    assert len(direct_three_days) == len(set(direct_three_days))
+
+
+def test_player_profiles_share_the_same_d1_d10_stage_shape():
+    results = run_profile_matrix(days=10, seed=42)
+
+    for _, snapshots, events, _ in results.values():
+        manual_events = [event for event in events if event.source == "manual"]
+        manual_amounts = {amount for event in manual_events for _, amount in event.orders}
+        direct_three_days = [
+            event.day
+            for event in manual_events
+            if any(amount == 3 for _, amount in event.orders)
+        ]
+        assert len(direct_three_days) == len(set(direct_three_days))
+        industrial_day = first_era_day(snapshots, "industrial")
+        assert industrial_day is not None
+        assert 4 <= industrial_day <= 6
+        assert first_era_day(snapshots, "electrical") is None
+        assert snapshots[9].nodes_reached >= 12
+        assert {1, 2, 3} <= manual_amounts

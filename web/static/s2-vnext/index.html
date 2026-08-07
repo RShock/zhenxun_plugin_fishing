@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#142331">
   <meta name="description" content="星穹矿脉 S2 vNext 浏览器原型">
   <title>星穹矿脉 · S2 vNext</title>
-  <link rel="stylesheet" href="style.css?v=1.0.1">
+  <link rel="stylesheet" href="style.css?v=1.0.3">
 </head>
 <body>
   <div class="app-shell" id="app">
@@ -31,7 +31,9 @@
         <div class="overview-copy">
           <div class="section-kicker"><span class="live-dot"></span><span id="runState">暂停中</span><span class="slash">/</span><span id="eraName">基础工程</span></div>
           <h2>把这颗星球挖穿</h2>
-          <p class="muted">固定时长结算矿物、矿币和深度。科技升级不受测试消息次数限制，达到 3 级后会永久自动采购。</p>
+          <p class="muted">固定时长结算矿物、矿币和深度。网页中每次购买按钮视为一条成功升级消息，每天最多三条；达到 3 级后会永久自动采购。</p>
+          <div class="experience-badges"><span class="message-budget" id="messageBudget">升级消息 0/3</span><span>查看与自动采购不限次数</span></div>
+          <p class="baseline-note">D1～D10 测试基线：先展开基础工程，约 D4～D6 进入工业时代，D10 仍应留在工业时代。</p>
           <div class="depth-readout">
             <strong id="depthValue">0</strong>
             <span>/ <b id="targetDepth">6e11</b> 深度单位</span>
@@ -110,7 +112,7 @@
               <div><div class="section-kicker">重生边界</div><h2>星球核心</h2></div>
               <div class="core-value" id="coreValue">0</div>
             </div>
-            <p class="muted small">爆破后保留核心与永久科技。本原型不限制手动升级消息，方便测试路线。</p>
+            <p class="muted small">爆破后保留核心与永久科技。正式 QQ 命令可在一条消息中规划多个项目；网页按钮一次只测试一个项目与数量。</p>
             <div class="core-list" id="coreList"></div>
           </section>
 
@@ -139,6 +141,6 @@
     </main>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="app.js?v=1.0.2"></script>
+  <script src="app.js?v=1.0.3"></script>
 </body>
 </html>

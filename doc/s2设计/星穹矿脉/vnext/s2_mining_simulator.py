@@ -386,6 +386,10 @@ class SimulationState:
     burst_seconds: int = 0
     fractional_planets: float = 0.0
     auto_cursor: int = 0
+    last_manual_day: int | None = None
+    last_manual_minute: int | None = None
+    last_manual_levels: int = 0
+    daily_direct_three_messages: int = 0
     reset_days: list[int] = field(default_factory=list)
     era_first_days: dict[str, int] = field(default_factory=dict)
     special_triggers: dict[str, int] = field(default_factory=dict)
@@ -547,6 +551,11 @@ class SimulationState:
             self.daily_upgrade_messages += 1
             self.max_daily_upgrade_messages = max(self.max_daily_upgrade_messages, self.daily_upgrade_messages)
             self.total_upgrade_messages += 1
+            self.last_manual_day = self.day
+            self.last_manual_minute = self.minute
+            self.last_manual_levels = sum(amount for _, amount in normalized)
+            if any(amount == 3 for _, amount in normalized):
+                self.daily_direct_three_messages += 1
         return True, "、".join(f"{SPECS[key].name}+{amount}" for key, amount in normalized)
 
     def auto_purchase(self) -> int:
@@ -745,6 +754,7 @@ class SimulationState:
     def start_new_day(self) -> None:
         self.day += 1
         self.daily_upgrade_messages = 0
+        self.daily_direct_three_messages = 0
 
     def spendable_resources(self) -> dict[str, float | str]:
         result: dict[str, float | str] = dict(self.resources)
@@ -877,6 +887,7 @@ def _strategy(
     state: SimulationState,
     message_budget: int = 1,
     mode: str = "balanced",
+    checks_remaining: int | None = None,
 ) -> tuple[tuple[str, int], ...]:
     """模拟一次玩家检查，最多发送一条真正有价值的升级消息。"""
     message_limit = min(3, state.daily_upgrade_messages + max(0, message_budget))
@@ -938,6 +949,7 @@ def _strategy(
             key,
         )
     )
+    proposal: tuple[str, int] | None = None
     for key in candidates:
         level = state.level(key)
         remaining = min(3, SPECS[key].max_level) - level
@@ -947,21 +959,71 @@ def _strategy(
         if level == 1:
             desired = 2
         elif level == 0 and state.day >= 4:
+            spec = SPECS[key]
+            era = ERA_BY_CATEGORY[spec.category]
+            mastery = state.era_mastery(era)
             batch_three = state._batch_cost(key, min(3, remaining))
-            ratios = [
+            three_ratios = [
                 state.resources.get(resource, 0.0) / cost
                 for resource, cost in batch_three.items()
                 if resource != "cores" and cost > 0
             ]
-            if ratios and min(ratios) >= 8.0:
+            # 直接 +3 是清理已经理解的常规路线，不用于刚出现的时代旗舰或特殊科技。
+            # 每天最多这样做一次，避免策略重新退化成“所有新项目一键冲自动化”。
+            if (
+                state.day >= 5
+                and state.daily_direct_three_messages == 0
+                and not spec.special
+                and mastery >= 2
+                and three_ratios
+                and min(three_ratios) >= 8.0
+            ):
                 desired = min(3, remaining)
-            elif ratios and min(ratios) >= 3.0:
-                desired = min(2, remaining)
+            else:
+                batch_two = state._batch_cost(key, min(2, remaining))
+                two_ratios = [
+                    state.resources.get(resource, 0.0) / cost
+                    for resource, cost in batch_two.items()
+                    if resource != "cores" and cost > 0
+                ]
+                if not spec.special and mastery >= 2 and two_ratios and min(two_ratios) >= 4.0:
+                    desired = min(2, remaining)
         for amount in range(min(desired, remaining), 0, -1):
-            orders = ((key, amount),)
-            ok, _ = state.upgrade_command(orders)
-            if ok:
-                return orders
+            cost = state._batch_cost(key, amount)
+            affordable = all(
+                state._core_count_as_float() >= value
+                if resource == "cores"
+                else state.resources.get(resource, 0.0) + 1e-9 >= value
+                for resource, value in cost.items()
+            )
+            if affordable:
+                proposal = (key, amount)
+                break
+        if proposal is not None:
+            break
+    if proposal is None:
+        return ()
+
+    key, amount = proposal
+    spec = SPECS[key]
+    era = ERA_BY_CATEGORY[spec.category]
+    frontier = (
+        (spec.special and key not in state.ever_local_keys)
+        or (era != "foundation" and state.era_mastery(era) == 0 and state.level(key) == 0)
+    )
+    if state.last_manual_day == state.day and state.last_manual_minute is not None and not frontier:
+        messages_left = 3 - state.daily_upgrade_messages
+        must_use_now = checks_remaining is not None and checks_remaining < messages_left
+        # 冷却相对上一次真实购买，而不是绑定 00/08/16 三个固定窗口。
+        # 越接近当天第三条消息，机会成本越高；大批量购买后也会多观察一会儿。
+        cooldown = 180 + state.daily_upgrade_messages * 120 + max(0, state.last_manual_levels - 1) * 30
+        if not must_use_now and state.minute - state.last_manual_minute < cooldown:
+            return ()
+
+    orders = ((key, amount),)
+    ok, _ = state.upgrade_command(orders)
+    if ok:
+        return orders
     return ()
 
 

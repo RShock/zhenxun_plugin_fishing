@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SAVE_KEY = "s2-vnext-browser-save-v1";
+  const SAVE_KEY = "s2-vnext-browser-save-v2";
   const TARGET_DEPTH = 600_000_000_000;
   const ORES = [
     { key: "tin", name: "锡矿", icon: "Sn", color: "tin", value: 1, use: "基础工程材料" },
@@ -13,13 +13,14 @@
   const ERA_LIST = [
     { key: "foundation", name: "基础工程", short: "基础", unlock: 0 },
     { key: "industrial", name: "工业时代", short: "工业", unlock: 0.00001 },
-    { key: "electrical", name: "电力时代", short: "电力", unlock: 0.00003 },
-    { key: "modern", name: "现代时代", short: "现代", unlock: 0.00007 },
-    { key: "future", name: "未来时代", short: "未来", unlock: 0.00015 },
-    { key: "planetary", name: "行星时代", short: "行星", unlock: 0.02 },
-    { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.08 },
+    { key: "electrical", name: "电力时代", short: "电力", unlock: 0.00020 },
+    { key: "modern", name: "现代时代", short: "现代", unlock: 0.00150 },
+    { key: "future", name: "未来时代", short: "未来", unlock: 0.00600 },
+    { key: "planetary", name: "行星时代", short: "行星", unlock: 0.0300 },
+    { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.1500 },
   ];
-  const SPECIAL_UNLOCK_DELAY = 0.00002;
+  const ERA_MASTERY = { industrial: 8, electrical: 15, modern: 15, future: 15, planetary: 15, anomaly: 15 };
+  const SPECIAL_UNLOCK_DELAY_RATIO = 0.03;
   const SPECIAL_BURST_THRESHOLD = 0.005;
   const SPECIALS = [
     "relativity_burst", "phase_skip", "singularity_finish", "ore_echo", "time_dilation",
@@ -67,17 +68,17 @@
     ["cat", "猫矿工", 12, { credits: 1500 }, 2.8, 0, "cat_sync", 0.03, "每级复制一份基础挖掘数据"],
     ["industrial_blaster", "爆破镐", 40, { credits: 12000, copper: 50000 }, 1.43, 0.00001, "speed_add", 0.30, "每级 +0.30 推进效率"],
     ["steam_cart", "蒸汽矿车", 40, { credits: 15000, copper: 65000 }, 1.43, 0.00001, "carry_add", 0.05, "每级 +0.05 携带量"],
-    ["electric_pickaxe", "电动镐", 40, { credits: 80000, quartz: 80000 }, 1.47, 0.00003, "speed_add", 0.55, "每级 +0.55 基础挖掘力"],
-    ["electric_cart", "电力车", 40, { credits: 90000, quartz: 90000 }, 1.47, 0.00003, "carry_add", 0.08, "每级 +0.08 携带量"],
-    ["modern_drill", "掘进机", 40, { credits: 500000, gold: 50000 }, 1.50, 0.00007, "speed_add", 0.90, "每级 +0.90 推进效率"],
-    ["future_quantum", "微观量子挖掘", 30, { credits: 4000000, gold: 200000, coreshard: 20000 }, 1.55, 0.00015, "speed_add", 1.50, "每级 +1.50 推进效率"],
-    ["relativity", "相对论效应", 10, { credits: 2e6, coreshard: 40 }, 1.72, 0.080005, "none", 0, "重生后 60 秒速度 ×100", "relativity_burst"],
+    ["electric_pickaxe", "电动镐", 40, { credits: 80000, quartz: 80000 }, 1.47, 0.00020, "speed_add", 0.55, "每级 +0.55 基础挖掘力"],
+    ["electric_cart", "电力车", 40, { credits: 90000, quartz: 90000 }, 1.47, 0.00020, "carry_add", 0.08, "每级 +0.08 携带量"],
+    ["modern_drill", "掘进机", 40, { credits: 500000, gold: 50000 }, 1.50, 0.00150, "speed_add", 0.90, "每级 +0.90 推进效率"],
+    ["future_quantum", "微观量子挖掘", 30, { credits: 4000000, gold: 200000, coreshard: 20000 }, 1.55, 0.00600, "speed_add", 1.50, "每级 +1.50 推进效率"],
+    ["relativity", "相对论效应", 10, { credits: 2e6, coreshard: 40 }, 1.72, 0.1700, "none", 0, "重生后 60 秒速度 ×100", "relativity_burst"],
   ];
 
   const specs = {};
   const localKeys = [];
   const coreKeys = CORE_SPECS.map((item) => item.key);
-  const specialForIndex = (eraIndex, index) => index % 4 === 0 ? SPECIALS[(index / 4 + eraIndex) % SPECIALS.length] : "";
+  const specialForIndex = (eraIndex, index) => index % 4 === 0 ? SPECIALS[(index + eraIndex) % SPECIALS.length] : "";
   baseSpecs.forEach((item) => {
     const [key, name, max, cost, growth, unlock, effectKind, perLevel, effect, special = ""] = item;
     specs[key] = { key, name, max, cost, growth, unlock, era: key === "relativity" ? "anomaly" : key === "industrial_blaster" || key === "steam_cart" ? "industrial" : key === "electric_pickaxe" || key === "electric_cart" ? "electrical" : key === "modern_drill" ? "modern" : key === "future_quantum" ? "future" : "foundation", effectKind, perLevel, effect, special, secondaryKind: "none", secondaryPerLevel: 0, prerequisites: [] };
@@ -90,9 +91,12 @@
       const special = specialForIndex(eraIndex, index);
       const secondary = index % 3 === 0 ? EFFECTS[(index * 2 + eraIndex + 5) % EFFECTS.length] : null;
       const perLevel = basePer * (1 + eraIndex * .08 + index * .006);
+      const eraEnd = ERA_LIST[eraIndex + 1]?.unlock ?? .90;
+      const eraSpan = eraEnd - era.unlock;
+      const unlockRatio = .05 + .82 * index / Math.max(1, NAMES[era.key].length - 1);
       specs[key] = {
         key, name, max: 8 + ((index + eraIndex) % 5), cost: eraCost(era.key), growth: 1.30 + eraIndex * .025 + (index % 3) * .015,
-        unlock: era.unlock + (special ? SPECIAL_UNLOCK_DELAY : 0), era: era.key, effectKind, perLevel,
+        unlock: era.unlock + eraSpan * (unlockRatio + (special ? SPECIAL_UNLOCK_DELAY_RATIO : 0)), era: era.key, effectKind, perLevel,
         effect: `每级 +${trim(perLevel)} ${label}${secondary ? `；+${trim(secondary[1] * (1 + eraIndex * .05))} ${secondary[2]}` : ""}`,
         special, secondaryKind: secondary ? secondary[0] : "none", secondaryPerLevel: secondary ? secondary[1] * (1 + eraIndex * .05) : 0,
         // 顺序由时代门槛和资源成本表达；特殊节点不能把同一时代的科技树截断成前三项。
@@ -115,11 +119,11 @@
     const localLevels = Object.fromEntries(localKeys.map((key) => [key, 0]));
     const permanentLevels = Object.fromEntries(coreKeys.map((key) => [key, 0]));
     return {
-      version: 1, totalMinutes: 0, depth: 0, targetDepth: TARGET_DEPTH, planets: 0, cores: 0,
+      version: 2, totalMinutes: 0, depth: 0, targetDepth: TARGET_DEPTH, planets: 0, cores: 0,
       resources: { credits: 0, tin: 0, copper: 0, quartz: 0, gold: 0, coreshard: 0 },
       localLevels, permanentLevels, autoUnlocked: [], everLocalKeys: [], resetDays: [],
-      dailyMessages: 0, totalMessages: 0, speedChoice: 1, events: [], maxSpeed: 1,
-      burstSeconds: 0, selectedEra: "foundation", running: false,
+      dailyMessages: 0, messageDay: 1, totalMessages: 0, speedChoice: 1, events: [], maxSpeed: 1,
+      autoCursor: 0, burstSeconds: 0, selectedEra: "foundation", running: false,
     };
   }
 
@@ -135,7 +139,7 @@
     planetCount: $("planetCount"), coreCount: $("coreCount"), coreValue: $("coreValue"), resourceStrip: $("resourceStrip"),
     techCount: $("techCount"), eraTabs: $("eraTabs"), techSearch: $("techSearch"), techSummary: $("techSummary"), techList: $("techList"),
     coreList: $("coreList"), eventLog: $("eventLog"), runBtn: $("runBtn"), runIcon: $("runIcon"), runText: $("runText"),
-    saveMeta: $("saveMeta"), toast: $("toast"), drillBeam: $("drillBeam"),
+    saveMeta: $("saveMeta"), toast: $("toast"), drillBeam: $("drillBeam"), messageBudget: $("messageBudget"),
   };
 
   function progress() { return Math.max(0, Math.min(1, state.depth / state.targetDepth)); }
@@ -157,8 +161,28 @@
     if (minutes < 1440) return `${(minutes / 60).toFixed(1)} 小时`;
     return `${(minutes / 1440).toFixed(1)} 天`;
   }
-  function currentEra() {
-    return ERA_LIST.slice().reverse().find((era) => progress() >= era.unlock) || ERA_LIST[0];
+  function eraMastery(eraKey) { return state.everLocalKeys.filter((key) => specs[key].era === eraKey).length; }
+  function eraUnlocked(eraKey) {
+    if (eraKey === "foundation") return true;
+    const eraIndex = ERA_LIST.findIndex((era) => era.key === eraKey);
+    const previous = ERA_LIST[eraIndex - 1];
+    const era = ERA_LIST[eraIndex];
+    return progress() + 1e-12 >= era.unlock && eraMastery(previous.key) >= ERA_MASTERY[eraKey];
+  }
+  function currentEra() { return ERA_LIST.slice().reverse().find((era) => eraUnlocked(era.key)) || ERA_LIST[0]; }
+  function eraGateText(eraKey) {
+    if (eraKey === "foundation") return "";
+    const eraIndex = ERA_LIST.findIndex((era) => era.key === eraKey);
+    const previous = ERA_LIST[eraIndex - 1];
+    const era = ERA_LIST[eraIndex];
+    if (progress() + 1e-12 < era.unlock) return `时代深度 ${formatPercent(era.unlock)} 解锁`;
+    const reached = eraMastery(previous.key);
+    const required = ERA_MASTERY[eraKey];
+    return reached < required ? `需掌握${previous.name}科技 ${reached}/${required}` : "";
+  }
+  function syncDailyMessages() {
+    const currentDay = day();
+    if (state.messageDay !== currentDay) { state.messageDay = currentDay; state.dailyMessages = 0; }
   }
   function resourceTotal(key) { return state.resources[key] || 0; }
   function costAt(spec, level, amount = 1) {
@@ -197,6 +221,7 @@
     const spec = specs[key];
     if (!spec) return false;
     if (state.permanentLevels.auto_all || state.autoUnlocked.includes(key)) return state.localLevels[key] < spec.max;
+    if (!eraUnlocked(spec.era)) return false;
     if (progress() + 1e-12 < spec.unlock) return false;
     return spec.prerequisites.every((required) => (state.localLevels[required] || 0) >= 1);
   }
@@ -209,6 +234,10 @@
   function buyLocal(key, amount = 1, automatic = false) {
     const spec = specs[key];
     if (!spec || !Number.isInteger(amount) || amount < 1) return false;
+    if (!automatic) {
+      syncDailyMessages();
+      if (state.dailyMessages >= 3) return false;
+    }
     const level = state.localLevels[key] || 0;
     const maxAmount = Math.min(amount, spec.max - level);
     if (!maxAmount || (!automatic && !available(key))) return false;
@@ -221,7 +250,11 @@
       state.autoUnlocked.push(key);
       pushEvent(`${spec.name} 达到 3 级，永久自动采购已解锁`, "good");
     }
-    if (!automatic) pushEvent(`购买 ${spec.name} +${maxAmount}`, "upgrade");
+    if (!automatic) {
+      state.dailyMessages += 1;
+      state.totalMessages += 1;
+      pushEvent(`购买 ${spec.name} +${maxAmount}（升级消息 ${state.dailyMessages}/3）`, "upgrade");
+    }
     return true;
   }
   function buyCore(key) {
@@ -232,8 +265,16 @@
     return true;
   }
   function autoPurchase() {
-    const keys = activeAutoKeys();
-    keys.forEach((key) => { if (available(key)) buyLocal(key, 1, true); });
+    const active = activeAutoKeys().slice().sort();
+    if (!active.length) return;
+    // 后台采购按固定预算轮转，避免自动线增多后每个结算点瞬间扫描并购买全部科技。
+    const budget = Math.min(24, active.length);
+    const start = (Number.isInteger(state.autoCursor) ? state.autoCursor : 0) % active.length;
+    for (let offset = 0; offset < budget; offset += 1) {
+      const key = active[(start + offset) % active.length];
+      if (available(key)) buyLocal(key, 1, true);
+    }
+    state.autoCursor = (start + budget) % active.length;
   }
   function oreYield() {
     const p = progress(); const effects = sumEffects();
@@ -265,6 +306,7 @@
     yields.forEach((amount, index) => { const ore = ORES[index]; state.resources[ore.key] += amount; state.resources.credits += amount * ore.value * refine * value * salvage; });
     if (specialLevel("vacuum_cache")) state.resources.credits += speedMultiplier() * .5 * specialLevel("vacuum_cache");
     state.totalMinutes += 1;
+    syncDailyMessages();
     state.maxSpeed = Math.max(state.maxSpeed, speedMultiplier());
     if (state.burstSeconds > 0) state.burstSeconds = Math.max(0, state.burstSeconds - 60);
     // 固定步进测试每 10 分钟结算一次自动采购；玩家的小时决策不阻塞后台成长。
@@ -282,7 +324,7 @@
     const extra = Math.floor((state.permanentLevels.entanglement || 0) * .25); const destroyed = 1 + extra;
     state.planets += destroyed; state.cores += 1 + survey + resonance; state.resetDays.push(day());
     state.depth = 0; state.resources = { credits: 0, tin: 0, copper: 0, quartz: 0, gold: 0, coreshard: 0 };
-    localKeys.forEach((key) => { state.localLevels[key] = 0; }); state.burstSeconds = relativityActive ? 60 : 0;
+    localKeys.forEach((key) => { state.localLevels[key] = 0; }); state.autoCursor = 0; state.burstSeconds = relativityActive ? 60 : 0;
     pushEvent(`星球爆裂：摧毁 ${destroyed} 颗，获得 ${1 + survey + resonance} 核心`, "core");
   }
 
@@ -291,8 +333,11 @@
     els.resourceStrip.innerHTML = list.map((item) => `<div class="resource-chip ${item.color}" title="${item.name}：${item.use}"><span class="resource-name"><i class="resource-icon">${item.icon}</i>${item.name}</span><strong class="resource-value">${formatNumber(resourceTotal(item.key), 1)}</strong></div>`).join("");
   }
   function renderOverview() {
+    syncDailyMessages();
     const p = progress(); const era = currentEra(); const speed = speedMultiplier();
     els.runState.textContent = state.running ? "自动挖掘中" : "暂停中"; els.eraName.textContent = era.name;
+    els.messageBudget.textContent = `升级消息 ${state.dailyMessages}/3`;
+    els.messageBudget.classList.toggle("exhausted", state.dailyMessages >= 3);
     els.depthValue.textContent = formatNumber(state.depth, 2); els.targetDepth.textContent = formatNumber(state.targetDepth, 0);
     els.depthProgress.style.width = `${p * 100}%`; els.progressLabel.textContent = formatPercent(p); els.speedLabel.textContent = `推进 ×${formatNumber(speed, 2)} · D${day()} ${String(Math.floor(minuteOfDay() / 60)).padStart(2, "0")}:${String(minuteOfDay() % 60).padStart(2, "0")}`;
     els.planetCount.textContent = formatNumber(state.planets, 0); els.coreCount.textContent = formatNumber(state.cores, 0); els.coreValue.textContent = formatNumber(state.cores, 0);
@@ -301,15 +346,22 @@
   }
   function renderEraTabs() {
     els.eraTabs.innerHTML = ERA_LIST.map((era) => {
-      const unlocked = progress() >= era.unlock || state.everLocalKeys.some((key) => specs[key].era === era.key);
-      return `<button class="era-tab ${state.selectedEra === era.key ? "active" : ""}" data-era="${era.key}" type="button" ${unlocked ? "" : "disabled"}>${era.short}<small>${unlocked ? "" : "锁"}</small></button>`;
+      const unlocked = eraUnlocked(era.key) || state.everLocalKeys.some((key) => specs[key].era === era.key);
+      const gate = unlocked ? "" : eraGateText(era.key);
+      return `<button class="era-tab ${state.selectedEra === era.key ? "active" : ""}" data-era="${era.key}" type="button" ${unlocked ? "" : "disabled"} title="${gate}">${era.short}<small>${unlocked ? "" : "锁"}</small></button>`;
     }).join("");
   }
   function renderTech() {
     const activeEra = state.selectedEra; const search = (els.techSearch.value || "").trim().toLowerCase();
     const keys = localKeys.filter((key) => specs[key].era === activeEra && (!search || specs[key].name.toLowerCase().includes(search)));
     const reached = state.everLocalKeys.length; const specialReached = state.everLocalKeys.filter((key) => specs[key].special).length;
-    els.techCount.textContent = `${reached} / ${localKeys.length}`; els.techSummary.innerHTML = `<span>${ERA_LIST.find((era) => era.key === activeEra)?.name || "科技"} · ${keys.length} 个节点</span><span>特殊 ${specialReached}/29 · 自动 ${state.autoUnlocked.length}/${localKeys.length}</span>`;
+    const eraIndex = ERA_LIST.findIndex((era) => era.key === activeEra);
+    const activeEraSpec = ERA_LIST[eraIndex];
+    const activeReached = eraMastery(activeEra);
+    const activeTotal = localKeys.filter((key) => specs[key].era === activeEra).length;
+    const nextEra = ERA_LIST[eraIndex + 1];
+    const masteryHint = nextEra ? ` · 下一时代掌握 ${activeReached}/${ERA_MASTERY[nextEra.key]}` : "";
+    els.techCount.textContent = `${reached} / ${localKeys.length}`; els.techSummary.innerHTML = `<span>${activeEraSpec?.name || "科技"} · 已接触 ${activeReached}/${activeTotal}${masteryHint}</span><span>特殊 ${specialReached}/29 · 自动 ${state.autoUnlocked.length}/${localKeys.length}</span>`;
     if (!keys.length) { els.techList.innerHTML = `<div class="empty-state">没有匹配的科技节点</div>`; return; }
     els.techList.innerHTML = keys.map((key) => techCard(key)).join("");
   }
@@ -317,10 +369,20 @@
     const spec = specs[key]; const level = state.localLevels[key] || 0; const isAvailable = available(key); const maxed = level >= spec.max; const special = spec.special ? `<span class="special-tag">${SPECIAL_NAMES[spec.special] || "特殊"}</span>` : "";
     const status = maxed ? "max" : !isAvailable ? "locked" : ""; const cost = costAt(spec, level, 1);
     const remaining = spec.max - level;
-    const canBuyOne = isAvailable && !maxed && canAfford(cost);
-    const canBuyThree = isAvailable && !maxed && canAfford(costAt(spec, level, Math.min(3, remaining)));
-    const lockText = !isAvailable && progress() < spec.unlock ? `深度 ${formatPercent(spec.unlock)} 解锁` : !isAvailable ? "需要前置科技" : costText(cost);
-    return `<article class="tech-card"><div class="tech-card-head"><div><div class="tech-name">${spec.name}</div>${special}</div><span class="tech-level ${status}">${maxed ? "MAX" : `Lv.${level}/${spec.max}`}</span></div><p class="tech-effect">${spec.effect}</p><div class="tech-foot"><span class="tech-cost">${isAvailable && !maxed ? `<b>${lockText}</b>` : lockText}</span><span class="tech-actions"><button class="buy-btn" data-buy="${key}" data-amount="1" type="button" ${canBuyOne ? "" : "disabled"}>+1</button><button class="buy-btn" data-buy="${key}" data-amount="3" type="button" ${canBuyThree ? "" : "disabled"}>+3</button></span></div></article>`;
+    const hasMessage = state.dailyMessages < 3;
+    let lockText = costText(cost);
+    if (maxed) lockText = "已达到等级上限";
+    else if (!isAvailable) {
+      lockText = eraGateText(spec.era) || (progress() + 1e-12 < spec.unlock ? `深度 ${formatPercent(spec.unlock)} 解锁` : "需要前置科技");
+    } else if (!hasMessage) lockText = "今日 3 条成功升级消息已用完";
+    const action = (amount) => {
+      const affordable = amount <= remaining && canAfford(costAt(spec, level, amount));
+      if (isAvailable && !maxed && !hasMessage && amount <= remaining) {
+        return `<button class="buy-btn budget-blocked" data-buy="${key}" data-amount="${amount}" type="button" aria-disabled="true" title="今日升级消息已用完">+${amount}</button>`;
+      }
+      return `<button class="buy-btn" data-buy="${key}" data-amount="${amount}" type="button" ${isAvailable && !maxed && affordable ? "" : "disabled"}>+${amount}</button>`;
+    };
+    return `<article class="tech-card"><div class="tech-card-head"><div><div class="tech-name">${spec.name}</div>${special}</div><span class="tech-level ${status}">${maxed ? "MAX" : `Lv.${level}/${spec.max}`}</span></div><p class="tech-effect">${spec.effect}</p><div class="tech-foot"><span class="tech-cost">${isAvailable && !maxed && hasMessage ? `<b>${lockText}</b>` : lockText}</span><span class="tech-actions">${action(1)}${action(2)}${action(3)}</span></div></article>`;
   }
   function renderCore() {
     els.coreList.innerHTML = CORE_SPECS.map((spec) => { const level = state.permanentLevels[spec.key] || 0; const disabled = level >= spec.max || state.cores < spec.cost; return `<div class="core-item"><div><div class="core-item-name">${spec.name} <span class="core-item-level">Lv.${level}/${spec.max}</span></div><div class="core-item-effect">${spec.effect}</div><button class="core-buy" data-core="${spec.key}" type="button" ${disabled ? "disabled" : ""}>消耗 ${spec.cost} 核心升级</button></div></div>`; }).join("");
@@ -368,7 +430,13 @@
   $("importInput").addEventListener("change", (event) => { if (event.target.files[0]) importSave(event.target.files[0]); event.target.value = ""; });
   els.techSearch.addEventListener("input", renderTech);
   els.eraTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-era]"); if (button && !button.disabled) { state.selectedEra = button.dataset.era; renderTech(); renderEraTabs(); } });
-  els.techList.addEventListener("click", (event) => { const button = event.target.closest("[data-buy]"); if (!button) return; if (buyLocal(button.dataset.buy, Number(button.dataset.amount))) { queueSave(); render(); } else toast("资源不足或尚未达到解锁条件"); });
+  els.techList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-buy]");
+    if (!button) return;
+    syncDailyMessages();
+    if (button.getAttribute("aria-disabled") === "true" || state.dailyMessages >= 3) { toast("今天 3 条成功升级消息已用完，明天再规划；查看与自动采购不受影响"); return; }
+    if (buyLocal(button.dataset.buy, Number(button.dataset.amount))) { queueSave(); render(); } else toast("资源不足或尚未达到解锁条件");
+  });
   els.coreList.addEventListener("click", (event) => { const button = event.target.closest("[data-core]"); if (!button) return; if (buyCore(button.dataset.core)) { queueSave(); render(); } else toast("核心不足或已达到上限"); });
   document.querySelectorAll("[data-speed]").forEach((button) => button.addEventListener("click", () => { state.speedChoice = Number(button.dataset.speed); document.querySelectorAll("[data-speed]").forEach((item) => item.classList.toggle("active", item === button)); render(); }));
   document.querySelectorAll("[data-cheat]").forEach((button) => button.addEventListener("click", () => cheat(button.dataset.cheat)));
