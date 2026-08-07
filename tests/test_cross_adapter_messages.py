@@ -37,7 +37,7 @@ def test_image_message_can_show_name_when_mention_is_unavailable():
     )
 
     assert list(message) == [
-        ("text", "@FinalLone.，\n"),
+        ("text", "@FinalLone.\n"),
         ("image", b"image-bytes"),
         ("text", "\nresult"),
     ]
@@ -67,7 +67,7 @@ def test_text_message_can_show_name_when_mention_is_unavailable():
         "done", is_private=False, display_name="FinalLone."
     )
 
-    assert list(message) == [("text", "@FinalLone.，"), ("text", "done")]
+    assert list(message) == [("text", "@FinalLone."), ("text", "done")]
 
 
 def test_route_binding_keeps_official_openid_for_mentions():
@@ -183,7 +183,7 @@ def test_official_group_reply_never_falls_back_to_member_openid():
             is_private=False,
             display_name="天天开心",
         )
-    ) == [("text", "@天天开心，"), ("text", "钓鱼成功")]
+    ) == [("text", "@天天开心"), ("text", "钓鱼成功")]
 
 
 def test_malformed_onebot_card_falls_back_to_sender_nickname():

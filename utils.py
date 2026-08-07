@@ -206,7 +206,7 @@ def _build_image_message(
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
     elif display_name and not is_private:
-        msg += UniMessage.text(f"@{display_name}，\n")
+        msg += UniMessage.text(f"@{display_name}\n")
     msg += UniMessage.image(raw=image)
     if text:
         msg += UniMessage.text("\n" + text)
@@ -224,7 +224,7 @@ def _build_text_message(
     if user_id and not is_private:
         msg += UniMessage.at(user_id)
     elif display_name and not is_private:
-        msg += UniMessage.text(f"@{display_name}，")
+        msg += UniMessage.text(f"@{display_name}")
     msg += UniMessage.text(text)
     return msg
 
