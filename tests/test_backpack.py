@@ -1,5 +1,6 @@
 import json
 from datetime import date, timedelta
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -14,6 +15,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack import (
     black_market_exchange,
     black_market_revoke,
     get_collection_image,
+    get_starry_ranking_image,
     gift_fish,
     render_white_market_records,
     lock_fish,
@@ -183,6 +185,117 @@ class TestDetailedCollection:
 
 async def _async_bytes(value):
     return value
+
+
+class TestStarryRankingScope:
+    """星空排行按群过滤：默认本群，仅显式「全服」查看全服。"""
+
+    ENTRY_A = ("u1", "玩家A", [{"id": "777777"}])
+    ENTRY_B = ("u2", "玩家B", [{"id": "888888"}])
+
+    async def _call_ranking(
+        self,
+        monkeypatch,
+        *,
+        group_id=None,
+        member_ids=None,
+        fallback_ids=None,
+    ):
+        captured = {}
+
+        async def _capture(entries, top_n=20, *, scope="全服"):
+            captured["entries"] = entries
+            captured["scope"] = scope
+            return b"ranking"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.view.render_starry_ranking",
+            _capture,
+        )
+
+        async def _fake_member_ids(gid):
+            return member_ids
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.view._get_group_member_ids",
+            _fake_member_ids,
+        )
+
+        async def _fake_recorded_group_ids(gid):
+            return set(fallback_ids or [])
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.models.FishingUser.get_exhibition_fisher_ids_in_group",
+            _fake_recorded_group_ids,
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.models.FishingUser.get_all_starry_exhibition_entries",
+            AsyncMock(return_value=[self.ENTRY_A, self.ENTRY_B]),
+        )
+
+        result = await get_starry_ranking_image(group_id=group_id)
+        return result, captured
+
+    async def test_no_group_shows_global(self, monkeypatch):
+        _, captured = await self._call_ranking(monkeypatch)
+        assert captured["scope"] == "全服"
+        assert [e[0] for e in captured["entries"]] == ["u1", "u2"]
+
+    async def test_group_filters_by_member_list(self, monkeypatch):
+        _, captured = await self._call_ranking(
+            monkeypatch, group_id="10001", member_ids={"u2"}
+        )
+        assert captured["scope"] == "本群"
+        assert [e[0] for e in captured["entries"]] == ["u2"]
+
+    async def test_member_fetch_failure_falls_back_to_recorded_group(self, monkeypatch):
+        """get_group_member_list 不可用时，按钓鱼来源群判定归属。"""
+        _, captured = await self._call_ranking(
+            monkeypatch, group_id="10001", member_ids=None, fallback_ids=["u1"]
+        )
+        assert captured["scope"] == "本群"
+        assert [e[0] for e in captured["entries"]] == ["u1"]
+
+    async def test_group_with_no_member_entries_shows_empty(self, monkeypatch):
+        _, captured = await self._call_ranking(
+            monkeypatch, group_id="10001", member_ids={"u3"}
+        )
+        assert captured["scope"] == "本群"
+        assert captured["entries"] == []
+
+    async def test_group_member_fetch_ignored_for_global_scope(self, monkeypatch):
+        """无 group_id 时不应触发群成员查询。"""
+        called = {"member": False}
+
+        async def _fake_member_ids(gid):
+            called["member"] = True
+            return {"u1"}
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.view._get_group_member_ids",
+            _fake_member_ids,
+        )
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.models.FishingUser.get_all_starry_exhibition_entries",
+            AsyncMock(return_value=[self.ENTRY_A]),
+        )
+
+        captured = {}
+
+        async def _capture(entries, top_n=20, *, scope="全服"):
+            captured["entries"] = entries
+            captured["scope"] = scope
+            return b"ranking"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.view.render_starry_ranking",
+            _capture,
+        )
+
+        await get_starry_ranking_image()
+        assert called["member"] is False
+        assert captured["scope"] == "全服"
+        assert [e[0] for e in captured["entries"]] == ["u1"]
 
 
 class TestSellFish:

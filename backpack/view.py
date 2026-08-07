@@ -2,6 +2,8 @@
 背包视图渲染 — get_backpack_image, get_collection_image。
 """
 
+from zhenxun.services.log import logger
+
 from ..config import ConfigManager, calculate_fish_price, generate_fish_numeric_id
 from ..models import FishingUser
 from ..render import render_backpack, render_collection, render_starry_exhibition, render_starry_ranking
@@ -363,6 +365,39 @@ async def get_starry_exhibition_image(user_id: str) -> bytes:
     return await render_starry_exhibition(user_id, user)
 
 
-async def get_starry_ranking_image() -> bytes:
+async def _get_group_member_ids(group_id: str | None) -> set[str] | None:
+    """获取群成员 user_id 集合；返回 None 表示无法确认（如 QQ 官方群无成员接口）。
+
+    星空排行按群过滤的主路径：根据群数据库确认哪些人属于本群。
+    """
+    if not group_id or not str(group_id).isdigit():
+        return None
+    try:
+        from nonebot import get_bot
+
+        bot = get_bot()
+        members = await bot.call_api(
+            "get_group_member_list", group_id=int(group_id)
+        )
+        return {str(member["user_id"]) for member in members}
+    except Exception as e:
+        logger.warning(f"获取群成员列表失败，改按钓鱼来源群过滤星空排行: {e}")
+        return None
+
+
+async def get_starry_ranking_image(group_id: str | None = None) -> bytes:
     entries = await FishingUser.get_all_starry_exhibition_entries()
-    return await render_starry_ranking(entries)
+    scope = "全服"
+    if group_id:
+        member_ids = await _get_group_member_ids(group_id)
+        if member_ids is None:
+            # 主路径失效时退回钓鱼来源群判定，宁可少显示也不能暴露其他群玩家
+            member_ids = await FishingUser.get_exhibition_fisher_ids_in_group(
+                group_id
+            )
+        if member_ids:
+            entries = [e for e in entries if e[0] in member_ids]
+        else:
+            entries = []
+        scope = "本群"
+    return await render_starry_ranking(entries, scope=scope)

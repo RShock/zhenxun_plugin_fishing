@@ -225,11 +225,14 @@ async def render_starry_exhibition(user_id: str, user) -> bytes:
 async def render_starry_ranking(
     entries: list[tuple[str, str, list[dict]]],
     top_n: int = 20,
+    *,
+    scope: str = "全服",
 ) -> bytes:
-    """渲染全服星空排行榜图片。
+    """渲染星空排行榜图片。
 
-    entries: (user_id, nickname, exhibition_records) 列表，来自全表扫描。
+    entries: (user_id, nickname, exhibition_records) 列表，来自全表扫描或本群过滤。
     展馆记录保存的是入馆时分数快照，这里按当前规则重算以确保排行一致性。
+    scope: 显示范围文案，用于榜单副标题（本群 / 全服）。
     """
     from ..core.starry_system import REWARD_POOL_NAMES, score_starry_fish
 
@@ -279,5 +282,6 @@ async def render_starry_ranking(
         width=560,
         entries=flat,
         top_n=top_n,
+        scope=scope,
     )
     return await render_html(html, 560)

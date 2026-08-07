@@ -50,6 +50,7 @@ from ..utils import (
     _ensure_user,
     _get_at_display_name,
     _get_at_list,
+    _get_group_context_id,
     _is_private_chat,
     _send_image,
     _send_text,
@@ -264,10 +265,16 @@ async def _(event: Event, matcher: Matcher):
 
 
 @starry_ranking_matcher.handle()
-async def _(event: Event, matcher: Matcher):
+async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
-    image = await get_starry_ranking_image()
+    scope_text = (group[0] or "").strip() if group and group[0] else ""
+    # 默认只显示本群；「星空排行 全服」显式查看全服。私聊没有群概念，等同全服。
+    if scope_text == "全服" or is_private:
+        image = await get_starry_ranking_image()
+    else:
+        group_context_id = _get_group_context_id(event)
+        image = await get_starry_ranking_image(group_id=group_context_id)
     await _send_image(matcher, image, user_id=user_id, is_private=is_private)
 
 

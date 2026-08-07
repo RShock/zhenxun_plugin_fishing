@@ -952,6 +952,22 @@ class FishingUser(Model):
         return result
 
     @classmethod
+    async def get_exhibition_fisher_ids_in_group(cls, group_id: str) -> set[str]:
+        """返回最近一次钓鱼来源群为指定群的玩家 ID 集合。
+
+        仅作为星空排行按群过滤的备用手段：当 get_group_member_list
+        不可用（如 QQ 官方群无成员接口）时，按开始钓鱼时记录的来源群判定归属。
+        """
+        group_id = str(group_id)
+        result: set[str] = set()
+        users = await cls.all().only("user_id", "fishing_status")
+        for user in users:
+            status = user.fishing_status
+            if isinstance(status, dict) and str(status.get("group_id", "")) == group_id:
+                result.add(user.user_id)
+        return result
+
+    @classmethod
     async def try_claim_miracle(cls, user_id: str) -> dict | None:
         """尝试用持有的流星鱼凑一次奇迹，成功则消耗子集并 +1 星空框。
 
