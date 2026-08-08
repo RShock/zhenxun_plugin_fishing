@@ -7,55 +7,81 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 
 # 延迟导入，避免循环依赖
 # 药水使用逻辑已从 shop/ 拆出至 items/potion_use.py
 def _time_potion():
     from ..items.potion_use import use_time_potion
+
     return use_time_potion
+
 
 def _duoduo_potion():
     from ..items.potion_use import use_duoduo_potion
+
     return use_duoduo_potion
+
 
 async def _rollback_potion_adapter(user_id: str, count: int = 1, **kwargs):
     from ..items.potion_use import use_rollback_potion
+
     return await use_rollback_potion(user_id)
+
 
 async def _lucky_potion_adapter(user_id: str, count: int = 1, **kwargs):
     from ..items.potion_use import use_lucky_potion
+
     return await use_lucky_potion(user_id, count)
+
 
 async def _flash_potion_adapter(user_id: str, count: int = 1, **kwargs):
     from ..items.potion_use import use_flash_potion
+
     return await use_flash_potion(user_id, count, **kwargs)
+
 
 async def _utr_select_adapter(user_id: str, count: int = 1, **kwargs):
     from ..items.potion_use import use_utr_select_ticket
+
     return await use_utr_select_ticket(user_id, count, **kwargs)
+
 
 async def _corn_adapter(user_id: str, count: int = 1, **kwargs):
     from .nest import do_nest
+
     return await do_nest(user_id, count, **kwargs)
+
 
 def _corn():
     return _corn_adapter
 
+
 async def _frame_buff_adapter(user_id: str, count: int = 1, **kwargs):
     from ..items.potion_use import use_display_frame_buff
+
     return await use_display_frame_buff(user_id, count, **kwargs)
+
 
 def _frame_buff():
     return _frame_buff_adapter
 
+
 async def _cat_frame_nest_adapter(user_id: str, count: int = 1, **kwargs):
     from .nest import do_cat_frame_nest
+
     return await do_cat_frame_nest(user_id, count, **kwargs)
+
 
 def _cat_frame_nest():
     return _cat_frame_nest_adapter
+
+
+def _big_fish():
+    from ..items.character_use import use_big_fish
+
+    return use_big_fish
 
 
 # (aliases, handler_factory, is_image)
@@ -69,6 +95,7 @@ _ITEM_ENTRIES: list[tuple[list[str], Callable, bool]] = [
     (["香甜玉米", "玉米"], _corn, False),
     (["展示木框", "木框"], _frame_buff, False),
     (["猫猫框", "猫框"], _cat_frame_nest, False),
+    (["大肥鱼"], _big_fish, False),
 ]
 
 # 展开为 flat dict: name -> (handler_factory, is_image)

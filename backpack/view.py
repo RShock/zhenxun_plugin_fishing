@@ -6,7 +6,13 @@ from zhenxun.services.log import logger
 
 from ..config import ConfigManager, calculate_fish_price, generate_fish_numeric_id
 from ..models import FishingUser
-from ..render import render_backpack, render_collection, render_starry_exhibition, render_starry_ranking
+from ..models import user_mutations as mut
+from ..render import (
+    render_backpack,
+    render_collection,
+    render_starry_exhibition,
+    render_starry_ranking,
+)
 from ..services import get_or_create_user
 
 
@@ -65,6 +71,22 @@ def build_misc_inventory(items_list: list[dict]) -> list[dict]:
             name = _MISC_ITEM_NAMES.get(item_id, item_id)
             result.append({"item_id": item_id, "name": name, "count": count})
     result.sort(key=lambda x: x["name"])
+    return result
+
+
+def build_character_item_inventory(items_list: list[dict]) -> list[dict]:
+    """未使用的角色道具仍显示在背包道具栏。"""
+    result = [
+        {
+            "item_id": str(item.get("item_id", "")),
+            "name": str(item.get("item_id", "")),
+            "count": int(item.get("count", 0) or 0),
+        }
+        for item in items_list
+        if item.get("item_type") == "character"
+        and int(item.get("count", 0) or 0) > 0
+    ]
+    result.sort(key=lambda item: item["name"])
     return result
 
 def _coerce_starry_records(raw) -> list[dict]:
@@ -219,6 +241,8 @@ async def get_backpack_image(user_id: str) -> bytes:
 
     potion_list = build_potion_inventory(items_list)
     misc_list = build_misc_inventory(items_list)
+    character_item_list = build_character_item_inventory(items_list)
+    character_slots = mut.get_character_slots_on_user(user)
     # show tickets/fragments alongside potions
     potion_list = potion_list + [
         {"item_id": m["item_id"], "name": m["name"], "count": m["count"]} for m in misc_list
@@ -270,6 +294,8 @@ async def get_backpack_image(user_id: str) -> bytes:
         upgraded_display_count=user.upgraded_display_count,
         cat_frames=user.cat_frames,
         potion_list=potion_list,
+        character_item_list=character_item_list,
+        character_slots=character_slots,
         meteor_items=meteor_items,
         cat_park_materials=material_list,
         star_frames=int(getattr(user, "star_frames", 0) or 0),

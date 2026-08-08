@@ -57,6 +57,8 @@ async def render_backpack(
     upgraded_display_count: int = 0,
     cat_frames: int = 0,
     potion_list: list = None,
+    character_item_list: list = None,
+    character_slots: list[str | None] | None = None,
     meteor_items: list = None,
     cat_park_materials: list = None,
     star_frames: int = 0,
@@ -114,6 +116,9 @@ async def render_backpack(
             )
         )
 
+    character_slot_data = list(character_slots or [])[:3]
+    character_slot_data.extend([None] * (3 - len(character_slot_data)))
+
     html = render_template(
         "backpack.html",
         body_bg=gradient_bg("pink"),
@@ -130,6 +135,8 @@ async def render_backpack(
         fish_rows=fish_rows,
         total_value=total_value,
         potion_list=potion_list or [],
+        character_item_list=character_item_list or [],
+        character_slots=character_slot_data,
         meteor_items=meteor_items or [],
         cat_park_materials=cat_park_materials or [],
     )

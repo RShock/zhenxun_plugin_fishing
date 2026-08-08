@@ -48,6 +48,7 @@ _EMPTY_ACHIEVEMENTS = []
 _EMPTY_ITEMS = {}
 _EMPTY_DISPLAYS = {}
 _EMPTY_STARRY_FISH = []
+_EMPTY_CHARACTER_SLOTS = [None, None, None]
 
 
 def _ensure_dict(data: Any) -> dict:
@@ -115,6 +116,7 @@ _FIELD_DEFAULTS = [
     ("displays", dict, lambda: dict(_EMPTY_DISPLAYS)),
     ("starry_fish", list, lambda: list(_EMPTY_STARRY_FISH)),
     ("starry_exhibition", list, list),
+    ("character_slots", list, lambda: list(_EMPTY_CHARACTER_SLOTS)),
 ]
 
 
@@ -149,6 +151,18 @@ def _repair_user_fields(user: "FishingUser") -> list[str]:
             if "1" not in value:
                 value.append("1")
                 need_save = True
+            is_invalid = False
+
+        if field_name == "character_slots" and isinstance(value, list):
+            normalized = [
+                slot.strip() if isinstance(slot, str) and slot.strip() else None
+                for slot in value[:3]
+            ]
+            normalized.extend([None] * (3 - len(normalized)))
+            if normalized != value:
+                setattr(user, field_name, normalized)
+                need_save = True
+            value = normalized
             is_invalid = False
 
         if field_name == "skin_id" and not value:
@@ -257,6 +271,10 @@ class FishingUser(Model):
     displays = fields.JSONField(
         default=dict, description="展示栏{slot: {fish_name, rarity, numeric_id}}"
     )
+    character_slots = fields.JSONField(
+        default=lambda: [None, None, None],
+        description="角色栏，固定3个位置，保存角色名称或空值",
+    )
     fishing_status = fields.JSONField(
         default=None, null=True, description="钓鱼状态{location_id, start_time}"
     )
@@ -298,6 +316,9 @@ class FishingUser(Model):
             "ALTER TABLE fishing_user ADD COLUMN s2_ticket_claimed INTEGER NOT NULL DEFAULT 0;",
             "ALTER TABLE fishing_user ADD COLUMN starry_fish TEXT;",
             "ALTER TABLE fishing_user ADD COLUMN starry_exhibition TEXT;",
+            # ── 角色队伍 ──
+            "ALTER TABLE fishing_user ADD COLUMN character_slots TEXT NOT NULL "
+            "DEFAULT '[null,null,null]';",
             # ── 防闲置 ──
             "ALTER TABLE fishing_user ADD COLUMN last_location_id VARCHAR(50) NOT NULL DEFAULT '';",
             "ALTER TABLE fishing_user ADD COLUMN last_active_time TIMESTAMP;",
@@ -317,6 +338,7 @@ class FishingUser(Model):
             "displays": dict(_EMPTY_DISPLAYS),
             "starry_fish": list(_EMPTY_STARRY_FISH),
             "starry_exhibition": [],
+            "character_slots": list(_EMPTY_CHARACTER_SLOTS),
         }
         if nickname:
             defaults["nickname"] = nickname
@@ -905,6 +927,22 @@ class FishingUser(Model):
         achievement_key = f"collect_scene_{location_id}"
         result = await cls.is_achievement_completed(user_id, achievement_key)
         return result
+
+    @classmethod
+    async def get_character_slots(cls, user_id: str) -> list[str | None]:
+        user = await cls.get_user(user_id)
+        return mut.get_character_slots_on_user(user)
+
+    @classmethod
+    async def set_character_slot(
+        cls, user_id: str, position: int, character_name: str
+    ) -> None:
+        if position not in (1, 2, 3):
+            raise ValueError("角色位置只能是1、2或3")
+        user = await cls.get_user(user_id)
+        dirty: set[str] = set()
+        mut.apply_set_character_slot(user, position, character_name, dirty)
+        await mut.save_dirty(user, dirty)
 
     @classmethod
     async def add_item(

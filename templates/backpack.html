@@ -29,6 +29,9 @@
 .inv-item { background: #f0f7ff; border: 1px solid #d0e3f7; border-radius: 8px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; }
 .inv-name { font-size: 13px; color: #333; font-weight: bold; }
 .inv-count { font-size: 13px; color: #4facfe; font-weight: bold; }
+.character-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 5px; }
+.character-slot { background: #fff8e8; border: 1px solid #f0cf83; border-radius: 8px; padding: 9px 8px; color: #333; font-size: 13px; font-weight: bold; text-align: center; }
+.character-empty { color: #999; font-weight: normal; }
 .meteor-card { background: #FFF0F5; border: 1px solid #FF69B4; border-radius: 8px; padding: 8px 10px; margin-bottom: 5px; }
 .meteor-head { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 6px; }
 .meteor-count { color: #FF1493; font-size: 12px; font-weight: bold; }
@@ -136,7 +139,13 @@
     {% endfor %}
 </div>
 {% endif %}
-{% if corn_count > 0 or potion_list %}
+<div class="section-title">👥 角色</div>
+<div class="character-list">
+    {% for character in character_slots %}
+    <div class="character-slot">第{{ loop.index }}位：{% if character %}{{ character }}{% else %}<span class="character-empty">空</span>{% endif %}</div>
+    {% endfor %}
+</div>
+{% if corn_count > 0 or potion_list or character_item_list %}
 <div class="section-title">🎒 道具</div>
 <div class="inv-list">
     {% if corn_count > 0 %}
@@ -144,6 +153,9 @@
     {% endif %}
     {% for potion in potion_list %}
     <div class="inv-item"><span class="inv-name">🧪 {{ potion.name }}</span><span class="inv-count">x{{ potion.count }}</span></div>
+    {% endfor %}
+    {% for item in character_item_list %}
+    <div class="inv-item"><span class="inv-name">{{ item.name }}</span><span class="inv-count">x{{ item.count }}</span></div>
     {% endfor %}
 </div>
 {% endif %}

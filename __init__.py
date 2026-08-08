@@ -25,6 +25,7 @@ require("nonebot_plugin_session")
 require("nonebot_plugin_alconna")
 
 from zhenxun.configs.utils import Command, PluginCdBlock, PluginExtraData
+from zhenxun.services.log import logger
 
 from .commands import iter_command_aliases
 
@@ -61,7 +62,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="",
-        version="1.0.5",
+        version="1.0.6",
         # 与 QQ Matcher、Web 路由共用 commands.py；help.html 仍由人工维护。
         commands=[Command(command=alias) for alias in iter_command_aliases()],
         limits=[PluginCdBlock()],
@@ -132,6 +133,7 @@ from .matchers import (
     white_market_matcher,
 )
 from .models import FishingBuff, FishingUser
+from .services.achievement_service import grant_big_fish_reward
 
 
 @get_driver().on_startup
@@ -181,3 +183,15 @@ async def _migrate_frame_buffs():
 # ═══════════════════════════════════════════════════════════════════════════════
 # 【临时迁移代码结束】
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+@get_driver().on_startup
+async def _migrate_big_fish_rewards():
+    # 奖励标记与道具在同一次 save 中写入，重启扫描可安全重试。
+    granted_count = 0
+    users = await FishingUser.all()
+    for user in users:
+        if await grant_big_fish_reward(user.user_id, user=user):
+            granted_count += 1
+    if granted_count:
+        logger.info(f"已为 {granted_count} 名老玩家补发大肥鱼")

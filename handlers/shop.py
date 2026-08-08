@@ -197,6 +197,22 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         await _send_text(matcher, message, user_id, is_private=is_private)
 
 
+def _parse_use_item_arguments(item_name: str, rest: str) -> tuple[int, str]:
+    """角色道具的数字参数表示队伍位置，其他道具仍按数量解析。"""
+    if not rest:
+        return 1, ""
+    if item_name == "大肥鱼":
+        return 1, rest.strip()
+
+    parts = rest.split()
+    if len(parts) == 1 and parts[0].isdigit():
+        return max(1, int(parts[0])), ""
+    if parts and parts[-1].isdigit() and len(parts) > 1:
+        # 兼容：钓鱼使用 UTR自选券 某某鱼 1
+        return max(1, int(parts[-1])), " ".join(parts[:-1]).strip()
+    return 1, rest
+
+
 @use_item_matcher.handle()
 @with_user_lock("使用物品")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
@@ -206,7 +222,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     rest = group[1].strip() if group and len(group) > 1 and group[1] else ""
 
     available = (
-        "时光药水、回档药水、幸运药水、闪光药水、UTR自选券、香甜玉米、木框、猫框"
+        "时光药水、回档药水、幸运药水、闪光药水、UTR自选券、香甜玉米、木框、猫框、大肥鱼"
     )
     if not item_name:
         await _send_text(
@@ -219,18 +235,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         )
         return
 
-    count = 1
-    arg = ""
-    if rest:
-        parts = rest.split()
-        if len(parts) == 1 and parts[0].isdigit():
-            count = max(1, int(parts[0]))
-        elif parts and parts[-1].isdigit() and len(parts) > 1:
-            # 兼容：钓鱼使用 UTR自选券 某某鱼 1
-            count = max(1, int(parts[-1]))
-            arg = " ".join(parts[:-1]).strip()
-        else:
-            arg = rest
+    count, arg = _parse_use_item_arguments(item_name, rest)
 
     handler, is_image = resolve_item_handler(item_name)
     if handler is None:
