@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from ..characters import normalize_character_slots
 from ..config import ConfigManager, calculate_fish_price
 from .base import (
     RARITY_COLORS,
@@ -8,6 +9,7 @@ from .base import (
     _starry_feature_digit_styles,
     build_fish_item_data,
     build_starry_fish_cards,
+    get_character_image_src,
     get_fish_image_src,
     gradient_bg,
     render_html,
@@ -58,7 +60,7 @@ async def render_backpack(
     cat_frames: int = 0,
     potion_list: list = None,
     character_item_list: list = None,
-    character_slots: list[str | None] | None = None,
+    character_slots: list[dict[str, str | int] | str | None] | None = None,
     meteor_items: list = None,
     cat_park_materials: list = None,
     star_frames: int = 0,
@@ -116,8 +118,20 @@ async def render_backpack(
             )
         )
 
-    character_slot_data = list(character_slots or [])[:3]
-    character_slot_data.extend([None] * (3 - len(character_slot_data)))
+    character_slot_data = []
+    for character in normalize_character_slots(character_slots or []):
+        if character is None:
+            character_slot_data.append(None)
+            continue
+        rarity = str(character.get("rarity", "N")).upper()
+        character_slot_data.append(
+            {
+                **character,
+                "rarity": rarity,
+                "color": RARITY_COLORS.get(rarity, RARITY_COLORS["N"]),
+                "img_src": get_character_image_src(str(character["character_id"])),
+            }
+        )
 
     html = render_template(
         "backpack.html",

@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from ..characters import normalize_character_data, normalize_character_slots
 from ..config import DAILY_ACTION_LIMIT, normalize_fish_numeric_id
 
 # 与 user.py 保持一致的空结构
@@ -325,33 +326,28 @@ def is_achievement_completed_on_user(user, achievement_key: str) -> bool:
 # ── 物品 ─────────────────────────────────────────────────────────────────
 
 
-# 角色队伍固定为 3 位；历史数据可能缺字段、过长或包含空字符串。
-
-
-def _normalize_character_slots(slots: Any) -> list[str | None]:
-    if not isinstance(slots, list):
-        return [None, None, None]
-    normalized = [
-        slot.strip() if isinstance(slot, str) and slot.strip() else None
-        for slot in slots[:3]
-    ]
-    normalized.extend([None] * (3 - len(normalized)))
-    return normalized
+# 角色队伍固定为 3 位；规范化时会把旧版纯字符串角色升级为带等级和稀有度的数据。
 
 
 def apply_set_character_slot(
-    user, position: int, character_name: str, dirty: set[str] | None = None
+    user,
+    position: int,
+    character: str | dict[str, str | int],
+    dirty: set[str] | None = None,
 ) -> None:
     if position not in (1, 2, 3):
         raise ValueError("角色位置只能是1、2或3")
-    slots = _normalize_character_slots(getattr(user, "character_slots", None))
-    slots[position - 1] = character_name
+    character_data = normalize_character_data(character)
+    if character_data is None:
+        raise ValueError("角色数据不能为空")
+    slots = normalize_character_slots(getattr(user, "character_slots", None))
+    slots[position - 1] = character_data
     user.character_slots = slots
     mark_dirty(dirty, "character_slots")
 
 
-def get_character_slots_on_user(user) -> list[str | None]:
-    return _normalize_character_slots(getattr(user, "character_slots", None))
+def get_character_slots_on_user(user) -> list[dict[str, str | int] | None]:
+    return normalize_character_slots(getattr(user, "character_slots", None))
 
 
 def apply_add_item(

@@ -15,6 +15,7 @@ from tortoise import fields
 
 from zhenxun.services.db_context import Model
 
+from ..characters import normalize_character_slots
 from ..config import (
     DAILY_ACTION_LIMIT,
     DAILY_GIFT_LIMIT,
@@ -154,11 +155,7 @@ def _repair_user_fields(user: "FishingUser") -> list[str]:
             is_invalid = False
 
         if field_name == "character_slots" and isinstance(value, list):
-            normalized = [
-                slot.strip() if isinstance(slot, str) and slot.strip() else None
-                for slot in value[:3]
-            ]
-            normalized.extend([None] * (3 - len(normalized)))
+            normalized = normalize_character_slots(value)
             if normalized != value:
                 setattr(user, field_name, normalized)
                 need_save = True
@@ -273,7 +270,7 @@ class FishingUser(Model):
     )
     character_slots = fields.JSONField(
         default=lambda: [None, None, None],
-        description="角色栏，固定3个位置，保存角色名称或空值",
+        description="角色栏，固定3个位置，保存角色ID、等级与稀有度",
     )
     fishing_status = fields.JSONField(
         default=None, null=True, description="钓鱼状态{location_id, start_time}"
@@ -929,7 +926,9 @@ class FishingUser(Model):
         return result
 
     @classmethod
-    async def get_character_slots(cls, user_id: str) -> list[str | None]:
+    async def get_character_slots(
+        cls, user_id: str
+    ) -> list[dict[str, str | int] | None]:
         user = await cls.get_user(user_id)
         return mut.get_character_slots_on_user(user)
 

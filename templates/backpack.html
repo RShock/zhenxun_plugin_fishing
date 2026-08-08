@@ -29,8 +29,26 @@
 .inv-item { background: #f0f7ff; border: 1px solid #d0e3f7; border-radius: 8px; padding: 6px 12px; display: flex; align-items: center; gap: 8px; }
 .inv-name { font-size: 13px; color: #333; font-weight: bold; }
 .inv-count { font-size: 13px; color: #4facfe; font-weight: bold; }
-.character-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 5px; }
-.character-slot { background: #fff8e8; border: 1px solid #f0cf83; border-radius: 8px; padding: 9px 8px; color: #333; font-size: 13px; font-weight: bold; text-align: center; }
+.character-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 5px; }
+.character-slot {
+    box-sizing: border-box;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    border-radius: 10px;
+    padding: 3px 4px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+.character-position { position: absolute; top: 2px; left: 4px; color: #333; font-size: 13px; font-weight: bold; z-index: 1; }
+.character-level { position: absolute; top: 2px; right: 4px; color: #333; font-size: 13px; font-weight: bold; z-index: 1; }
+.character-img { width: 96px; height: 96px; object-fit: contain; margin: 0; }
+.character-img-placeholder { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; font-size: 52px; }
+.character-name { margin-top: -1px; font-size: 14px; font-weight: bold; line-height: 1.05; }
+.character-slot-empty { background: #f8f9fa; border: 2px dashed #c8cdd3; justify-content: center; color: #999; font-size: 13px; }
 .character-empty { color: #999; font-weight: normal; }
 .meteor-card { background: #FFF0F5; border: 1px solid #FF69B4; border-radius: 8px; padding: 8px 10px; margin-bottom: 5px; }
 .meteor-head { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 6px; }
@@ -142,7 +160,16 @@
 <div class="section-title">👥 角色</div>
 <div class="character-list">
     {% for character in character_slots %}
-    <div class="character-slot">第{{ loop.index }}位：{% if character %}{{ character }}{% else %}<span class="character-empty">空</span>{% endif %}</div>
+    {% if character %}
+    <div class="character-slot" style="background: {{ character.color }}20; border: 2px solid {{ character.color }};">
+        <div class="character-position">第{{ loop.index }}位</div>
+        <div class="character-level">Lv.{{ character.level }}</div>
+        {% if character.img_src %}<img src="{{ character.img_src }}" class="character-img" />{% else %}<div class="character-img-placeholder">👥</div>{% endif %}
+        <div class="character-name" style="color: {{ character.color }};">{{ character.name }}</div>
+    </div>
+    {% else %}
+    <div class="character-slot character-slot-empty"><span>第{{ loop.index }}位：</span><span class="character-empty">空</span></div>
+    {% endif %}
     {% endfor %}
 </div>
 {% if corn_count > 0 or potion_list or character_item_list %}

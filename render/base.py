@@ -14,9 +14,11 @@ DEBUG_TEMP_DIR = Path(__file__).parent.parent / "temp"
 DEBUG_MODE = False
 
 _fish_image_cache: dict[str, str] = {}
+_character_image_cache: dict[str, str] = {}
 
 TEMPLATES_PATH = Path(__file__).parent.parent / "templates"
 FISH_IMAGES_PATH = Path(__file__).parent.parent / "resources" / "images" / "fish"
+CHARACTER_IMAGES_PATH = Path(__file__).parent.parent / "resources" / "images" / "chara"
 SCENES_IMAGES_PATH = Path(__file__).parent.parent / "resources" / "images" / "scenes"
 PLAYER_IMAGES_PATH = Path(__file__).parent.parent / "resources" / "images" / "player"
 ITEMS_IMAGES_PATH = Path(__file__).parent.parent / "resources" / "images" / "items"
@@ -226,6 +228,25 @@ def get_fish_image_src(fish_name: str, location_id: str = None) -> str:
         return f"data:image/png;base64,{data}"
     except Exception:
         return path.as_uri()
+
+
+def get_character_image_src(character_id: str) -> str:
+    cached = _character_image_cache.get(character_id)
+    if cached is not None:
+        return cached
+    path = CHARACTER_IMAGES_PATH / f"{character_id}.png"
+    if not path.exists():
+        _character_image_cache[character_id] = ""
+        return ""
+    try:
+        import base64
+
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        src = f"data:image/png;base64,{data}"
+    except Exception:
+        src = path.as_uri()
+    _character_image_cache[character_id] = src
+    return src
 
 
 def build_fish_item_data(

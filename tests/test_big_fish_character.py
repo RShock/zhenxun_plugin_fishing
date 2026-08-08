@@ -1,11 +1,13 @@
 from zhenxun.plugins.zhenxun_plugin_fishing.backpack.view import (
     build_character_item_inventory,
 )
+from zhenxun.plugins.zhenxun_plugin_fishing.characters import build_character_data
 from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
 from zhenxun.plugins.zhenxun_plugin_fishing.handlers.shop import (
     _parse_use_item_arguments,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.items.character_use import use_big_fish
+from zhenxun.plugins.zhenxun_plugin_fishing.models import user_mutations as mut
 from zhenxun.plugins.zhenxun_plugin_fishing.services.achievement_service import (
     _BIG_FISH_RARITIES,
     BIG_FISH_ITEM_ID,
@@ -97,7 +99,7 @@ class TestBigFishUse:
 
         assert success
         assert message == "大肥鱼被放在了队伍第1位！"
-        assert user.character_slots == [BIG_FISH_ITEM_ID, None, None]
+        assert user.character_slots == [build_character_data(BIG_FISH_ITEM_ID), None, None]
         assert f"{BIG_FISH_ITEM_ID}|{BIG_FISH_ITEM_TYPE}" not in user.items
 
     async def test_partial_team_uses_first_empty_slot(self, db):
@@ -109,7 +111,11 @@ class TestBigFishUse:
 
         assert success
         assert message == "大肥鱼被放在了队伍第2位！"
-        assert user.character_slots == ["A", BIG_FISH_ITEM_ID, "C"]
+        assert user.character_slots == [
+            build_character_data("A"),
+            build_character_data(BIG_FISH_ITEM_ID),
+            build_character_data("C"),
+        ]
 
     async def test_full_team_requires_position_without_consuming(self, db):
         user = await db.user_get("big_fish_full")
@@ -132,7 +138,11 @@ class TestBigFishUse:
 
         assert success
         assert message == "大肥鱼被放在了队伍第2位！"
-        assert user.character_slots == ["A", BIG_FISH_ITEM_ID, "C"]
+        assert user.character_slots == [
+            build_character_data("A"),
+            build_character_data(BIG_FISH_ITEM_ID),
+            build_character_data("C"),
+        ]
         assert f"{BIG_FISH_ITEM_ID}|{BIG_FISH_ITEM_TYPE}" not in user.items
 
     async def test_invalid_position_does_not_consume(self, db):
@@ -166,7 +176,20 @@ class TestBigFishBackpackAndParsing:
             {"item_id": BIG_FISH_ITEM_ID, "name": BIG_FISH_ITEM_ID, "count": 1}
         ]
 
-    async def test_character_slots_render_as_text(self, monkeypatch):
+    async def test_legacy_character_name_is_upgraded_to_level_one_utr_data(self, db):
+        user = await db.user_get("legacy_big_fish")
+        user.character_slots = [BIG_FISH_ITEM_ID, None, None]
+
+        slots = mut.get_character_slots_on_user(user)
+
+        assert slots[0] == {
+            "character_id": BIG_FISH_ITEM_ID,
+            "name": BIG_FISH_ITEM_ID,
+            "level": 1,
+            "rarity": "UTR",
+        }
+
+    async def test_character_slots_render_as_square_image_cards(self, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.render import backpack as module
 
         captured: dict[str, str] = {}
@@ -180,17 +203,24 @@ class TestBigFishBackpackAndParsing:
             "render_big_fish",
             [],
             0,
-            character_slots=[BIG_FISH_ITEM_ID, None, None],
+            character_slots=[build_character_data(BIG_FISH_ITEM_ID), None, None],
             character_item_list=[{"name": BIG_FISH_ITEM_ID, "count": 1}],
         )
 
         assert result == b"rendered"
         html = captured["html"]
         character_block = html.split("👥 角色", 1)[1].split("🎒 道具", 1)[0]
-        assert "第1位：" in character_block
+        assert "第1位" in character_block
         assert BIG_FISH_ITEM_ID in character_block
-        assert character_block.count("character-slot") == 3
-        assert "<img" not in character_block
+        assert character_block.count('class="character-slot') == 3
+        assert '<img src="data:image/png;base64,' in character_block
+        assert 'class="character-img"' in character_block
+        assert 'class="character-level">Lv.1<' in character_block
+        assert 'grid-template-columns: repeat(4, 1fr)' in html
+        assert 'aspect-ratio: 1 / 1' in html
+        assert '.character-img { width: 96px; height: 96px;' in html
+        assert f'background: {module.RARITY_COLORS["UTR"]}20' in character_block
+        assert f'border: 2px solid {module.RARITY_COLORS["UTR"]}' in character_block
 
     def test_model_has_three_slot_column_migration(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser

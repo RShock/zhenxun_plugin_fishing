@@ -1,5 +1,6 @@
 """角色道具的使用逻辑。"""
 
+from ..characters import build_character_data
 from ..models import FishingUser
 from ..models import user_mutations as mut
 from ..services.achievement_service import BIG_FISH_ITEM_ID, BIG_FISH_ITEM_TYPE
@@ -32,6 +33,6 @@ async def use_big_fish(user_id: str, count: int = 1, **kwargs) -> tuple[bool, st
     if not mut.apply_remove_item(user, BIG_FISH_ITEM_ID, BIG_FISH_ITEM_TYPE, 1, dirty):
         return False, "大肥鱼数量不足，使用失败！"
     # 指定已占用位置时覆盖原角色，但不额外返还被替换角色。
-    mut.apply_set_character_slot(user, position, BIG_FISH_ITEM_ID, dirty)
+    mut.apply_set_character_slot(user, position, build_character_data(BIG_FISH_ITEM_ID), dirty)
     await mut.save_dirty(user, dirty)
     return True, f"大肥鱼被放在了队伍第{position}位！"
