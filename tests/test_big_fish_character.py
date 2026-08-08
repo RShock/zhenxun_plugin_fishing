@@ -258,6 +258,7 @@ class TestBigFishBackpackAndParsing:
         assert 'grid-template-columns: repeat(4, 1fr)' in html
         assert 'aspect-ratio: 1 / 1' in html
         assert '.character-img { width: 96px; height: 96px;' in html
+        assert '.character-name { margin-top: 4px;' in html
         assert f'background: {module.RARITY_COLORS["UTR"]}20' in character_block
         assert f'border: 2px solid {module.RARITY_COLORS["UTR"]}' in character_block
 
