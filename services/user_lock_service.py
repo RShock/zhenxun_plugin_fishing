@@ -40,7 +40,7 @@ _held_owner: ContextVar[asyncio.Task[Any] | None] = ContextVar(
 )
 
 _WARNING_WAIT_SECONDS = 0.5
-_LOCK_WAIT_TIMEOUT_SECONDS = 3.0
+_LOCK_WAIT_TIMEOUT_SECONDS = 10.0
 _BUSY_MESSAGE = "上一个钓鱼操作仍在处理中，请稍后再试。"
 
 
