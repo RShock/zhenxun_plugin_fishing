@@ -1018,8 +1018,11 @@ class TestBlackMarketExchange:
 
         assert ok is True
         assert should_reply is True
-        # 不应消耗兑换券（使用了免费次数）
+        # 不应消耗兑换券（使用了免费次数），也不能缩短之前的过载冷却。
         assert "兑换券" not in msg
+        assert user.smart_black_market_available_date == date.today() + timedelta(
+            days=3
+        )
 
     async def test_smart_black_market_chains_and_uses_tickets_for_cooldown(
         self, db, monkeypatch

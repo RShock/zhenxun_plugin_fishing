@@ -1019,7 +1019,7 @@ code, .ic {
         <thead><tr><th>保底类型</th><th>阈值</th><th>计数条件</th><th>获取后</th></tr></thead>
         <tbody>
           <tr><td>UTR 保底</td><td>150 次</td><td>1-10/S1：仅已解锁的迷途风天气 +1；11-20：仅集齐该图全部 UR 后的乱纪元 +1</td><td>计数器归零</td></tr>
-          <tr><td>木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零</td></tr>
+          <tr><td>木框保底</td><td>150 次</td><td>每次钓鱼时 +1</td><td>计数器归零，结算时会提示保底触发</td></tr>
           <tr><td>猫框保底</td><td>15 次</td><td>每次被猫吃掉鱼但是未掉落框时 +1</td><td>计数器归零</td></tr>
         </tbody>
       </table>
@@ -1078,7 +1078,7 @@ code, .ic {
     <div class="grid-2">
       <div class="cmd-card">
         <span class="cmd-name">智能黑商</span>
-        <p class="cmd-desc">输入 <code>智能黑商 来源鱼 目标鱼</code>。若黑商随机给了别的鱼，系统会把本次产物继续交换，直到得到指定目标，或产物离开背包。</p>
+        <p class="cmd-desc">输入 <code>智能黑商 来源鱼 目标鱼</code>。若黑商随机给了别的鱼，系统会把本次产物继续交换，直到得到指定目标，或产物离开背包。若已有过载冷却，本次结算不会把原有的可用日期提前。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">收竿提示</span>

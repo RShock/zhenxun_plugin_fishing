@@ -254,3 +254,15 @@ def test_official_only_group_context_keeps_group_openid(monkeypatch):
     event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
 
     assert _get_group_context_id(event) == "OPEN_GROUP"
+
+
+async def test_menu_counter_uses_shared_numeric_group(monkeypatch):
+    from zhenxun.plugins.zhenxun_plugin_fishing.handlers import menu
+
+    monkeypatch.setattr(menu, "_get_group_context_id", lambda _event: "1054188847")
+    menu._group_msg_counter.clear()
+    event = type("QQGroupEvent", (), {"group_id": "OPEN_GROUP"})()
+
+    await menu._count_group_msg(event)
+
+    assert menu._group_msg_counter == {"1054188847": {"count": 1, "last_push": None}}

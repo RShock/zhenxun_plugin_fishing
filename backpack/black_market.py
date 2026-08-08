@@ -619,6 +619,7 @@ async def smart_black_market_exchange(
     used_count = await FishingUser.get_black_market_count(user_id)
     user = await FishingUser.get_user(user_id)
     today = date.today()
+    existing_available_date = getattr(user, "smart_black_market_available_date", None)
 
     start_ticket_used = False
     if used_count >= DAILY_BLACK_MARKET_LIMIT:
@@ -710,7 +711,9 @@ async def smart_black_market_exchange(
             user_id, "black_market_extra_ticket", "ticket", used_tickets
         )
     cooldown_days = max(1, attempts - used_tickets)
-    next_date = today + timedelta(days=cooldown_days)
+    calculated_next_date = today + timedelta(days=cooldown_days)
+    # 冷却中的每日免费启动只增加可用机会，不能把既有过载惩罚缩短。
+    next_date = max(existing_available_date or today, calculated_next_date)
     user.smart_black_market_available_date = next_date
     await user.save(
         update_fields=[

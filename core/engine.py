@@ -1299,7 +1299,7 @@ async def simulate_fishing_loop(
         from ..starry import is_starry_location as _is_starry
 
         frame_was_guaranteed = (
-            state.frame_pity >= FRAME_PITY_THRESHOLD
+            state.frame_pity + 1 >= FRAME_PITY_THRESHOLD
             and not _is_starry(ctx.location.id)
         )
         fish_count_before = len(state.fish_caught)

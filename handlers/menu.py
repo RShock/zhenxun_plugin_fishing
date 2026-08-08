@@ -24,7 +24,11 @@ from nonebot.matcher import Matcher
 
 from ..matchers import fishing_menu_matcher
 from ..models import FishingActiveGroup
-from ..utils import _is_official_qq_group_event, _send_text
+from ..utils import (
+    _get_group_context_id,
+    _is_official_qq_group_event,
+    _send_text,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 菜单数据 — 智能排版，按标签长度分组
@@ -65,15 +69,8 @@ _PUSH_TIME_THRESHOLD = timedelta(hours=1)
 
 
 def _get_event_group_id(event: Event) -> str:
-    """从事件中提取群标识。
-
-    OneBot 事件：event.group_id 为数字群号
-    QQ官方Bot事件：event.group_id 即 group_openid（字母开头）
-    """
-    gid = str(getattr(event, "group_id", "") or "")
-    if gid:
-        return gid
-    return str(getattr(event, "group_openid", "") or "")
+    """提取与玩法记录一致的群标识，避免共享群被拆成两套计数。"""
+    return _get_group_context_id(event) or ""
 
 
 def _is_countable_group_msg(event: Event, bot: Bot) -> bool:
