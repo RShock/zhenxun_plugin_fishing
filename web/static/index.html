@@ -460,6 +460,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .inventory-card-exchange { position:absolute; left:3px; bottom:3px; z-index:2; color:#fff; background:var(--success); border-radius:5px; padding:1px 4px; font-size:9px; line-height:1.2; font-weight:900; }
 .inventory-card-lock { position:absolute; right:3px; bottom:3px; font-size:9px; }
 .display-card.empty { cursor:default; border-style:dashed; color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:10px; }
+/* 猫框/星空框槽位：鱼图向左上扩大10%（允许超出卡片上/左边界），不向下扩大 */
+.inventory-card.display-card.frame-cat,
+.inventory-card.display-card.frame-starry { overflow:visible; }
+.inventory-card.display-card.frame-cat img,
+.inventory-card.display-card.frame-starry img { transform:scale(1.1); transform-origin:right bottom; }
 .starry-card { cursor:default; background:linear-gradient(145deg,#f8f5ff,#e8f3ff); }
 .inventory-menu { position:fixed; z-index:1200; width:220px; padding:10px; border:1px solid var(--border-strong); border-radius:14px; background:#fff; box-shadow:var(--shadow); }
 .inventory-menu-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; font-size:13px; font-weight:900; }
@@ -654,7 +659,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
       <div class="section-title">展示区 <span class="hint">完整 10 槽</span></div>
       <div class="inventory-card-grid">
-        <div v-for="d in backpack.displays" :key="'d'+d.slot+(d.numeric_id||'empty')" :class="['inventory-card','display-card',{empty:d.empty}]">
+        <div v-for="d in backpack.displays" :key="'d'+d.slot+(d.numeric_id||'empty')" :class="['inventory-card','display-card','frame-'+(d.frame_tier||'normal'),{empty:d.empty}]">
           <template v-if="!d.empty"><img v-if="d.image_url" :src="d.image_url"><span class="inventory-card-meta left">{{ d.rarity }}</span><span class="inventory-card-meta right">{{ d.slot }}</span><div class="inventory-card-name">{{ d.fish_name }}</div></template>
           <template v-else>空槽 {{ d.slot }}</template>
         </div>

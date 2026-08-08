@@ -168,6 +168,28 @@ def _starry_web_records(user, items_raw: list[dict]) -> tuple[list[dict], list[d
     return backpack, exhibition
 
 
+def _assign_display_frame_tiers(displays: list[dict], starry_frames: int, upgraded_count: int) -> None:
+    """为展示鱼按价格降序排名，前 starry_frames 条标记星空框、其后到 upgraded_count 条标记猫框。
+
+    排名规则与 QQ 背包 render/backpack.py 保持一致（价格降序），保证网页与 QQ 展示框视觉一致。
+    """
+    from ..config import ConfigManager, calculate_fish_price
+
+    def _price(d: dict) -> int:
+        fish_data = ConfigManager.get_fish_by_name(d.get("fish_name", ""))
+        if not fish_data:
+            return 0
+        return calculate_fish_price(fish_data, d.get("rarity", "N"), 0) * 2
+
+    for i, d in enumerate(sorted(displays, key=_price, reverse=True)):
+        if i < starry_frames:
+            d["frame_tier"] = "starry"
+        elif i < upgraded_count:
+            d["frame_tier"] = "cat"
+        else:
+            d["frame_tier"] = "normal"
+
+
 def _build_display_slots(displays: list[dict], slot_count: int = 10) -> list[dict]:
     """网页展示区固定呈现完整槽位，未解锁或未放鱼的槽位也保留占位。"""
     display_by_slot = {int(display.get("slot", 0)): display for display in displays}
@@ -285,6 +307,11 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
     displays = await FishingUser.get_user_displays(user_id)
     for display in displays:
         display.update(_fish_web_meta(display.get("fish_name", "")))
+    _assign_display_frame_tiers(
+        displays,
+        int(user.starry_frames or 0),
+        int(user.upgraded_display_count or 0),
+    )
     starry_fish, starry_exhibition = _starry_web_records(user, items_raw)
     display_slots = _build_display_slots(displays)
     backpack = {
