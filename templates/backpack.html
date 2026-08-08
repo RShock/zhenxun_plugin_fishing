@@ -19,11 +19,12 @@
     z-index: 1;
     pointer-events: none;
 }
-/* 猫框/星空框槽位：鱼图以右下角为锚点放大10%，向左上扩展（允许超出容器），不向下扩大 */
-.disp-slot.disp-frame-cat .disp-fish-img,
-.disp-slot.disp-frame-starry .disp-fish-img,
-.disp-slot.disp-frame-cat .disp-fish-starry,
-.disp-slot.disp-frame-starry .disp-fish-starry { transform: scale(1.1); transform-origin: right bottom; }
+/* 猫框/星空框槽位：框背景以右下角为锚点放大10%（向左上扩展，允许超出容器），不向下扩大 */
+.disp-slot.disp-frame-cat .disp-frame-img-cat,
+.disp-slot.disp-frame-starry .disp-frame-img-starry {
+    transform: scale(1.1);
+    transform-origin: right bottom;
+}
 .disp-fish-ph { font-size: 40px; }
 .disp-fish-starry { position: absolute; top: 6px; left: 6px; width: 68px; height: 68px; }
 .disp-fish-starry-silhouette { position: absolute; top: 0; left: 0; width: 68px; height: 68px; object-fit: contain; filter: brightness(0); border-radius: 4px; }

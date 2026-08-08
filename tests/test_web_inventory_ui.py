@@ -7,7 +7,6 @@ from types import SimpleNamespace
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.web.api import (
-    _assign_display_frame_tiers,
     _build_display_slots,
     _fish_web_meta,
     _sort_web_fish,
@@ -48,32 +47,6 @@ def test_display_slots_are_always_complete_ten_slots():
     assert slots[0]["empty"] is True
     assert slots[1]["fish_name"] == "鲤鱼"
     assert slots[9]["fish_name"] == "草鱼"
-
-
-def test_assign_display_frame_tiers_ranks_by_price_descending():
-    """星空框/猫框按价格降序排名标记，规则与 QQ 背包 _display_frame_tier 一致。"""
-    displays = [
-        {"slot": 1, "fish_name": "小鲫鱼", "rarity": "N"},
-        {"slot": 2, "fish_name": "小鲫鱼", "rarity": "UTR"},
-        {"slot": 3, "fish_name": "草鱼", "rarity": "SSR"},
-    ]
-
-    _assign_display_frame_tiers(displays, starry_frames=1, upgraded_count=2)
-
-    by_slot = {d["slot"]: d["frame_tier"] for d in displays}
-    assert by_slot[2] == "starry"  # 最贵 → 星空框
-    assert by_slot[3] == "cat"  # 次贵 → 猫框
-    assert by_slot[1] == "normal"
-
-
-def test_assign_display_frame_tiers_empty_and_no_frames():
-    displays = []
-    _assign_display_frame_tiers(displays, starry_frames=0, upgraded_count=0)
-    assert displays == []
-
-    single = [{"slot": 5, "fish_name": "小鲫鱼", "rarity": "UR"}]
-    _assign_display_frame_tiers(single, starry_frames=0, upgraded_count=0)
-    assert single[0]["frame_tier"] == "normal"
 
 
 def test_fish_web_meta_uses_player_facing_minimum_level():

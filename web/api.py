@@ -307,11 +307,6 @@ async def get_state(request: web.Request, user_id: str) -> web.Response:
     displays = await FishingUser.get_user_displays(user_id)
     for display in displays:
         display.update(_fish_web_meta(display.get("fish_name", "")))
-    _assign_display_frame_tiers(
-        displays,
-        int(user.starry_frames or 0),
-        int(user.upgraded_display_count or 0),
-    )
     starry_fish, starry_exhibition = _starry_web_records(user, items_raw)
     display_slots = _build_display_slots(displays)
     backpack = {

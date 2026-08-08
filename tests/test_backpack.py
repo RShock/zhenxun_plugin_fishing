@@ -43,6 +43,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market import (
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.fishing import start_fishing, stop_fishing
 from zhenxun.plugins.zhenxun_plugin_fishing.render.collection import render_collection
+from zhenxun.plugins.zhenxun_plugin_fishing.render.base import render_template
 
 USER_ID = "test_user_001"
 TARGET_ID = "test_user_002"
@@ -168,9 +169,10 @@ class TestDetailedCollection:
             "price": 12,
         }
 
-        assert await render_collection(
-            collection_data, has_utr=True, detailed=True
-        ) == b"rendered"
+        assert (
+            await render_collection(collection_data, has_utr=True, detailed=True)
+            == b"rendered"
+        )
         utr_fish = captured[-1]["locations"][0]["fish"][0]
         assert len(utr_fish["details"]) == 6
         assert [row["rarity"] for row in utr_fish["details"]] == [
@@ -379,13 +381,15 @@ class TestSellFish:
         async def capture_earn_gold(
             user_id, amount, operation, reason="", details=None
         ):
-            captured.update({
-                "user_id": user_id,
-                "amount": amount,
-                "operation": operation,
-                "reason": reason,
-                "details": details,
-            })
+            captured.update(
+                {
+                    "user_id": user_id,
+                    "amount": amount,
+                    "operation": operation,
+                    "reason": reason,
+                    "details": details,
+                }
+            )
 
         monkeypatch.setattr(
             "zhenxun.plugins.zhenxun_plugin_fishing.backpack.sell.earn_gold",
@@ -402,14 +406,16 @@ class TestSellFish:
         assert details["species_count"] == 1
         assert details["fish_count"] == 3
         assert details["total"] == captured["amount"]
-        assert details["items"] == [{
-            "numeric_id": "123",
-            "fish_name": "鲢鱼",
-            "rarity": "N",
-            "count": 3,
-            "unit_price": details["items"][0]["unit_price"],
-            "subtotal": captured["amount"],
-        }]
+        assert details["items"] == [
+            {
+                "numeric_id": "123",
+                "fish_name": "鲢鱼",
+                "rarity": "N",
+                "count": 3,
+                "unit_price": details["items"][0]["unit_price"],
+                "subtotal": captured["amount"],
+            }
+        ]
         assert details["items"][0]["unit_price"] * 3 == captured["amount"]
 
     async def test_sell_by_wildcard_rarity(self, db):
@@ -927,10 +933,9 @@ class TestBlackMarketExchange:
         assert first[0] is True
         assert second[0] is True
         assert "已消耗 1 张黑商额外兑换券" in second[1]
-        ticket = await db.items_get_item(
-            USER_ID, "black_market_extra_ticket", "ticket"
-        )
+        ticket = await db.items_get_item(USER_ID, "black_market_extra_ticket", "ticket")
         assert ticket is None
+
 
     async def test_original_black_market_rejects_extra_exchange_without_ticket(
         self, db, monkeypatch
@@ -1053,10 +1058,10 @@ class TestBlackMarketExchange:
         assert ok is True and should_reply is True
         assert "共尝试 3 次" in msg
         assert "已消耗 2 张" in msg
-        assert user.smart_black_market_available_date == date.today() + timedelta(days=1)
-        ticket = await db.items_get_item(
-            USER_ID, "black_market_extra_ticket", "ticket"
+        assert user.smart_black_market_available_date == date.today() + timedelta(
+            days=1
         )
+        ticket = await db.items_get_item(USER_ID, "black_market_extra_ticket", "ticket")
         assert ticket["count"] == 7
 
     async def test_smart_black_market_uses_start_ticket_after_normal_exchange(
@@ -1103,9 +1108,7 @@ class TestBlackMarketExchange:
         assert normal[0] is True
         assert smart[0] is True
         assert "启动时已消耗 1 张" in smart[1]
-        ticket = await db.items_get_item(
-            USER_ID, "black_market_extra_ticket", "ticket"
-        )
+        ticket = await db.items_get_item(USER_ID, "black_market_extra_ticket", "ticket")
         assert ticket is None
 
     async def test_smart_black_market_can_run_again_today_with_start_ticket(
@@ -1135,14 +1138,10 @@ class TestBlackMarketExchange:
         assert first[0] is True
         assert second[0] is True
         assert "启动时已消耗 1 张" in second[1]
-        ticket = await db.items_get_item(
-            USER_ID, "black_market_extra_ticket", "ticket"
-        )
+        ticket = await db.items_get_item(USER_ID, "black_market_extra_ticket", "ticket")
         assert ticket is None
 
-    async def test_smart_black_market_rejects_paid_start_without_ticket(
-        self, db
-    ):
+    async def test_smart_black_market_rejects_paid_start_without_ticket(self, db):
         source = find_fish_target("橘座鲫鱼", "UR")
         target = find_fish_target("小鲫鱼", "UR")
         assert source is not None and target is not None
@@ -1161,9 +1160,7 @@ class TestBlackMarketExchange:
 
         assert result[0] is False
         assert "启动智能黑商需要 1 张" in result[1]
-        remaining = await db.backpack_get_fish_by_numeric_id(
-            USER_ID, source.numeric_id
-        )
+        remaining = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
         assert remaining["count"] == 1
 
     async def test_smart_black_market_stops_when_product_is_displayed(
@@ -1375,9 +1372,7 @@ class TestBlackMarketExchange:
         image = await render_white_market_records(TARGET_ID)
         assert isinstance(image, bytes)
 
-    async def test_white_market_hides_own_record_when_collected(
-        self, db, monkeypatch
-    ):
+    async def test_white_market_hides_own_record_when_collected(self, db, monkeypatch):
         """取消特例后：自己的黑商记录若已收集可换回鱼，同样隐藏。"""
         black_source = find_fish_target("小鲫鱼", "UR")
         black_target = find_fish_target("小鲫鱼", "N")
@@ -1511,10 +1506,14 @@ class TestBlackMarketRevoke:
         assert should_reply is True
         assert "撤回成功" in msg
         # 验证目标鱼已退还（从背包移除）
-        target_fish = await db.backpack_get_fish_by_numeric_id(USER_ID, target.numeric_id)
+        target_fish = await db.backpack_get_fish_by_numeric_id(
+            USER_ID, target.numeric_id
+        )
         assert target_fish is None
         # 验证来源鱼已返还（可能在背包或被自动展示）
-        source_fish = await db.backpack_get_fish_by_numeric_id(USER_ID, source.numeric_id)
+        source_fish = await db.backpack_get_fish_by_numeric_id(
+            USER_ID, source.numeric_id
+        )
         displays = await db.display_get_user_displays(USER_ID)
         in_display = any(d["numeric_id"] == source.numeric_id for d in displays)
         assert source_fish is not None or in_display
@@ -1602,6 +1601,7 @@ class TestBlackMarketRevoke:
         # 模拟已使用 1 次黑商
         user = await db.user_get(USER_ID)
         from datetime import date as _date
+
         user._set_daily_counter("black_market", 1, _date.today().isoformat())
 
         await black_market_revoke(USER_ID, "")
@@ -1652,7 +1652,72 @@ class TestBlackMarketRevoke:
         assert "撤回成功" in msg
         assert "兑换券" not in msg
         # 验证没有返还额外券
-        ticket = await db.items_get_item(
-            USER_ID, "black_market_extra_ticket", "ticket"
-        )
+        ticket = await db.items_get_item(USER_ID, "black_market_extra_ticket", "ticket")
         assert ticket is None
+
+
+class TestBackpackDisplayFrameCss:
+    """QQ 背包展示框槽位放大样式回归：仅放大框背景，鱼图与 UTR 星空蒙版不受影响。"""
+
+    def _render(self, displays):
+        return render_template(
+            "backpack.html",
+            body_bg="linear-gradient(135deg,#a8edea 0%,#fed6e3 100%)",
+            width=550,
+            gold=100,
+            displays=displays,
+            display_slots=3,
+            bait_list=[],
+            corn_count=0,
+            display_frames=0,
+            cat_frames=0,
+            star_frames=0,
+            starry_frames=0,
+            fish_rows=[],
+            total_value=0,
+            potion_list=[],
+            meteor_items=[],
+            cat_park_materials=[],
+        )
+
+    def test_cat_frame_slot_gets_tier_class_and_frame_scale(self):
+        html = self._render(
+            [
+                {
+                    "slot": 1, "color": "#4facfe", "img_src": "fish.png",
+                    "fish_name": "鱼", "price": 1, "daily_income": 1,
+                    "frame_src": "frame.png", "is_upgraded": True,
+                    "frame_tier": "cat", "is_utr": False, "utr_starry_src": "",
+                }
+            ]
+        )
+        assert 'class="disp-slot disp-frame-cat' in html
+        # 仅框背景放大
+        assert ".disp-slot.disp-frame-cat .disp-frame-img-cat," in html
+        assert "transform: scale(1.1)" in html
+        assert "transform-origin: right bottom" in html
+
+    def test_fish_img_and_utr_starry_must_not_be_scaled(self):
+        """鱼图与 UTR 星空鱼禁用 transform：前者用户只要求放大框，后者会破坏蒙版混合。"""
+        html = self._render(
+            [
+                {
+                    "slot": 1, "color": "#4facfe", "img_src": "fish.png",
+                    "fish_name": "鱼", "price": 1, "daily_income": 1,
+                    "frame_src": "frame.png", "is_upgraded": True,
+                    "frame_tier": "starry", "is_utr": True,
+                    "utr_starry_src": "utr.png",
+                }
+            ]
+        )
+        # 放大规则只存在于"猫框/星空框"注释开始的 CSS 块中，且只作用于框图片类
+        css_block = html.split("/* 猫框/星空框槽位")[1].split(".disp-fish-ph")[0]
+        assert ".disp-slot.disp-frame-starry .disp-frame-img-starry {" in css_block
+        assert "scale(1.1)" in css_block
+        for banned in (
+            ".disp-fish-img",
+            ".disp-fish-starry",
+            ".disp-fish-starry-silhouette",
+            ".disp-fish-starry-sky",
+        ):
+            assert banned not in css_block, f"{banned} 不应出现在放大样式中"
