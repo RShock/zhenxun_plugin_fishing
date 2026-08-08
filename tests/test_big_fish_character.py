@@ -100,6 +100,7 @@ class TestBigFishUse:
         assert success
         assert message == "大肥鱼被放在了队伍第1位！"
         assert user.character_slots == [build_character_data(BIG_FISH_ITEM_ID), None, None]
+        assert user.characters == [build_character_data(BIG_FISH_ITEM_ID)]
         assert f"{BIG_FISH_ITEM_ID}|{BIG_FISH_ITEM_TYPE}" not in user.items
 
     async def test_partial_team_uses_first_empty_slot(self, db):
@@ -115,6 +116,11 @@ class TestBigFishUse:
             build_character_data("A"),
             build_character_data(BIG_FISH_ITEM_ID),
             build_character_data("C"),
+        ]
+        assert user.characters == [
+            build_character_data("A"),
+            build_character_data("C"),
+            build_character_data(BIG_FISH_ITEM_ID),
         ]
 
     async def test_full_team_requires_position_without_consuming(self, db):
@@ -132,6 +138,11 @@ class TestBigFishUse:
     async def test_full_team_can_replace_requested_slot(self, db):
         user = await db.user_get("big_fish_replace")
         user.character_slots = ["A", "B", "C"]
+        user.characters = [
+            build_character_data("A"),
+            build_character_data("B"),
+            build_character_data("C"),
+        ]
         self._give(user)
 
         success, message = await use_big_fish(user.user_id, arg="2")
@@ -142,6 +153,12 @@ class TestBigFishUse:
             build_character_data("A"),
             build_character_data(BIG_FISH_ITEM_ID),
             build_character_data("C"),
+        ]
+        assert user.characters == [
+            build_character_data("A"),
+            build_character_data("B"),
+            build_character_data("C"),
+            build_character_data(BIG_FISH_ITEM_ID),
         ]
         assert f"{BIG_FISH_ITEM_ID}|{BIG_FISH_ITEM_TYPE}" not in user.items
 
@@ -177,10 +194,16 @@ class TestBigFishBackpackAndParsing:
         ]
 
     async def test_legacy_character_name_is_upgraded_to_level_one_utr_data(self, db):
+        from zhenxun.plugins.zhenxun_plugin_fishing.models.user import (
+            _repair_user_fields,
+        )
+
         user = await db.user_get("legacy_big_fish")
         user.character_slots = [BIG_FISH_ITEM_ID, None, None]
 
+        updated_fields = _repair_user_fields(user)
         slots = mut.get_character_slots_on_user(user)
+        characters = mut.get_characters_on_user(user)
 
         assert slots[0] == {
             "character_id": BIG_FISH_ITEM_ID,
@@ -188,8 +211,21 @@ class TestBigFishBackpackAndParsing:
             "level": 1,
             "rarity": "UTR",
         }
+        assert characters == [build_character_data(BIG_FISH_ITEM_ID)]
+        assert user.characters == [build_character_data(BIG_FISH_ITEM_ID)]
+        assert "characters" in updated_fields
 
-    async def test_character_slots_render_as_square_image_cards(self, monkeypatch):
+    async def test_owned_characters_are_independent_from_team_slots(self, db):
+        user = await db.user_get("owned_characters")
+        user.characters = [build_character_data("A"), build_character_data("B")]
+        user.character_slots = [build_character_data("A"), None, None]
+
+        assert mut.get_characters_on_user(user) == [
+            build_character_data("A"),
+            build_character_data("B"),
+        ]
+
+    async def test_characters_render_as_square_image_cards(self, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.render import backpack as module
 
         captured: dict[str, str] = {}
@@ -203,16 +239,19 @@ class TestBigFishBackpackAndParsing:
             "render_big_fish",
             [],
             0,
-            character_slots=[build_character_data(BIG_FISH_ITEM_ID), None, None],
+            characters=[build_character_data(BIG_FISH_ITEM_ID)],
             character_item_list=[{"name": BIG_FISH_ITEM_ID, "count": 1}],
         )
 
         assert result == b"rendered"
         html = captured["html"]
         character_block = html.split("👥 角色", 1)[1].split("🎒 道具", 1)[0]
-        assert "第1位" in character_block
+        assert "第1位" not in character_block
+        assert "第2位" not in character_block
+        assert "第3位" not in character_block
         assert BIG_FISH_ITEM_ID in character_block
-        assert character_block.count('class="character-slot') == 3
+        assert character_block.count('class="character-card') == 1
+        assert "character-slot" not in character_block
         assert '<img src="data:image/png;base64,' in character_block
         assert 'class="character-img"' in character_block
         assert 'class="character-level">Lv.1<' in character_block
@@ -222,10 +261,36 @@ class TestBigFishBackpackAndParsing:
         assert f'background: {module.RARITY_COLORS["UTR"]}20' in character_block
         assert f'border: 2px solid {module.RARITY_COLORS["UTR"]}' in character_block
 
-    def test_model_has_three_slot_column_migration(self):
+    async def test_empty_character_inventory_has_no_position_cards(self, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing.render import backpack as module
+
+        captured: dict[str, str] = {}
+
+        async def capture_html(html: str, width: int = 300) -> bytes:
+            captured["html"] = html
+            return b"rendered"
+
+        monkeypatch.setattr(module, "render_html", capture_html)
+        await module.render_backpack(
+            "render_empty_characters",
+            [],
+            0,
+            characters=[],
+        )
+
+        character_block = captured["html"].split("👥 角色", 1)[1].split(
+            "🐟 鱼获", 1
+        )[0]
+        assert "还没有角色~" in character_block
+        assert 'class="character-card' not in character_block
+        assert "第1位" not in character_block
+
+    def test_model_has_team_slots_and_character_inventory_migrations(self):
         from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
 
         assert hasattr(FishingUser, "character_slots")
         assert any(
             "ADD COLUMN character_slots" in sql for sql in FishingUser._run_script()
         )
+        assert hasattr(FishingUser, "characters")
+        assert any("ADD COLUMN characters" in sql for sql in FishingUser._run_script())

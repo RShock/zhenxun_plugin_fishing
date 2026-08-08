@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ..characters import normalize_character_slots
+from ..characters import normalize_characters
 from ..config import ConfigManager, calculate_fish_price
 from .base import (
     RARITY_COLORS,
@@ -60,7 +60,7 @@ async def render_backpack(
     cat_frames: int = 0,
     potion_list: list = None,
     character_item_list: list = None,
-    character_slots: list[dict[str, str | int] | str | None] | None = None,
+    characters: list[dict[str, str | int] | str] | None = None,
     meteor_items: list = None,
     cat_park_materials: list = None,
     star_frames: int = 0,
@@ -118,13 +118,10 @@ async def render_backpack(
             )
         )
 
-    character_slot_data = []
-    for character in normalize_character_slots(character_slots or []):
-        if character is None:
-            character_slot_data.append(None)
-            continue
+    character_data = []
+    for character in normalize_characters(characters or []):
         rarity = str(character.get("rarity", "N")).upper()
-        character_slot_data.append(
+        character_data.append(
             {
                 **character,
                 "rarity": rarity,
@@ -150,7 +147,7 @@ async def render_backpack(
         total_value=total_value,
         potion_list=potion_list or [],
         character_item_list=character_item_list or [],
-        character_slots=character_slot_data,
+        characters=character_data,
         meteor_items=meteor_items or [],
         cat_park_materials=cat_park_materials or [],
     )

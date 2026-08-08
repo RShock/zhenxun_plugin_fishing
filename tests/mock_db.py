@@ -37,6 +37,7 @@ class InMemoryUser:
         self.starry_fish = []
         self.starry_exhibition = []
         self.character_slots = [None, None, None]
+        self.characters = []
         self.daily_counters = {
             "stop": {"count": 0, "date": None},
             "sell": {"count": 0, "date": None},

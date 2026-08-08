@@ -66,6 +66,23 @@ def normalize_character_data(value: Any) -> dict[str, str | int] | None:
     return character
 
 
+def normalize_characters(values: Any) -> list[dict[str, str | int]]:
+    if not isinstance(values, list):
+        return []
+    characters: list[dict[str, str | int]] = []
+    seen_ids: set[str] = set()
+    for value in values:
+        character = normalize_character_data(value)
+        if character is None:
+            continue
+        character_id = str(character["character_id"])
+        if character_id in seen_ids:
+            continue
+        seen_ids.add(character_id)
+        characters.append(character)
+    return characters
+
+
 def normalize_character_slots(
     slots: Any,
 ) -> list[dict[str, str | int] | None]:

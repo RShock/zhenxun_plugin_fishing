@@ -13,7 +13,11 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from ..characters import normalize_character_data, normalize_character_slots
+from ..characters import (
+    normalize_character_data,
+    normalize_characters,
+    normalize_character_slots,
+)
 from ..config import DAILY_ACTION_LIMIT, normalize_fish_numeric_id
 
 # 与 user.py 保持一致的空结构
@@ -348,6 +352,37 @@ def apply_set_character_slot(
 
 def get_character_slots_on_user(user) -> list[dict[str, str | int] | None]:
     return normalize_character_slots(getattr(user, "character_slots", None))
+
+
+def apply_add_character(
+    user,
+    character: str | dict[str, str | int],
+    dirty: set[str] | None = None,
+) -> bool:
+    character_data = normalize_character_data(character)
+    if character_data is None:
+        raise ValueError("角色数据不能为空")
+    characters = get_characters_on_user(user)
+    character_id = str(character_data["character_id"])
+    if any(str(item["character_id"]) == character_id for item in characters):
+        return False
+    characters.append(character_data)
+    user.characters = characters
+    mark_dirty(dirty, "characters")
+    return True
+
+
+def get_characters_on_user(user) -> list[dict[str, str | int]]:
+    characters = normalize_characters(getattr(user, "characters", None))
+    # 旧版只把角色存在队伍位中；读取时合并可保证迁移前数据不会在背包中消失。
+    slot_characters = [
+        character
+        for character in normalize_character_slots(
+            getattr(user, "character_slots", None)
+        )
+        if character is not None
+    ]
+    return normalize_characters([*characters, *slot_characters])
 
 
 def apply_add_item(

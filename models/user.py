@@ -15,7 +15,7 @@ from tortoise import fields
 
 from zhenxun.services.db_context import Model
 
-from ..characters import normalize_character_slots
+from ..characters import normalize_character_slots, normalize_characters
 from ..config import (
     DAILY_ACTION_LIMIT,
     DAILY_GIFT_LIMIT,
@@ -50,6 +50,7 @@ _EMPTY_ITEMS = {}
 _EMPTY_DISPLAYS = {}
 _EMPTY_STARRY_FISH = []
 _EMPTY_CHARACTER_SLOTS = [None, None, None]
+_EMPTY_CHARACTERS = []
 
 
 def _ensure_dict(data: Any) -> dict:
@@ -118,6 +119,7 @@ _FIELD_DEFAULTS = [
     ("starry_fish", list, lambda: list(_EMPTY_STARRY_FISH)),
     ("starry_exhibition", list, list),
     ("character_slots", list, lambda: list(_EMPTY_CHARACTER_SLOTS)),
+    ("characters", list, lambda: list(_EMPTY_CHARACTERS)),
 ]
 
 
@@ -162,6 +164,14 @@ def _repair_user_fields(user: "FishingUser") -> list[str]:
             value = normalized
             is_invalid = False
 
+        if field_name == "characters" and isinstance(value, list):
+            normalized = normalize_characters(value)
+            if normalized != value:
+                setattr(user, field_name, normalized)
+                need_save = True
+            value = normalized
+            is_invalid = False
+
         if field_name == "skin_id" and not value:
             is_invalid = True
 
@@ -174,6 +184,22 @@ def _repair_user_fields(user: "FishingUser") -> list[str]:
 
         if need_save and field_name not in update_fields:
             update_fields.append(field_name)
+
+    # 旧版只有队伍位，将其中的角色补入独立角色背包，替换队员后仍保留所有权。
+    owned_characters = normalize_characters(getattr(user, "characters", None))
+    slot_characters = [
+        character
+        for character in normalize_character_slots(
+            getattr(user, "character_slots", None)
+        )
+        if character is not None
+    ]
+    merged_characters = normalize_characters([*owned_characters, *slot_characters])
+    if merged_characters != owned_characters:
+        user.characters = merged_characters
+        need_save = True
+        if "characters" not in update_fields:
+            update_fields.append("characters")
 
     # 迁移：检测已领取猫猫乐园3级雕像奖励但 bonus_rod_level 未同步的玩家
     if user.bonus_rod_level == 0 and isinstance(user.items, dict):
@@ -270,7 +296,11 @@ class FishingUser(Model):
     )
     character_slots = fields.JSONField(
         default=lambda: [None, None, None],
-        description="角色栏，固定3个位置，保存角色ID、等级与稀有度",
+        description="角色队伍，固定3个位置",
+    )
+    characters = fields.JSONField(
+        default=list,
+        description="已拥有角色列表，保存角色ID、等级与稀有度",
     )
     fishing_status = fields.JSONField(
         default=None, null=True, description="钓鱼状态{location_id, start_time}"
@@ -316,6 +346,7 @@ class FishingUser(Model):
             # ── 角色队伍 ──
             "ALTER TABLE fishing_user ADD COLUMN character_slots TEXT NOT NULL "
             "DEFAULT '[null,null,null]';",
+            "ALTER TABLE fishing_user ADD COLUMN characters TEXT NOT NULL DEFAULT '[]';",
             # ── 防闲置 ──
             "ALTER TABLE fishing_user ADD COLUMN last_location_id VARCHAR(50) NOT NULL DEFAULT '';",
             "ALTER TABLE fishing_user ADD COLUMN last_active_time TIMESTAMP;",
@@ -336,6 +367,7 @@ class FishingUser(Model):
             "starry_fish": list(_EMPTY_STARRY_FISH),
             "starry_exhibition": [],
             "character_slots": list(_EMPTY_CHARACTER_SLOTS),
+            "characters": list(_EMPTY_CHARACTERS),
         }
         if nickname:
             defaults["nickname"] = nickname
@@ -931,6 +963,11 @@ class FishingUser(Model):
     ) -> list[dict[str, str | int] | None]:
         user = await cls.get_user(user_id)
         return mut.get_character_slots_on_user(user)
+
+    @classmethod
+    async def get_characters(cls, user_id: str) -> list[dict[str, str | int]]:
+        user = await cls.get_user(user_id)
+        return mut.get_characters_on_user(user)
 
     @classmethod
     async def set_character_slot(

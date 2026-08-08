@@ -242,7 +242,7 @@ async def get_backpack_image(user_id: str) -> bytes:
     potion_list = build_potion_inventory(items_list)
     misc_list = build_misc_inventory(items_list)
     character_item_list = build_character_item_inventory(items_list)
-    character_slots = mut.get_character_slots_on_user(user)
+    characters = mut.get_characters_on_user(user)
     # show tickets/fragments alongside potions
     potion_list = potion_list + [
         {"item_id": m["item_id"], "name": m["name"], "count": m["count"]} for m in misc_list
@@ -295,7 +295,7 @@ async def get_backpack_image(user_id: str) -> bytes:
         cat_frames=user.cat_frames,
         potion_list=potion_list,
         character_item_list=character_item_list,
-        character_slots=character_slots,
+        characters=characters,
         meteor_items=meteor_items,
         cat_park_materials=material_list,
         star_frames=int(getattr(user, "star_frames", 0) or 0),
