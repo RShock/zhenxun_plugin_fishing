@@ -62,7 +62,7 @@ __plugin_meta__ = PluginMetadata(
     """.strip(),
     extra=PluginExtraData(
         author="",
-        version="1.0.9",
+        version="1.0.10",
         # 与 QQ Matcher、Web 路由共用 commands.py；help.html 仍由人工维护。
         commands=[Command(command=alias) for alias in iter_command_aliases()],
         limits=[PluginCdBlock()],

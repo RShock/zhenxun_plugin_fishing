@@ -1,22 +1,21 @@
 """
 钓鱼菜单指令 handler — 展示常用指令快捷菜单。
 
-QQ官方Bot群聊中发送 Markdown（内嵌 qqbot-cmd-enter / qqbot-cmd-input 标签），
-玩家点击链接即可直接发送指令或插入输入框；
+QQ官方Bot群聊中发送一条带快捷按钮的菜单卡片，点击按钮直接发送对应基础指令；
 OneBot等其他适配器回退为纯文本菜单。
+QQ 群聊不支持官方 Markdown 指令标签，因此群聊不尝试发送 qqbot-cmd-enter。
 定时推送采用智能防刷策略：仅向有QQ官方Bot的活跃群推送，且要求该群累计消息>20条
 （说明上一次公告已被刷走）且距上次推送超过1小时，才会再次推送。
 
 支持两种群类型：
 1. 共享群（OneBot + QQ官方Bot同时在场）：通过 route2 桥接映射查找
-2. QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，直接用任意已连接的QQ官方Bot发送
+2. QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，
+   直接用任意已连接的QQ官方Bot发送
 """
-
 from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
-from urllib.parse import quote
 
 from nonebot import get_bots, logger, on_message
 from nonebot.adapters import Bot, Event
@@ -36,31 +35,46 @@ from ..utils import (
 # QQ官方Bot按钮在同一行内等宽分配，行内按钮越多每个越窄。
 # 2字标签放4个一行（每个1/4屏宽，2字轻松放下）；
 # 4字标签放3个一行（每个1/3屏宽，4字不会被截断）。
-# 冷门指令（如建设星空艇、升级展示栏、黑商交换）不设按钮，玩家手动输入即可。
-#
-# 每个按钮三元组：(label, command, enter)
-# enter=True  → 点击后直接自动发送（适用于无参数指令）
-# enter=False → 仅插入输入框，待玩家补充参数后手动发送
+# 每个按钮都直接提交对应基础指令；需要参数的命令由原有 handler 返回提示，
+# 避免用户停留在输入框却没有发送。
 # ─────────────────────────────────────────────────────────────────────────────
-_MENU_ROWS: tuple[tuple[tuple[str, str, bool], ...], ...] = (
+_MENU_ROWS: tuple[tuple[tuple[str, str], ...], ...] = (
     # 第1行 — 核心操作（4个×2字）
-    (("钓鱼", "钓鱼", False), ("收杆", "收杆", True), ("背包", "背包", True), ("卖鱼", "卖鱼", False)),
+    (
+        ("钓鱼", "钓鱼"),
+        ("收杆", "收杆"),
+        ("背包", "背包"),
+        ("卖鱼", "卖鱼"),
+    ),
     # 第2行 — 常用功能（4个×2字）
-    (("鱼店", "鱼店", True), ("图鉴", "图鉴", False), ("天气", "天气", False), ("打窝", "打窝", False)),
+    (
+        ("鱼店", "鱼店"),
+        ("图鉴", "图鉴"),
+        ("天气", "天气"),
+        ("打窝", "打窝"),
+    ),
     # 第3行 — 交易设置（3个×2字）
-    (("锁鱼", "锁鱼", False), ("白商", "白商", False), ("赠送", "赠送", False)),
+    (("锁鱼", "锁鱼"), ("白商", "白商"), ("赠送", "赠送")),
     # 第4行 — 状态自动（3个×4字）
-    (("钓鱼状态", "钓鱼状态", True), ("自动卖鱼", "自动卖鱼", False), ("自动锁鱼", "自动锁鱼", False)),
+    (
+        ("钓鱼状态", "钓鱼状态"),
+        ("自动卖鱼", "自动卖鱼"),
+        ("自动锁鱼", "自动锁鱼"),
+    ),
     # 第5行 — 升级排行（3个×4字）
-    (("升级钓竿", "升级钓竿", True), ("升级鱼钩", "升级鱼钩", True), ("星空排行", "星空排行", True)),
+    (
+        ("升级钓竿", "升级钓竿"),
+        ("升级鱼钩", "升级鱼钩"),
+        ("星空排行", "星空排行"),
+    ),
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 消息计数器 — 用于防刷屏推送判断
 #
 # 统计所有有QQ官方Bot在场的群消息：
-# - 共享群：OneBot 事件触发计数（route2 放行 OneBot 事件），key 为数字群号
-# - QQ官方Bot独有群：QQ 事件触发计数（route2 不拦截），key 为 group_openid
+# - 共享群：无论消息来自 OneBot 还是 QQ 官方 Bot，key 都归一为数字群号
+# - QQ官方Bot独有群：保留 group_openid 作为 key
 # 推送条件：累计消息 > _PUSH_MSG_THRESHOLD 且距上次推送 > _PUSH_TIME_THRESHOLD
 # ─────────────────────────────────────────────────────────────────────────────
 _group_msg_counter: dict[str, dict] = {}
@@ -120,50 +134,16 @@ def _build_menu_text() -> str:
     """构建纯文本菜单，用于 OneBot 回退。"""
     lines = []
     for row in _MENU_ROWS:
-        labels = " | ".join(label for label, _, _ in row)
+        labels = " | ".join(label for label, _ in row)
         lines.append(labels)
     return "\n".join(lines)
 
 
-def _build_qq_markdown_content() -> str:
-    """构建含 qqbot-cmd-enter / qqbot-cmd-input 标签的 Markdown 内容。
-
-    qqbot-cmd-enter：点击后直接发送指令（适用于无参数指令）
-    qqbot-cmd-input：点击后插入输入框，待玩家补充参数后手动发送
-    text/show 参数需 urlencode，QQ 客户端会自动解码显示原文。
-    """
-    lines = ["🎣 钓鱼菜单", ""]
-    for row_buttons in _MENU_ROWS:
-        parts = []
-        for label, command, enter in row_buttons:
-            encoded_cmd = quote(command)
-            if enter:
-                # 点击后直接自动发送，无需 show 参数（客户端展示解码后的 text）
-                parts.append(f'<qqbot-cmd-enter text="{encoded_cmd}" />')
-            else:
-                # 仅插入输入框，show 设为标签文本便于玩家识别
-                encoded_label = quote(label)
-                parts.append(
-                    f'<qqbot-cmd-input text="{encoded_cmd}" show="{encoded_label}" />'
-                )
-        lines.append(" ".join(parts))
-        lines.append("")  # 空行分隔每行
-    return "\n".join(lines)
-
-
-def _build_qq_markdown_message():
-    """构造仅含 Markdown（内嵌指令链接）的 QQ Message 对象。"""
-    from nonebot.adapters.qq import Message as QQMessage
-    from nonebot.adapters.qq import MessageSegment as QQMessageSegment
-
-    return QQMessage(QQMessageSegment.markdown(_build_qq_markdown_content()))
-
-
 def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
-    """直接构造 QQ 官方 Bot 的 Message 对象（含 Markdown + Keyboard）。
+    """构建 QQ 官方 Bot 群聊可用的 Markdown + Keyboard 消息。
 
-    使用 InlineKeyboardRow 为每行按钮创建独立行，确保智能排版：
-    短标签多放、长标签少放，避免文字被截断。
+    群聊不支持 qqbot-cmd-enter/qqbot-cmd-input，因此按钮使用 QQ Keyboard
+    的 enter=True，让点击操作直接提交按钮中的基础指令。
     """
     from nonebot.adapters.qq import Message as QQMessage
     from nonebot.adapters.qq import MessageSegment as QQMessageSegment
@@ -177,13 +157,13 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
         RenderData,
     )
 
-    # QQ API 要求 markdown 必填，不支持仅下发键盘消息
+    # QQ API 要求 Markdown 字段，键盘则提供可点击的按钮。
     msg = QQMessage(QQMessageSegment.markdown(markdown_text))
 
     rows = []
     for row_buttons in _MENU_ROWS:
         buttons = []
-        for label, command, enter in row_buttons:
+        for label, command in row_buttons:
             buttons.append(
                 Button(
                     render_data=RenderData(
@@ -192,9 +172,9 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
                         style=1,  # 蓝色线框
                     ),
                     action=Action(
-                        type=2,  # 指令按钮：自动在输入框插入 @bot data
+                        type=2,  # 指令按钮：data 是要发送的指令
                         data=command,
-                        enter=enter,  # True=点击后直接自动发送，False=仅插入输入框
+                        enter=True,  # 点击后直接发送，不只写入输入框
                         permission=Permission(type=2),  # 所有人可操作
                         unsupport_tips="请升级至最新版本",
                     ),
@@ -209,48 +189,40 @@ def _build_qq_keyboard_message(markdown_text: str = "🎣 钓鱼菜单"):
 
 @fishing_menu_matcher.handle()
 async def _(bot: Bot, event: Event, matcher: Matcher):
-    """处理"钓鱼菜单"指令。
-
-    QQ官方Bot群聊：发送含 qqbot-cmd-enter 指令链接的 Markdown 菜单；
-    共享群中 OneBot 事件跳过（由 QQ 官方 Bot 统一发送，避免双发）；
-    其他适配器(OneBot等)：发送纯文本菜单。
-    若 Markdown 发送失败，回退为键盘按钮，再回退为纯文本。
-    """
+    """处理“钓鱼菜单”指令。"""
     user_id = event.get_user_id()
 
     if not _is_official_qq_group_event(event):
-        # OneBot 事件：共享群中 QQ 官方 Bot 会发送指令链接菜单，OneBot 不重复发送纯文本
+        # 共享群由 QQ 官方 Bot 发送，OneBot 事件不重复发送纯文本。
         gid = _get_event_group_id(event)
         if gid:
             try:
                 from zhenxun.plugins.zhenxun_plugin_route2.official_bridge import (
                     official_route_bridge as bridge,
                 )
+
                 if bridge.get_target(gid):
-                    return  # QQ 官方 Bot 会处理，跳过避免双发
+                    return
             except Exception:
                 pass
         await _send_text(matcher, _build_menu_text(), user_id)
         return
 
-    # QQ 官方 Bot：优先发送含指令链接的 Markdown（点击即发送/插入输入框）
     try:
-        msg = _build_qq_markdown_message()
-        await bot.send(event, msg)
-        await matcher.finish()
-    except Exception:
-        # Markdown 发送失败时回退为键盘按钮
-        try:
-            msg = _build_qq_keyboard_message()
-            await bot.send(event, msg)
-            await matcher.finish()
-        except Exception:
-            await _send_text(matcher, _build_menu_text(), user_id)
+        menu = _build_qq_keyboard_message()
+        group_openid = str(getattr(event, "group_openid", "") or "")
+        send_to_group = getattr(bot, "send_to_group", None)
+        if not group_openid or not callable(send_to_group):
+            raise RuntimeError("当前 QQ Bot 不支持群聊主动发送接口")
+        # 使用群聊主动发送接口，不依赖入站消息的回复窗口；这也是任意发送权限的用法。
+        await send_to_group(group_openid=group_openid, message=menu)
+    except Exception as e:
+        logger.warning(f"[钓鱼菜单] QQ群卡片发送失败，回退纯文本: {e}")
+        await _send_text(matcher, _build_menu_text(), user_id)
+    # 不调用 matcher.finish()：finish 会抛出控制流异常，不能被发送失败回退逻辑捕获。
 
 
-def _find_qq_bot_for_group(
-    group_id: str, bridge, bots: dict
-) -> tuple[Bot, str] | None:
+def _find_qq_bot_for_group(group_id: str, bridge, bots: dict) -> tuple[Bot, str] | None:
     """查找可向指定群发送消息的 QQ 官方 Bot 及其 group_openid。
 
     返回 (bot, group_openid) 或 None。
@@ -295,7 +267,8 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
 
     支持两种群类型：
     - 共享群（OneBot + QQ官方Bot）：通过 route2 映射查找 QQ 官方 Bot
-    - QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，直接用已连接的 QQ 官方 Bot 发送
+    - QQ官方Bot独有群（无OneBot）：group_id 即 group_openid，
+      直接用已连接的 QQ 官方 Bot 发送
 
     推送条件：累计消息 > 20 条（公告已被刷走）且距上次推送 > 1 小时。
     推送后重置计数器。没有 QQ 官方 Bot 的群直接跳过。
@@ -354,7 +327,7 @@ async def broadcast_menu_to_active_groups() -> tuple[int, int]:
         seq += 1
         try:
             if qq_menu_msg is None:
-                qq_menu_msg = _build_qq_markdown_message()
+                qq_menu_msg = _build_qq_keyboard_message()
             await qq_bot.send_to_group(
                 group_openid=group_openid,
                 message=qq_menu_msg,
