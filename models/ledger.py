@@ -1,10 +1,11 @@
 """
-钓鱼账本模型 — 记录钓鱼会话、道具使用、金币变动。
+钓鱼账本模型 — 记录钓鱼会话、道具使用、金币变动、GM操作。
 
-三种条目类型：
+四种条目类型：
 - fishing: 每次收杆的完整快照（地点、钓竿、鱼获、道具、金币等）
 - item_use: 每次成功使用道具的记录
 - gold: 每次金币变动的对账记录（含历史推导与异常标记）
+- gm_op: GM道具/资源操作记录（添加/扣除道具、鱼饵、鱼等）
 
 金币对账规则：
 - 用户首条 gold 条目为基准（is_baseline=True），不校验历史
@@ -23,7 +24,7 @@ class FishingLedger(Model):
     id = fields.IntField(pk=True, generated=True, auto_increment=True)
     user_id = fields.CharField(255, index=True, description="用户ID")
     entry_type = fields.CharField(
-        20, description="条目类型: fishing/item_use/gold"
+        20, description="条目类型: fishing/item_use/gold/gm_op"
     )
     # JSON 载荷：各类型的详细数据（鱼获列表、道具信息、金币操作明细等）
     data = fields.JSONField(description="类型相关的详细数据")

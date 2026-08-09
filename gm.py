@@ -24,6 +24,7 @@ from .core.result import add_fish_to_user
 from .core.starry_rewards import grant_rewards_for_starry_fish
 from .models import FishingUser, FishingWeather
 from .services import adjust_gold, earn_gold, set_gold
+from .services.ledger_service import log_gm_operation
 
 
 def _decode_fish_numeric_id(
@@ -485,11 +486,19 @@ async def _handle_counter_item(
 ) -> tuple[bool, str]:
     if count >= 0:
         await add(user_id, count)
+        await log_gm_operation(
+            user_id, operation="add", item_id=spec.item_id,
+            item_type=spec.category, item_name=spec.display, count=count,
+        )
         logger.info(f"GM给用户 {user_id} 添加 {count} 个{spec.display}")
         return True, f"已给用户 {user_id} 添加 {count} 个{spec.display}！"
     success = await reduce(user_id, -count)
     if not success:
         return False, f"用户 {user_id} 的{spec.display}不足！"
+    await log_gm_operation(
+        user_id, operation="remove", item_id=spec.item_id,
+        item_type=spec.category, item_name=spec.display, count=-count,
+    )
     logger.info(f"GM减少用户 {user_id} 的 {-count} 个{spec.display}")
     return True, f"已减少用户 {user_id} 的 {-count} 个{spec.display}！"
 
@@ -528,6 +537,10 @@ async def _handle_inventory_item(
     unit = {"potion": "瓶", "ticket": "张", "fragment": "个"}[spec.category]
     if count >= 0:
         await FishingUser.add_item(user_id, spec.item_id, spec.category, count)
+        await log_gm_operation(
+            user_id, operation="add", item_id=spec.item_id,
+            item_type=spec.category, item_name=spec.display, count=count,
+        )
         logger.info(f"GM给用户 {user_id} 添加 {count}{unit}{spec.display}")
         return True, f"已给用户 {user_id} 添加 {count}{unit}{spec.display}！"
     success = await FishingUser.remove_item(
@@ -535,6 +548,10 @@ async def _handle_inventory_item(
     )
     if not success:
         return False, f"用户 {user_id} 的{spec.display}不足！"
+    await log_gm_operation(
+        user_id, operation="remove", item_id=spec.item_id,
+        item_type=spec.category, item_name=spec.display, count=-count,
+    )
     logger.info(f"GM减少用户 {user_id} 的 {-count}{unit}{spec.display}")
     return True, f"已减少用户 {user_id} 的 {-count}{unit}{spec.display}！"
 
@@ -548,11 +565,19 @@ async def _handle_bait(
     bait_spec = _GmItemSpec(str(bait.id), "bait", bait.name)
     if count >= 0:
         await FishingUser.add_item(user_id, bait_spec.item_id, "bait", count)
+        await log_gm_operation(
+            user_id, operation="add", item_id=bait_spec.item_id,
+            item_type="bait", item_name=bait.name, count=count,
+        )
         logger.info(f"GM给用户 {user_id} 添加 {count} 个{bait.name}")
         return True, f"已给用户 {user_id} 添加 {count} 个{bait.name}！"
     success = await FishingUser.remove_item(user_id, bait_spec.item_id, "bait", -count)
     if not success:
         return False, f"用户 {user_id} 的{bait.name}不足！"
+    await log_gm_operation(
+        user_id, operation="remove", item_id=bait_spec.item_id,
+        item_type="bait", item_name=bait.name, count=-count,
+    )
     logger.info(f"GM减少用户 {user_id} 的 {-count} 个{bait.name}")
     return True, f"已减少用户 {user_id} 的 {-count} 个{bait.name}！"
 
@@ -651,6 +676,11 @@ async def _handle_meteor_fish(
             else:
                 await FishingUser.add_item(user_id, number, "meteor_fish", 1)
         logger.info(f"GM给用户 {user_id} 添加 {count} 条流星鱼 #{number}")
+        await log_gm_operation(
+            user_id, operation="add", item_id=number,
+            item_type="meteor_fish", item_name=f"流星鱼 #{number}",
+            count=count, details={"is_starry": is_starry},
+        )
         msg = f"已给用户 {user_id} 添加 {count} 条流星鱼 #{number}！"
         if is_starry:
             msg += "\n" + _format_gm_meteor_reward_feedback(number, per_fish_rewards)
@@ -666,6 +696,11 @@ async def _handle_meteor_fish(
     if not success:
         return False, f"用户 {user_id} 的流星鱼 #{number} 不足！"
     logger.info(f"GM减少用户 {user_id} 的 {-count} 条流星鱼 #{number}")
+    await log_gm_operation(
+        user_id, operation="remove", item_id=number,
+        item_type="meteor_fish", item_name=f"流星鱼 #{number}",
+        count=-count, details={"is_starry": is_starry},
+    )
     return True, f"已减少用户 {user_id} 的 {-count} 条流星鱼 #{number}！"
 
 
@@ -693,12 +728,22 @@ async def _handle_fish(
             return False, f"用户 {user_id} 的 {fish_name}({rarity}) 数量不足！"
         await FishingUser.remove_fish_by_numeric_id(user_id, numeric_id, -count)
         logger.info(f"GM减少用户 {user_id} 的 {-count} 条 {fish_name}({rarity})")
+        await log_gm_operation(
+            user_id, operation="remove", item_id=numeric_id,
+            item_type="fish", item_name=f"{fish_name}({rarity})",
+            count=-count, details={"rarity": rarity},
+        )
         return True, f"已减少用户 {user_id} 的 {-count} 条 {fish_name}({rarity})！"
 
     result = await add_fish_to_user(
         user_id, [(fish_name, rarity, numeric_id, count)]
     )
     logger.info(f"GM给用户 {user_id} 添加 {count} 条 {fish_name}({rarity})")
+    await log_gm_operation(
+        user_id, operation="add", item_id=numeric_id,
+        item_type="fish", item_name=f"{fish_name}({rarity})",
+        count=count, details={"rarity": rarity},
+    )
     msg = f"已给用户 {user_id} 添加 {count} 条 {fish_name}({rarity})！"
     extra = [*result["messages"], *result["achievement_messages"]]
     return (True, msg + ("\n" + "\n".join(extra) if extra else ""))
@@ -761,6 +806,11 @@ async def gm_give_fish(user_id: str, fish_ids_str: str) -> tuple[bool, str]:
             result_extra.extend(result["achievement_messages"])
         for entry in fish_entries:
             logger.info(f"GM给用户 {user_id} 发鱼 {entry[0]}({entry[1]})")
+            await log_gm_operation(
+                user_id, operation="add", item_id=entry[2],
+                item_type="fish", item_name=f"{entry[0]}({entry[1]})",
+                count=1, details={"rarity": entry[1], "source": "give_fish"},
+            )
 
     result_parts = []
     if success_list:

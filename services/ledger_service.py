@@ -1,10 +1,11 @@
 """
-账本服务 — 记录钓鱼会话、道具使用、金币变动。
+账本服务 — 记录钓鱼会话、道具使用、金币变动、GM操作。
 
-三种记录入口：
+四种记录入口：
 1. log_fishing_session: 收杆后记录完整钓鱼快照
 2. log_item_use: 成功使用道具后记录
 3. log_gold_change: 金币变动时记录并执行对账
+4. log_gm_operation: GM道具/资源操作后记录痕迹
 
 金币对账流程：
 - 查询用户最近一条 gold 记录
@@ -307,6 +308,44 @@ async def log_gold_change(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# GM操作记录
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+async def log_gm_operation(
+    user_id: str,
+    *,
+    operation: str,
+    item_id: str,
+    item_type: str,
+    item_name: str = "",
+    count: int = 1,
+    details: dict | None = None,
+) -> None:
+    """记录GM道具/资源操作到账本。
+
+    operation: "add"（添加）或 "remove"（扣除）
+    item_type: potion/ticket/fragment/bait/cat_frame/display_frame/corn/meteor_fish/fish
+    count: 操作数量（始终为正数，方向由 operation 区分）
+    details: 额外信息（如流星鱼编号、鱼稀有度等）
+    """
+    data = {
+        "operation": operation,
+        "item_id": item_id,
+        "item_type": item_type,
+        "item_name": item_name or item_id,
+        "count": abs(count),
+        "details": details or {},
+        "timestamp": datetime.now().isoformat(),
+    }
+    await _safe_create({
+        "user_id": user_id,
+        "entry_type": "gm_op",
+        "data": data,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 查询接口
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -352,6 +391,16 @@ async def get_anomaly_entries(
 ) -> list[FishingLedger]:
     """获取金币异常记录。user_id=None 时查全库。"""
     qs = FishingLedger.filter(entry_type="gold", gold_anomaly=True)
+    if user_id:
+        qs = qs.filter(user_id=user_id)
+    return await qs.order_by("-create_time", "-id").limit(limit).all()
+
+
+async def get_gm_op_history(
+    user_id: str | None = None, limit: int = 50
+) -> list[FishingLedger]:
+    """获取GM操作记录。user_id=None 时查全库。"""
+    qs = FishingLedger.filter(entry_type="gm_op")
     if user_id:
         qs = qs.filter(user_id=user_id)
     return await qs.order_by("-create_time", "-id").limit(limit).all()
