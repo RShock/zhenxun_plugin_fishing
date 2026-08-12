@@ -78,19 +78,19 @@
       {% for player in player_list %}
       {% if player.mirror and player.mirror_body_h > 0 %}
       <div class="prefl-wrap" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index - 1 }};top:{{ player.scene_y }}%;">
-          <img src="{{ player.uri }}" class="prefl" style="top:{{ player.y_offset }}px;width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;" alt="">
+          <img src="{{ player.uri }}" class="prefl" style="top:{{ player.y_offset }}px;width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;filter:brightness({{ player.actor_brightness|default(1) }}) blur(.8px);" alt="">
       </div>
       {% endif %}
       {% if player.special == "longline" %}
       <div class="ll-body" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.line_base }}px);width:{{ player.skin_w }}px;height:{{ player.body_h }}px;">
-          <img src="{{ player.uri }}" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;" alt="">
+          <img src="{{ player.uri }}" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;filter:brightness({{ player.actor_brightness|default(1) }});" alt="">
       </div>
       <div class="ll-line" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};height:calc({{ player.scene_bottom }}% + {{ player.line_base }}px);width:{{ player.skin_w }}px;">
-          <img src="{{ player.uri }}" style="height:{{ player.line_img_height_pct }}%;top:{{ player.line_img_top_pct }}%;" alt="">
+          <img src="{{ player.uri }}" style="height:{{ player.line_img_height_pct }}%;top:{{ player.line_img_top_pct }}%;filter:brightness({{ player.actor_brightness|default(1) }});" alt="">
       </div>
       {% else %}
       <div class="player{% if player.is_current %} current{% endif %}" style="left:{{ player.left_pos }}px;z-index:{{ player.z_index }};bottom:calc({{ player.scene_bottom }}% + {{ player.y_offset }}px);">
-          <img src="{{ player.uri }}" class="psprite" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;" alt="">
+          <img src="{{ player.uri }}" class="psprite" style="width:{{ player.skin_w }}px;height:{{ player.skin_h }}px;filter:brightness({{ player.actor_brightness|default(1) }});" alt="">
       </div>
       {% endif %}
       {% endfor %}

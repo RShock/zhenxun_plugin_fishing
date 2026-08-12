@@ -25,6 +25,19 @@ class TestParseSpecialAndLayout:
             "T@1,2_3,4",
         )
 
+    def test_actor_brightness_effect(self):
+        assert fs._actor_brightness([]) == 1.0
+        assert fs._actor_brightness(["dark50"]) == 0.5
+        assert fs._actor_brightness(["longline", "dark50"]) == 0.5
+        assert fs._actor_brightness(["dark150"]) == 0.0
+
+    def test_darkness_and_longline_scene_effects_coexist(self):
+        layout = fs._parse_scene_layout(
+            "17-scene-S@longline,dark50+T@16.5,73.7_43.6,74.3"
+        )
+        assert layout["effects"] == ["longline", "dark50"]
+        assert layout["mode"] == "tracks"
+
     def test_multi_effects_tracks(self):
         assert fs._parse_special_and_layout("S@longline,foo+T@10,20") == (
             ["longline", "foo"],

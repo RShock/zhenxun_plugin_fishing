@@ -30,6 +30,17 @@ _SCENE_FG_SUFFIXES = ("-fg", "_fg")
 _LONGLINE_WIDTH_LIMIT = 10  # 宽度须 < 10
 _LONGLINE_BAND_ROWS = 5
 _LONGLINE_BAND_CACHE: dict[tuple[str, int, int], tuple[float, float] | None] = {}
+_ACTOR_BRIGHTNESS_EFFECT_RE = re.compile(r"^dark(\d{1,3})$")
+
+
+def _actor_brightness(effects: list[str]) -> float:
+    """Return actor brightness from a ``darkNN`` scene effect marker."""
+    for effect in effects:
+        matched = _ACTOR_BRIGHTNESS_EFFECT_RE.fullmatch(effect.strip().lower())
+        if matched:
+            darkness = min(max(int(matched.group(1)), 0), 100)
+            return round(1.0 - darkness / 100.0, 2)
+    return 1.0
 
 
 def _find_weather_overlay(weather_type: str) -> str:
@@ -584,6 +595,7 @@ def _actor_view(
         "scene_y": round(scene_y, 2),
         "scene_bottom": round(100 - scene_y, 2),
         "effects": effects,
+        "actor_brightness": _actor_brightness(effects),
         "special": "",
         # 镜面特效：以脚部线（scene_bottom% + y_offset）为镜像轴向下翻转，
         # 仅在脚部线以下绘制模糊倒影，不越过脚部线
