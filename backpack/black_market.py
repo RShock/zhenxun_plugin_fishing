@@ -22,6 +22,15 @@ from ..models import FishingExchangeRecord, FishingUser
 DAILY_BLACK_MARKET_LIMIT = 1
 _SAME_RARITY_RANDOM_RATE = 0.7
 _BLACK_MARKET_PITY_THRESHOLD = 4
+_MARKET_MENU_LIMIT = 10
+_MARKET_MENU_RARITY_ORDER = {
+    "UTR": 0,
+    "UR": 1,
+    "SSR": 2,
+    "SR": 3,
+    "R": 4,
+    "N": 5,
+}
 BLACK_MARKET_USAGE = (
     "黑商用法：黑商 鱼名字稀有度 鱼名字稀有度 / 黑商 鱼ID 鱼ID\n"
     "也可以使用：黑商交换 鱼名字稀有度 鱼名字稀有度\n"
@@ -76,6 +85,13 @@ class FishTarget:
     scene_level: int
     fish_index: int
     numeric_id: str
+
+
+@dataclass(frozen=True)
+class MarketMenuOption:
+    source: FishTarget
+    target: FishTarget
+    command: str
 
 
 def _normalize_rarity(rarity: str) -> str:
@@ -210,6 +226,125 @@ def can_exchange(source: FishTarget, target: FishTarget) -> bool:
     source_rarity = RARITY_INDEX.get(source.rarity, 0)
     target_rarity = RARITY_INDEX.get(target.rarity, 0)
     return source.scene_level >= target.scene_level and source_rarity >= target_rarity
+
+
+def _iter_fish_targets(rarity: str):
+    """Iterate over every configured fish of the requested rarity."""
+    for location in ConfigManager.get_locations():
+        for pool_index, _fish_name in enumerate(location.fish_pool):
+            target = _find_fish_target_by_location(location.id, pool_index, rarity)
+            if target is not None:
+                yield target
+
+
+def _market_option_sort_key(option: MarketMenuOption) -> tuple:
+    """Prefer same-map options, then UTR, UR, SSR, SR, R, and N."""
+    source = option.source
+    target = option.target
+    return (
+        0 if source.location_id == target.location_id else 1,
+        _MARKET_MENU_RARITY_ORDER.get(target.rarity, 99),
+        -target.scene_level,
+        target.numeric_id,
+        source.scene_level - target.scene_level,
+        source.numeric_id,
+    )
+
+
+async def get_black_market_menu_options(
+    user_id: str, limit: int = _MARKET_MENU_LIMIT
+) -> list[MarketMenuOption]:
+    """Build black-market shortcut options for uncollected targets.
+
+    Only same-rarity exchanges are exposed in the menu. Same-map choices are
+    ranked ahead of cross-map choices; manually typed exchanges remain unchanged.
+    """
+    user_fish = await FishingUser.get_user_fish(user_id)
+    collected = await FishingUser.get_user_collected(user_id)
+    options: list[MarketMenuOption] = []
+    seen: set[tuple[str, str]] = set()
+
+    for fish in user_fish:
+        if int(fish.get("count", 0) or 0) < 1:
+            continue
+        source = find_fish_target_by_numeric_id(str(fish.get("numeric_id", "")))
+        if source is None:
+            source = find_fish_target(
+                str(fish.get("fish_name", "")), str(fish.get("rarity", ""))
+            )
+        if source is None:
+            continue
+
+        # The shortcut menu intentionally omits high-rarity-to-low-rarity exchanges.
+        for target in _iter_fish_targets(source.rarity):
+            if target.numeric_id == source.numeric_id:
+                continue
+            if (target.name, target.rarity) in collected:
+                continue
+            if not can_exchange(source, target):
+                continue
+            key = (source.numeric_id, target.numeric_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            options.append(
+                MarketMenuOption(
+                    source=source,
+                    target=target,
+                    command=(
+                        f"黑商 {source.name}{source.rarity} "
+                        f"{target.name}{target.rarity}"
+                    ),
+                )
+            )
+
+    options.sort(key=_market_option_sort_key)
+    return options[: max(0, limit)]
+
+
+async def get_white_market_menu_options(
+    user_id: str, limit: int = _MARKET_MENU_LIMIT
+) -> list[MarketMenuOption]:
+    """Build white-market options that can be executed immediately."""
+    from ..services.white_market_service import get_white_market_eligibility
+
+    eligibility = await get_white_market_eligibility(user_id)
+    if eligibility.exhausted:
+        return []
+
+    options: list[MarketMenuOption] = []
+    seen: set[tuple[str, str]] = set()
+    for payment in eligibility.payments:
+        source = find_fish_target_by_numeric_id(payment.numeric_id)
+        if source is None:
+            source = find_fish_target(payment.fish_name, payment.rarity)
+        if source is None:
+            continue
+        for eligible_target in payment.targets:
+            target = find_fish_target_by_numeric_id(eligible_target.numeric_id)
+            if target is None:
+                target = find_fish_target(
+                    eligible_target.fish_name, eligible_target.rarity
+                )
+            if target is None:
+                continue
+            key = (source.numeric_id, target.numeric_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            options.append(
+                MarketMenuOption(
+                    source=source,
+                    target=target,
+                    command=(
+                        f"白商交换 {source.name}{source.rarity} "
+                        f"{target.name}{target.rarity}"
+                    ),
+                )
+            )
+
+    options.sort(key=_market_option_sort_key)
+    return options[: max(0, limit)]
 
 
 def _maybe_randomize_same_rarity_target(

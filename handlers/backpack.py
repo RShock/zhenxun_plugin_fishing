@@ -2,7 +2,7 @@
 背包 & 图鉴 handler — 背包、卖鱼、锁鱼、解锁、赠送、图鉴。
 """
 
-from nonebot.adapters import Event
+from nonebot.adapters import Bot, Event
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 from zhenxun.services.log import logger
@@ -14,9 +14,11 @@ from ..backpack import (
     extract_market_exchange_input,
     gift_fish,
     get_backpack_image,
+    get_black_market_menu_options,
     get_collection_image,
     get_starry_exhibition_image,
     get_starry_ranking_image,
+    get_white_market_menu_options,
     is_likely_misfire,
     lock_fish,
     render_white_market_records,
@@ -27,6 +29,7 @@ from ..backpack import (
     white_market_exchange,
 )
 from ..core.bait import set_preferred_bait
+from .market_menu import try_send_market_menu
 from ..services.user_lock_service import event_user_and_at_ids, with_user_lock
 from ..matchers import (
     backpack_matcher,
@@ -181,23 +184,43 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @black_market_matcher.handle()
-@with_user_lock("黑商交换")
-async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+@with_user_lock("????")
+async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
     raw_text = event.get_plaintext()
     exchange_input = _market_exchange_input_from_event(event)
+    if not exchange_input:
+        options = await get_black_market_menu_options(user_id)
+        if await try_send_market_menu(
+            bot,
+            event,
+            title="???????",
+            options=options,
+            empty_text="??????????????????????",
+        ):
+            return
+
     success, message, should_reply = await black_market_exchange(user_id, exchange_input)
     if not should_reply:
-        _log_silent_market_command(user_id, "黑商", raw_text)
+        _log_silent_market_command(user_id, "??", raw_text)
         return
     await _send_text(matcher, message, user_id, is_private=is_private)
 
 
 @white_market_matcher.handle()
-async def _(event: Event, matcher: Matcher):
+async def _(bot: Bot, event: Event, matcher: Matcher):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
+    options = await get_white_market_menu_options(user_id)
+    if await try_send_market_menu(
+        bot,
+        event,
+        title="?????????",
+        options=options,
+        empty_text="????????????????",
+    ):
+        return
     image = await render_white_market_records(user_id)
     await _send_image(matcher, image, user_id=user_id, is_private=is_private)
 
