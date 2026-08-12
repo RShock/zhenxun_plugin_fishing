@@ -184,41 +184,41 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
 
 @black_market_matcher.handle()
-@with_user_lock("????")
-async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+@with_user_lock("黑商交换")
+async def _handle_black_market(
+    bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup()
+):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
     raw_text = event.get_plaintext()
     exchange_input = _market_exchange_input_from_event(event)
     if not exchange_input:
         options = await get_black_market_menu_options(user_id)
-        if await try_send_market_menu(
+        if options and await try_send_market_menu(
             bot,
             event,
-            title="???????",
             options=options,
-            empty_text="??????????????????????",
         ):
             return
 
-    success, message, should_reply = await black_market_exchange(user_id, exchange_input)
+    success, message, should_reply = await black_market_exchange(
+        user_id, exchange_input
+    )
     if not should_reply:
-        _log_silent_market_command(user_id, "??", raw_text)
+        _log_silent_market_command(user_id, "黑商", raw_text)
         return
     await _send_text(matcher, message, user_id, is_private=is_private)
 
 
 @white_market_matcher.handle()
-async def _(bot: Bot, event: Event, matcher: Matcher):
+async def _handle_white_market(bot: Bot, event: Event, matcher: Matcher):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
     options = await get_white_market_menu_options(user_id)
-    if await try_send_market_menu(
+    if options and await try_send_market_menu(
         bot,
         event,
-        title="?????????",
         options=options,
-        empty_text="????????????????",
     ):
         return
     image = await render_white_market_records(user_id)

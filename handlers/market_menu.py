@@ -11,25 +11,25 @@ from ..backpack.black_market import MarketMenuOption
 from ..utils import _get_group_context_id, _is_official_qq_group_event
 
 _KEYBOARD_ROWS_PER_MESSAGE = 5
+_BUTTON_LABEL_MAX_LENGTH = 10
 
 
 def _button_label(option: MarketMenuOption) -> str:
-    """Build a concise label within QQ keyboard limits."""
-    label = f"{option.source.name}?{option.target.name}"
-    if len(label) <= 10:
-        return label
-    return f"{option.source.name[:4]}?{option.target.name[:4]}"
+    """Keep both rarities visible within QQ's ten-character label limit."""
+    source_rarity = option.source.rarity
+    target_rarity = option.target.rarity
+    fixed_length = len(source_rarity) + len(target_rarity) + 1
+    name_budget = max(2, _BUTTON_LABEL_MAX_LENGTH - fixed_length)
+    source_budget = max(1, (name_budget + 1) // 2)
+    target_budget = max(1, name_budget - source_budget)
+    return (
+        f"{option.source.name[:source_budget]}{source_rarity}>"
+        f"{option.target.name[:target_budget]}{target_rarity}"
+    )
 
 
-def _build_qq_market_message(
-    title: str,
-    options: list[MarketMenuOption],
-    *,
-    page: int = 1,
-    pages: int = 1,
-    empty_text: str = "No exchange options are currently available.",
-):
-    """Build one Markdown and keyboard message with at most five rows."""
+def _build_qq_market_message(options: list[MarketMenuOption]):
+    """Build one keyboard-only message with at most five button rows."""
     from nonebot.adapters.qq import Message as QQMessage
     from nonebot.adapters.qq import MessageSegment as QQMessageSegment
     from nonebot.adapters.qq.models.common import (
@@ -42,22 +42,7 @@ def _build_qq_market_message(
         RenderData,
     )
 
-    page_suffix = f"?{page}/{pages}?" if pages > 1 else ""
-    lines = [f"## {title}{page_suffix}"]
-    if options:
-        lines.append("点击按钮发送完整兑换指令：")
-        for index, option in enumerate(options, 1):
-            lines.append(
-                f"{index}. {option.source.name}{option.source.rarity} ? "
-                f"{option.target.name}{option.target.rarity}"
-            )
-    else:
-        lines.append(empty_text)
-
-    message = QQMessage(QQMessageSegment.markdown("\n".join(lines)))
-    if not options:
-        return message
-
+    message = QQMessage(QQMessageSegment.markdown("\u200b"))
     rows = []
     for option in options:
         label = _button_label(option)
@@ -75,7 +60,7 @@ def _build_qq_market_message(
                             data=option.command,
                             enter=True,
                             permission=Permission(type=2),
-                            unsupport_tips="请升级至最新版本",
+                            unsupport_tips="\u8bf7\u5347\u7ea7\u81f3\u6700\u65b0\u7248\u672c",
                         ),
                     )
                 ]
@@ -86,30 +71,15 @@ def _build_qq_market_message(
     return message
 
 
-def build_qq_market_messages(
-    title: str,
-    options: list[MarketMenuOption],
-    *,
-    empty_text: str = "No exchange options are currently available.",
-) -> list[Any]:
-    """Split the menu at QQ's five keyboard rows per message."""
+def build_qq_market_messages(options: list[MarketMenuOption]) -> list[Any]:
+    """Split non-empty options at QQ's five keyboard rows per message."""
     if not options:
-        return [_build_qq_market_message(title, [], empty_text=empty_text)]
+        return []
     chunks = [
         options[index : index + _KEYBOARD_ROWS_PER_MESSAGE]
         for index in range(0, len(options), _KEYBOARD_ROWS_PER_MESSAGE)
     ]
-    pages = len(chunks)
-    return [
-        _build_qq_market_message(
-            title,
-            chunk,
-            page=page,
-            pages=pages,
-            empty_text=empty_text,
-        )
-        for page, chunk in enumerate(chunks, 1)
-    ]
+    return [_build_qq_market_message(chunk) for chunk in chunks]
 
 
 def _resolve_official_group_sender(bot: Bot, event: Event) -> tuple[Bot, str] | None:
@@ -142,17 +112,17 @@ async def try_send_market_menu(
     bot: Bot,
     event: Event,
     *,
-    title: str,
     options: list[MarketMenuOption],
-    empty_text: str,
 ) -> bool:
-    """Send proactively through QQ; return False when fallback is required."""
+    """Send non-empty options proactively; otherwise require caller fallback."""
+    if not options:
+        return False
     sender = _resolve_official_group_sender(bot, event)
     if sender is None:
         return False
     official_bot, group_openid = sender
     try:
-        for message in build_qq_market_messages(title, options, empty_text=empty_text):
+        for message in build_qq_market_messages(options):
             await official_bot.send_to_group(
                 group_openid=group_openid,
                 message=message,
