@@ -83,6 +83,26 @@ async def _scheduled_clear_expired_buffs():
     await FishingBuff.clear_expired_buffs()
 
 
+def _database_is_ready() -> bool:
+    """兼容新旧真寻版本检查数据库是否可查询。"""
+    try:
+        from zhenxun.services import db_context
+
+        checker = getattr(db_context, "is_initialized", None)
+        if callable(checker):
+            return bool(checker())
+    except Exception as e:
+        logger.debug(f"读取数据库初始化状态失败，改用 Tortoise 状态: {e}", "钓鱼菜单")
+
+    # 旧版真寻没有导出 is_initialized；Tortoise.apps 会在模型注册完成后填充。
+    try:
+        from tortoise import Tortoise
+
+        return bool(getattr(Tortoise, "apps", None))
+    except Exception:
+        return False
+
+
 @scheduler.scheduled_job(
     "cron",
     minute="*/5",
@@ -98,9 +118,13 @@ async def _scheduled_fishing_menu():
     2. 自上次推送后累计消息 > 20 条（公告已被刷走）
     3. 距上次推送 > 1 小时
     """
-    from .handlers.menu import broadcast_menu_to_active_groups
-
     try:
+        if not _database_is_ready():
+            logger.debug("数据库尚未就绪，跳过本轮菜单定时推送", "钓鱼菜单")
+            return
+
+        from .handlers.menu import broadcast_menu_to_active_groups
+
         await broadcast_menu_to_active_groups()
     except Exception as e:
         logger.error("钓鱼菜单定时推送失败", "钓鱼菜单", e=e)

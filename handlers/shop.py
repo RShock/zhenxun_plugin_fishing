@@ -2,7 +2,7 @@
 商店 & 升级 handler — 鱼店、升级钓竿/鱼钩、购买、展示栏、打窝、兑换。
 """
 
-from nonebot.adapters import Event
+from nonebot.adapters import Bot, Event
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 
@@ -35,6 +35,12 @@ from ..utils import (
     _is_private_chat,
     _send_image,
     _send_text,
+)
+from .item_menu import (
+    get_use_item_menu_options,
+    get_utr_ticket_menu_state,
+    is_utr_ticket_name,
+    try_send_use_item_menu,
 )
 
 
@@ -215,16 +221,33 @@ def _parse_use_item_arguments(item_name: str, rest: str) -> tuple[int, str]:
 
 @use_item_matcher.handle()
 @with_user_lock("使用物品")
-async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
     item_name = group[0].strip() if group and group[0] else ""
     rest = group[1].strip() if group and len(group) > 1 and group[1] else ""
 
     available = (
-        "时光药水、回档药水、幸运药水、闪光药水、UTR自选券、香甜玉米、木框、猫框、大肥鱼"
+        "时光药水、回档药水、幸运药水、真多多药水、闪光药水、"
+        "UTR自选券、香甜玉米、展示木框、猫猫框、大肥鱼"
     )
     if not item_name:
+        options = await get_use_item_menu_options(user_id, is_private=is_private)
+        if options and await try_send_use_item_menu(
+            bot,
+            event,
+            options=options,
+            title="🎒 选择要使用的物品",
+        ):
+            return
+        if not options:
+            await _send_text(
+                matcher,
+                "当前没有符合使用条件的物品。",
+                user_id,
+                is_private=is_private,
+            )
+            return
         await _send_text(
             matcher,
             "请指定要使用的物品！\n"
@@ -234,6 +257,34 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
             is_private=is_private,
         )
         return
+
+    if is_utr_ticket_name(item_name) and not rest:
+        state = await get_utr_ticket_menu_state(user_id)
+        if state.ticket_count <= 0:
+            await _send_text(
+                matcher,
+                "UTR自选券不足（当前0张）",
+                user_id,
+                is_private=is_private,
+            )
+            return
+        if state.options and await try_send_use_item_menu(
+            bot,
+            event,
+            options=state.options,
+            title="🎫 选择要兑换的 UTR 鱼",
+            buttons_per_row=1,
+        ):
+            return
+        if not state.options:
+            await _send_text(
+                matcher,
+                "当前没有可用 UTR自选券兑换的鱼："
+                "需先在对应地图解锁至少1条UTR，且收集齐该图全部UR。",
+                user_id,
+                is_private=is_private,
+            )
+            return
 
     count, arg = _parse_use_item_arguments(item_name, rest)
 

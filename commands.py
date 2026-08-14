@@ -55,7 +55,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"自动锁鱼(?:\s*(.*))?", "自动锁鱼", "auto_lock_matcher", ("自动锁鱼",)),
     CommandDef(r"钓鱼改名(?:\s*(.+))?", "改名", "rename_matcher", ("钓鱼改名",)),
     CommandDef(r"更换皮肤(?:\s*(\S+))?", "更换皮肤", "skin_matcher", ("更换皮肤",)),
-    CommandDef(r"钓鱼使用\s*(\S+)(?:\s+(.+))?", "使用物品", "use_item_matcher", ("钓鱼使用",)),
+    CommandDef(r"钓鱼使用(?:\s+(\S+)(?:\s+(.+))?)?", "使用物品", "use_item_matcher", ("钓鱼使用",)),
     CommandDef(r"(?:天气预报|钓鱼天气|天气|天气状态)(?:\s*([12]))?", "天气", "weather_forecast_matcher", ("天气预报", "钓鱼天气", "天气", "天气状态")),
     CommandDef(r"建设猫猫乐园(?:\s*(.+))?", "建设猫猫乐园", "cat_park_build_matcher", ("建设猫猫乐园",)),
     CommandDef(r"建设星空艇", "建设星空艇", "build_starry_ship_matcher", ("建设星空艇",)),
