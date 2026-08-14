@@ -38,6 +38,19 @@ class UseItemMenuOption:
 
 
 @dataclass(frozen=True)
+class UnavailableUseItem:
+    name: str
+    count: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class UseItemMenuState:
+    options: list[UseItemMenuOption]
+    unavailable: list[UnavailableUseItem]
+
+
+@dataclass(frozen=True)
 class UtrTicketMenuState:
     ticket_count: int
     options: list[UseItemMenuOption]
@@ -66,36 +79,45 @@ async def _active_buff_count(**filters) -> int:
     return await FishingBuff.filter(**filters).count()
 
 
-async def _can_use_time_potion(user, status: dict) -> bool:
+async def _time_potion_unavailable_reason(user, status: dict) -> str | None:
     if not status:
-        return False
+        return "未在钓鱼"
     bait = ConfigManager.get_bait(str(getattr(user, "bait_id", "0") or "0"))
     if not bait or str(getattr(user, "bait_id", "0")) == "0":
-        return False
-    return _json_item_count(user, str(bait.id), "bait") >= 30
+        return "未装备鱼饵"
+    bait_count = _json_item_count(user, str(bait.id), "bait")
+    if bait_count < 30:
+        return f"当前鱼饵不足30个（{bait_count}个）"
+    return None
 
 
-def _can_use_rollback_potion(status: dict) -> bool:
-    if not status or not is_starry_location(str(status.get("location_id", ""))):
-        return False
-    return not normalize_time_potions(status.get("time_potions_used", []))
-
-
-async def _can_add_corn_nest(user_id: str, status: dict, *, is_private: bool) -> bool:
+def _rollback_potion_unavailable_reason(status: dict) -> str | None:
     if not status:
-        return False
+        return "未在钓鱼"
+    if not is_starry_location(str(status.get("location_id", ""))):
+        return "仅可在11-20星空图使用"
+    if normalize_time_potions(status.get("time_potions_used", [])):
+        return "本次钓鱼已使用时光药水"
+    return None
+
+
+async def _corn_nest_unavailable_reason(
+    user_id: str, status: dict, *, is_private: bool
+) -> str | None:
+    if not status:
+        return "未在钓鱼"
     location_id = str(status.get("location_id", ""))
     location = ConfigManager.get_location(location_id)
     if not location:
-        return False
+        return "当前钓鱼地点无效"
     if not is_private and await FishingUser.get_nest_count(user_id) >= DAILY_NEST_LIMIT:
-        return False
+        return "今日打窝次数已用完"
 
     available_layers = MAX_NEST_LAYERS
     if not is_starry_location(location_id):
         available_layers = max(0, MAX_NEST_LAYERS - await get_starry_bonus_count())
     if available_layers <= 0:
-        return False
+        return "当前地点打窝上限已被星空艇加成占满"
 
     scene_instance_id = get_scene_instance_id(status, location_id)
     active_layers = await _active_buff_count(
@@ -104,93 +126,31 @@ async def _can_add_corn_nest(user_id: str, status: dict, *, is_private: bool) ->
         buff_type=BuffEffect.BUFF_TYPE_NEST,
         end_time__gt=datetime.now(),
     )
-    return active_layers < available_layers
+    if active_layers >= available_layers:
+        return "当前地点打窝层数已满"
+    return None
 
 
-async def _can_add_cat_nest(user_id: str, status: dict, *, is_private: bool) -> bool:
-    if not status or not is_starry_location(str(status.get("location_id", ""))):
-        return False
+async def _cat_nest_unavailable_reason(
+    user_id: str, status: dict, *, is_private: bool
+) -> str | None:
+    if not status:
+        return "未在钓鱼"
+    if not is_starry_location(str(status.get("location_id", ""))):
+        return "仅可在11-20星空图使用"
     if not is_private and await FishingUser.get_nest_count(user_id) >= DAILY_NEST_LIMIT:
-        return False
+        return "今日打窝次数已用完"
     active_layers = await _active_buff_count(
         target_type=BuffEffect.TARGET_TYPE_GLOBAL,
         buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
         end_time__gt=datetime.now(),
     )
-    return active_layers < MAX_NEST_LAYERS
+    if active_layers >= MAX_NEST_LAYERS:
+        return "星空图猫框打窝层数已满"
+    return None
 
 
-async def get_use_item_menu_options(
-    user_id: str, *, is_private: bool = False
-) -> list[UseItemMenuOption]:
-    """Return held items that are currently usable from the no-argument menu."""
-    user = await get_or_create_user(user_id)
-    status = user.fishing_status if isinstance(user.fishing_status, dict) else {}
-    options: list[UseItemMenuOption] = []
-
-    def add(name: str, count: int) -> None:
-        if count > 0:
-            options.append(
-                UseItemMenuOption(
-                    label=_compact_label(f"{name}×{count}"),
-                    command=f"钓鱼使用 {name}",
-                )
-            )
-
-    time_count = _json_item_count(user, "time_potion", "potion")
-    if time_count and await _can_use_time_potion(user, status):
-        add("时光药水", time_count)
-
-    rollback_count = _json_item_count(user, "回档药水", "potion")
-    if rollback_count and _can_use_rollback_potion(status):
-        add("回档药水", rollback_count)
-
-    add(
-        "幸运药水",
-        _json_item_count(user, "幸运药水", "potion"),
-    )
-    add(
-        "真多多药水",
-        _json_item_count(user, "真多多药水", "potion"),
-    )
-    add(
-        "闪光药水",
-        _json_item_count(user, "闪光药水", "potion"),
-    )
-    add("UTR自选券", _json_item_count(user, "utr_select_ticket", "ticket"))
-
-    corn_count = max(0, int(getattr(user, "corn", 0) or 0))
-    if corn_count and await _can_add_corn_nest(user_id, status, is_private=is_private):
-        add("香甜玉米", corn_count)
-
-    display_frame_count = max(0, int(getattr(user, "display_frames", 0) or 0))
-    if display_frame_count:
-        frame_layers = await FishingBuff.get_global_buff_count(
-            BuffEffect.BUFF_TYPE_FRAME
-        )
-        if frame_layers < MAX_FRAME_BUFF_LAYERS:
-            add("展示木框", display_frame_count)
-
-    cat_frame_count = max(0, int(getattr(user, "cat_frames", 0) or 0))
-    if cat_frame_count and await _can_add_cat_nest(
-        user_id, status, is_private=is_private
-    ):
-        add("猫猫框", cat_frame_count)
-
-    add(
-        "大肥鱼",
-        _json_item_count(user, BIG_FISH_ITEM_ID, BIG_FISH_ITEM_TYPE),
-    )
-    return options
-
-
-async def get_utr_ticket_menu_state(user_id: str) -> UtrTicketMenuState:
-    """Return ticket count and at most ten currently exchangeable UTR fish."""
-    user = await get_or_create_user(user_id)
-    ticket_count = _json_item_count(user, "utr_select_ticket", "ticket")
-    if ticket_count <= 0:
-        return UtrTicketMenuState(ticket_count=0, options=[])
-
+async def _build_utr_ticket_options(user_id: str) -> list[UseItemMenuOption]:
     collected = set(await FishingUser.get_user_collected(user_id))
     options: list[UseItemMenuOption] = []
     for location in ConfigManager.get_locations():
@@ -206,15 +166,154 @@ async def get_utr_ticket_menu_state(user_id: str) -> UtrTicketMenuState:
             options.append(
                 UseItemMenuOption(
                     label=label,
-                    command=(
-                        f"钓鱼使用 "
-                        f"UTR自选券 {fish_name}"
-                    ),
+                    command=f"钓鱼使用 UTR自选券 {fish_name}",
                 )
             )
             if len(options) >= _UTR_MENU_LIMIT:
-                return UtrTicketMenuState(ticket_count=ticket_count, options=options)
-    return UtrTicketMenuState(ticket_count=ticket_count, options=options)
+                return options
+    return options
+
+
+async def get_use_item_menu_state(
+    user_id: str, *, is_private: bool = False
+) -> UseItemMenuState:
+    """Return usable buttons and held-but-unusable item explanations."""
+    user = await get_or_create_user(user_id)
+    status = user.fishing_status if isinstance(user.fishing_status, dict) else {}
+    options: list[UseItemMenuOption] = []
+    unavailable: list[UnavailableUseItem] = []
+
+    def add(name: str, count: int, reason: str | None = None) -> None:
+        if count <= 0:
+            return
+        if reason:
+            unavailable.append(UnavailableUseItem(name, count, reason))
+            return
+        options.append(
+            UseItemMenuOption(
+                label=_compact_label(f"{name}×{count}"),
+                command=f"钓鱼使用 {name}",
+            )
+        )
+
+    time_count = _json_item_count(user, "time_potion", "potion")
+    if time_count:
+        add(
+            "时光药水",
+            time_count,
+            await _time_potion_unavailable_reason(user, status),
+        )
+
+    rollback_count = _json_item_count(user, "回档药水", "potion")
+    if rollback_count:
+        add(
+            "回档药水",
+            rollback_count,
+            _rollback_potion_unavailable_reason(status),
+        )
+
+    add("幸运药水", _json_item_count(user, "幸运药水", "potion"))
+    add(
+        "真多多药水",
+        _json_item_count(user, "真多多药水", "potion"),
+    )
+    add("闪光药水", _json_item_count(user, "闪光药水", "potion"))
+
+    ticket_count = _json_item_count(user, "utr_select_ticket", "ticket")
+    if ticket_count:
+        utr_options = await _build_utr_ticket_options(user_id)
+        add(
+            "UTR自选券",
+            ticket_count,
+            None
+            if utr_options
+            else "暂无符合兑换条件的UTR鱼（需对应图已解锁UTR且集齐全部UR）",
+        )
+
+    corn_count = max(0, int(getattr(user, "corn", 0) or 0))
+    if corn_count:
+        add(
+            "香甜玉米",
+            corn_count,
+            await _corn_nest_unavailable_reason(
+                user_id, status, is_private=is_private
+            ),
+        )
+
+    display_frame_count = max(0, int(getattr(user, "display_frames", 0) or 0))
+    if display_frame_count:
+        frame_layers = await FishingBuff.get_global_buff_count(
+            BuffEffect.BUFF_TYPE_FRAME
+        )
+        add(
+            "展示木框",
+            display_frame_count,
+            f"全图展示木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%"
+            if frame_layers >= MAX_FRAME_BUFF_LAYERS
+            else None,
+        )
+
+    cat_frame_count = max(0, int(getattr(user, "cat_frames", 0) or 0))
+    if cat_frame_count:
+        add(
+            "猫猫框",
+            cat_frame_count,
+            await _cat_nest_unavailable_reason(
+                user_id, status, is_private=is_private
+            ),
+        )
+
+    add(
+        "大肥鱼",
+        _json_item_count(user, BIG_FISH_ITEM_ID, BIG_FISH_ITEM_TYPE),
+    )
+    add(
+        "许愿药水",
+        _json_item_count(user, "许愿药水", "potion"),
+        "当前版本暂未开放使用方式",
+    )
+    add(
+        "星空框",
+        max(0, int(getattr(user, "star_frames", 0) or 0)),
+        "当前版本暂未开放使用方式",
+    )
+    return UseItemMenuState(options=options, unavailable=unavailable)
+
+
+async def get_use_item_menu_options(
+    user_id: str, *, is_private: bool = False
+) -> list[UseItemMenuOption]:
+    """Compatibility wrapper returning only usable buttons."""
+    state = await get_use_item_menu_state(user_id, is_private=is_private)
+    return state.options
+
+
+async def get_utr_ticket_menu_state(user_id: str) -> UtrTicketMenuState:
+    user = await get_or_create_user(user_id)
+    ticket_count = _json_item_count(user, "utr_select_ticket", "ticket")
+    if ticket_count <= 0:
+        return UtrTicketMenuState(ticket_count=0, options=[])
+    return UtrTicketMenuState(
+        ticket_count=ticket_count,
+        options=await _build_utr_ticket_options(user_id),
+    )
+
+
+def format_unavailable_items(items: list[UnavailableUseItem]) -> str:
+    if not items:
+        return ""
+    lines = ["⚠️ 已持有但当前不可用："]
+    lines.extend(
+        f"- {item.name}×{item.count}：{item.reason}" for item in items
+    )
+    return "\n".join(lines)
+
+
+def build_use_item_menu_markdown(title: str, state: UseItemMenuState) -> str:
+    unavailable_text = format_unavailable_items(state.unavailable)
+    if not unavailable_text:
+        return title
+    return f"{title}\n\n{unavailable_text}"
 
 
 def _build_qq_use_item_message(
@@ -345,10 +444,15 @@ async def try_send_use_item_menu(
 
 
 __all__ = [
+    "UnavailableUseItem",
     "UseItemMenuOption",
+    "UseItemMenuState",
     "UtrTicketMenuState",
     "build_qq_use_item_messages",
+    "build_use_item_menu_markdown",
+    "format_unavailable_items",
     "get_use_item_menu_options",
+    "get_use_item_menu_state",
     "get_utr_ticket_menu_state",
     "is_utr_ticket_name",
     "try_send_use_item_menu",

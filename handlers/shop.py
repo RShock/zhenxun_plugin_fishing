@@ -37,7 +37,9 @@ from ..utils import (
     _send_text,
 )
 from .item_menu import (
-    get_use_item_menu_options,
+    build_use_item_menu_markdown,
+    format_unavailable_items,
+    get_use_item_menu_state,
     get_utr_ticket_menu_state,
     is_utr_ticket_name,
     try_send_use_item_menu,
@@ -232,27 +234,39 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
         "UTR自选券、香甜玉米、展示木框、猫猫框、大肥鱼"
     )
     if not item_name:
-        options = await get_use_item_menu_options(user_id, is_private=is_private)
-        if options and await try_send_use_item_menu(
+        state = await get_use_item_menu_state(user_id, is_private=is_private)
+        unavailable_text = format_unavailable_items(state.unavailable)
+        menu_markdown = build_use_item_menu_markdown(
+            "🎒 选择要使用的物品", state
+        )
+        if state.options and await try_send_use_item_menu(
             bot,
             event,
-            options=options,
-            title="🎒 选择要使用的物品",
+            options=state.options,
+            title=menu_markdown,
         ):
             return
-        if not options:
+        if not state.options:
+            message = "当前没有符合使用条件的物品。"
+            if unavailable_text:
+                message += f"\n{unavailable_text}"
             await _send_text(
                 matcher,
-                "当前没有符合使用条件的物品。",
+                message,
                 user_id,
                 is_private=is_private,
             )
             return
-        await _send_text(
-            matcher,
+        fallback = (
             "请指定要使用的物品！\n"
             f"格式：钓鱼使用 物品名 [数量/参数]\n可用物品：{available}\n"
-            "例：钓鱼使用 闪光药水 1\n例：钓鱼使用 UTR自选券 鱼名",
+            "例：钓鱼使用 闪光药水 1\n例：钓鱼使用 UTR自选券 鱼名"
+        )
+        if unavailable_text:
+            fallback += f"\n\n{unavailable_text}"
+        await _send_text(
+            matcher,
+            fallback,
             user_id,
             is_private=is_private,
         )
