@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import types
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import Mock
 
 import pytest
 
@@ -12,6 +12,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.constants import (
     MAX_NEST_LAYERS,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.handlers import item_menu
+from zhenxun.plugins.zhenxun_plugin_fishing.items import use_checks
 from zhenxun.plugins.zhenxun_plugin_fishing.services.achievement_service import (
     BIG_FISH_ITEM_ID,
     BIG_FISH_ITEM_TYPE,
@@ -68,8 +69,25 @@ def _item(item_id: str, item_type: str, count: int) -> tuple[str, dict]:
     return f"{item_id}|{item_type}", {"item_type": item_type, "count": count}
 
 
+def _buff(buff_type: str, target_type: str, target_id: str = "", value: int = 5):
+    return SimpleNamespace(
+        buff_type=buff_type,
+        target_type=target_type,
+        target_id=target_id,
+        value=value,
+    )
+
+
 @pytest.mark.asyncio
 async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
+    fish_name = "UTR\u9c7c"
+    location = SimpleNamespace(id="13", name="13\u56fe", fish_pool=[fish_name])
+    monkeypatch.setattr(use_checks.ConfigManager, "get_locations", lambda: [location])
+    monkeypatch.setattr(
+        use_checks.ConfigManager,
+        "get_location",
+        lambda location_id: location,
+    )
     items = dict(
         [
             _item("time_potion", "potion", 2),
@@ -82,53 +100,47 @@ async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
             _item(BIG_FISH_ITEM_ID, BIG_FISH_ITEM_TYPE, 1),
         ]
     )
+    status = {"location_id": "13", "time_potions_used": []}
     user = SimpleNamespace(
         items=items,
         bait_id="1",
-        fishing_status={"location_id": "13", "time_potions_used": []},
+        fishing_status=status,
+        collection={fish_name: {"UR": 1, "UTR": 1}},
+        daily_counters={},
+        character_slots=[None, None, None],
         corn=6,
         display_frames=7,
         cat_frames=8,
+        star_frames=0,
     )
-    monkeypatch.setattr(item_menu, "get_or_create_user", AsyncMock(return_value=user))
-    monkeypatch.setattr(
-        item_menu.ConfigManager,
-        "get_bait",
-        lambda bait_id: SimpleNamespace(id=1, name="\u9c7c\u9975"),
-    )
-    monkeypatch.setattr(
-        item_menu.ConfigManager,
-        "get_location",
-        lambda location_id: SimpleNamespace(id=location_id, name="13\u56fe"),
-    )
-    monkeypatch.setattr(
-        item_menu.FishingUser, "get_nest_count", AsyncMock(return_value=0)
-    )
-    monkeypatch.setattr(
-        item_menu, "get_starry_bonus_count", AsyncMock(return_value=0)
-    )
-    monkeypatch.setattr(
-        item_menu,
-        "_build_utr_ticket_options",
-        AsyncMock(
-            return_value=[
-                item_menu.UseItemMenuOption(
-                    label="13\u56fe UTR\u9c7c",
-                    command="\u9493\u9c7c\u4f7f\u7528 UTR\u81ea\u9009\u5238 UTR\u9c7c",
-                )
-            ]
-        ),
-    )
-    monkeypatch.setattr(
-        item_menu, "_active_buff_count", AsyncMock(return_value=MAX_NEST_LAYERS)
-    )
-    monkeypatch.setattr(
-        item_menu.FishingBuff,
-        "get_global_buff_count",
-        AsyncMock(return_value=MAX_FRAME_BUFF_LAYERS),
+    scene_id = use_checks.get_scene_instance_id(status, "13")
+    context = use_checks.UseCheckContext("user", user)
+    context._active_buffs_cache = (
+        [
+            _buff(
+                use_checks.BuffEffect.BUFF_TYPE_NEST,
+                use_checks.BuffEffect.TARGET_TYPE_LOCATION,
+                scene_id,
+            )
+            for _ in range(MAX_NEST_LAYERS)
+        ]
+        + [
+            _buff(
+                use_checks.BuffEffect.BUFF_TYPE_FRAME,
+                use_checks.BuffEffect.TARGET_TYPE_GLOBAL,
+            )
+            for _ in range(MAX_FRAME_BUFF_LAYERS)
+        ]
+        + [
+            _buff(
+                use_checks.BuffEffect.BUFF_TYPE_CAT_NEST,
+                use_checks.BuffEffect.TARGET_TYPE_GLOBAL,
+            )
+            for _ in range(MAX_NEST_LAYERS)
+        ]
     )
 
-    state = await item_menu.get_use_item_menu_state("user")
+    state = await item_menu.get_use_item_menu_state("user", context=context)
     commands = {option.command for option in state.options}
     reasons = {item.name: item.reason for item in state.unavailable}
 
@@ -139,46 +151,39 @@ async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
     assert "\u9493\u9c7c\u4f7f\u7528 \u9999\u751c\u7389\u7c73" not in commands
     assert "\u9493\u9c7c\u4f7f\u7528 \u5c55\u793a\u6728\u6846" not in commands
     assert "\u9493\u9c7c\u4f7f\u7528 \u732b\u732b\u6846" not in commands
-    assert reasons["\u9999\u751c\u7389\u7c73"] == (
-        "\u5f53\u524d\u5730\u70b9\u6253\u7a9d\u5c42\u6570\u5df2\u6ee1"
+    assert (
+        "\u5f53\u524d\u5730\u70b9\u6253\u7a9d\u6548\u679c\u5df2\u6ee1"
+        in reasons["\u9999\u751c\u7389\u7c73"]
     )
     assert "50%" in reasons["\u5c55\u793a\u6728\u6846"]
-    assert reasons["\u732b\u732b\u6846"] == (
-        "\u661f\u7a7a\u56fe\u732b\u6846\u6253\u7a9d\u5c42\u6570\u5df2\u6ee1"
-    )
+    assert "50%" in reasons["\u732b\u732b\u6846"]
 
 
 @pytest.mark.asyncio
 async def test_use_item_menu_includes_available_frames_and_corn(monkeypatch):
+    location = SimpleNamespace(id="13", name="13\u56fe", fish_pool=[])
+    monkeypatch.setattr(
+        use_checks.ConfigManager,
+        "get_location",
+        lambda location_id: location,
+    )
     user = SimpleNamespace(
         items={},
         bait_id="0",
         fishing_status={"location_id": "13", "time_potions_used": []},
+        collection={},
+        daily_counters={},
+        character_slots=[None, None, None],
         corn=2,
         display_frames=3,
         cat_frames=4,
+        star_frames=0,
     )
-    monkeypatch.setattr(item_menu, "get_or_create_user", AsyncMock(return_value=user))
-    monkeypatch.setattr(
-        item_menu.ConfigManager,
-        "get_location",
-        lambda location_id: SimpleNamespace(id=location_id, name="13\u56fe"),
-    )
-    monkeypatch.setattr(
-        item_menu.FishingUser, "get_nest_count", AsyncMock(return_value=0)
-    )
-    monkeypatch.setattr(
-        item_menu, "get_starry_bonus_count", AsyncMock(return_value=0)
-    )
-    monkeypatch.setattr(item_menu, "_active_buff_count", AsyncMock(return_value=2))
-    monkeypatch.setattr(
-        item_menu.FishingBuff,
-        "get_global_buff_count",
-        AsyncMock(return_value=2),
-    )
+    context = use_checks.UseCheckContext("user", user)
+    context._active_buffs_cache = []
 
-    options = await item_menu.get_use_item_menu_options("user")
-    labels = {option.label for option in options}
+    state = await item_menu.get_use_item_menu_state("user", context=context)
+    labels = {option.label for option in state.options}
 
     assert "\u9999\u751c\u7389\u7c73\u00d72" in labels
     assert "\u5c55\u793a\u6728\u6846\u00d73" in labels
@@ -186,7 +191,7 @@ async def test_use_item_menu_includes_available_frames_and_corn(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_held_but_unusable_items_include_text_reasons(monkeypatch):
+async def test_shared_reason_matches_menu_and_direct_check():
     user = SimpleNamespace(
         items=dict(
             [
@@ -196,26 +201,69 @@ async def test_held_but_unusable_items_include_text_reasons(monkeypatch):
         ),
         bait_id="0",
         fishing_status=None,
+        collection={},
+        daily_counters={},
+        character_slots=[None, None, None],
         corn=0,
         display_frames=0,
         cat_frames=0,
         star_frames=3,
     )
-    monkeypatch.setattr(item_menu, "get_or_create_user", AsyncMock(return_value=user))
+    context = use_checks.UseCheckContext("user", user)
 
-    state = await item_menu.get_use_item_menu_state("user")
+    direct = await use_checks.check_item_use(context, "\u65f6\u5149\u836f\u6c34")
+    state = await item_menu.get_use_item_menu_state("user", context=context)
     reasons = {item.name: item.reason for item in state.unavailable}
     text = item_menu.format_unavailable_items(state.unavailable)
 
-    assert state.options == []
-    assert reasons["\u65f6\u5149\u836f\u6c34"] == "\u672a\u5728\u9493\u9c7c"
+    assert direct.usable is False
+    assert direct.reason == reasons["\u65f6\u5149\u836f\u6c34"]
     unavailable_reason = (
         "\u5f53\u524d\u7248\u672c\u6682\u672a\u5f00\u653e\u4f7f\u7528\u65b9\u5f0f"
     )
     assert reasons["\u8bb8\u613f\u836f\u6c34"] == unavailable_reason
     assert reasons["\u661f\u7a7a\u6846"] == unavailable_reason
-    assert "\u65f6\u5149\u836f\u6c34\u00d72\uff1a\u672a\u5728\u9493\u9c7c" in text
+    assert "\u65f6\u5149\u836f\u6c34\u00d72" in text
     assert "\u661f\u7a7a\u6846\u00d73" in text
+
+
+@pytest.mark.asyncio
+async def test_shared_context_loads_relevant_buffs_only_once(monkeypatch):
+    location = SimpleNamespace(id="13", name="13\u56fe", fish_pool=[])
+    monkeypatch.setattr(
+        use_checks.ConfigManager,
+        "get_location",
+        lambda location_id: location,
+    )
+
+    class Query:
+        async def all(self):
+            return []
+
+    filter_mock = Mock(return_value=Query())
+    monkeypatch.setattr(use_checks.FishingBuff, "filter", filter_mock)
+    user = SimpleNamespace(
+        items={},
+        bait_id="0",
+        fishing_status={"location_id": "13", "time_potions_used": []},
+        collection={},
+        daily_counters={},
+        character_slots=[None, None, None],
+        corn=1,
+        display_frames=1,
+        cat_frames=1,
+        star_frames=0,
+    )
+    context = use_checks.UseCheckContext("user", user)
+
+    checks = await use_checks.get_held_item_use_checks(context)
+
+    assert {check.canonical_name for check in checks} == {
+        "\u9999\u751c\u7389\u7c73",
+        "\u5c55\u793a\u6728\u6846",
+        "\u732b\u732b\u6846",
+    }
+    assert filter_mock.call_count == 1
 
 
 def test_unavailable_text_does_not_create_keyboard_rows(monkeypatch):
@@ -264,24 +312,19 @@ async def test_utr_ticket_menu_is_limited_to_ten_and_marks_map_id(monkeypatch):
             id="14", fish_pool=[f"\u5341\u56db\u9c7c{i}" for i in range(1, 7)]
         ),
     ]
-    collected = {
-        (fish_name, rarity)
+    monkeypatch.setattr(use_checks.ConfigManager, "get_locations", lambda: locations)
+    collection = {
+        fish_name: {"UR": 1, "UTR": 1}
         for location in locations
         for fish_name in location.fish_pool
-        for rarity in ("UR", "UTR")
     }
     user = SimpleNamespace(
         items=dict([_item("utr_select_ticket", "ticket", 2)]),
+        collection=collection,
     )
-    monkeypatch.setattr(item_menu, "get_or_create_user", AsyncMock(return_value=user))
-    monkeypatch.setattr(
-        item_menu.FishingUser,
-        "get_user_collected",
-        AsyncMock(return_value=collected),
-    )
-    monkeypatch.setattr(item_menu.ConfigManager, "get_locations", lambda: locations)
+    context = use_checks.UseCheckContext("user", user)
 
-    state = await item_menu.get_utr_ticket_menu_state("user")
+    state = await item_menu.get_utr_ticket_menu_state("user", context=context)
 
     assert state.ticket_count == 2
     assert len(state.options) == 10

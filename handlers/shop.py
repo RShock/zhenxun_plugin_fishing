@@ -7,6 +7,7 @@ from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 
 from ..config import ConfigManager
+from ..items.use_checks import UseCheckContext, check_item_use
 from ..matchers import (
     build_starry_ship_matcher,
     buy_matcher,
@@ -224,8 +225,13 @@ def _parse_use_item_arguments(item_name: str, rest: str) -> tuple[int, str]:
 @use_item_matcher.handle()
 @with_user_lock("使用物品")
 async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup()):
-    user_id, _ = await _ensure_user(event)
+    user_id = event.get_user_id()
+    nickname = _get_nickname(event)
     is_private = _is_private_chat(event)
+    user = await get_or_create_user(user_id, nickname)
+    use_context = UseCheckContext(
+        user_id=user_id, user=user, is_private=is_private
+    )
     item_name = group[0].strip() if group and group[0] else ""
     rest = group[1].strip() if group and len(group) > 1 and group[1] else ""
 
@@ -234,7 +240,9 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
         "UTR自选券、香甜玉米、展示木框、猫猫框、大肥鱼"
     )
     if not item_name:
-        state = await get_use_item_menu_state(user_id, is_private=is_private)
+        state = await get_use_item_menu_state(
+            user_id, is_private=is_private, context=use_context
+        )
         unavailable_text = format_unavailable_items(state.unavailable)
         menu_markdown = build_use_item_menu_markdown(
             "🎒 选择要使用的物品", state
@@ -273,16 +281,19 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
         return
 
     if is_utr_ticket_name(item_name) and not rest:
-        state = await get_utr_ticket_menu_state(user_id)
-        if state.ticket_count <= 0:
+        use_check = await check_item_use(use_context, item_name)
+        if not use_check.usable:
             await _send_text(
                 matcher,
-                "UTR自选券不足（当前0张）",
+                use_check.reason,
                 user_id,
                 is_private=is_private,
             )
             return
-        if state.options and await try_send_use_item_menu(
+        state = await get_utr_ticket_menu_state(
+            user_id, is_private=is_private, context=use_context
+        )
+        if await try_send_use_item_menu(
             bot,
             event,
             options=state.options,
@@ -290,17 +301,20 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
             buttons_per_row=1,
         ):
             return
-        if not state.options:
-            await _send_text(
-                matcher,
-                "当前没有可用 UTR自选券兑换的鱼："
-                "需先在对应地图解锁至少1条UTR，且收集齐该图全部UR。",
-                user_id,
-                is_private=is_private,
-            )
-            return
 
     count, arg = _parse_use_item_arguments(item_name, rest)
+
+    use_check = await check_item_use(
+        use_context, item_name, count=count, arg=arg
+    )
+    if not use_check.usable:
+        await _send_text(
+            matcher,
+            use_check.reason,
+            user_id,
+            is_private=is_private,
+        )
+        return
 
     handler, is_image = resolve_item_handler(item_name)
     if handler is None:
