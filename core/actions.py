@@ -388,6 +388,7 @@ async def _compute_settle_step(
         cat_eaten_fish=total_cat_eaten,
         cat_gifts=merged_cat_gifts,
         meteor_fish_numbers=simulation.meteor_fish_numbers,
+        meteor_fish_records=simulation.meteor_fish_records,
         bait_usage=simulation.bait_usage,
     )
 

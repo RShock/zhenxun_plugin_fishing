@@ -2,11 +2,11 @@
 黑商/白商交换 — 用更高级的鱼交换同级或更低级目标鱼，并支持历史逆交换。
 """
 
+from dataclasses import dataclass
+from datetime import date, timedelta
 import json
 import random
 import re
-from dataclasses import dataclass
-from datetime import date, timedelta
 
 from ..config import (
     DAILY_GIFT_LIMIT,
@@ -487,13 +487,15 @@ async def render_white_market_records(user_id: str) -> bytes:
                 "target_location_name": record.target_location_name,
                 "sources": [],
             }
-        loc_rarity_groups[gk]["sources"].append({
-            "name": record.source_name,
-            "rarity": record.source_rarity,
-            "location_name": record.source_location_name,
-            "location_id": record.source_location_id,
-            "numeric_id": record.source_numeric_id,
-        })
+        loc_rarity_groups[gk]["sources"].append(
+            {
+                "name": record.source_name,
+                "rarity": record.source_rarity,
+                "location_name": record.source_location_name,
+                "location_id": record.source_location_id,
+                "numeric_id": record.source_numeric_id,
+            }
+        )
 
     now_items: list[dict] = []
     possible_items: list[dict] = []
@@ -517,12 +519,14 @@ async def render_white_market_records(user_id: str) -> bytes:
             sgk = (s["location_name"], s["rarity"])
             if sgk not in group_index:
                 group_index[sgk] = len(get_groups)
-                get_groups.append({
-                    "rarity": s["rarity"],
-                    "location_name": s["location_name"],
-                    "location_tag": s_loc_tag,
-                    "names": [],
-                })
+                get_groups.append(
+                    {
+                        "rarity": s["rarity"],
+                        "location_name": s["location_name"],
+                        "location_tag": s_loc_tag,
+                        "names": [],
+                    }
+                )
             get_groups[group_index[sgk]]["names"].append(s["name"])
 
         # 查找玩家背包中与target同地图同稀有度的鱼
@@ -537,20 +541,24 @@ async def render_white_market_records(user_id: str) -> bytes:
             f_target = find_fish_target(f["fish_name"], f["rarity"])
             if f_target and f_target.location_id == loc_id:
                 seen_bp_names.add(f["fish_name"])
-                backpack_fish.append({
-                    "name": f["fish_name"],
-                    "rarity": f["rarity"],
-                    "location_name": loc_name,
-                    "location_tag": loc_tag,
-                })
+                backpack_fish.append(
+                    {
+                        "name": f["fish_name"],
+                        "rarity": f["rarity"],
+                        "location_name": loc_name,
+                        "location_tag": loc_tag,
+                    }
+                )
 
         if backpack_fish:
             # 可以交换：左边显示背包中具体的鱼，右边显示获得鱼分组
-            now_items.append({
-                "pay_fish": backpack_fish,
-                "pay_location_tag": loc_tag,
-                "get_groups": get_groups,
-            })
+            now_items.append(
+                {
+                    "pay_fish": backpack_fish,
+                    "pay_location_tag": loc_tag,
+                    "get_groups": get_groups,
+                }
+            )
         else:
             # 有可能交换：检查是否已解锁
             unlock_key = f"{loc_id}|{rarity}"
@@ -561,12 +569,14 @@ async def render_white_market_records(user_id: str) -> bytes:
             if not unlock_cache[unlock_key]:
                 continue
             # 左边显示泛化标签
-            possible_items.append({
-                "pay_label": f"{loc_name} {rarity}",
-                "pay_rarity": rarity,
-                "pay_location_tag": loc_tag,
-                "get_groups": get_groups,
-            })
+            possible_items.append(
+                {
+                    "pay_label": f"{loc_name} {rarity}",
+                    "pay_rarity": rarity,
+                    "pay_location_tag": loc_tag,
+                    "get_groups": get_groups,
+                }
+            )
 
     html = render_template(
         "white_market_list.html",
@@ -630,12 +640,16 @@ async def black_market_exchange(
 
     user = await FishingUser.get_user(user_id)
     today = date.today()
-    # 黑商过载冷却：smart_black_market_available_date 在未来时，硬封禁普通黑商。
-    # 与智能黑商不同，普通黑商不允许用额外券绕过冷却——这是对滥用撤回漏洞的惩罚。
+    # 黑商过载冷却只封禁同稀有度交换。高换低时黑商即使没来也会接受，
+    # 且普通黑商仍不允许用额外券绕过同稀有度交换的冷却。
     available_date = getattr(user, "smart_black_market_available_date", None)
-    if available_date and available_date > today:
+    if not is_high_to_low and available_date and available_date > today:
         delta_days = (available_date - today).days
-        return False, f"黑商将在 {delta_days} 天后（{available_date.isoformat()}）再来。", True
+        return (
+            False,
+            f"黑商将在 {delta_days} 天后（{available_date.isoformat()}）再来。",
+            True,
+        )
 
     used_extra_ticket = False
     if not is_high_to_low:
@@ -835,9 +849,7 @@ async def smart_black_market_exchange(
             )
         return False, stop_reason or "智能黑商未能开始交换。", True
 
-    ticket = await FishingUser.get_item(
-        user_id, "black_market_extra_ticket", "ticket"
-    )
+    ticket = await FishingUser.get_item(user_id, "black_market_extra_ticket", "ticket")
     ticket_count = int(ticket.get("count", 0) or 0) if ticket else 0
     # 每张券只抵一天冷却；无论券有多少，智能黑商都至少要到次日才会再来。
     used_tickets = min(ticket_count, max(0, attempts - 1))
@@ -910,7 +922,11 @@ async def white_market_exchange(
         get_fish.numeric_id
     )
     if not records:
-        return False, f"没有找到能获得 {get_fish.name}({get_fish.rarity}) 的有效黑商记录。", True
+        return (
+            False,
+            f"没有找到能获得 {get_fish.name}({get_fish.rarity}) 的有效黑商记录。",
+            True,
+        )
 
     # 从记录中找一条 target 与支付鱼同地图同稀有度的
     matched_record = None
@@ -947,8 +963,7 @@ async def white_market_exchange(
         None,
     )
     if not eligible_payment or not any(
-        target.numeric_id == get_fish.numeric_id
-        for target in eligible_payment.targets
+        target.numeric_id == get_fish.numeric_id for target in eligible_payment.targets
     ):
         return False, "当前白商资格已变化，请重新查看白商列表。", True
 
@@ -1023,9 +1038,7 @@ async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
     if record.is_randomized:
         user = await FishingUser.get_user(user_id)
         if user:
-            user.black_market_pity_counter = max(
-                0, user.black_market_pity_counter - 1
-            )
+            user.black_market_pity_counter = max(0, user.black_market_pity_counter - 1)
             await user.save(update_fields=["black_market_pity_counter"])
     # 撤回不返还额外券：额外券在黑商交换时已作为"透支次数"消耗，
     # 撤回只退鱼获和保底，不退券，防止撤回后用退回的券再次透支。
@@ -1041,9 +1054,7 @@ async def _do_revoke(user_id: str, record) -> tuple[bool, str, bool]:
     return True, msg, True
 
 
-async def black_market_revoke(
-    user_id: str, selection: str
-) -> tuple[bool, str, bool]:
+async def black_market_revoke(user_id: str, selection: str) -> tuple[bool, str, bool]:
     """撤回当天黑商交换。
 
     selection 为空时：仅 1 条记录直接撤回，多条则列出序号供选择。
@@ -1057,7 +1068,9 @@ async def black_market_revoke(
     if not sel:
         if len(records) == 1:
             return await _do_revoke(user_id, records[0])
-        lines = ["今天有以下可撤回的黑商交换，回复「黑商撤回 序号」撤回（消耗赠送次数）："]
+        lines = [
+            "今天有以下可撤回的黑商交换，回复「黑商撤回 序号」撤回（消耗赠送次数）："
+        ]
         for i, r in enumerate(records, 1):
             lines.append(
                 f"{i}. 退还 {r.target_name}({r.target_rarity}) "

@@ -25,18 +25,63 @@ class TestParseSpecialAndLayout:
             "T@1,2_3,4",
         )
 
+    def test_limited_longline_tracks(self):
+        assert fs._parse_special_and_layout("S@longline_15+T@19.3,57.8_76.3,58.4") == (
+            ["longline_15"],
+            "T@19.3,57.8_76.3,58.4",
+        )
+
+    def test_longline_bottom_gap(self):
+        assert fs._longline_bottom_gap(["longline"]) == 0.0
+        assert fs._longline_bottom_gap(["longline_15"]) == 15.0
+        assert fs._longline_bottom_gap(["mirror"]) is None
+
     def test_actor_brightness_effect(self):
         assert fs._actor_brightness([]) == 1.0
         assert fs._actor_brightness(["dark50"]) == 0.5
         assert fs._actor_brightness(["longline", "dark50"]) == 0.5
         assert fs._actor_brightness(["dark150"]) == 0.0
 
-    def test_darkness_and_longline_scene_effects_coexist(self):
-        layout = fs._parse_scene_layout(
-            "17-scene-S@longline,dark50+T@16.5,73.7_43.6,74.3"
+    def test_dark50_is_written_to_actor_image_filters(self, tmp_path: Path):
+        img = tmp_path / "skin.png"
+        img.write_bytes(b"x")
+        player = fs._actor_view(
+            img,
+            "A",
+            (22.0, 61.0),
+            (100.0, 70.0),
+            0,
+            False,
+            effects=["dark50"],
         )
-        assert layout["effects"] == ["longline", "dark50"]
-        assert layout["mode"] == "tracks"
+        html = fs.render_template(
+            "fishing_scene.html",
+            body_bg="",
+            width=330,
+            container_width=330,
+            scene_uri="scene.png",
+            foreground_uri="",
+            badges=[],
+            player_list=[player],
+            location_name="scene",
+            location_difficulty=1,
+            fish_count=1,
+            bait_info="",
+            power_info="",
+            hook_info="",
+            prob_items=[],
+            timeline_data=None,
+            hints=[],
+            weather_emoji="",
+            weather_name="",
+            weather_time="",
+            weather_effect="",
+            weather_active=True,
+            weather_overlay_uri="",
+            material_rate=0,
+            scene_inverted=False,
+        )
+        assert "filter:brightness(0.5);" in html
 
     def test_multi_effects_tracks(self):
         assert fs._parse_special_and_layout("S@longline,foo+T@10,20") == (
@@ -66,6 +111,30 @@ class TestParseSceneLayoutEffects:
         layout = fs._parse_scene_layout("13-彗尾瀑-T@10,80_40,85")
         assert layout["mode"] == "tracks"
         assert layout.get("effects") == []
+
+
+    def test_default_canvas_width(self):
+        layout = fs._parse_scene_layout("15-scene-S@mirror_70")
+        assert layout["canvas_width"] == 330
+
+    def test_c660_canvas_marker_keeps_track_layout(self):
+        layout = fs._parse_scene_layout(
+            "16-scene-C660-S@longline+T@16.5,73.7_43.6,74.3"
+        )
+        assert layout["mode"] == "tracks"
+        assert layout["effects"] == ["longline"]
+        assert layout["canvas_width"] == 660
+        assert layout["tracks"][0]["points"] == [
+            (16.5, 73.7),
+            (43.6, 74.3),
+        ]
+
+    def test_darkness_and_longline_scene_effects_coexist(self):
+        layout = fs._parse_scene_layout(
+            "17-scene-C660-S@longline,dark50+T@16.5,73.7_43.6,74.3"
+        )
+        assert layout["effects"] == ["longline", "dark50"]
+        assert layout["mode"] == "tracks"
 
 
 class TestForegroundDiscovery:
@@ -185,6 +254,7 @@ class TestLonglineAdaptiveBand:
             path, "T", (40.0, skin_h), (10.0, 70.0), y_offset, True, effects=["longline"]
         )
         assert view["special"] == "longline"
+        assert view["line_stop_bottom"] == 0.0
         assert view["line_base"] + view["body_h"] == pytest.approx(y_offset + skin_h)
         # no band -> normal
         fs._LONGLINE_BAND_CACHE.clear()
@@ -200,6 +270,20 @@ class TestLonglineAdaptiveBand:
             path2, "T", (40.0, skin_h), (10.0, 70.0), y_offset, False, effects=["longline"]
         )
         assert view2["special"] == ""
+
+    def test_actor_view_limited_longline_stops_above_bottom(self, tmp_path: Path):
+        fs._LONGLINE_BAND_CACHE.clear()
+        h, w = 100, 20
+        paint = {y: list(range(8)) for y in range(0, 60)}
+        for y in range(70, 90):
+            paint[y] = [5]
+        path = self._make_skin(tmp_path, "limited.png", w, h, paint)
+        view = fs._actor_view(
+            path, "T", (40.0, 100.0), (10.0, 70.0), -10, True,
+            effects=["longline_15"],
+        )
+        assert view["special"] == "longline"
+        assert view["line_stop_bottom"] == 15.0
 
 
 class TestLonglineActorViewLegacyNames:

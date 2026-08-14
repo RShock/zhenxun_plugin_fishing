@@ -141,9 +141,7 @@ class TestStartFishing:
         assert status["location_id"] == LOCATION_1
 
     async def test_start_fishing_records_group_context(self, db):
-        await start_fishing(
-            USER_ID, LOCATION_1, "TestUser", group_id="1054188847"
-        )
+        await start_fishing(USER_ID, LOCATION_1, "TestUser", group_id="1054188847")
         status = await db.status_get(USER_ID)
         assert status is not None
         assert status["group_id"] == "1054188847"
@@ -180,18 +178,14 @@ class TestStartFishing:
         """未建设星空艇时进入星空图应给出明确提示。"""
         from zhenxun.plugins.zhenxun_plugin_fishing import starry
 
-        monkeypatch.setattr(
-            starry, "has_starry_ship", AsyncMock(return_value=False)
-        )
+        monkeypatch.setattr(starry, "has_starry_ship", AsyncMock(return_value=False))
         user = await db.user_get(USER_ID)
         user.rod_level = 10
         image, ok, hint = await start_fishing(USER_ID, "11")
         assert ok is False
         assert "尚未建设星空艇" in hint
 
-    async def test_start_fishing_cat_park_without_ticket_hint(
-        self, db, monkeypatch
-    ):
+    async def test_start_fishing_cat_park_without_ticket_hint(self, db, monkeypatch):
         """未获得猫猫乐园门票时应给出明确提示。"""
         from zhenxun.plugins.zhenxun_plugin_fishing import cat_park
 
@@ -433,7 +427,9 @@ class TestStepSettlement:
         assert hasattr(result, "bait")
         assert hasattr(result, "buff_messages")
 
-    async def test_settle_step_does_not_persist_auto_switched_bait(self, db, monkeypatch):
+    async def test_settle_step_does_not_persist_auto_switched_bait(
+        self, db, monkeypatch
+    ):
         """步进结算不持久化临时自动换饵，保持玩家持久化偏好；
         最终鱼饵在收杆阶段由 _apply_session_reward_stage 统一落库。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.core import actions

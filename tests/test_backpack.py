@@ -963,10 +963,33 @@ class TestBlackMarketExchange:
         assert second[0] is False
         assert "继续交换需要 1 张" in second[1]
 
-    async def test_black_market_blocked_by_overload_cooldown(self, db):
-        """smart_black_market_available_date 在未来时，普通黑商被硬封禁。"""
+    async def test_high_to_low_black_market_bypasses_overload_cooldown(self, db):
+        """黑商没来时仍接受高稀有度换低稀有度。"""
         source = find_fish_target("小鲫鱼", "UR")
         target = find_fish_target("小鲫鱼", "N")
+        assert source is not None and target is not None
+        await db.backpack_add_fish(
+            USER_ID, source.name, source.rarity, source.numeric_id, count=1
+        )
+        user = await db.user_get(USER_ID)
+        user.smart_black_market_available_date = date.today() + timedelta(days=5)
+
+        ok, msg, should_reply = await black_market_exchange(
+            USER_ID, f"{source.name} {source.rarity} {target.name} {target.rarity}"
+        )
+
+        assert ok is True
+        assert should_reply is True
+        assert "黑商很高兴" in msg
+        assert "兑换券" not in msg
+        assert user.smart_black_market_available_date == date.today() + timedelta(days=5)
+        count, _ = user._get_daily_counter("black_market")
+        assert count == 0
+
+    async def test_same_rarity_black_market_blocked_by_overload_cooldown(self, db):
+        """黑商没来时，同稀有度的普通交换仍被过载冷却封禁。"""
+        source = find_fish_target("橘座鲫鱼", "UR")
+        target = find_fish_target("小鲫鱼", "UR")
         assert source is not None and target is not None
         await db.backpack_add_fish(
             USER_ID, source.name, source.rarity, source.numeric_id, count=1

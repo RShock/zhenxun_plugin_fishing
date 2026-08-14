@@ -8,9 +8,41 @@ from unittest.mock import AsyncMock
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing.core import actions
+from zhenxun.plugins.zhenxun_plugin_fishing.core.settlement_status import (
+    build_settlement_status,
+)
+from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import use_rollback_potion
 from zhenxun.plugins.zhenxun_plugin_fishing.models import FishingUser
 from zhenxun.plugins.zhenxun_plugin_fishing.render import fishing_status
-from zhenxun.plugins.zhenxun_plugin_fishing.items.potion_use import use_rollback_potion
+
+
+def test_settlement_migrates_legacy_meteor_numbers_without_loss():
+    catch_time = datetime.now() - timedelta(hours=1)
+    status = {
+        "location_id": "11",
+        "start_time": (catch_time - timedelta(hours=30)).isoformat(),
+        "meteor_fish_numbers": [123456],
+    }
+
+    updated = build_settlement_status(
+        status_dict=status,
+        last_settle_time=datetime.now(),
+        fish_caught=[],
+        bait_consumed=0,
+        frame_pity=0,
+        cat_frame_pity=0,
+        utr_pity=0,
+        cat_eaten_fish=[],
+        cat_gifts={},
+        meteor_fish_numbers=[654321],
+        meteor_fish_records=[(654321, catch_time)],
+    )
+
+    assert updated["meteor_fish_numbers"] == [123456, 654321]
+    assert updated["meteor_fish_records"] == [
+        {"number": 123456},
+        {"number": 654321, "catch_time": catch_time.isoformat()},
+    ]
 
 
 @pytest.mark.asyncio
@@ -66,7 +98,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     await FishingUser.update_fishing_status(
         user_id,
         {
-            "location_id": "1",
+            "location_id": "11",
             "start_time": original_start,
             "last_settle_time": (datetime.now() - timedelta(minutes=5)).isoformat(),
             "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 9}],
@@ -77,6 +109,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
             "utr_pity": 97,
             "cat_eaten_fish": [{"fish_id": "草鱼", "rarity": "R", "count": 1}],
             "cat_gifts": {"gold": 100},
+            "meteor_fish_numbers": [111111],
             "time_potions_used": [],
             "shadow_scene": True,
         },
@@ -120,6 +153,8 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert observed_status["cat_frame_pity"] == 12
     assert observed_status["utr_pity"] == 13
     assert observed_status["cat_eaten_fish"] == []
+    assert observed_status["meteor_fish_numbers"] == []
+    assert observed_status["meteor_fish_records"] == []
     assert observed_status["time_potions_used"] == []
     assert observed_status["shadow_scene"] is True
     assert observed_status["bait_usage_log"] == {}
@@ -157,13 +192,23 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     await FishingUser.update_fishing_status(
         user_id,
         {
-            "location_id": "1",
+            "location_id": "11",
             "start_time": start_30h_ago,
             "last_settle_time": fish_1h_ago,
             # 25h前的鱼（保留）+ 1h前的鱼（移除）
             "fish_caught": [
-                {"fish_id": "小鲫鱼", "rarity": "N", "count": 5, "catch_time": fish_25h_ago},
-                {"fish_id": "鲤鱼", "rarity": "R", "count": 3, "catch_time": fish_1h_ago},
+                {
+                    "fish_id": "小鲫鱼",
+                    "rarity": "N",
+                    "count": 5,
+                    "catch_time": fish_25h_ago,
+                },
+                {
+                    "fish_id": "鲤鱼",
+                    "rarity": "R",
+                    "count": 3,
+                    "catch_time": fish_1h_ago,
+                },
             ],
             "bait_consumed": 8,
             "bait_usage_log": {"1": 8},
@@ -171,10 +216,25 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
             "cat_frame_pity": 5,
             "utr_pity": 30,
             "cat_eaten_fish": [
-                {"fish_id": "草鱼", "rarity": "R", "count": 1, "catch_time": fish_25h_ago},
-                {"fish_id": "麦穗鱼", "rarity": "N", "count": 2, "catch_time": fish_1h_ago},
+                {
+                    "fish_id": "草鱼",
+                    "rarity": "R",
+                    "count": 1,
+                    "catch_time": fish_25h_ago,
+                },
+                {
+                    "fish_id": "麦穗鱼",
+                    "rarity": "N",
+                    "count": 2,
+                    "catch_time": fish_1h_ago,
+                },
             ],
             "cat_gifts": {"gold": 100},
+            "meteor_fish_numbers": [111111, 222222],
+            "meteor_fish_records": [
+                {"number": 111111, "catch_time": fish_25h_ago},
+                {"number": 222222, "catch_time": fish_1h_ago},
+            ],
             "time_potions_used": [],
         },
     )
@@ -221,6 +281,12 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
     assert len(kept_cat_eaten) == 1
     assert kept_cat_eaten[0]["fish_id"] == "草鱼"
 
+    # 25h 前的流星鱼保留，1h 前的流星鱼移除
+    assert observed_status["meteor_fish_numbers"] == [111111]
+    assert observed_status["meteor_fish_records"] == [
+        {"number": 111111, "catch_time": fish_25h_ago}
+    ]
+
     # 鱼饵按比例退还：被移除鱼数=3+2=5，总鱼数=5+3+1+2=11，比例≈0.4545
     # refund = round(8 * 0.4545) = round(3.636) = 4
     # new_bait_usage_log = {"1": 8 - 4} = {"1": 4}
@@ -231,6 +297,87 @@ async def test_rollback_potion_only_rolls_back_last_24h(db, monkeypatch):
 
     # 回档药水已消耗
     assert await FishingUser.get_item(user_id, "回档药水", "potion") is None
+
+
+@pytest.mark.asyncio
+async def test_rollback_preserves_legacy_meteor_fish_without_timestamps(
+    db, monkeypatch
+):
+    """旧会话无法判断流星鱼时间时，在长会话中优先保留玩家资产。"""
+    user_id = "rollback-legacy-meteor-fish"
+    await FishingUser.get_or_create_user(user_id, "旧流星鱼回档测试")
+    await FishingUser.add_item(user_id, "回档药水", "potion", 1)
+
+    now = datetime.now()
+    await FishingUser.update_fishing_status(
+        user_id,
+        {
+            "location_id": "11",
+            "start_time": (now - timedelta(hours=30)).isoformat(),
+            "last_settle_time": (now - timedelta(hours=1)).isoformat(),
+            "fish_caught": [],
+            "bait_consumed": 0,
+            "bait_usage_log": {},
+            "cat_eaten_fish": [],
+            "cat_gifts": {},
+            "meteor_fish_numbers": [123456, 654321],
+            "time_potions_used": [],
+        },
+    )
+
+    observed_status = None
+
+    async def fake_check_fishing_status(called_user_id, **kwargs):
+        nonlocal observed_status
+        observed_status = await FishingUser.get_status(called_user_id)
+        return b"LEGACY_METEOR_IMAGE", object()
+
+    check_mock = AsyncMock(side_effect=fake_check_fishing_status)
+    monkeypatch.setattr(actions, "check_fishing_status", check_mock)
+
+    success, image = await use_rollback_potion(user_id)
+
+    assert success is True
+    assert image == b"LEGACY_METEOR_IMAGE"
+    assert observed_status is not None
+    assert observed_status["meteor_fish_numbers"] == [123456, 654321]
+    assert observed_status["meteor_fish_records"] == [
+        {"number": 123456},
+        {"number": 654321},
+    ]
+
+
+@pytest.mark.parametrize("location_id", ["1", "10", "S1"])
+@pytest.mark.asyncio
+async def test_rollback_rejected_outside_starry_maps(db, monkeypatch, location_id):
+    """1-10 普通地图和 S1 不可使用，且不会消耗回档药水。"""
+    user_id = f"rollback-location-block-{location_id}"
+    await FishingUser.get_or_create_user(user_id, "地图限制测试")
+    await FishingUser.add_item(user_id, "回档药水", "potion", 1)
+    now = datetime.now()
+    await FishingUser.update_fishing_status(
+        user_id,
+        {
+            "location_id": location_id,
+            "start_time": (now - timedelta(hours=3)).isoformat(),
+            "last_settle_time": (now - timedelta(minutes=5)).isoformat(),
+            "fish_caught": [],
+            "bait_consumed": 0,
+            "cat_eaten_fish": [],
+            "time_potions_used": [],
+        },
+    )
+    check_mock = AsyncMock()
+    monkeypatch.setattr(actions, "check_fishing_status", check_mock)
+
+    success, message = await use_rollback_potion(user_id)
+
+    assert success is False
+    assert "仅可在星空地图" in message
+    check_mock.assert_not_awaited()
+    item = await FishingUser.get_item(user_id, "回档药水", "potion")
+    assert item is not None
+    assert item["count"] == 1
 
 
 @pytest.mark.asyncio
@@ -246,7 +393,7 @@ async def test_rollback_rejected_when_time_potion_used(db, monkeypatch):
     await FishingUser.update_fishing_status(
         user_id,
         {
-            "location_id": "1",
+            "location_id": "11",
             "start_time": (now - timedelta(hours=3)).isoformat(),
             "last_settle_time": (now - timedelta(minutes=5)).isoformat(),
             "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 5}],
@@ -283,7 +430,7 @@ async def test_rollback_rejected_when_old_format_time_potion_used(db, monkeypatc
     await FishingUser.update_fishing_status(
         user_id,
         {
-            "location_id": "1",
+            "location_id": "11",
             "start_time": (now - timedelta(hours=3)).isoformat(),
             "last_settle_time": (now - timedelta(minutes=5)).isoformat(),
             "fish_caught": [{"fish_id": "小鲫鱼", "rarity": "N", "count": 5}],

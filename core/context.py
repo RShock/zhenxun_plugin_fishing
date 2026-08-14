@@ -40,6 +40,7 @@ class SimulationResult:
     cat_gifts: dict
     utr_pity: int
     meteor_fish_numbers: list[int]
+    meteor_fish_records: list[tuple[int, datetime | None]]
     # 供时光药水的多阶段模拟完整继承鱼饵状态，避免第二阶段从数据库恢复库存。
     available_baits: dict[str, dict[str, Any]] = field(default_factory=dict)
     no_bait_mode: bool = False
@@ -117,6 +118,49 @@ def serialize_fish_caught(
         count = item[2]
         catch_time = item[3] if len(item) > 3 else None
         entry: dict = {"fish_id": fish.id, "rarity": rarity, "count": count}
+        if catch_time is not None:
+            entry["catch_time"] = catch_time.isoformat()
+        serialized.append(entry)
+    return serialized
+
+
+def deserialize_meteor_fish_records(
+    status_dict: dict,
+) -> list[tuple[int, datetime | None]]:
+    """读取带捕获时间的流星鱼记录，并兼容旧编号数组。
+
+    新状态以 ``meteor_fish_records`` 为权威来源；旧状态只有
+    ``meteor_fish_numbers`` 时将捕获时间记为 None。回档药水在长会话中
+    会保留这些无法判定时间的旧记录，优先避免玩家资产损失。
+    """
+    if "meteor_fish_records" not in status_dict:
+        return [
+            (int(number), None)
+            for number in status_dict.get("meteor_fish_numbers", [])
+        ]
+
+    records: list[tuple[int, datetime | None]] = []
+    for entry in status_dict.get("meteor_fish_records", []):
+        if not isinstance(entry, dict) or "number" not in entry:
+            continue
+        catch_time: datetime | None = None
+        raw_ct = entry.get("catch_time")
+        if raw_ct:
+            try:
+                catch_time = _make_naive(datetime.fromisoformat(raw_ct))
+            except (ValueError, TypeError):
+                pass
+        records.append((int(entry["number"]), catch_time))
+    return records
+
+
+def serialize_meteor_fish_records(
+    records: list[tuple[int, datetime | None]],
+) -> list[dict]:
+    """将逐条流星鱼记录序列化为 JSON 可存储格式。"""
+    serialized: list[dict] = []
+    for number, catch_time in records:
+        entry: dict = {"number": int(number)}
         if catch_time is not None:
             entry["catch_time"] = catch_time.isoformat()
         serialized.append(entry)

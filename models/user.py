@@ -1240,6 +1240,8 @@ class FishingUser(Model):
             "utr_pity": user.utr_pity_counter,
             "cat_frame_pity": user.cat_frame_pity_counter,
             "time_potions_used": [],
+            "meteor_fish_numbers": [],
+            "meteor_fish_records": [],
         }
         if group_id:
             user.fishing_status["group_id"] = str(group_id)

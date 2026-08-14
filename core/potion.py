@@ -67,6 +67,7 @@ async def use_time_potion_settle(
     all_bait_usage: dict[str, int] = {}
     all_cat_eaten: list = []
     all_meteor: list[int] = []
+    all_meteor_records: list = []
     all_buff_messages: list[str] = []
     current_frame_pity = frame_pity
     current_cat_frame_pity = cat_frame_pity
@@ -104,6 +105,7 @@ async def use_time_potion_settle(
             all_cat_eaten.extend(simulation1.cat_eaten_fish)
             if simulation1.meteor_fish_numbers:
                 all_meteor.extend(simulation1.meteor_fish_numbers)
+                all_meteor_records.extend(simulation1.meteor_fish_records)
             all_buff_messages.extend(ctx1.buff_messages)
 
             current_frame_pity = simulation1.frame_pity
@@ -169,6 +171,7 @@ async def use_time_potion_settle(
     all_cat_eaten.extend(simulation2.cat_eaten_fish)
     if simulation2.meteor_fish_numbers:
         all_meteor.extend(simulation2.meteor_fish_numbers)
+        all_meteor_records.extend(simulation2.meteor_fish_records)
     all_buff_messages.extend(ctx2.buff_messages)
 
     final_frame_pity = simulation2.frame_pity
@@ -206,6 +209,7 @@ async def use_time_potion_settle(
         cat_eaten_fish=total_cat_eaten,
         cat_gifts=merged_cat_gifts_result,
         meteor_fish_numbers=all_meteor if all_meteor else None,
+        meteor_fish_records=all_meteor_records if all_meteor_records else None,
         bait_usage=all_bait_usage,
     )
     if potion_count > 0:

@@ -764,7 +764,7 @@ code, .ic {
       <div class="cmd-card"><span class="cmd-name">时光药水</span><p class="cmd-desc">每瓶模拟 8 小时钓鱼，鱼获合并进当前钓鱼状态；收杆时统一入包、记录图鉴并触发自动锁鱼/卖鱼。不受其他药水的影响。</p></div>
       <div class="cmd-card"><span class="cmd-name">真多多药水</span><p class="cmd-desc">鱼竿等级临时 -1，鱼获数量翻倍（持续 8 小时/瓶）；对流星鱼也生效，掉落时获得两条相同编号。不可叠加，重复使用延长时间。与幸运药水、闪光药水不同时生效：已有其他药水覆盖时，新药水自动延后到覆盖结束后生效，拥有完整 8 小时区间。</p></div>
       <div class="cmd-card"><span class="cmd-name">幸运药水</span><p class="cmd-desc">持续 8 小时，双次结算取更高稀有度。对 UTR、木框、猫框也有效。与真多多药水、闪光药水不同时生效：已有其他药水覆盖时，新药水自动延后到覆盖结束后生效，拥有完整 8 小时区间。</p></div>
-      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">回溯最近 24 小时的钓鱼结果并重新结算该时段；24 小时之前的鱼获保留不变。鱼饵按被移除鱼获的比例退还。本次钓鱼期间使用过时光药水时不允许回档。会话不足 24 小时时退化为全额回档。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
+      <div class="cmd-card"><span class="cmd-name">回档药水</span><p class="cmd-desc">仅可在 11-20 星空地图使用，1-10 普通地图和 S1 猫猫乐园不可使用。回溯最近 24 小时的普通鱼获、猫吃鱼和流星鱼并重新结算该时段；24 小时之前的鱼获保留不变。鱼饵按被移除鱼获的比例退还。本次钓鱼期间使用过时光药水时不允许回档。会话不足 24 小时时退化为全额回档。结算后返回钓鱼状态图，不会收杆，也不占用每日状态次数。</p></div>
       <div class="cmd-card"><span class="cmd-name">鱼饵一览</span><p class="cmd-desc">蚯蚓 +20% / 虾米 +40% / 拟饵 +60% / 黄金 +80% / 魔法 +100% / 传说 +120% 速度加成。</p></div>
     </div>
     <div class="callout info" style="margin-top:10px">
@@ -1082,7 +1082,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">收竿提示</span>
-        <p class="cmd-desc">收竿结果出现“黑商已可用”时，表示普通黑商或智能黑商至少有一个入口当前可用；黑商过载冷却期间不会显示该提示。</p>
+        <p class="cmd-desc">收竿结果出现“黑商已可用”时，表示普通黑商或智能黑商至少有一个入口当前可用；黑商过载冷却期间不会显示该提示，但高稀有度换低稀有度仍可直接执行。</p>
       </div>
     </div>
   </div>
@@ -1096,7 +1096,7 @@ code, .ic {
       </div>
       <div class="cmd-card">
         <span class="cmd-name">普通黑商每日次数</span>
-        <p class="cmd-desc">每天第一次普通黑商免费；当天继续使用普通黑商时，每次消耗 1 张黑商额外兑换券。智能黑商当天已经执行过，也会占用这次免费机会。<strong>高稀有度换低稀有度（如 UR→SSR）不消耗次数</strong>，黑商很高兴收到更稀有的鱼。</p>
+        <p class="cmd-desc">每天第一次普通黑商免费；当天继续使用普通黑商时，每次消耗 1 张黑商额外兑换券。智能黑商当天已经执行过，也会占用这次免费机会。<strong>高稀有度换低稀有度（如 UR→SSR）不消耗次数</strong>，即使黑商因过载冷却还没来也能执行。</p>
       </div>
       <div class="cmd-card">
         <span class="cmd-name">同稀有度风险</span>

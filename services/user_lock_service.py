@@ -179,8 +179,9 @@ class user_operation_lock:
                     if self.wait_timeout is None:
                         await entry.lock.acquire()
                     else:
-                        async with asyncio.timeout(max(self.wait_timeout, 0.0)):
-                            await entry.lock.acquire()
+                        await asyncio.wait_for(
+                            entry.lock.acquire(), max(self.wait_timeout, 0.0)
+                        )
                 except TimeoutError as exc:
                     waited = monotonic() - wait_started
                     logger.warning(

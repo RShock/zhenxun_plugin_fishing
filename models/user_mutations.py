@@ -672,6 +672,8 @@ def apply_start_fishing(
         "frame_pity": user.frame_pity_counter,
         "utr_pity": user.utr_pity_counter,
         "cat_frame_pity": user.cat_frame_pity_counter,
+        "meteor_fish_numbers": [],
+        "meteor_fish_records": [],
     }
     mark_dirty(dirty, "fishing_status")
     return user.fishing_status

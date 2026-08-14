@@ -24,13 +24,36 @@ from .fishing_status import _build_buff_timeline
 
 # Scene special render marker S@effect and optional foreground *-fg.png
 _SCENE_FG_SUFFIXES = ("-fg", "_fg")
+_DEFAULT_SCENE_CANVAS_WIDTH = 330
+_SCENE_CANVAS_WIDTH_BY_MARKER = {"C660": 660}
 # 长钓线：自下而上扫描“稳定细线带”——单行非透明像素数 1~9（宽度 < 10），
 # 且连续 5 行宽度完全相同；取最靠近底部的 5 行作为拉伸采样带。找不到则不拉伸。
 # 结果按文件缓存。
 _LONGLINE_WIDTH_LIMIT = 10  # 宽度须 < 10
 _LONGLINE_BAND_ROWS = 5
 _LONGLINE_BAND_CACHE: dict[tuple[str, int, int], tuple[float, float] | None] = {}
+_LONGLINE_EFFECT_RE = re.compile(r"^longline(?:_(\d+(?:\.\d+)?))?$")
 _ACTOR_BRIGHTNESS_EFFECT_RE = re.compile(r"^dark(\d{1,3})$")
+
+
+def _longline_bottom_gap(effects: list[str]) -> float | None:
+    """Return the bottom gap percentage encoded by a longline effect.
+
+    ``longline`` keeps the legacy behavior and reaches the bottom edge;
+    ``longline_15`` stops 15% above the bottom edge.
+    """
+    for effect in effects:
+        matched = _LONGLINE_EFFECT_RE.fullmatch(effect.strip())
+        if not matched:
+            continue
+        raw_gap = matched.group(1)
+        if raw_gap is None:
+            return 0.0
+        try:
+            return min(max(float(raw_gap), 0.0), 100.0)
+        except ValueError:
+            return 0.0
+    return None
 
 
 def _actor_brightness(effects: list[str]) -> float:
@@ -204,6 +227,15 @@ def _point_on_polyline(
     return points[-1]
 
 
+def _parse_scene_canvas_width(stem: str) -> int:
+    """Parse an optional standalone logical-canvas marker from the scene filename."""
+    for token in stem.split("-"):
+        width = _SCENE_CANVAS_WIDTH_BY_MARKER.get(token.upper())
+        if width is not None:
+            return width
+    return _DEFAULT_SCENE_CANVAS_WIDTH
+
+
 def _parse_scene_layout(stem: str) -> dict:
     """解析场景文件名后缀，兼容旧高度、多轨道与特殊渲染标记。
 
@@ -217,12 +249,19 @@ def _parse_scene_layout(stem: str) -> dict:
     effects, layout_suffix = _parse_special_and_layout(suffix)
     layout_stem = f"_layout-_-{layout_suffix}"
     tracks = _parse_scene_tracks(layout_stem)
+    canvas_width = _parse_scene_canvas_width(stem)
     if tracks:
-        return {"mode": "tracks", "tracks": tracks, "effects": effects}
+        return {
+            "mode": "tracks",
+            "tracks": tracks,
+            "effects": effects,
+            "canvas_width": canvas_width,
+        }
     return {
         "mode": "heights",
         "heights": _parse_scene_heights(layout_stem),
         "effects": effects,
+        "canvas_width": canvas_width,
     }
 
 
@@ -313,7 +352,12 @@ def _place_on_heights(
 
 
 def _find_scene_file(location) -> tuple[Path | None, dict]:
-    default_layout = {"mode": "heights", "heights": [50], "effects": []}
+    default_layout = {
+        "mode": "heights",
+        "heights": [50],
+        "effects": [],
+        "canvas_width": _DEFAULT_SCENE_CANVAS_WIDTH,
+    }
     if not SCENES_IMAGES_PATH.exists():
         return None, default_layout
     for f in SCENES_IMAGES_PATH.iterdir():
@@ -601,8 +645,10 @@ def _actor_view(
         # 仅在脚部线以下绘制模糊倒影，不越过脚部线
         "mirror": "mirror" in effects,
         "mirror_body_h": round(mirror_body_h, 2),
+        "line_stop_bottom": 0.0,
     }
-    if "longline" in effects:
+    longline_bottom_gap = _longline_bottom_gap(effects)
+    if longline_bottom_gap is not None:
         # 自适应识别细钓线带；识别失败则退回普通渲染，避免误拉脚部
         band_ratios = _analyze_longline_band(image_path)
         if band_ratios is not None:
@@ -623,6 +669,7 @@ def _actor_view(
                     "line_img_top_pct": (
                         round(-body_ratio / band * 100.0, 4) if band > 1e-9 else -600.0
                     ),
+                    "line_stop_bottom": round(longline_bottom_gap, 2),
                     "line_body_ratio": round(body_ratio, 6),
                     "line_crop_ratio": round(crop_ratio, 6),
                 }
@@ -789,7 +836,9 @@ async def render_fishing_scene(
     scene_uri = scene_file.as_uri()
     fg_file = _find_foreground_file(location)
     foreground_uri = fg_file.as_uri() if fg_file and fg_file.exists() else ""
-    container_width = 330
+    container_width = int(
+        scene_layout.get("canvas_width", _DEFAULT_SCENE_CANVAS_WIDTH)
+    )
     player_list = _build_scene_actors(
         players, current_user_id, weather_info, scene_layout, container_width
     )

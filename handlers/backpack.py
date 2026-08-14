@@ -5,20 +5,20 @@
 from nonebot.adapters import Bot, Event
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
+
 from zhenxun.services.log import logger
 
 from ..backpack import (
-    BLACK_MARKET_REVOKE_USAGE,
     black_market_exchange,
     black_market_revoke,
     extract_market_exchange_input,
-    gift_fish,
     get_backpack_image,
     get_black_market_menu_options,
     get_collection_image,
     get_starry_exhibition_image,
     get_starry_ranking_image,
     get_white_market_menu_options,
+    gift_fish,
     is_likely_misfire,
     lock_fish,
     render_white_market_records,
@@ -29,8 +29,6 @@ from ..backpack import (
     white_market_exchange,
 )
 from ..core.bait import set_preferred_bait
-from .market_menu import try_send_market_menu
-from ..services.user_lock_service import event_user_and_at_ids, with_user_lock
 from ..matchers import (
     backpack_matcher,
     black_market_matcher,
@@ -49,6 +47,7 @@ from ..matchers import (
     white_market_exchange_matcher,
     white_market_matcher,
 )
+from ..services.user_lock_service import event_user_and_at_ids, with_user_lock
 from ..utils import (
     _ensure_user,
     _get_at_display_name,
@@ -58,7 +57,7 @@ from ..utils import (
     _send_image,
     _send_text,
 )
-
+from .market_menu import try_send_market_menu
 
 LOG_COMMAND = "钓鱼黑白商"
 
@@ -90,7 +89,9 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     is_private = _is_private_chat(event)
     fish_input = group[0] if group and group[0] else "全部"
     exclude_utr = not (group and group[0])
-    success, message = await sell_fish(user_id, fish_input, is_private=is_private, exclude_utr=exclude_utr)
+    success, message = await sell_fish(
+        user_id, fish_input, is_private=is_private, exclude_utr=exclude_utr
+    )
     await _send_text(matcher, message, user_id, is_private=is_private)
 
 
@@ -232,7 +233,9 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     is_private = _is_private_chat(event)
     raw_text = event.get_plaintext()
     exchange_input = _market_exchange_input_from_event(event)
-    success, message, should_reply = await white_market_exchange(user_id, exchange_input)
+    success, message, should_reply = await white_market_exchange(
+        user_id, exchange_input
+    )
     if not should_reply:
         _log_silent_market_command(user_id, "白商", raw_text)
         return

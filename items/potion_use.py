@@ -9,19 +9,20 @@ from datetime import datetime, timedelta
 
 from zhenxun.services.log import logger
 
+from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..core.cat_gift import default_cat_gifts
 from ..core.context import (
     deserialize_fish_caught,
+    deserialize_meteor_fish_records,
     normalize_time_potions,
     serialize_fish_caught,
+    serialize_meteor_fish_records,
 )
-from ..config import MAX_FRAME_BUFF_LAYERS, ConfigManager
 from ..models import BuffEffect, FishingBuff, FishingUser, _make_naive
 from ..scene_instance import get_scene_instance_id
 from ..services import get_or_create_user, ledger_service
-
 from ..shop.view import get_status_image
-
+from ..starry import is_starry_location
 
 _MUTEX_POTION_BUFFS = (
     (BuffEffect.BUFF_TYPE_DUODUO, "真多多药水"),
@@ -142,11 +143,16 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     if not status_dict:
         return False, "你还没有在钓鱼，无法使用回档药水！请先【钓鱼 地点编号】开始钓鱼"
 
-    user = await get_or_create_user(user_id)
+    user = await FishingUser.get_user(user_id)
+    if not user:
+        return False, "玩家数据不存在，无法使用回档药水"
     rollback_item = await FishingUser.get_item(user_id, "回档药水", "potion")
     potion_count = rollback_item["count"] if rollback_item else 0
     if potion_count < 1:
         return False, "回档药水不足，需要1瓶（当前0瓶）"
+
+    if not is_starry_location(status_dict.get("location_id", "")):
+        return False, "回档药水仅可在星空地图（11-20）使用，普通地图和猫猫乐园无法使用"
 
     # 使用过时光药水的钓鱼会话不允许回档
     time_potions_raw = normalize_time_potions(
@@ -171,6 +177,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     existing_cat_eaten = deserialize_fish_caught(
         status_dict.get("cat_eaten_fish", [])
     )
+    existing_meteor = deserialize_meteor_fish_records(status_dict)
 
     keep_fish: list = []
     remove_fish: list = []
@@ -190,6 +197,14 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
             keep_cat_eaten.append((fish, rarity, count, ct))
         else:
             remove_cat_eaten.append((fish, rarity, count, ct))
+
+    keep_meteor: list[tuple[int, datetime | None]] = []
+    remove_meteor: list[tuple[int, datetime | None]] = []
+    for number, ct in existing_meteor:
+        if not is_full_rollback and (ct is None or ct < rollback_cutoff):
+            keep_meteor.append((number, ct))
+        else:
+            remove_meteor.append((number, ct))
 
     # ── 估算鱼饵退还量 ──
     # bait_usage_log 只记录总消耗，无时间戳。用「被移除鱼数 / 总鱼数」
@@ -240,6 +255,8 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "cat_eaten_fish": serialize_fish_caught(keep_cat_eaten),
         # 猫礼物无法按时间拆分，重置为默认值
         "cat_gifts": default_cat_gifts() | {"cat_frame_pity": 0},
+        "meteor_fish_numbers": [number for number, _ in keep_meteor],
+        "meteor_fish_records": serialize_meteor_fish_records(keep_meteor),
         "time_potions_used": [],
         "bait_usage_log": new_bait_usage_log,
     }
@@ -269,6 +286,7 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
     logger.info(
         f"用户 {user_id} 使用回档药水，回溯{window_desc}，"
         f"保留{len(keep_fish)}条鱼获，移除{len(remove_fish)}条，"
+        f"保留{len(keep_meteor)}条流星鱼，移除{len(remove_meteor)}条，"
         f"退还鱼饵 {refunded_bait} 个"
     )
     await ledger_service.log_item_use(

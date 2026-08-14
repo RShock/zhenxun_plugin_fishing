@@ -17,6 +17,7 @@ from .constants import RARITY_MULTIPLIER
 from .core.starry_system import S2_TICKET_SCORE_THRESHOLD
 from .models import BuffEffect, FishingBuff, FishingUser, FishingWeather
 from .starry import get_starry_bonus_count, is_starry_location
+from .web.admin import AdminRequest, handle_admin_request
 
 _TZ = ZoneInfo("Asia/Shanghai")
 
@@ -225,6 +226,44 @@ def _route(path: str):
     return decorator
 
 
+def _status_reason(status: int) -> str:
+    return {
+        200: "OK",
+        204: "No Content",
+        303: "See Other",
+        400: "Bad Request",
+        401: "Unauthorized",
+        403: "Forbidden",
+        404: "Not Found",
+        413: "Payload Too Large",
+        500: "Internal Server Error",
+        503: "Service Unavailable",
+    }.get(status, "OK")
+
+
+async def _write_http_response(
+    writer: asyncio.StreamWriter,
+    status: int,
+    data: bytes,
+    content_type: str = "application/json; charset=utf-8",
+    headers: dict[str, str] | None = None,
+):
+    response_headers = {
+        "Content-Type": content_type,
+        "Content-Length": str(len(data)),
+        "Connection": "close",
+        **(headers or {}),
+    }
+    header_text = "".join(f"{key}: {value}\r\n" for key, value in response_headers.items())
+    response = (
+        f"HTTP/1.1 {status} {_status_reason(status)}\r\n"
+        f"{_CORS_HEADERS}"
+        f"{header_text}\r\n"
+    ).encode() + data
+    writer.write(response)
+    await writer.drain()
+
+
 async def _handle_request(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     try:
         request_line = await asyncio.wait_for(reader.readline(), timeout=5.0)
@@ -234,67 +273,89 @@ async def _handle_request(reader: asyncio.StreamReader, writer: asyncio.StreamWr
             return
 
         try:
-            parts = request_line.decode().split(" ")
-            method = parts[0]
+            parts = request_line.decode("latin-1").strip().split(" ")
+            method = parts[0].upper()
             path = parts[1] if len(parts) > 1 else "/"
         except (IndexError, UnicodeDecodeError):
             method = "GET"
             path = "/"
 
+        headers: dict[str, str] = {}
         while True:
             header = await asyncio.wait_for(reader.readline(), timeout=2.0)
             if header in (b"\r\n", b"\n", b""):
                 break
+            try:
+                key, value = header.decode("latin-1").split(":", 1)
+            except ValueError:
+                continue
+            headers[key.strip().lower()] = value.strip()
+
+        try:
+            content_length = max(0, int(headers.get("content-length", "0")))
+        except ValueError:
+            content_length = 0
+        if content_length > 2 * 1024 * 1024:
+            await _write_http_response(writer, 413, b'{"error":"request body too large"}')
+            return
+        body = (
+            await asyncio.wait_for(reader.readexactly(content_length), timeout=5.0)
+            if content_length
+            else b""
+        )
+        peer = writer.get_extra_info("peername")
+        client_host = peer[0] if isinstance(peer, tuple) and peer else ""
+
+        admin_response = await handle_admin_request(
+            AdminRequest(
+                method=method,
+                target=path,
+                headers=headers,
+                body=body,
+                client_host=client_host,
+            )
+        )
+        if admin_response is not None:
+            await _write_http_response(
+                writer,
+                admin_response.status,
+                admin_response.body_bytes(),
+                admin_response.content_type,
+                admin_response.headers,
+            )
+            return
 
         if method == "OPTIONS":
-            response = (
-                f"HTTP/1.1 204 No Content\r\n{_CORS_HEADERS}Content-Length: 0\r\n\r\n"
-            )
-            writer.write(response.encode())
-            await writer.drain()
+            await _write_http_response(writer, 204, b"", headers={"Content-Length": "0"})
             return
 
         static_resp = _try_serve_s2_static(path.split("?", 1)[0])
         if static_resp is not None:
             data, content_type, status = static_resp
-            reason = {200: "OK", 403: "Forbidden", 404: "Not Found"}.get(status, "OK")
-            response = (
-                f"HTTP/1.1 {status} {reason}\r\n"
-                f"Content-Type: {content_type}\r\n"
-                f"Content-Length: {len(data)}\r\n"
-                f"{_CORS_HEADERS}"
-                "\r\n"
-            ).encode() + data
-            writer.write(response)
-            await writer.drain()
+            await _write_http_response(writer, status, data, content_type)
             return
 
         handler = _ROUTES.get(path.split("?", 1)[0])
         if handler:
-            body = await handler()
-            status_line = "HTTP/1.1 200 OK"
+            data = (await handler()).encode("utf-8")
+            await _write_http_response(writer, 200, data)
         else:
-            body = json.dumps(
+            data = json.dumps(
                 {
                     "error": "not found",
-                    "available": [*list(_ROUTES.keys()), "/s2/"],
+                    "available": [
+                        *list(_ROUTES.keys()),
+                        "/s2/",
+                        "/fishing-admin/logs",
+                        "/fishing-admin/db",
+                    ],
                 },
                 ensure_ascii=False,
-            )
-            status_line = "HTTP/1.1 404 Not Found"
-
-        data = body.encode("utf-8")
-        response = (
-            f"{status_line}\r\n"
-            "Content-Type: application/json; charset=utf-8\r\n"
-            f"Content-Length: {len(data)}\r\n"
-            f"{_CORS_HEADERS}"
-            "\r\n"
-        ).encode() + data
-
-        writer.write(response)
-        await writer.drain()
-    except (asyncio.TimeoutError, ConnectionResetError, Exception):
+            ).encode("utf-8")
+            await _write_http_response(writer, 404, data)
+    except (asyncio.TimeoutError, ConnectionResetError, asyncio.IncompleteReadError):
+        pass
+    except Exception:
         pass
     finally:
         try:

@@ -275,8 +275,9 @@ async def _send_image(
     )
 
     async def send():
-        async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-            await _deliver_universal_message(msg)
+        await asyncio.wait_for(
+            _deliver_universal_message(msg), _MESSAGE_SEND_TIMEOUT_SECONDS
+        )
 
     if defer_user_lock_send(send):
         return
@@ -295,15 +296,17 @@ async def _send_text(
     )
 
     async def send():
-        async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-            await _deliver_universal_message(msg)
+        await asyncio.wait_for(
+            _deliver_universal_message(msg), _MESSAGE_SEND_TIMEOUT_SECONDS
+        )
 
     if defer_user_lock_send(send):
         # The deferred sender owns delivery; stop this matcher to avoid a second send.
         await matcher.finish()
         return
-    async with asyncio.timeout(_MESSAGE_SEND_TIMEOUT_SECONDS):
-        await _deliver_universal_message(msg, finish=True)
+    await asyncio.wait_for(
+        _deliver_universal_message(msg, finish=True), _MESSAGE_SEND_TIMEOUT_SECONDS
+    )
 
 
 __all__ = [

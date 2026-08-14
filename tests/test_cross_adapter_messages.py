@@ -44,9 +44,7 @@ def test_image_message_can_show_name_when_mention_is_unavailable():
 
 
 def test_private_text_message_does_not_prepend_at():
-    message = _build_text_message(
-        "done", user_id="user-open-id", is_private=True
-    )
+    message = _build_text_message("done", user_id="user-open-id", is_private=True)
 
     assert list(message) == [("text", "done")]
 
@@ -63,9 +61,7 @@ def test_text_message_prefers_real_mention_over_name_fallback():
 
 
 def test_text_message_can_show_name_when_mention_is_unavailable():
-    message = _build_text_message(
-        "done", is_private=False, display_name="FinalLone."
-    )
+    message = _build_text_message("done", is_private=False, display_name="FinalLone.")
 
     assert list(message) == [("text", "@FinalLone."), ("text", "done")]
 
@@ -213,9 +209,6 @@ def test_nickname_is_limited_to_database_field_length():
     )()
 
     assert _get_nickname(event) == "猫" * 255
-
-
-
 
 
 def test_official_group_context_uses_shared_numeric_group(monkeypatch):

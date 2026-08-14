@@ -561,6 +561,8 @@ def _try_append_starry_meteor_fish(
     rarity: str | None,
     meteor_fish_numbers: list[int] | None,
     effects: dict | None = None,
+    meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
+    catch_time: datetime | None = None,
 ) -> None:
     """星空地图额外掉落 6 位编号流星鱼（星空祈愿）。
 
@@ -608,12 +610,15 @@ def _try_append_starry_meteor_fish(
     if starry_fish is not None:
         # 真多多后置：先得到最终编号产物，再检查多多并复制为两条同号
         duoduo_active = bool(effects and int(effects.get("duoduo_count", 0) or 0) > 0)
-        meteor_fish_numbers.extend(
-            expand_starry_fish_with_duoduo(
-                starry_fish.fish_id,
-                duoduo_active=duoduo_active,
-            )
+        new_numbers = expand_starry_fish_with_duoduo(
+            starry_fish.fish_id,
+            duoduo_active=duoduo_active,
         )
+        meteor_fish_numbers.extend(new_numbers)
+        if meteor_fish_records is not None:
+            meteor_fish_records.extend(
+                (number, catch_time) for number in new_numbers
+            )
 
 
 def _append_fish(
@@ -687,6 +692,7 @@ def _catch_fish_at_interval(
     cat_gifts: dict | None = None,
     bait_id: str = "",
     meteor_fish_numbers: list[int] | None = None,
+    meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     catch_time: datetime | None = None,
 ) -> tuple[int, int]:
     """在一次钓鱼间隔执行捕获（含双倍捕获和额外掉落）。
@@ -722,7 +728,13 @@ def _catch_fish_at_interval(
             catch_time=catch_time,
         )
         _try_append_starry_meteor_fish(
-            location, fish, rarity, meteor_fish_numbers, effects=effects
+            location,
+            fish,
+            rarity,
+            meteor_fish_numbers,
+            effects=effects,
+            meteor_fish_records=meteor_fish_records,
+            catch_time=catch_time,
         )
         # 掉到材料时结束本次间隔（与原逻辑一致：材料不触发双倍捕获）
         if fish is not None and fish.id.startswith("cat_park_material:"):
@@ -806,6 +818,7 @@ def _try_catch_in_remaining_time(
     cat_gifts: dict | None = None,
     bait_id: str = "",
     meteor_fish_numbers: list[int] | None = None,
+    meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     catch_time: datetime | None = None,
 ) -> tuple[int, int, bool, int, int]:
     """在剩余时间内按概率尝试一次捕获。
@@ -830,6 +843,7 @@ def _try_catch_in_remaining_time(
         cat_gifts=cat_gifts,
         bait_id=bait_id,
         meteor_fish_numbers=meteor_fish_numbers,
+        meteor_fish_records=meteor_fish_records,
         catch_time=catch_time,
     )
     return 1, bait_remaining, no_bait_mode, frame_pity, utr_pity
@@ -853,6 +867,7 @@ class _SimulationState:
     fish_caught: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
     cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
     meteor_fish_numbers: list[int] = field(default_factory=list)
+    meteor_fish_records: list[tuple[int, datetime | None]] = field(default_factory=list)
     bait_usage: dict[str, int] = field(default_factory=dict)
     available_baits: dict[str, dict] = field(default_factory=dict)
     collected_fish_names: set[str] = field(default_factory=set)
@@ -1273,6 +1288,7 @@ async def simulate_fishing_loop(
                     cat_gifts=state.cat_gifts,
                     bait_id=str(state.bait.id) if state.bait else "",
                     meteor_fish_numbers=state.meteor_fish_numbers,
+                    meteor_fish_records=state.meteor_fish_records,
                     catch_time=state.current_time,
                 )
                 (
@@ -1315,6 +1331,7 @@ async def simulate_fishing_loop(
             cat_gifts=state.cat_gifts,
             bait_id=str(state.bait.id) if state.bait else "",
             meteor_fish_numbers=state.meteor_fish_numbers,
+            meteor_fish_records=state.meteor_fish_records,
             catch_time=state.current_time,
         )
         _record_bait_consumption(state, effects, fish_count_before)
@@ -1341,6 +1358,7 @@ async def simulate_fishing_loop(
         cat_gifts=state.cat_gifts,
         utr_pity=state.utr_pity,
         meteor_fish_numbers=state.meteor_fish_numbers,
+        meteor_fish_records=state.meteor_fish_records,
         available_baits=state.available_baits,
         no_bait_mode=state.no_bait_mode,
     )

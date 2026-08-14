@@ -24,7 +24,12 @@ from .gift import gift_fish
 from .lock import auto_lock_fish, lock_fish, unlock_fish
 from .selection import FishSelection, is_likely_misfire, parse_fish_selection
 from .sell import sell_bait, sell_fish
-from .view import get_backpack_image, get_collection_image, get_starry_exhibition_image, get_starry_ranking_image
+from .view import (
+    get_backpack_image,
+    get_collection_image,
+    get_starry_exhibition_image,
+    get_starry_ranking_image,
+)
 
 __all__ = [
     "get_backpack_image",

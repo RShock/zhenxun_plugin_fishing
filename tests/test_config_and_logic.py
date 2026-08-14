@@ -189,6 +189,8 @@ class TestCatchFish:
         location = ConfigManager.get_location("11")
         fish = ConfigManager.get_fish(location.fish_pool[0])
         meteor_numbers = []
+        meteor_records = []
+        catch_time = datetime.now() - timedelta(hours=2)
         monkeypatch.setattr(
             "zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system.random.random",
             lambda: 0.009,
@@ -198,9 +200,17 @@ class TestCatchFish:
             lambda start, end: start,
         )
 
-        _try_append_starry_meteor_fish(location, fish, "N", meteor_numbers)
+        _try_append_starry_meteor_fish(
+            location,
+            fish,
+            "N",
+            meteor_numbers,
+            meteor_fish_records=meteor_records,
+            catch_time=catch_time,
+        )
 
         assert meteor_numbers == [0]
+        assert meteor_records == [(0, catch_time)]
 
     def test_starry_meteor_fish_doubled_by_duoduo_same_id(self, monkeypatch):
         """真多多后置：掉落流星鱼后复制为两条相同编号。"""
