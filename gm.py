@@ -38,16 +38,33 @@ def _decode_fish_numeric_id(
         loc_id = "S1"
         fish_idx_str = numeric_id[2]
         rarity_idx_str = numeric_id[3]
-    elif numeric_id.isdigit():
-        if len(numeric_id) >= 4 and numeric_id[:2] == "10":
-            loc_id = "10"
-            fish_idx_str = numeric_id[2:-1]
-            rarity_idx_str = numeric_id[-1]
-        elif len(numeric_id) == 3:
-            loc_id = numeric_id[0]
-            fish_idx_str = numeric_id[1]
-            rarity_idx_str = numeric_id[2]
-        else:
+    elif numeric_id.isdigit() and len(numeric_id) >= 3:
+        # 数字 ID = 完整地图号 + 鱼序号 + 稀有度。按已配置地图号从长到短
+        # 匹配，避免 11-20 图被旧版三位数分支误判为无效 ID。
+        id_body = numeric_id[:-1]
+        rarity_idx_str = numeric_id[-1]
+        loc_id = None
+        fish_idx_str = ""
+        numeric_locations = sorted(
+            (
+                location
+                for location in ConfigManager.get_locations()
+                if str(location.id).isdigit()
+            ),
+            key=lambda location: len(str(location.id)),
+            reverse=True,
+        )
+        for candidate_location in numeric_locations:
+            candidate_id = str(candidate_location.id)
+            candidate_fish_idx = id_body[len(candidate_id) :]
+            if not id_body.startswith(candidate_id) or not candidate_fish_idx.isdigit():
+                continue
+            candidate_index = int(candidate_fish_idx)
+            if 1 <= candidate_index <= len(candidate_location.fish_pool):
+                loc_id = candidate_id
+                fish_idx_str = candidate_fish_idx
+                break
+        if loc_id is None:
             return None, None, None, None
     else:
         return None, None, None, None

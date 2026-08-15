@@ -111,6 +111,34 @@ class TestShopRenderStarryFrame:
         assert rod.get("cmd") == "建设星空艇"
         assert rod.get("price") == STARRY_SHIP_COST
 
+    async def test_rod_section_uses_base_level_for_max_check(self, monkeypatch):
+        """有效等级 20、基础等级 19 时，鱼店仍应显示升级入口。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.render import shop as shop_render
+
+        captured = {}
+
+        def _capture_template(name, **kwargs):
+            captured.update(kwargs)
+            return "<html>fake</html>"
+
+        monkeypatch.setattr(shop_render, "render_template", _capture_template)
+        await shop_render.render_shop(
+            [],
+            [],
+            rod_level=20,
+            rod_upgrade_price=8300000,
+            hook_level=1,
+            hook_upgrade_price=50,
+            user_id=USER_ID,
+            has_starry_ship=True,
+            base_rod_level=19,
+        )
+
+        rod = captured.get("rod_section") or {}
+        assert rod.get("is_max") is False
+        assert rod.get("cmd") == "升级钓竿"
+        assert rod.get("price") == 8300000
+
 
 class TestUpgradeRod:
     async def test_upgrade_rod_success(self, db):
@@ -135,6 +163,37 @@ class TestUpgradeRod:
         ok, msg = await upgrade_rod(USER_ID)
         assert ok is False
         assert "最高" in msg
+
+    async def test_upgrade_rod_base_19_with_bonus_can_reach_effective_21(self, db):
+        """雕像加成不得让总等级 20 提前触发满级；基础 19 仍可升到 20。"""
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
+
+        user = await db.user_get(USER_ID)
+        user.rod_level = 20
+        user.bonus_rod_level = 1
+        await db.items_add(USER_ID, STARRY_SHIP_ITEM_ID, STARRY_SHIP_ITEM_TYPE, 1)
+        expected_price = ConfigManager.get_rod_upgrade_price(19)
+        user.gold = expected_price
+
+        ok, msg = await upgrade_rod(USER_ID)
+
+        assert ok is True, msg
+        user_after = await db.user_get(USER_ID)
+        assert user_after.base_rod_level == 20
+        assert user_after.rod_level == 21
+        assert user_after.gold == 0
+
+    async def test_upgrade_rod_base_20_with_bonus_is_max(self, db):
+        user = await db.user_get(USER_ID)
+        user.rod_level = 21
+        user.bonus_rod_level = 1
+        user.gold = 999999999
+
+        ok, msg = await upgrade_rod(USER_ID)
+
+        assert ok is False
+        assert "最高" in msg
+        assert user.gold == 999999999
 
     async def test_upgrade_rod_level_10_requires_starry_ship(self, db):
         user = await db.user_get(USER_ID)

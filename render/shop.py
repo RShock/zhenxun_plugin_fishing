@@ -21,10 +21,15 @@ async def render_shop(
 ) -> bytes:
     # 未传时按无雕像加成处理；门禁/展示与定价一致，都基于基础等级
     base_level = rod_level if base_rod_level is None else base_rod_level
-    rod_section = {"is_max": rod_level >= 20}
-    if rod_level >= 20:
+    rod_section = {"is_max": base_level >= 20}
+    if base_level >= 20:
         rod_section["name"] = "🎣 钓竿已满级"
-        rod_section["desc"] = "当前等级: 20级 · 愿星钓竿"
+        if rod_level > base_level:
+            rod_section["desc"] = (
+                f"基础等级: {base_level}级 · 有效等级: {rod_level}级"
+            )
+        else:
+            rod_section["desc"] = "当前等级: 20级 · 愿星钓竿"
     elif base_level >= 10 and not has_starry_ship:
         # 基础 Lv.10+ 未建艇：入口固定为建艇（雕像把总等级顶到 11+ 也不能绕过）
         # 注意：此处用参数 has_starry_ship，不可再 import 同名函数遮蔽布尔值

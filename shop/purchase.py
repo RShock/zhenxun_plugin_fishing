@@ -19,9 +19,10 @@ async def _upgrade_equipment(user_id: str, equipment_type: str) -> tuple[bool, s
     user = await get_or_create_user(user_id)
 
     if equipment_type == "rod":
-        current_level = user.rod_level
-        # 定价与升到 11+ 的门禁都只用基础等级：雕像 +1 不抬商店价，也不能跳过建艇锁
-        pricing_level = user.base_rod_level
+        # 商店升级上限、定价与升到 11+ 的门禁都只用基础等级；
+        # 雕像加成仅提高有效等级，不能提前满级或跳过建艇锁。
+        current_level = user.base_rod_level
+        pricing_level = current_level
         name = "钓竿"
         max_level = 20
         get_price = ConfigManager.get_rod_upgrade_price

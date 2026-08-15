@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock
 import pytest
 
 from zhenxun.plugins.zhenxun_plugin_fishing import gm
+from zhenxun.plugins.zhenxun_plugin_fishing.config import (
+    ConfigManager,
+    generate_fish_numeric_id,
+)
 from zhenxun.plugins.zhenxun_plugin_fishing.gm import (
+    _decode_fish_numeric_id,
     _parse_item_input,
     parse_gm_add_body,
     parse_gm_item_specs,
@@ -408,6 +413,40 @@ class TestParseGmAddBody:
         assert specs == [("猫框", 5)]
         assert "1922570420" in target
         assert "3404193303" in target
+
+
+class TestGmFishNumericId:
+    @pytest.mark.parametrize("location_id", ["10", "11", "20"])
+    def test_decode_generated_two_digit_location_id(self, location_id):
+        location = ConfigManager.get_location(location_id)
+        numeric_id = generate_fish_numeric_id(location_id, 1, "N")
+
+        fish_name, rarity, decoded_location, fish_index = _decode_fish_numeric_id(
+            numeric_id
+        )
+
+        assert fish_name == location.fish_pool[0]
+        assert rarity == "N"
+        assert decoded_location == location_id
+        assert fish_index == 1
+
+    async def test_gm_give_fish_accepts_map_11_generated_id(self, monkeypatch):
+        location = ConfigManager.get_location("11")
+        numeric_id = generate_fish_numeric_id("11", 1, "SR")
+        add_fish = AsyncMock(
+            return_value={"messages": [], "achievement_messages": []}
+        )
+        log_operation = AsyncMock()
+        monkeypatch.setattr(gm, "add_fish_to_user", add_fish)
+        monkeypatch.setattr(gm, "log_gm_operation", log_operation)
+
+        ok, message = await gm.gm_give_fish("10001", numeric_id)
+
+        assert ok is True, message
+        add_fish.assert_awaited_once_with(
+            "10001",
+            [(location.fish_pool[0], "SR", numeric_id, 1)],
+        )
 
 
 class TestGmAddCommandPrefix:

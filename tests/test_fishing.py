@@ -622,6 +622,59 @@ class TestFishingLoopIntegration:
         assert result.bait_remaining == 0
         assert result.bait_usage == {"test-bait": 1}
 
+    async def test_full_interval_cat_eaten_catch_consumes_bait(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData, FishData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
+
+        ctx = await self._context(db, duration_minutes=0, bait_remaining=1)
+        ctx.bait = BaitData(
+            id=999, name="测试鱼饵", speed_bonus=0, price=1, description="测试"
+        )
+        monkeypatch.setattr(engine, "_calculate_fishing_interval", lambda *_: 5.0)
+
+        def catch(*args, **kwargs):
+            kwargs["cat_eaten_fish"].append(
+                (FishData(id="cat-eaten-fish", base_price=1), "N", 1)
+            )
+            return args[3], args[5]
+
+        monkeypatch.setattr(engine, "_catch_fish_at_interval", catch)
+        result = await engine.simulate_fishing_loop(ctx, time_credit_minutes=5)
+
+        assert result.fish_caught == []
+        assert len(result.cat_eaten_fish) == 1
+        assert result.bait_remaining == 0
+        assert result.bait_usage == {"999": 1}
+
+    async def test_remaining_time_cat_eaten_catch_consumes_bait(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import BaitData, FishData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
+
+        ctx = await self._context(db, duration_minutes=2, bait_remaining=1)
+        ctx.bait = BaitData(
+            id=999, name="测试鱼饵", speed_bonus=0, price=1, description="测试"
+        )
+        monkeypatch.setattr(engine, "_calculate_fishing_interval", lambda *_: 5.0)
+        monkeypatch.setattr(engine.random, "random", lambda: 0.0)
+
+        def catch(*args, **kwargs):
+            kwargs["cat_eaten_fish"].append(
+                (FishData(id="cat-eaten-fish", base_price=1), "N", 1)
+            )
+            return args[3], args[5]
+
+        monkeypatch.setattr(engine, "_catch_fish_at_interval", catch)
+        result = await engine.simulate_fishing_loop(ctx)
+
+        assert result.fish_caught == []
+        assert len(result.cat_eaten_fish) == 1
+        assert result.bait_remaining == 0
+        assert result.bait_usage == {"999": 1}
+
     async def test_utr_pity_149_notifies_after_guaranteed_catch(self, db, monkeypatch):
         from zhenxun.plugins.zhenxun_plugin_fishing.config import FishData
         from zhenxun.plugins.zhenxun_plugin_fishing.core import engine

@@ -1177,9 +1177,16 @@ def _select_window_action(
 
 
 def _record_bait_consumption(
-    state: _SimulationState, effects: dict, fish_count_before: int
+    state: _SimulationState,
+    effects: dict,
+    fish_count_before: int,
+    cat_eaten_count_before: int,
 ) -> None:
-    if len(state.fish_caught) <= fish_count_before:
+    # 捕获成功后即结算鱼饵；鱼被猫全部吃掉仍然属于成功捕获。
+    if (
+        len(state.fish_caught) <= fish_count_before
+        and len(state.cat_eaten_fish) <= cat_eaten_count_before
+    ):
         return
     consumed, state.bait_remaining, state.no_bait_mode = _consume_one_bait(
         state.bait_remaining, state.no_bait_mode, effects
@@ -1187,6 +1194,7 @@ def _record_bait_consumption(
     logger.debug(
         f"[材料调试] user={_debug_current_user_id} "
         f"fish_caught: {fish_count_before}→{len(state.fish_caught)}, "
+        f"cat_eaten: {cat_eaten_count_before}→{len(state.cat_eaten_fish)}, "
         f"consumed={consumed}, bait_remaining={state.bait_remaining}"
     )
     if consumed > 0 and state.bait:
@@ -1272,6 +1280,7 @@ async def simulate_fishing_loop(
             remaining_time = float(window_value)
             if remaining_time > 0:
                 fish_count_before = len(state.fish_caught)
+                cat_eaten_count_before = len(state.cat_eaten_fish)
                 remainder_result = _try_catch_in_remaining_time(
                     remaining_time,
                     fishing_interval,
@@ -1299,7 +1308,9 @@ async def simulate_fishing_loop(
                     state.utr_pity,
                 ) = remainder_result
                 if caught > 0:
-                    _record_bait_consumption(state, effects, fish_count_before)
+                    _record_bait_consumption(
+                        state, effects, fish_count_before, cat_eaten_count_before
+                    )
             break
 
         # 1-10/S1 看迷途风；11-20 看 collect_scene 解锁后 max_rarity=UTR
@@ -1319,6 +1330,7 @@ async def simulate_fishing_loop(
             and not _is_starry(ctx.location.id)
         )
         fish_count_before = len(state.fish_caught)
+        cat_eaten_count_before = len(state.cat_eaten_fish)
         state.frame_pity, state.utr_pity = _catch_fish_at_interval(
             effects,
             ctx.location,
@@ -1334,7 +1346,9 @@ async def simulate_fishing_loop(
             meteor_fish_records=state.meteor_fish_records,
             catch_time=state.current_time,
         )
-        _record_bait_consumption(state, effects, fish_count_before)
+        _record_bait_consumption(
+            state, effects, fish_count_before, cat_eaten_count_before
+        )
 
         if utr_was_guaranteed and state.utr_pity == 0:
             msg = (

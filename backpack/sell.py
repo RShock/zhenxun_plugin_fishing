@@ -15,8 +15,6 @@ from ..services import earn_gold, get_or_create_user
 from ..services.gold_service import _gold_transaction
 from .selection import FishSelection, parse_fish_selection
 
-_BAIT_SELL_RATIO = 1.0
-
 
 async def sell_fish(
     user_id: str,
@@ -73,7 +71,7 @@ async def sell_fish(
     logger.info(f"用户 {user_id} 卖出鱼，获得 {total_coins} 钓鱼币")
 
     rod_upgrade_hint = ""
-    if user.rod_level < 20:
+    if user.base_rod_level < 20:
         next_rod_price = ConfigManager.get_rod_upgrade_price(user.base_rod_level)
         rod_diff = next_rod_price - user.gold
         if rod_diff > 0:
@@ -186,7 +184,7 @@ async def _get_bait_inventory_hint(user_id: str) -> str:
 
 
 async def sell_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
-    """卖出用户所有指定的鱼饵，按购买价的50%回收。"""
+    """卖出用户所有指定的鱼饵，回收单价使用鱼饵购买价。"""
     if not bait_input:
         hint = await _get_bait_inventory_hint(user_id)
         return False, f"格式：卖出鱼饵 鱼饵ID(1-6)/名称\n{hint}"
@@ -202,7 +200,7 @@ async def sell_bait(user_id: str, bait_input: str) -> tuple[bool, str]:
         return False, f"你没有{bait.name}可以出售\n{hint}"
 
     count = bait_item["count"]
-    sell_price = max(1, int(bait.price * _BAIT_SELL_RATIO))
+    sell_price = bait.price
     total_coins = sell_price * count
 
     # 扣饵、金币入账、鱼饵字段更新必须在同一事务中

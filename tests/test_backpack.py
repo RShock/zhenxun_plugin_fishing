@@ -19,6 +19,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.backpack import (
     gift_fish,
     render_white_market_records,
     lock_fish,
+    sell_bait,
     sell_fish,
     smart_black_market_exchange,
     unlock_fish,
@@ -298,6 +299,32 @@ class TestStarryRankingScope:
         assert called["member"] is False
         assert captured["scope"] == "全服"
         assert [e[0] for e in captured["entries"]] == ["u1"]
+
+
+class TestSellBait:
+    async def test_sell_bait_uses_full_purchase_price(self, db, monkeypatch):
+        bait = ConfigManager.get_bait("1")
+        count = 3
+        await db.items_add(USER_ID, str(bait.id), "bait", count)
+        user = await db.user_get(USER_ID)
+        earned = []
+
+        async def fake_earn_gold(user_id, amount, operation, reason):
+            earned.append((user_id, amount, operation, reason))
+            user.gold += amount
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.backpack.sell.earn_gold",
+            fake_earn_gold,
+        )
+
+        ok, message = await sell_bait(USER_ID, str(bait.id))
+
+        expected = bait.price * count
+        assert ok is True, message
+        assert user.gold == expected
+        assert earned[0][1] == expected
+        assert str(expected) in message
 
 
 class TestSellFish:
