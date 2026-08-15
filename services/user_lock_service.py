@@ -99,6 +99,27 @@ def _task_name() -> str:
         return repr(task)
 
 
+async def _acquire_lock(lock: asyncio.Lock, wait_timeout: float | None) -> None:
+    """可取消地获取锁，避免 wait_for 子任务在取消竞态中遗留已获取的锁。"""
+    if wait_timeout is None:
+        await lock.acquire()
+        return
+
+    acquire_task = asyncio.create_task(lock.acquire())
+    try:
+        await asyncio.wait_for(asyncio.shield(acquire_task), max(wait_timeout, 0.0))
+    except BaseException:
+        acquire_task.cancel()
+        acquired = False
+        try:
+            acquired = await acquire_task
+        except asyncio.CancelledError:
+            pass
+        if acquired and lock.locked():
+            lock.release()
+        raise
+
+
 def event_user_ids(
     event: Event, _args: tuple[Any, ...], _kwargs: dict[str, Any]
 ) -> list[str]:
@@ -176,13 +197,8 @@ class user_operation_lock:
                 )
                 contended = entry.lock.locked()
                 try:
-                    if self.wait_timeout is None:
-                        await entry.lock.acquire()
-                    else:
-                        await asyncio.wait_for(
-                            entry.lock.acquire(), max(self.wait_timeout, 0.0)
-                        )
-                except TimeoutError as exc:
+                    await _acquire_lock(entry.lock, self.wait_timeout)
+                except asyncio.TimeoutError as exc:
                     waited = monotonic() - wait_started
                     logger.warning(
                         "钓鱼用户锁等待超时: "

@@ -255,6 +255,7 @@ async def test_status_and_scene_endpoints_keep_output_contract(monkeypatch):
         weathers={"lake": {"type": "sunny"}},
         global_frame_count=0,
         starry_bonus_count=0,
+        cat_nest_count=0,
     )
     monkeypatch.setattr(
         status_api, "_load_scene_snapshot", lambda: _async_value(snapshot)
