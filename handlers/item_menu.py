@@ -17,7 +17,7 @@ from ..utils import _get_group_context_id, _is_official_qq_group_event
 
 _KEYBOARD_ROWS_PER_MESSAGE = 5
 _ITEM_BUTTONS_PER_ROW = 2
-_UTR_MENU_LIMIT = 10
+_UTR_MENU_LIMIT = 20
 _BUTTON_LABEL_MAX_LENGTH = 10
 
 @dataclass(frozen=True)

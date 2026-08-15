@@ -221,7 +221,7 @@ class UseCheckContext:
             return 0
         return min(max(values) // STARRY_BONUS_VALUE, STARRY_MAX_LAYERS)
 
-    async def utr_options(self, *, limit: int = 10) -> list[UtrUseOption]:
+    async def utr_options(self, *, limit: int = 20) -> list[UtrUseOption]:
         collected = self.collected()
         options: list[UtrUseOption] = []
         for location in ConfigManager.get_locations():
@@ -233,6 +233,8 @@ class UseCheckContext:
             if any((fish_name, "UR") not in collected for fish_name in fish_names):
                 continue
             for fish_name in fish_names:
+                if (fish_name, "UTR") in collected:
+                    continue
                 options.append(UtrUseOption(str(location.id), fish_name))
                 if len(options) >= limit:
                     return options
@@ -341,6 +343,8 @@ async def _check_utr_ticket(context: UseCheckContext, arg: str) -> str:
     location = ConfigManager.get_location(target.location_id)
     fish_names = list(location.fish_pool) if location else []
     collected = context.collected()
+    if (target.name, "UTR") in collected:
+        return f"无法兑换：你已解锁 {target.name} UTR，请选择尚未解锁的鱼"
     if not any((name, "UTR") in collected for name in fish_names):
         return (
             f"无法兑换：需要先在【{target.location_name}】解锁至少 1 条 "

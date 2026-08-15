@@ -81,7 +81,10 @@ def _buff(buff_type: str, target_type: str, target_id: str = "", value: int = 5)
 @pytest.mark.asyncio
 async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
     fish_name = "UTR\u9c7c"
-    location = SimpleNamespace(id="13", name="13\u56fe", fish_pool=[fish_name])
+    locked_fish_name = "\u5f85\u89e3\u9501UTR\u9c7c"
+    location = SimpleNamespace(
+        id="13", name="13\u56fe", fish_pool=[fish_name, locked_fish_name]
+    )
     monkeypatch.setattr(use_checks.ConfigManager, "get_locations", lambda: [location])
     monkeypatch.setattr(
         use_checks.ConfigManager,
@@ -105,7 +108,10 @@ async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
         items=items,
         bait_id="1",
         fishing_status=status,
-        collection={fish_name: {"UR": 1, "UTR": 1}},
+        collection={
+            fish_name: {"UR": 1, "UTR": 1},
+            locked_fish_name: {"UR": 1},
+        },
         daily_counters={},
         character_slots=[None, None, None],
         corn=6,
@@ -303,21 +309,19 @@ def test_unavailable_text_does_not_create_keyboard_rows(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_utr_ticket_menu_is_limited_to_ten_and_marks_map_id(monkeypatch):
+async def test_utr_ticket_menu_shows_twenty_locked_eligible_fish(monkeypatch):
     locations = [
-        SimpleNamespace(
-            id="13", fish_pool=[f"\u5341\u4e09\u9c7c{i}" for i in range(1, 7)]
-        ),
-        SimpleNamespace(
-            id="14", fish_pool=[f"\u5341\u56db\u9c7c{i}" for i in range(1, 7)]
-        ),
+        SimpleNamespace(id="13", fish_pool=[f"十三鱼{i}" for i in range(1, 13)]),
+        SimpleNamespace(id="14", fish_pool=[f"十四鱼{i}" for i in range(1, 13)]),
     ]
     monkeypatch.setattr(use_checks.ConfigManager, "get_locations", lambda: locations)
     collection = {
-        fish_name: {"UR": 1, "UTR": 1}
+        fish_name: {"UR": 1}
         for location in locations
         for fish_name in location.fish_pool
     }
+    collection["十三鱼1"]["UTR"] = 1
+    collection["十四鱼1"]["UTR"] = 1
     user = SimpleNamespace(
         items=dict([_item("utr_select_ticket", "ticket", 2)]),
         collection=collection,
@@ -327,36 +331,42 @@ async def test_utr_ticket_menu_is_limited_to_ten_and_marks_map_id(monkeypatch):
     state = await item_menu.get_utr_ticket_menu_state("user", context=context)
 
     assert state.ticket_count == 2
-    assert len(state.options) == 10
-    assert state.options[0].label == "13\u56fe \u5341\u4e09\u9c7c1"
-    assert state.options[0].command == (
-        "\u9493\u9c7c\u4f7f\u7528 UTR\u81ea\u9009\u5238 \u5341\u4e09\u9c7c1"
-    )
-    assert state.options[-1].label.startswith("14\u56fe ")
+    assert len(state.options) == 20
+    assert state.options[0].label == "13图 十三鱼2"
+    assert state.options[0].command == "钓鱼使用 UTR自选券 十三鱼2"
+    commands = {option.command for option in state.options}
+    assert "钓鱼使用 UTR自选券 十三鱼1" not in commands
+    assert "钓鱼使用 UTR自选券 十四鱼1" not in commands
+    assert state.options[-1].label == "14图 十四鱼10"
 
 
-def test_utr_ticket_menu_builds_two_messages_with_five_rows(monkeypatch):
+def test_utr_ticket_menu_builds_two_pages_with_five_by_two_layout(monkeypatch):
     _install_fake_qq_adapter(monkeypatch)
     options = [
         item_menu.UseItemMenuOption(
-            label=f"13\u56fe \u9c7c{i}",
-            command=f"\u9493\u9c7c\u4f7f\u7528 UTR\u81ea\u9009\u5238 \u9c7c{i}",
+            label=f"13图 鱼{i}",
+            command=f"钓鱼使用 UTR自选券 鱼{i}",
         )
-        for i in range(10)
+        for i in range(20)
     ]
 
     messages = item_menu.build_qq_use_item_messages(
         options,
-        title="\u9009\u62e9 UTR",
-        buttons_per_row=1,
+        title="选择 UTR",
+        buttons_per_row=2,
     )
 
     assert len(messages) == 2
     for message in messages:
         keyboard = message[1][1]
         assert len(keyboard.content.rows) == 5
-        assert all(len(row.buttons) == 1 for row in keyboard.content.rows)
-        assert all(row.buttons[0].action.enter is True for row in keyboard.content.rows)
+        assert all(len(row.buttons) == 2 for row in keyboard.content.rows)
+        assert all(
+            button.action.enter is True
+            for row in keyboard.content.rows
+            for button in row.buttons
+        )
     assert messages[0][1][1].content.rows[0].buttons[0].action.data == (
-        "\u9493\u9c7c\u4f7f\u7528 UTR\u81ea\u9009\u5238 \u9c7c0"
+        "钓鱼使用 UTR自选券 鱼0"
     )
+    assert messages[1][0][1].endswith("（2/2）")

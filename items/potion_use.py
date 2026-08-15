@@ -738,6 +738,10 @@ async def use_utr_select_ticket(
             f"未找到鱼种「{fish_name}」，请输入正确的鱼名（如地图中的 UTR 鱼）",
         )
 
+    collected = await FishingUser.get_user_collected(user_id)
+    if (target.name, "UTR") in collected:
+        return False, f"无法兑换：你已解锁 {target.name} UTR，请选择尚未解锁的鱼"
+
     if not await _location_has_any_utr(user_id, target.location_id):
         return (
             False,

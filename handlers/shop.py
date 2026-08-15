@@ -2,6 +2,7 @@
 商店 & 升级 handler — 鱼店、升级钓竿/鱼钩、购买、展示栏、打窝、兑换。
 """
 
+from nonebot import logger
 from nonebot.adapters import Bot, Event
 from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
@@ -45,14 +46,43 @@ from .item_menu import (
     is_utr_ticket_name,
     try_send_use_item_menu,
 )
+from .shop_menu import (
+    build_shop_menu_fallback_text,
+    build_shop_menu_markdown,
+    get_shop_menu_state,
+    try_send_shop_menu,
+)
 
 
 @shop_matcher.handle()
-async def _(event: Event, matcher: Matcher):
+async def show_shop(bot: Bot, event: Event, matcher: Matcher):
+    """图片与 Markdown 按钮分开发送，避免 QQBot 混合消息限制。"""
     user_id, _ = await _ensure_user(event)
     is_private = _is_private_chat(event)
-    image = await get_shop_image(user_id)
-    await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+    state = await get_shop_menu_state(user_id)
+
+    try:
+        image = await get_shop_image(user_id)
+        await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+    except Exception as e:
+        # 图片失败不能阻止购买入口发送；两条消息彼此独立。
+        logger.warning(f"[鱼店] 图片发送失败，继续发送购买菜单: {e}")
+
+    markdown = build_shop_menu_markdown(state)
+    if await try_send_shop_menu(
+        bot,
+        event,
+        state=state,
+        title=markdown,
+    ):
+        return
+
+    await _send_text(
+        matcher,
+        build_shop_menu_fallback_text(state),
+        user_id,
+        is_private=is_private,
+    )
 
 
 @upgrade_rod_matcher.handle()
@@ -298,7 +328,7 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
             event,
             options=state.options,
             title="🎫 选择要兑换的 UTR 鱼",
-            buttons_per_row=1,
+            buttons_per_row=2,
         ):
             return
 

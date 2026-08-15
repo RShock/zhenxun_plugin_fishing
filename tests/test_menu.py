@@ -73,6 +73,11 @@ def test_qq_keyboard_buttons_submit_commands_directly(monkeypatch):
     assert [button.action.data for button in buttons] == [
         command for row in menu._MENU_ROWS for _, command in row
     ]
+    commands = [command for row in menu._MENU_ROWS for _, command in row]
+    assert "钓鱼使用" in commands
+    assert "鱼店购买" in commands
+    assert "自动卖鱼" not in commands
+    assert "自动锁鱼" not in commands
 
 
 @pytest.mark.asyncio
