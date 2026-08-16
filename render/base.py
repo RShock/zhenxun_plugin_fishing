@@ -363,9 +363,9 @@ _REWARD_POOL_RARITY = {
 def _pool_mark_rarity(reward_pool: str = "", display_score: int = 0) -> str:
     """Map starry reward pool / score to fish rarity color key.
 
-    奖池：无→N、低→R、中→SR、高→SSR、究极→UR；展示分 ≥15 升为 UTR。
+    奖池：无→N、低→R、中→SR、高→SSR、究极→UR；展示分 ≥16 升为 UTR。
     """
-    if int(display_score or 0) >= 15:
+    if int(display_score or 0) >= 16:
         return "UTR"
     key = (reward_pool or "none").strip().lower()
     return _REWARD_POOL_RARITY.get(key, "N")
@@ -395,7 +395,7 @@ def _starry_feature_digit_styles(
 ) -> tuple[list[bool], list[str | None], list[str | None]]:
     """Return matched mask + pool-tier backgrounds for each digit.
 
-    命中位由番型 span 决定（屁胡只标同号）；背景色按奖池，≥15 分用 UTR 色。
+    命中位由番型 span 决定（屁胡只标同号）；背景色按奖池，≥16 分用 UTR 色。
     """
     mask = [False] * 6
     for feature in features or []:

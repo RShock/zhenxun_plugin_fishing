@@ -569,7 +569,7 @@ class TestStarWishNumbers:
 
 
     def test_pihu_digit_mark_only_same_numbers(self):
-        """屁胡只高亮同号数字；卡片外壳按奖池稀有度染色（≥15 分 UTR）。"""
+        """屁胡只高亮同号数字；卡片外壳按奖池稀有度染色（≥16 分 UTR）。"""
         from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
             RARITY_COLORS,
             _starry_feature_digit_styles,
@@ -596,7 +596,7 @@ class TestStarWishNumbers:
         # 对比文字色必须存在且与背景色搭配（暗底→白字，亮底→深字）
         assert cards[0]["pool_text_color"] in ("#ffffff", "#1f2937")
 
-        # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥15 分 → UTR
+        # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥16 分 → UTR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature
 
         feat = StarryFeature("pihu", "pihu", "1,2,6", 0.802444)
@@ -619,6 +619,14 @@ class TestStarWishNumbers:
             "002150",
             reward_pool="ultimate",
             display_score=15,
+        )
+        assert utr_colors[0] == RARITY_COLORS["UR"]
+
+        _mask, utr_colors, _ = _starry_feature_digit_styles(
+            [feat],
+            "002150",
+            reward_pool="ultimate",
+            display_score=16,
         )
         assert utr_colors[0] == RARITY_COLORS["UTR"]
 
