@@ -223,7 +223,7 @@ class UseCheckContext:
 
     async def utr_options(self, *, limit: int = 20) -> list[UtrUseOption]:
         collected = self.collected()
-        options: list[UtrUseOption] = []
+        candidates: list[tuple[int, int, UtrUseOption]] = []
         for location in ConfigManager.get_locations():
             fish_names = list(location.fish_pool)
             if not fish_names:
@@ -232,13 +232,22 @@ class UseCheckContext:
                 continue
             if any((fish_name, "UR") not in collected for fish_name in fish_names):
                 continue
-            for fish_name in fish_names:
+            for fish_index, fish_name in enumerate(fish_names, start=1):
                 if (fish_name, "UTR") in collected:
                     continue
-                options.append(UtrUseOption(str(location.id), fish_name))
-                if len(options) >= limit:
-                    return options
-        return options
+                location_id = str(location.id)
+                location_order = (
+                    int(location_id) if location_id.isdigit() else -1
+                )
+                candidates.append(
+                    (
+                        location_order,
+                        fish_index,
+                        UtrUseOption(location_id, fish_name),
+                    )
+                )
+        candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        return [option for _, _, option in candidates[:limit]]
 
 
 def _insufficient_reason(canonical_name: str) -> str:

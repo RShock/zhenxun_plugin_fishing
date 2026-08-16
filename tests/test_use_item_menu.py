@@ -331,12 +331,12 @@ async def test_utr_ticket_menu_shows_twenty_locked_eligible_fish(monkeypatch):
 
     assert state.ticket_count == 2
     assert len(state.options) == 20
-    assert state.options[0].label == "13图 十三鱼2"
-    assert state.options[0].command == "钓鱼使用 UTR自选券 十三鱼2"
+    assert state.options[0].label == "14图 十四鱼12"
+    assert state.options[0].command == "钓鱼使用 UTR自选券 十四鱼12"
     commands = {option.command for option in state.options}
     assert "钓鱼使用 UTR自选券 十三鱼1" not in commands
     assert "钓鱼使用 UTR自选券 十四鱼1" not in commands
-    assert state.options[-1].label == "14图 十四鱼10"
+    assert state.options[-1].label == "13图 十三鱼4"
 
 
 def test_utr_ticket_menu_builds_two_pages_with_five_by_two_layout(monkeypatch):
