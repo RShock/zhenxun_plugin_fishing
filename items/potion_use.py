@@ -488,11 +488,6 @@ async def use_display_frame_buff(
     user = await get_or_create_user(user_id)
     if user.display_frames <= 0:
         return False, "木框不足，当前没有木框"
-    # 硬上限：不管用户请求多少个，最多使用 MAX_FRAME_BUFF_LAYERS 个
-    capped = False
-    if count > MAX_FRAME_BUFF_LAYERS:
-        capped = True
-        count = MAX_FRAME_BUFF_LAYERS
     # 宽容机制：请求数量超出库存时，使用全部剩余木框
     if user.display_frames < count:
         count = user.display_frames
@@ -508,33 +503,40 @@ async def use_display_frame_buff(
 
     duration_hours = ConfigManager.get_nest_duration_hours()
 
-    # 第一阶段：填满到上限（新增 buff 记录）
+    # 第一阶段：填满基础效果上限（新增 buff 记录）
     layers_to_add = min(count, max(0, MAX_FRAME_BUFF_LAYERS - total_layers))
-    # 第二阶段：剩余木框循环延长已有 buff（同一 buff 可被多次延长）
+    # 第二阶段：剩余木框循环延长 buff（同一 buff 可被多次延长，且无顺延上限）
     remaining = count - layers_to_add
     extended_count = 0
-    if remaining > 0 and current_frame_buffs:
+    extension_delta = timedelta(hours=duration_hours)
+    new_frame_buffs = []
+    for _ in range(layers_to_add):
+        new_frame_buffs.append(
+            await FishingBuff.add_global_buff(
+                buff_type=BuffEffect.BUFF_TYPE_FRAME,
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(hours=duration_hours),
+                value=5,
+                description=f"木框效果，1-10图与S1钓鱼速度+5%",
+            )
+        )
+
+    all_frame_buffs = current_frame_buffs + new_frame_buffs
+    if remaining > 0 and all_frame_buffs:
         extended_count = remaining
-        extension_delta = timedelta(hours=duration_hours)
-        for i in range(remaining):
-            buff = current_frame_buffs[i % len(current_frame_buffs)]
-            buff.end_time = _make_naive(buff.end_time) + extension_delta
-            await buff.save(update_fields=["end_time"])
+        # 按结束时间顺序轮转延长。按批次保存，避免超量使用时每个木框都产生一次数据库写入。
+        rounds, remainder = divmod(remaining, len(all_frame_buffs))
+        for i, buff in enumerate(all_frame_buffs):
+            extension_count = rounds + (1 if i < remainder else 0)
+            if extension_count:
+                buff.end_time = _make_naive(buff.end_time) + extension_delta * extension_count
+                await buff.save(update_fields=["end_time"])
 
     actual_frames = layers_to_add + extended_count
     if actual_frames == 0:
-        return False, f"全图木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
+        return False, "当前没有可用的木框效果，无法继续使用"
 
     await FishingUser.reduce_display_frames(user_id, actual_frames)
-
-    for _ in range(layers_to_add):
-        await FishingBuff.add_global_buff(
-            buff_type=BuffEffect.BUFF_TYPE_FRAME,
-            start_time=datetime.now(),
-            end_time=datetime.now() + timedelta(hours=duration_hours),
-            value=5,
-            description=f"木框效果，1-10图与S1钓鱼速度+5%",
-        )
 
     new_total = total_layers + layers_to_add
 
@@ -550,10 +552,6 @@ async def use_display_frame_buff(
 
     if layers_to_add > 0 and extended_count > 0:
         msg += f"\n已满{MAX_FRAME_BUFF_LAYERS * 5}%上限，延长了{extended_count}次已有木框buff（每次+{duration_hours}小时）"
-    if actual_frames < count:
-        msg += f"\n无已有木框buff可延长，仅消耗{actual_frames}个木框，{count - actual_frames}个未消耗"
-    if capped:
-        msg += f"\n木框使用上限为{MAX_FRAME_BUFF_LAYERS}个，已自动调整使用数量"
 
     logger.info(f"用户 {user_id} 使用木框{layers_to_add}层，延长{extended_count}次，当前全图{new_total}层")
     await ledger_service.log_item_use(

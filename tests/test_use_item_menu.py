@@ -155,13 +155,12 @@ async def test_use_item_menu_hides_contextually_full_nest_items(monkeypatch):
     assert "\u9493\u9c7c\u4f7f\u7528 UTR\u81ea\u9009\u5238" in commands
     assert "\u9493\u9c7c\u4f7f\u7528 \u5927\u80a5\u9c7c" in commands
     assert "\u9493\u9c7c\u4f7f\u7528 \u9999\u751c\u7389\u7c73" not in commands
-    assert "\u9493\u9c7c\u4f7f\u7528 \u5c55\u793a\u6728\u6846" not in commands
+    assert "\u9493\u9c7c\u4f7f\u7528 \u5c55\u793a\u6728\u6846" in commands
     assert "\u9493\u9c7c\u4f7f\u7528 \u732b\u732b\u6846" not in commands
     assert (
         "\u5f53\u524d\u5730\u70b9\u6253\u7a9d\u6548\u679c\u5df2\u6ee1"
         in reasons["\u9999\u751c\u7389\u7c73"]
     )
-    assert "50%" in reasons["\u5c55\u793a\u6728\u6846"]
     assert "50%" in reasons["\u732b\u732b\u6846"]
 
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from ..config import ConfigManager
-from ..constants import DAILY_NEST_LIMIT, MAX_FRAME_BUFF_LAYERS, MAX_NEST_LAYERS
+from ..constants import DAILY_NEST_LIMIT, MAX_NEST_LAYERS
 from ..core.context import normalize_time_potions
 from ..models import BuffEffect, FishingBuff
 from ..models import user_mutations as mut
@@ -292,11 +292,7 @@ async def _check_corn(context: UseCheckContext) -> str:
 
 
 async def _check_display_frame(context: UseCheckContext) -> str:
-    if (
-        await context.global_buff_count(BuffEffect.BUFF_TYPE_FRAME)
-        >= MAX_FRAME_BUFF_LAYERS
-    ):
-        return f"全图展示木框效果已满{MAX_FRAME_BUFF_LAYERS * 5}%，无法继续使用"
+    # 基础效果达到 10 层后仍可继续使用木框，顺延已有 buff 的持续时间。
     return ""
 
 

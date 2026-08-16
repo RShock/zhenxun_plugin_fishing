@@ -1160,7 +1160,7 @@ class TestFrameBuffExtension:
             assert old_buffs[i].end_time == original_end_times[i]
 
     async def test_frame_more_than_extendable(self, db, monkeypatch):
-        """已有10个frame buff、请求15个木框：cap到10个，10个buff各延长1次。"""
+        """已有10个frame buff、请求15个木框：不截断，前5个buff延长2次、后5个延长1次。"""
         user = await db.user_get(USER_ID)
         user.display_frames = 20
         await start_fishing(USER_ID, "1")
@@ -1185,21 +1185,43 @@ class TestFrameBuffExtension:
 
         ok, msg = await use_display_frame_buff(USER_ID, count=15, is_private=True)
         assert ok is True
-        assert "延长" in msg
-        assert "上限" in msg  # cap 提示
+        assert "\u5ef6\u957f" in msg
 
-        # cap 到 10：只消耗 10 个木框
         user_after = await db.user_get(USER_ID)
-        assert user_after.display_frames == 10  # 20 - 10 = 10
+        assert user_after.display_frames == 5  # 20 - 15 = 5
 
-        # buff 总数不变（仍为 10）
         frame_buffs = [
             b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME
         ]
         assert len(frame_buffs) == 10
 
-        # 10 个 buff 各延长 1 次（+8h）
-        for i in range(10):
+        for i in range(5):
+            expected = original_end_times[i] + timedelta(hours=16)
+            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+        for i in range(5, 10):
             expected = original_end_times[i] + timedelta(hours=8)
             assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+
+    async def test_frame_overflow_from_empty_creates_and_extends(self, db, monkeypatch):
+        """没有已有木框 buff 时，超量使用也应先建满10层，再继续顺延。"""
+        user = await db.user_get(USER_ID)
+        user.display_frames = 15
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await use_display_frame_buff(USER_ID, count=15, is_private=True)
+        assert ok is True
+        assert "\u5ef6\u957f" in msg
+
+        user_after = await db.user_get(USER_ID)
+        assert user_after.display_frames == 0
+
+        frame_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_FRAME
+        ]
+        assert len(frame_buffs) == 10
+        now = datetime.now()
+        end_times = sorted(b.end_time for b in frame_buffs)
+        assert end_times[0] > now + timedelta(hours=7)
+        assert end_times[-1] > now + timedelta(hours=15)
 
