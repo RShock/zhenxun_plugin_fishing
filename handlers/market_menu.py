@@ -15,17 +15,28 @@ _BUTTON_LABEL_MAX_LENGTH = 10
 
 
 def _button_label(option: MarketMenuOption) -> str:
-    """Keep both rarities visible within QQ's ten-character label limit."""
-    source_rarity = option.source.rarity
-    target_rarity = option.target.rarity
-    fixed_length = len(source_rarity) + len(target_rarity) + 1
-    name_budget = max(2, _BUTTON_LABEL_MAX_LENGTH - fixed_length)
-    source_budget = max(1, (name_budget + 1) // 2)
-    target_budget = max(1, name_budget - source_budget)
-    return (
-        f"{option.source.name[:source_budget]}{source_rarity}>"
-        f"{option.target.name[:target_budget]}{target_rarity}"
+    """Use the ten-character QQ label budget for fish names only."""
+    source_name = option.source.name
+    target_name = option.target.name
+    name_budget = _BUTTON_LABEL_MAX_LENGTH - 1
+    source_budget = min(len(source_name), (name_budget + 1) // 2)
+    target_budget = min(len(target_name), name_budget - source_budget)
+    unused = name_budget - source_budget - target_budget
+    if unused:
+        extra = min(unused, len(target_name) - target_budget)
+        target_budget += extra
+        unused -= extra
+    if unused:
+        source_budget += min(unused, len(source_name) - source_budget)
+    return f"{source_name[:source_budget]}>{target_name[:target_budget]}"
+
+
+def _market_markdown(options: list[MarketMenuOption]) -> str:
+    market_name = "白商" if options[0].command.startswith("白商") else "黑商"
+    rarities = "、".join(
+        f"{option.source.rarity}>{option.target.rarity}" for option in options
     )
+    return f"{market_name}快捷交换\n稀有度（按钮从上到下）：{rarities}"
 
 
 def _build_qq_market_message(options: list[MarketMenuOption]):
@@ -42,7 +53,7 @@ def _build_qq_market_message(options: list[MarketMenuOption]):
         RenderData,
     )
 
-    message = QQMessage(QQMessageSegment.markdown("\u200b"))
+    message = QQMessage(QQMessageSegment.markdown(_market_markdown(options)))
     rows = []
     for option in options:
         label = _button_label(option)

@@ -268,12 +268,13 @@ def test_market_menu_with_five_options_builds_one_message(monkeypatch):
     messages = market_menu.build_qq_market_messages(options)
 
     assert len(messages) == 1
-    assert messages[0][0] == ("markdown", "\u200b")
+    assert messages[0][0][0] == "markdown"
+    assert "UR>UR、UR>UR、UR>UR、UR>UR、UR>UR" in messages[0][0][1]
     keyboard = messages[0][1][1]
     assert len(keyboard.content.rows) == 5
 
 
-def test_button_label_contains_both_rarities_and_ascii_separator():
+def test_button_label_uses_budget_for_names_and_moves_rarity_to_markdown():
     option = MarketMenuOption(
         source=_fish("GoldFish", "UTR", "2", 2, "214"),
         target=_fish("SilverFish", "UTR", "2", 1, "224"),
@@ -281,11 +282,13 @@ def test_button_label_contains_both_rarities_and_ascii_separator():
     )
 
     label = market_menu._button_label(option)
+    markdown = market_menu._market_markdown([option])
 
     assert len(label) <= 10
-    assert label.count("UTR") == 2
+    assert "UTR" not in label
+    assert label == "GoldF>Silv"
     assert ">" in label
-    assert "?" not in label
+    assert "UTR>UTR" in markdown
 
 
 @pytest.mark.asyncio

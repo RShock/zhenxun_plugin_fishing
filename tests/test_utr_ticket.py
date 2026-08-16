@@ -10,7 +10,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.items import potion_use, use_checks
 
 
 @pytest.mark.asyncio
-async def test_utr_preflight_rejects_already_unlocked_target(monkeypatch):
+async def test_utr_preflight_allows_already_unlocked_target(monkeypatch):
     target = SimpleNamespace(
         name="目标鱼",
         location_id="13",
@@ -37,12 +37,12 @@ async def test_utr_preflight_rejects_already_unlocked_target(monkeypatch):
 
     result = await use_checks.check_item_use(context, "UTR自选券", arg="目标鱼")
 
-    assert result.usable is False
-    assert "已解锁" in result.reason
+    assert result.usable is True
+    assert result.reason == ""
 
 
 @pytest.mark.asyncio
-async def test_utr_runtime_recheck_does_not_consume_ticket(monkeypatch):
+async def test_utr_runtime_allows_owned_target_and_consumes_ticket(monkeypatch):
     target = SimpleNamespace(
         name="目标鱼",
         location_id="13",
@@ -57,16 +57,25 @@ async def test_utr_runtime_recheck_does_not_consume_ticket(monkeypatch):
         AsyncMock(return_value={"count": 1}),
     )
     monkeypatch.setattr(
-        potion_use.FishingUser,
-        "get_user_collected",
-        AsyncMock(return_value={("目标鱼", "UTR")}),
+        potion_use, "_location_has_any_utr", AsyncMock(return_value=True)
+    )
+    monkeypatch.setattr(
+        potion_use, "_location_missing_ur", AsyncMock(return_value=[])
     )
     remove_item = AsyncMock(return_value=True)
     monkeypatch.setattr(potion_use.FishingUser, "remove_item", remove_item)
     monkeypatch.setattr(black_market, "find_fish_target", lambda name, rarity: target)
+    add_fish = AsyncMock(
+        return_value={"messages": [], "achievement_messages": [], "fish_coins": 0}
+    )
+    monkeypatch.setattr(
+        "zhenxun.plugins.zhenxun_plugin_fishing.core.result.add_fish_to_user",
+        add_fish,
+    )
 
     success, message = await potion_use.use_utr_select_ticket("user", arg="目标鱼")
 
-    assert success is False
-    assert "已解锁" in message
-    remove_item.assert_not_awaited()
+    assert success is True
+    assert "兑换成功" in message
+    remove_item.assert_awaited_once_with("user", "utr_select_ticket", "ticket", 1)
+    add_fish.assert_awaited_once()

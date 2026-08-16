@@ -344,8 +344,6 @@ async def _check_utr_ticket(context: UseCheckContext, arg: str) -> str:
     location = ConfigManager.get_location(target.location_id)
     fish_names = list(location.fish_pool) if location else []
     collected = context.collected()
-    if (target.name, "UTR") in collected:
-        return f"无法兑换：你已解锁 {target.name} UTR，请选择尚未解锁的鱼"
     if not any((name, "UTR") in collected for name in fish_names):
         return (
             f"无法兑换：需要先在【{target.location_name}】解锁至少 1 条 "

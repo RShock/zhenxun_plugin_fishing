@@ -327,7 +327,7 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
             bot,
             event,
             options=state.options,
-            title="🎫 选择要兑换的 UTR 鱼",
+            title="🎫 选择要兑换的 UTR 鱼\n仅显示未获得的UTR",
             buttons_per_row=2,
         ):
             return
