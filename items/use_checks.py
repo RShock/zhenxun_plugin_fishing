@@ -312,11 +312,7 @@ async def _check_cat_frame(context: UseCheckContext) -> str:
         return "猫框打窝只能在 11-20 星空图使用"
     if not context.is_private and context.nest_count() >= DAILY_NEST_LIMIT:
         return "今天已经不能再打窝了"
-    if (
-        await context.global_buff_count(BuffEffect.BUFF_TYPE_CAT_NEST)
-        >= MAX_NEST_LAYERS
-    ):
-        return f"猫框打窝效果已满{MAX_NEST_LAYERS * 5}%，无法继续打窝"
+    # 基础效果达到 10 层后仍可继续使用猫框，顺延已有 buff 的持续时间。
     return ""
 
 

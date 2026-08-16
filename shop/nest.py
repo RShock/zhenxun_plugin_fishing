@@ -145,7 +145,7 @@ async def do_nest(
 async def do_cat_frame_nest(
     user_id: str, frame_count: int = 1, is_private: bool = False, **kwargs
 ) -> tuple[bool, str]:
-    """猫框打窝 — 仅可在 11-20 星空图使用，地点级速度加成。"""
+    """猫框打窝 — 仅可在 11-20 星空图使用，全局速度加成。"""
     if frame_count < 1:
         return False, "数量必须大于0"
 
@@ -173,12 +173,6 @@ async def do_cat_frame_nest(
     if user.cat_frames <= 0:
         return False, "猫框不足，当前没有猫框，无法打窝"
 
-    # 硬上限：不管用户请求多少个，最多使用 MAX_NEST_LAYERS 个
-    capped = False
-    if frame_count > MAX_NEST_LAYERS:
-        capped = True
-        frame_count = MAX_NEST_LAYERS
-
     original_request = frame_count
     frame_adjusted = False
     if user.cat_frames < frame_count:
@@ -195,32 +189,39 @@ async def do_cat_frame_nest(
     duration_hours = ConfigManager.get_nest_duration_hours()
 
     # 第一阶段：填满到上限（新增 buff 记录）
+    # Fill the base 10-layer speed effect first, then extend existing buffs without a limit.
     layers_to_add = min(frame_count, max(0, MAX_NEST_LAYERS - total_layers))
-    # 第二阶段：剩余猫框循环延长已有 buff（同一 buff 可被多次延长）
     remaining = frame_count - layers_to_add
     extended_count = 0
-    if remaining > 0 and current_cat_buffs:
+    extension_delta = timedelta(hours=duration_hours)
+    new_cat_buffs = []
+    for _ in range(layers_to_add):
+        new_cat_buffs.append(
+            await FishingBuff.add_global_buff(
+                buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
+                start_time=datetime.now(),
+                end_time=datetime.now() + timedelta(hours=duration_hours),
+                value=5,
+                description=f"猫框打窝效果，11-20星空图钓鱼速度+5%",
+            )
+        )
+
+    all_cat_buffs = current_cat_buffs + new_cat_buffs
+    if remaining > 0 and all_cat_buffs:
         extended_count = remaining
-        extension_delta = timedelta(hours=duration_hours)
-        for i in range(remaining):
-            buff = current_cat_buffs[i % len(current_cat_buffs)]
-            buff.end_time = _make_naive(buff.end_time) + extension_delta
-            await buff.save(update_fields=["end_time"])
+        # Batch writes so large overflow requests do not issue one save per frame.
+        rounds, remainder = divmod(remaining, len(all_cat_buffs))
+        for i, buff in enumerate(all_cat_buffs):
+            extension_count = rounds + (1 if i < remainder else 0)
+            if extension_count:
+                buff.end_time = _make_naive(buff.end_time) + extension_delta * extension_count
+                await buff.save(update_fields=["end_time"])
 
     actual_frames = layers_to_add + extended_count
     if actual_frames == 0:
-        return False, f"猫框打窝效果已满{MAX_NEST_LAYERS * 5}%，无法继续打窝"
+        return False, "当前没有可用的猫框打窝效果，无法继续打窝"
 
     await FishingUser.reduce_cat_frames(user_id, actual_frames)
-
-    for _ in range(layers_to_add):
-        await FishingBuff.add_global_buff(
-            buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-            start_time=datetime.now(),
-            end_time=datetime.now() + timedelta(hours=duration_hours),
-            value=5,
-            description=f"猫框打窝效果，11-20星空图钓鱼速度+5%",
-        )
 
     new_total = total_layers + layers_to_add
     if not is_private:
@@ -249,18 +250,11 @@ async def do_cat_frame_nest(
             f"\n已满{MAX_NEST_LAYERS * 5}%上限，延长了{extended_count}次已有猫框打窝buff"
             f"（每次+{duration_hours}小时）"
         )
-    if actual_frames < frame_count:
-        msg += (
-            f"\n无已有猫框打窝buff可延长，仅消耗{actual_frames}个猫框，"
-            f"{frame_count - actual_frames}个未消耗"
-        )
     if frame_adjusted:
         msg += (
             f"\n猫框不足请求的{original_request}个，"
             f"已使用全部剩余{frame_count}个猫框打窝"
         )
-    if capped:
-        msg += f"\n猫框打窝上限为{MAX_NEST_LAYERS}个，已自动调整使用数量"
     if not is_private and is_last:
         msg += "\n今天已经不能再打窝"
 

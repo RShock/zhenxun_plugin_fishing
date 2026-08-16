@@ -1026,18 +1026,19 @@ class TestCatFrameNestExtension:
             assert old_buffs[i].end_time == original_end_times[i]
 
     async def test_cat_nest_more_than_extendable(self, db, monkeypatch):
-        """已有10个cat_nest buff、请求15个猫框：cap到10个，10个buff各延长1次。"""
+        """Overflow cat-frame use extends existing buffs without truncating the request."""
         await self._setup_starry_fishing(db, monkeypatch)
         user = await db.user_get(USER_ID)
         user.cat_frames = 20
 
+        now = datetime.now()
         for i in range(10):
             await db.buff_add_global_buff(
                 buff_type=BuffEffect.BUFF_TYPE_CAT_NEST,
-                start_time=datetime.now(),
-                end_time=datetime.now() + timedelta(hours=8),
+                start_time=now,
+                end_time=now + timedelta(hours=8),
                 value=5,
-                description="猫框打窝效果",
+                description="cat frame nest effect",
             )
 
         old_buffs = sorted(
@@ -1050,22 +1051,46 @@ class TestCatFrameNestExtension:
 
         ok, msg = await do_cat_frame_nest(USER_ID, frame_count=15, is_private=True)
         assert ok is True
-        assert "延长" in msg
-        assert "上限" in msg  # cap 提示
+        assert "\u5ef6\u957f" in msg
 
-        # cap 到 10：只消耗 10 个猫框
         user_after = await db.user_get(USER_ID)
-        assert user_after.cat_frames == 10  # 20 - 10 = 10
+        assert user_after.cat_frames == 5  # 20 - 15 = 5
 
         cat_nest_buffs = [
             b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_CAT_NEST
         ]
-        assert len(cat_nest_buffs) == 10  # 总数不变
+        assert len(cat_nest_buffs) == 10
 
-        # 10 个 buff 各延长 1 次（+8h）
-        for i in range(10):
+        for i in range(5):
+            expected = original_end_times[i] + timedelta(hours=16)
+            assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+        for i in range(5, 10):
             expected = original_end_times[i] + timedelta(hours=8)
             assert abs((old_buffs[i].end_time - expected).total_seconds()) < 1
+
+    async def test_cat_nest_overflow_from_empty_creates_and_extends(self, db, monkeypatch):
+        """Overflow cat-frame use fills the base layers before extending them."""
+        await self._setup_starry_fishing(db, monkeypatch)
+        user = await db.user_get(USER_ID)
+        user.cat_frames = 15
+
+        monkeypatch.setattr(FishingBuff, "filter", db.make_buff_filter_mock())
+
+        ok, msg = await do_cat_frame_nest(USER_ID, frame_count=15, is_private=True)
+        assert ok is True
+        assert "\u5ef6\u957f" in msg
+
+        user_after = await db.user_get(USER_ID)
+        assert user_after.cat_frames == 0
+
+        cat_nest_buffs = [
+            b for b in db._buffs if b.buff_type == BuffEffect.BUFF_TYPE_CAT_NEST
+        ]
+        assert len(cat_nest_buffs) == 10
+        now = datetime.now()
+        end_times = sorted(b.end_time for b in cat_nest_buffs)
+        assert end_times[0] > now + timedelta(hours=7)
+        assert end_times[-1] > now + timedelta(hours=15)
 
 
 class TestFrameBuffExtension:
