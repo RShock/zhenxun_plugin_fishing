@@ -122,13 +122,10 @@ async def test_shop_handler_sends_image_then_markdown_menu_separately(monkeypatc
 
     monkeypatch.setattr(shop_handler, "_send_image", send_image)
     monkeypatch.setattr(shop_handler, "try_send_shop_menu", send_menu)
-    send_text = AsyncMock()
-    monkeypatch.setattr(shop_handler, "_send_text", send_text)
 
     await shop_handler.show_shop(Mock(), Mock(), Mock())
 
     assert calls == ["image", "markdown"]
-    send_text.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -147,10 +144,38 @@ async def test_shop_handler_still_sends_menu_when_image_fails(monkeypatch):
     )
     send_menu = AsyncMock(return_value=True)
     monkeypatch.setattr(shop_handler, "try_send_shop_menu", send_menu)
+
+    await shop_handler.show_shop(Mock(), Mock(), Mock())
+
+    send_menu.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_shop_handler_does_not_send_text_without_official_bot(monkeypatch):
+    calls = []
+    state = shop_menu.ShopMenuState(gold=10, options=[])
+    monkeypatch.setattr(
+        shop_handler, "_ensure_user", AsyncMock(return_value=("user", "name"))
+    )
+    monkeypatch.setattr(shop_handler, "_is_private_chat", lambda event: False)
+    monkeypatch.setattr(
+        shop_handler, "get_shop_menu_state", AsyncMock(return_value=state)
+    )
+    monkeypatch.setattr(shop_handler, "get_shop_image", AsyncMock(return_value=b"png"))
+
+    async def send_image(*args, **kwargs):
+        calls.append("image")
+
+    async def no_official_sender(*args, **kwargs):
+        calls.append("menu-unavailable")
+        return False
+
+    monkeypatch.setattr(shop_handler, "_send_image", send_image)
+    monkeypatch.setattr(shop_handler, "try_send_shop_menu", no_official_sender)
     send_text = AsyncMock()
     monkeypatch.setattr(shop_handler, "_send_text", send_text)
 
     await shop_handler.show_shop(Mock(), Mock(), Mock())
 
-    send_menu.assert_awaited_once()
+    assert calls == ["image", "menu-unavailable"]
     send_text.assert_not_awaited()

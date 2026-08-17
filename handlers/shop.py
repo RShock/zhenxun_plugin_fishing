@@ -47,7 +47,6 @@ from .item_menu import (
     try_send_use_item_menu,
 )
 from .shop_menu import (
-    build_shop_menu_fallback_text,
     build_shop_menu_markdown,
     get_shop_menu_state,
     try_send_shop_menu,
@@ -69,19 +68,11 @@ async def show_shop(bot: Bot, event: Event, matcher: Matcher):
         logger.warning(f"[鱼店] 图片发送失败，继续发送购买菜单: {e}")
 
     markdown = build_shop_menu_markdown(state)
-    if await try_send_shop_menu(
+    await try_send_shop_menu(
         bot,
         event,
         state=state,
         title=markdown,
-    ):
-        return
-
-    await _send_text(
-        matcher,
-        build_shop_menu_fallback_text(state),
-        user_id,
-        is_private=is_private,
     )
 
 

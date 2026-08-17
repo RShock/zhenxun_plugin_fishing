@@ -68,12 +68,6 @@ def build_shop_menu_markdown(state: ShopMenuState) -> str:
     )
 
 
-def build_shop_menu_fallback_text(state: ShopMenuState) -> str:
-    lines = [build_shop_menu_markdown(state), "", "可用指令："]
-    lines.extend(f"- {option.command}" for option in state.options)
-    return "\n".join(lines)
-
-
 async def try_send_shop_menu(
     bot: Bot,
     event: Event,
@@ -92,7 +86,6 @@ async def try_send_shop_menu(
 
 __all__ = [
     "ShopMenuState",
-    "build_shop_menu_fallback_text",
     "build_shop_menu_markdown",
     "get_shop_menu_state",
     "try_send_shop_menu",
