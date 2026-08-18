@@ -37,7 +37,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     # 展示框万能升级：升级展示栏/升级展示框/升级木框/升级星空展示框 均为同一指令的别名
     CommandDef(r"(?:升级展示栏|升级展示框|升级展示位|升级木框|升级星空展示框|升级星空木框|增加展示栏位|扩展展示栏|扩充展示栏|强化展示栏位|星空木框|展示框|猫猫展示框|星空展示框)", "升级展示栏", "display_slot_matcher", ("升级展示栏", "升级展示框", "升级木框", "升级星空展示框", "增加展示栏位", "强化展示栏位")),
     CommandDef(r"(?:钓鱼状态|状态)", "钓鱼状态", "status_matcher", ("钓鱼状态",)),
-    CommandDef(r"(?:钓鱼打窝|打窝)(?:\s+(\d+))?", "打窝", "nest_matcher", ("打窝",)),
+    CommandDef(r"(?:钓鱼打窝|打窝)(?:\s*(\d+))?", "打窝", "nest_matcher", ("打窝",)),
     CommandDef(r"(?:钓鱼图鉴|图鉴|查看图鉴)([12]?)", "图鉴", "collection_matcher", ("钓鱼图鉴", "图鉴", "查看图鉴")),
     CommandDef(r"详细图鉴([12]?)", "详细图鉴", "detailed_collection_matcher", ("详细图鉴",)),
     CommandDef(r"(?:流星鱼展馆|星空祈愿展馆|星空起源展馆|星空鱼展馆|星空展馆|星鱼展馆)", "星空鱼展馆", "starry_exhibition_matcher", ("流星鱼展馆",)),
@@ -55,7 +55,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"自动锁鱼(?:\s*(.*))?", "自动锁鱼", "auto_lock_matcher", ("自动锁鱼",)),
     CommandDef(r"钓鱼改名(?:\s*(.+))?", "改名", "rename_matcher", ("钓鱼改名",)),
     CommandDef(r"更换皮肤(?:\s*(\S+))?", "更换皮肤", "skin_matcher", ("更换皮肤",)),
-    CommandDef(r"钓鱼使用(?:\s+(\S+)(?:\s+(.+))?)?", "使用物品", "use_item_matcher", ("钓鱼使用",)),
+    CommandDef(r"钓鱼使用(?:\s*(\S+)(?:\s+(.+))?)?", "使用物品", "use_item_matcher", ("钓鱼使用",)),
     CommandDef(r"(?:天气预报|钓鱼天气|天气|天气状态)(?:\s*([12]))?", "天气", "weather_forecast_matcher", ("天气预报", "钓鱼天气", "天气", "天气状态")),
     CommandDef(r"建设猫猫乐园(?:\s*(.+))?", "建设猫猫乐园", "cat_park_build_matcher", ("建设猫猫乐园",)),
     CommandDef(r"建设星空艇", "建设星空艇", "build_starry_ship_matcher", ("建设星空艇",)),

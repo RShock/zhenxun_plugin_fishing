@@ -341,6 +341,11 @@ class TestGmAddItemIntegration:
         specs = parse_gm_item_specs("时光药水x3,真多多药水", default_count=1)
         assert specs == [("时光药水", 3), ("真多多药水", 1)]
 
+    def test_fused_count(self):
+        assert parse_gm_item_specs("时光药水3", default_count=5) == [
+            ("时光药水", 3)
+        ]
+
     def test_suffix_star_and_global(self):
         # 有 xN 的不套用全局数量；无后缀的用全局
         specs = parse_gm_item_specs("时光药水*2,幸运药水", default_count=5)

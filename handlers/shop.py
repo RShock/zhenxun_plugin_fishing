@@ -8,7 +8,11 @@ from nonebot.matcher import Matcher
 from nonebot.params import RegexGroup
 
 from ..config import ConfigManager
-from ..items.use_checks import UseCheckContext, check_item_use
+from ..items.use_checks import (
+    UseCheckContext,
+    check_item_use,
+    split_fused_use_item,
+)
 from ..matchers import (
     build_starry_ship_matcher,
     buy_matcher,
@@ -51,6 +55,21 @@ from .shop_menu import (
     get_shop_menu_state,
     try_send_shop_menu,
 )
+
+
+def _split_fused_bait_count(name_or_id: str) -> tuple[str, int | None]:
+    """Split a configured bait name from a directly attached purchase count."""
+    raw = (name_or_id or "").strip()
+    for bait in sorted(
+        ConfigManager.get_shop().baits,
+        key=lambda item: len(item.name),
+        reverse=True,
+    ):
+        if raw.startswith(bait.name) and raw != bait.name:
+            suffix = raw[len(bait.name) :]
+            if suffix.isdigit():
+                return bait.name, int(suffix)
+    return raw, None
 
 
 @shop_matcher.handle()
@@ -160,6 +179,11 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     name_or_id = group[0] if group and group[0] else ""
     count = int(group[1]) if group and len(group) > 1 and group[1] else 1
 
+    if not (group and len(group) > 1 and group[1]):
+        name_or_id, fused_count = _split_fused_bait_count(name_or_id)
+        if fused_count is not None:
+            count = fused_count
+
     if not name_or_id:
         await _send_text(
             matcher, "请指定要购买的物品名称或编号！", user_id, is_private=is_private
@@ -255,6 +279,9 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
     )
     item_name = group[0].strip() if group and group[0] else ""
     rest = group[1].strip() if group and len(group) > 1 and group[1] else ""
+    if not rest:
+        item_name, fused_rest = split_fused_use_item(item_name)
+        rest = fused_rest
 
     available = (
         "时光药水、回档药水、幸运药水、真多多药水、闪光药水、"

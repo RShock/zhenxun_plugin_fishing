@@ -106,6 +106,23 @@ def normalize_use_item_name(item_name: str) -> str:
     return _ALIASES.get(compact, compact)
 
 
+def split_fused_use_item(item_name: str) -> tuple[str, str]:
+    """Split a known item name from a directly attached count or argument."""
+    raw = (item_name or "").strip()
+    if not raw:
+        return "", ""
+
+    candidates = sorted((*_ITEM_ORDER, *_ALIASES), key=len, reverse=True)
+    for candidate in candidates:
+        if raw == candidate or not raw.startswith(candidate):
+            continue
+        suffix = raw[len(candidate) :]
+        canonical = normalize_use_item_name(candidate)
+        if suffix.isdigit() or canonical in {"UTR自选券", "大肥鱼"}:
+            return candidate, suffix
+    return raw, ""
+
+
 def _json_item_count(user, item_id: str, item_type: str) -> int:
     items = user.items if isinstance(getattr(user, "items", None), dict) else {}
     entry = items.get(f"{item_id}|{item_type}")
@@ -425,4 +442,5 @@ __all__ = [
     "check_item_use",
     "get_held_item_use_checks",
     "normalize_use_item_name",
+    "split_fused_use_item",
 ]

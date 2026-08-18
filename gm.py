@@ -217,6 +217,20 @@ def _parse_item_input(item_input: str) -> tuple[str, str | None]:
     return item_input, None
 
 
+def _split_fused_gm_item_count(item_input: str) -> tuple[str, int | None]:
+    """Split a known GM item name from a directly attached count."""
+    raw = (item_input or "").strip()
+    candidates = set(_SPECIAL_ITEM_ALIASES)
+    candidates.update(potion.name for potion in ConfigManager.get_items().potions)
+    candidates.update(bait.name for bait in ConfigManager.get_shop().baits)
+    for candidate in sorted(candidates, key=len, reverse=True):
+        if raw.startswith(candidate) and raw != candidate:
+            suffix = raw[len(candidate) :]
+            if suffix.isdigit():
+                return candidate, int(suffix)
+    return raw, None
+
+
 def parse_gm_item_specs(
     item_blob: str, default_count: int = 1
 ) -> list[tuple[str, int]]:
@@ -224,7 +238,7 @@ def parse_gm_item_specs(
 
     支持写法：
     - ``真多多药水,幸运药水,时光药水,时光药水,时光药水``
-    - ``时光药水x3`` / ``时光药水*3`` / ``时光药水×3``
+    - ``时光药水x3`` / ``时光药水*3`` / ``时光药水×3`` / ``时光药水3``
     - 全局数量通过 ``default_count`` 乘到每一项（无单项后缀时）
 
     返回按首次出现顺序的 ``[(物品名, 数量), ...]``。
@@ -252,8 +266,8 @@ def parse_gm_item_specs(
             name = m.group("name").strip()
             cnt = int(m.group("cnt"))
         else:
-            name = part
-            cnt = default_count
+            name, fused_count = _split_fused_gm_item_count(part)
+            cnt = default_count if fused_count is None else fused_count
         if not name:
             continue
         if name not in merged:

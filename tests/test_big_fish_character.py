@@ -5,6 +5,10 @@ from zhenxun.plugins.zhenxun_plugin_fishing.characters import build_character_da
 from zhenxun.plugins.zhenxun_plugin_fishing.config import ConfigManager
 from zhenxun.plugins.zhenxun_plugin_fishing.handlers.shop import (
     _parse_use_item_arguments,
+    _split_fused_bait_count,
+)
+from zhenxun.plugins.zhenxun_plugin_fishing.items.use_checks import (
+    split_fused_use_item,
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.items.character_use import use_big_fish
 from zhenxun.plugins.zhenxun_plugin_fishing.models import user_mutations as mut
@@ -178,6 +182,21 @@ class TestBigFishBackpackAndParsing:
     def test_position_is_not_parsed_as_count(self):
         assert _parse_use_item_arguments(BIG_FISH_ITEM_ID, "2") == (1, "2")
         assert _parse_use_item_arguments("闪光药水", "2") == (2, "")
+
+    def test_fused_use_item_count_is_split_before_argument_parsing(self):
+        item_name, rest = split_fused_use_item("时光药水1")
+        assert (item_name, rest) == ("时光药水", "1")
+        assert _parse_use_item_arguments(item_name, rest) == (1, "")
+
+    def test_fused_special_item_argument_is_preserved(self):
+        assert split_fused_use_item("大肥鱼2") == ("大肥鱼", "2")
+        assert split_fused_use_item("UTR自选券十四鱼12") == (
+            "UTR自选券",
+            "十四鱼12",
+        )
+
+    def test_fused_bait_count_is_split_for_purchase(self):
+        assert _split_fused_bait_count("蚯蚓鱼饵10") == ("蚯蚓鱼饵", 10)
 
     def test_unused_character_item_stays_in_props_inventory(self):
         rows = build_character_item_inventory(
