@@ -52,11 +52,14 @@ def test_display_slots_are_always_complete_ten_slots():
 def test_fish_web_meta_uses_player_facing_minimum_level():
     first_scene = _fish_web_meta("小鲫鱼")
     second_scene = _fish_web_meta("草鱼")
+    starry_scene = _fish_web_meta("环月飞鱼")
 
     assert first_scene["difficulty"] == 0
     assert first_scene["minimum_level"] == 1
     assert second_scene["difficulty"] == 1
     assert second_scene["minimum_level"] == 2
+    assert starry_scene["category"] == "starry"
+    assert starry_scene["image_url"].endswith("12-%E7%8E%AF%E6%9C%88%E9%A3%9E%E9%B1%BC.png")
 
 
 def test_web_fish_order_matches_qq_backpack():
@@ -123,6 +126,8 @@ def test_web_ui_uses_element_plus_and_responsive_scroll_contract():
     assert 'class="inventory-card-grid"' in html
     assert 'grid-template-columns:repeat(4,minmax(0,1fr))' in html
     assert 'v-for="f in normalFish"' in html
+    assert "const normalFish = computed(() => backpack.fish);" in html
+    assert "backpack.fish.filter(f => f.category !== 'starry')" not in html
     assert 'v-for="f in starryFishCards"' in html
     assert '@click.stop="openFishMenu(f,$event)"' in html
     assert '@contextmenu.prevent.stop="openFishMenu(f,$event)"' in html

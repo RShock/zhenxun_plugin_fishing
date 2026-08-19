@@ -942,7 +942,8 @@ createApp({
     const nonBaitItems = computed(() => backpack.items.filter(x => x.item_type !== 'bait'));
     const fishingProgress = computed(() => Math.min(100, Math.max(4, fishing.elapsed_seconds / 1800 * 100)));
     const resultFrameHtml = computed(() => '<style>html{overflow:hidden}body{margin:0;padding:0;}img{max-width:100%;height:auto}</style>' + result.html);
-    const normalFish = computed(() => backpack.fish.filter(f => f.category !== 'starry'));
+    // Named fish from maps 11-20 remain in backpack.fish; only meteor fish use starry_fish.
+    const normalFish = computed(() => backpack.fish);
     const starryFishCards = computed(() => [
       ...backpack.starry_exhibition.map(f=>({...f,source:'exhibition'})),
       ...backpack.starry_fish.map(f=>({...f,source:f.legacy?'legacy':'backpack'})),
