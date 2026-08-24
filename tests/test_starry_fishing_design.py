@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 
 import pytest
 
@@ -595,6 +596,13 @@ class TestStarWishNumbers:
         assert cards[0]["pool_color"] == RARITY_COLORS["R"]
         # 对比文字色必须存在且与背景色搭配（暗底→白字，亮底→深字）
         assert cards[0]["pool_text_color"] in ("#ffffff", "#1f2937")
+
+        template = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "starry_exhibition.html"
+        ).read_text(encoding="utf-8")
+        assert "card.location_id" not in template
 
         # 奖池分档：无/低/中/高/究极 → N/R/SR/SSR/UR；≥16 分 → UTR
         from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import StarryFeature

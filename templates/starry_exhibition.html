@@ -189,7 +189,6 @@
         </div>
         <div class="starry-meta">
             <span class="starry-chip pool">{{ card.reward_pool }}</span>
-            {% if card.location_id %}<span class="starry-chip">{{ card.location_id }}</span>{% endif %}
         </div>
         <div class="starry-features">
             {% for feature in card.features %}<span class="starry-feature">{{ feature }}</span>{% endfor %}
