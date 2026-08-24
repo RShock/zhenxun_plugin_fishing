@@ -830,6 +830,7 @@ def _apply_starry_rewards(
 def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
     """尝试连续领取奇迹并构造展示信息。"""
     from ..models import user_mutations as mut
+    from ..constants import STARRY_FRAMES_MAX
 
     claims = mut.apply_try_claim_miracles(plan.user, dirty=plan.dirty)
     if not claims:
@@ -853,7 +854,8 @@ def _apply_miracle_claims(plan: _StopSettlementPlan) -> None:
         "consumed_ids": consumed_ids,
         "consumed_groups": consumed_groups,
         "star_frames": int(last.get("star_frames") or 0),
-        "can_upgrade_starry_frame": True,
+        "can_upgrade_starry_frame": int(plan.user.starry_frames or 0)
+        < STARRY_FRAMES_MAX,
         "hint": subtitle,
         "subtitle": subtitle,
     }
