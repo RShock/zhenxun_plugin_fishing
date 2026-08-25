@@ -10,6 +10,7 @@ FishingUser 内存变更层。
 
 from __future__ import annotations
 
+import random
 from datetime import date, datetime
 from typing import Any
 
@@ -567,6 +568,7 @@ def apply_add_starry_fish(
 
 def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     from ..core.starry_system import (
+        MIRACLE_MAX_EXACT_N,
         MIRACLE_TARGET,
         find_miracle_subset,
         format_starry_fish_id,
@@ -588,10 +590,21 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 
     # 展馆是受保护存储，任何奇迹都不能读取或扣除其中的鱼。
     # 旧版 items 流星鱼可参与，但必须按来源精确扣除，不能触碰展馆。
-    ids = [int(item.get("id", 0)) for _, item in candidates]
+    search_offset = 0
+    search_candidates = candidates
+    if len(candidates) > MIRACLE_MAX_EXACT_N:
+        search_offset = random.randrange(len(candidates))
+        if len(candidates) - search_offset < MIRACLE_MAX_EXACT_N:
+            search_offset = 0
+        search_candidates = candidates[
+            search_offset : search_offset + MIRACLE_MAX_EXACT_N
+        ]
+
+    ids = [int(item.get("id", 0)) for _, item in search_candidates]
     indices = find_miracle_subset(ids)
     if not indices:
         return None
+    indices = [index + search_offset for index in indices]
 
     index_set = set(indices)
     subset_candidates = [candidates[i] for i in sorted(indices)]

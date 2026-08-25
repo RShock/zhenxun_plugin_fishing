@@ -14,6 +14,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system import (
     MIRACLE_TARGET,
     find_miracle_subset,
 )
+from zhenxun.plugins.zhenxun_plugin_fishing.models import user_mutations
 from zhenxun.plugins.zhenxun_plugin_fishing.models.user_mutations import (
     apply_try_claim_miracle,
 )
@@ -74,6 +75,41 @@ class TestMiracleSubsetSearch:
         assert user.items["time_potion|potion"]["count"] == 2
         assert user.star_frames == 1
         assert "items" in dirty
+
+    def test_large_backpack_uses_random_sliding_window(self, monkeypatch):
+        user = SimpleNamespace(
+            starry_fish=(
+                [{"id": 2} for _ in range(19)]
+                + [{"id": 999999} for _ in range(7)]
+                + [{"id": 777784}]
+            ),
+            items={},
+            star_frames=0,
+        )
+        monkeypatch.setattr(user_mutations.random, "randrange", lambda _size: 1)
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is not None
+        assert set(claim["consumed_ids"]) == {"999999", "777784"}
+        assert [item["id"] for item in user.starry_fish] == [2] * 19
+
+    def test_large_backpack_tail_start_falls_back_to_first_window(self, monkeypatch):
+        user = SimpleNamespace(
+            starry_fish=(
+                [{"id": 2} for _ in range(19)]
+                + [{"id": 999999} for _ in range(7)]
+                + [{"id": 777784}]
+            ),
+            items={},
+            star_frames=0,
+        )
+        monkeypatch.setattr(user_mutations.random, "randrange", lambda size: size - 1)
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is None
+        assert len(user.starry_fish) == 27
 
     def test_nine_digit_legacy_fish_can_join_mixed_miracle(self):
         user = SimpleNamespace(
