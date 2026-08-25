@@ -384,8 +384,9 @@ async def _is_location_unlocked(user, location_id: str, rarity: str) -> bool:
     """检查用户是否已解锁指定地图且鱼竿等级足够钓到该稀有度。
 
     UTR 鱼还需场景全收集成就（collect_scene_{id}）。
-    非 UTR 鱼额外检查：当前鱼竿等级在该场景封顶后的最终概率中该稀有度须 > 0，
-    避免用未封顶原始概率错误展示不可获得的稀有度。
+    非 UTR 鱼额外检查当前分布的稀有度上界，避免用未封顶原始概率错误展示
+    超出地图/鱼竿能力的稀有度。分布下界不参与过滤：鱼竿过高时低稀有度的
+    当前概率可能为 0，但仍应保留白商的潜在兑换提示。
     """
     location = ConfigManager.get_location(location_id)
     if not location:
@@ -410,14 +411,24 @@ async def _is_location_unlocked(user, location_id: str, rarity: str) -> bool:
         if user.rod_level < location.difficulty:
             return False
 
-    # 非 UTR：按场景封顶后的最终分布判断，不能用未封顶原始概率误判。
+    # 非 UTR：只按场景封顶后的最终分布判断上界，不能用未封顶原始概率误判。
+    # 分布的下界随高等级鱼竿上移，但白商的“有可能”列表不能因此隐藏
+    # N/R 等低稀有度兑换；白商允许通过其他玩家留下的记录获得这些鱼。
     if rarity != "UTR":
         from ..core.probability import calculate_display_probabilities
 
         probs = calculate_display_probabilities(
             user.rod_level, location.difficulty, location.max_rarity
         )
-        if probs.get(rarity, 0) <= 0:
+        max_possible_rarity = max(
+            (
+                RARITY_INDEX.get(candidate_rarity, 0)
+                for candidate_rarity, probability in probs.items()
+                if probability > 0
+            ),
+            default=0,
+        )
+        if RARITY_INDEX.get(rarity, 0) > max_possible_rarity:
             return False
 
     # UTR 鱼需要场景全收集成就（解锁迷途风/UTR）

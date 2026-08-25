@@ -35,6 +35,7 @@ from zhenxun.plugins.zhenxun_plugin_fishing.services.white_market_service import
 )
 from zhenxun.plugins.zhenxun_plugin_fishing.backpack.black_market import (
     _maybe_randomize_same_rarity_target,
+    _is_location_unlocked,
     can_exchange,
     extract_market_exchange_input,
     find_fish_target,
@@ -1527,6 +1528,49 @@ class TestBlackMarketExchange:
             get_names.extend(g["names"])
         assert black_target.name in pay_names
         assert black_source.name in get_names
+
+    async def test_white_market_possible_keeps_low_rarity_after_rod_level_moves_up(
+        self, db, monkeypatch
+    ):
+        """高等级鱼竿使低稀有度当前概率为0时，白商仍显示潜在兑换。"""
+        user = await db.user_get(TARGET_ID)
+        user.rod_level = 14
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.cat_park.has_cat_park_ticket",
+            AsyncMock(return_value=True),
+        )
+
+        cat_park_fish = find_fish_target("橘座鲫鱼", "N")
+        map_20_fish = find_fish_target("奇迹锦鲤", "N")
+        assert cat_park_fish is not None
+        assert map_20_fish is not None
+        await db.exchange_create_black_record(
+            USER_ID, map_20_fish, cat_park_fish
+        )
+
+        assert await _is_location_unlocked(user, "S1", "N") is True
+
+        captured = {}
+
+        def _capture_template(name, **kwargs):
+            captured.update(kwargs)
+            return "<html>fake</html>"
+
+        monkeypatch.setattr(
+            "zhenxun.plugins.zhenxun_plugin_fishing.render.base.render_template",
+            _capture_template,
+        )
+
+        await render_white_market_records(TARGET_ID)
+
+        possible_items = json.loads(captured["possible_items_json"])
+        assert len(possible_items) == 1
+        assert possible_items[0]["pay_label"] == "猫猫乐园 N"
+        assert map_20_fish.name in possible_items[0]["get_groups"][0]["names"]
+
+        user.rod_level = 6
+        assert await _is_location_unlocked(user, "S1", "N") is True
+        assert await _is_location_unlocked(user, "S1", "SR") is False
 
 
 class TestBlackMarketRevoke:
