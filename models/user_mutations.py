@@ -600,7 +600,9 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
             search_offset : search_offset + MIRACLE_MAX_EXACT_N
         ]
 
-    ids = [int(item.get("id", 0)) for _, item in search_candidates]
+    # 流星鱼的有效编号是 6 位。旧版 items 可能保留了更长的原始编号，
+    # 但展示、计分和消耗提示都按末 6 位处理；奇迹求和也必须使用同一数值。
+    ids = [int(item.get("id", 0)) % 1_000_000 for _, item in search_candidates]
     indices = find_miracle_subset(ids)
     if not indices:
         return None
