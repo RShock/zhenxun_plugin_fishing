@@ -10,9 +10,12 @@ FishingUser 内存变更层。
 
 from __future__ import annotations
 
+import json
 import random
 from datetime import date, datetime
 from typing import Any
+
+from zhenxun.services.log import logger
 
 from ..characters import (
     normalize_character_data,
@@ -55,6 +58,88 @@ def _ensure_list(data: Any) -> list:
     if not data or not isinstance(data, list):
         return []
     return data
+
+
+def _log_large_miracle_exchange(
+    user,
+    *,
+    stage: str,
+    backpack: list,
+    legacy_items: dict,
+    candidates: list[tuple[str, dict]],
+    search_offset: int,
+    search_ids: list[int],
+    matched_indices: list[int] | None = None,
+    remaining_backpack: list | None = None,
+    remaining_items: dict | None = None,
+    star_frames_before: int | None = None,
+    star_frames_after: int | None = None,
+) -> None:
+    """记录高库存奇迹兑换的完整输入和结果，便于线上复盘窗口漏匹配。"""
+    legacy_count = sum(
+        max(0, int(entry.get("count", 0) or 0))
+        for key, entry in legacy_items.items()
+        if str(key).endswith("|meteor_fish")
+    )
+    held_count = len(backpack) + legacy_count
+    if held_count <= 100:
+        return
+
+    from ..core.starry_system import MIRACLE_MOD_BASE, MIRACLE_TARGET
+
+    matched_indices = matched_indices or []
+    candidate_ids = [str(item.get("id", "")) for _source, item in candidates]
+    matched_ids = [candidate_ids[index] for index in matched_indices]
+    matched_values = [int(candidate_ids[index]) for index in matched_indices]
+    search_sum = sum(search_ids)
+    matched_sum = sum(matched_values)
+    payload = {
+        "user_id": str(getattr(user, "user_id", "unknown")),
+        "stage": stage,
+        "held_count": held_count,
+        "backpack_count": len(backpack),
+        "legacy_meteor_count": legacy_count,
+        "candidate_count": len(candidates),
+        "candidate_ids": candidate_ids,
+        "candidate_sources": [source for source, _item in candidates],
+        "legacy_items": {
+            str(key): int(entry.get("count", 0) or 0)
+            for key, entry in legacy_items.items()
+            if str(key).endswith("|meteor_fish")
+        },
+        "search_offset": search_offset,
+        "search_count": len(search_ids),
+        "search_ids": search_ids,
+        "search_sum": search_sum,
+        "search_sum_mod": search_sum % MIRACLE_MOD_BASE,
+        "target": MIRACLE_TARGET,
+        "matched_indices": matched_indices,
+        "matched_ids": matched_ids,
+        "matched_sources": [candidates[index][0] for index in matched_indices],
+        "matched_sum": matched_sum,
+        "matched_sum_mod": matched_sum % MIRACLE_MOD_BASE,
+    }
+    if star_frames_before is not None:
+        payload["star_frames_before"] = star_frames_before
+    if star_frames_after is not None:
+        payload["star_frames_after"] = star_frames_after
+    if remaining_backpack is not None:
+        payload["remaining_backpack_count"] = len(remaining_backpack)
+        payload["remaining_backpack_ids"] = [
+            str(item.get("id", "")) for item in remaining_backpack
+        ]
+    if remaining_items is not None:
+        payload["remaining_legacy_items"] = {
+            str(key): int(entry.get("count", 0) or 0)
+            for key, entry in remaining_items.items()
+            if str(key).endswith("|meteor_fish")
+        }
+        payload["remaining_count"] = len(remaining_backpack or []) + sum(
+            max(0, int(entry.get("count", 0) or 0))
+            for key, entry in remaining_items.items()
+            if str(key).endswith("|meteor_fish")
+        )
+    logger.info("[奇迹兑换调试] " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
 
 def _normalize_collection(collection: dict) -> tuple[dict, bool]:
@@ -603,8 +688,33 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
     # 不能先截断高位，否则会改变历史数据的奇迹判定。
     ids = [int(item.get("id", 0)) for _, item in search_candidates]
+    if len(candidates) > 100:
+        _log_large_miracle_exchange(
+            user,
+            stage="search",
+            backpack=backpack,
+            legacy_items=legacy_items,
+            candidates=candidates,
+            search_offset=search_offset,
+            search_ids=ids,
+            star_frames_before=current_frames,
+        )
     indices = find_miracle_subset(ids)
     if not indices:
+        if len(candidates) > 100:
+            _log_large_miracle_exchange(
+                user,
+                stage="miss",
+                backpack=backpack,
+                legacy_items=legacy_items,
+                candidates=candidates,
+                search_offset=search_offset,
+                search_ids=ids,
+                remaining_backpack=backpack,
+                remaining_items=legacy_items,
+                star_frames_before=current_frames,
+                star_frames_after=current_frames,
+            )
         return None
     indices = [index + search_offset for index in indices]
 
@@ -635,6 +745,21 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     user.star_frames = current_frames + 1
     subset_count = len(subset_records)
     mark_dirty(dirty, "starry_fish", "items", "star_frames")
+    if len(candidates) > 100:
+        _log_large_miracle_exchange(
+            user,
+            stage="claimed",
+            backpack=backpack,
+            legacy_items=legacy_items,
+            candidates=candidates,
+            search_offset=search_offset,
+            search_ids=ids,
+            matched_indices=indices,
+            remaining_backpack=new_backpack,
+            remaining_items=new_items,
+            star_frames_before=current_frames,
+            star_frames_after=user.star_frames,
+        )
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [

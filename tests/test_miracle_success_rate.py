@@ -111,6 +111,58 @@ class TestMiracleSubsetSearch:
         assert claim is None
         assert len(user.starry_fish) == 27
 
+    def test_large_backpack_miss_writes_detailed_debug_log(self, monkeypatch):
+        user = SimpleNamespace(
+            user_id="large-miss-user",
+            starry_fish=[{"id": 0} for _ in range(101)],
+            items={},
+            star_frames=0,
+        )
+        messages = []
+        monkeypatch.setattr(
+            user_mutations.logger, "info", lambda message: messages.append(message)
+        )
+        monkeypatch.setattr(user_mutations.random, "randrange", lambda _size: 0)
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is None
+        assert len(messages) == 2
+        assert all(message.startswith("[奇迹兑换调试] ") for message in messages)
+        assert '"user_id":"large-miss-user"' in messages[0]
+        assert '"stage":"miss"' in messages[1]
+        assert '"candidate_count":101' in messages[1]
+        assert '"search_count":26' in messages[1]
+        assert '"matched_indices":[]' in messages[1]
+        assert '"remaining_count":101' in messages[1]
+
+    def test_large_backpack_claim_log_contains_match_and_remaining_inventory(
+        self, monkeypatch
+    ):
+        user = SimpleNamespace(
+            user_id="large-claim-user",
+            starry_fish=[
+                {"id": 123456},
+                {"id": 7654321},
+                *({"id": 0} for _ in range(100)),
+            ],
+            items={},
+            star_frames=0,
+        )
+        messages = []
+        monkeypatch.setattr(
+            user_mutations.logger, "info", lambda message: messages.append(message)
+        )
+        monkeypatch.setattr(user_mutations.random, "randrange", lambda _size: 0)
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is not None
+        claimed = next(message for message in messages if '"stage":"claimed"' in message)
+        assert '"matched_sum_mod":7777777' in claimed
+        assert '"matched_ids":["123456","7654321"]' in claimed
+        assert '"remaining_count":100' in claimed
+
     def test_legacy_fish_displays_the_full_id_used_by_miracle(self):
         user = SimpleNamespace(
             starry_fish=[{"id": "990957"}],
