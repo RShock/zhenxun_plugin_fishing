@@ -217,6 +217,14 @@ def format_starry_fish_id(value: int | str) -> str:
     return f"{numeric:06d}"
 
 
+def format_miracle_fish_id(value: int | str) -> str:
+    """Format a consumed ID without hiding legacy digits used by the sum."""
+    numeric = int(value)
+    if numeric < 0:
+        raise ValueError("miracle fish id must be non-negative")
+    return str(numeric).zfill(DIGITS)
+
+
 def digits_of(value: int | str) -> list[int]:
     return [int(ch) for ch in format_starry_fish_id(value)]
 

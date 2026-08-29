@@ -111,13 +111,9 @@ class TestMiracleSubsetSearch:
         assert claim is None
         assert len(user.starry_fish) == 27
 
-    def test_legacy_fish_uses_its_displayed_six_digit_id_for_miracle(self):
+    def test_legacy_fish_displays_the_full_id_used_by_miracle(self):
         user = SimpleNamespace(
-            starry_fish=[
-                {"id": "990957"},
-                *({"id": "999999"} for _ in range(6)),
-                {"id": "6"},
-            ],
+            starry_fish=[{"id": "990957"}],
             starry_exhibition=[],
             items={
                 "36786820|meteor_fish": {
@@ -131,12 +127,12 @@ class TestMiracleSubsetSearch:
         claim = apply_try_claim_miracle(user, set())
 
         assert claim is not None
-        assert "786820" in claim["consumed_ids"]
+        assert claim["consumed_ids"] == ["990957", "36786820"]
         assert user.starry_fish == []
         assert "36786820|meteor_fish" not in user.items
         assert user.star_frames == 1
 
-    def test_legacy_seven_digit_id_does_not_look_like_seven_sevens(self):
+    def test_legacy_seven_digit_id_is_shown_without_truncation(self):
         user = SimpleNamespace(
             starry_fish=[],
             starry_exhibition=[],
@@ -151,9 +147,45 @@ class TestMiracleSubsetSearch:
 
         claim = apply_try_claim_miracle(user, set())
 
-        assert claim is None
-        assert user.items["7777777|meteor_fish"]["count"] == 1
-        assert user.star_frames == 0
+        assert claim is not None
+        assert claim["consumed_ids"] == ["7777777"]
+        assert "7777777|meteor_fish" not in user.items
+        assert user.star_frames == 1
+
+    def test_legacy_hidden_digits_explain_a_truncated_seven_seven_sum(self):
+        displayed_group = [
+            238850,
+            20684,
+            6612,
+            892038,
+            517461,
+            91368,
+            91368,
+            124642,
+            124642,
+            583174,
+            3191,
+            83747,
+        ]
+        assert sum(displayed_group) == 2_777_777
+
+        user = SimpleNamespace(
+            starry_fish=[{"id": value} for value in displayed_group[1:]],
+            starry_exhibition=[],
+            items={
+                "5238850|meteor_fish": {
+                    "item_type": "meteor_fish",
+                    "count": 1,
+                }
+            },
+            star_frames=0,
+        )
+
+        claim = apply_try_claim_miracle(user, set())
+
+        assert claim is not None
+        assert "5238850" in claim["consumed_ids"]
+        assert "5238850|meteor_fish" not in user.items
 
     def test_miracle_max_exact_n_covers_practical_sizes(self):
         assert MIRACLE_MAX_EXACT_N >= max(BACKPACK_SIZES)

@@ -571,7 +571,7 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
         MIRACLE_MAX_EXACT_N,
         MIRACLE_TARGET,
         find_miracle_subset,
-        format_starry_fish_id,
+        format_miracle_fish_id,
     )
 
     current_frames = int(user.star_frames or 0)
@@ -600,9 +600,9 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
             search_offset : search_offset + MIRACLE_MAX_EXACT_N
         ]
 
-    # 流星鱼的有效编号是 6 位。旧版 items 可能保留了更长的原始编号，
-    # 但展示、计分和消耗提示都按末 6 位处理；奇迹求和也必须使用同一数值。
-    ids = [int(item.get("id", 0)) % 1_000_000 for _, item in search_candidates]
+    # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
+    # 不能先截断高位，否则会改变历史数据的奇迹判定。
+    ids = [int(item.get("id", 0)) for _, item in search_candidates]
     indices = find_miracle_subset(ids)
     if not indices:
         return None
@@ -638,7 +638,7 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
 
     # 收杆页要用小字列出要因编号，玩家才能对上“哪些数字加出了 7777777”
     consumed_ids = [
-        format_starry_fish_id(int(item.get("id", 0)) % 1_000_000)
+        format_miracle_fish_id(item.get("id", 0))
         for _source, item in subset_candidates
     ]
     return {
