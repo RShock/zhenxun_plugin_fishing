@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import random
+import uuid
 from datetime import date, datetime
 from typing import Any
 
@@ -63,6 +64,7 @@ def _ensure_list(data: Any) -> list:
 def _log_large_miracle_exchange(
     user,
     *,
+    exchange_id: str,
     stage: str,
     backpack: list,
     legacy_items: dict,
@@ -75,7 +77,7 @@ def _log_large_miracle_exchange(
     star_frames_before: int | None = None,
     star_frames_after: int | None = None,
 ) -> None:
-    """记录高库存奇迹兑换的完整输入和结果，便于线上复盘窗口漏匹配。"""
+    """用多条短 JSON 记录高库存奇迹兑换，避免日志净化器省略长消息。"""
     legacy_count = sum(
         max(0, int(entry.get("count", 0) or 0))
         for key, entry in legacy_items.items()
@@ -88,34 +90,79 @@ def _log_large_miracle_exchange(
     from ..core.starry_system import MIRACLE_MOD_BASE, MIRACLE_TARGET
 
     matched_indices = matched_indices or []
-    candidate_ids = [str(item.get("id", "")) for _source, item in candidates]
-    matched_ids = [candidate_ids[index] for index in matched_indices]
-    matched_values = [int(candidate_ids[index]) for index in matched_indices]
+    candidate_records = [
+        {"index": index, "source": source, "id": str(item.get("id", ""))}
+        for index, (source, item) in enumerate(candidates)
+    ]
+    matched_records = [candidate_records[index] for index in matched_indices]
+    matched_values = [int(record["id"]) for record in matched_records]
     search_sum = sum(search_ids)
     matched_sum = sum(matched_values)
+
+    def emit(record: dict) -> None:
+        message = "[奇迹兑换调试] " + json.dumps(
+            {"exchange_id": exchange_id, "stage": stage, **record},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        # logger._to_safe_text() replaces messages over 1000 chars as a whole.
+        # Normal 9-digit IDs stay below this limit after chunking. Do not let
+        # malformed historical data make the exchange itself fail.
+        logger.info(message)
+
+    def emit_chunks(record_type: str, field: str, values: list) -> None:
+        chunk: list = []
+        start = 0
+        part = 1
+        for index, value in enumerate(values):
+            candidate = chunk + [value]
+            probe = {
+                "record_type": record_type,
+                "part": part,
+                "start": start,
+                field: candidate,
+            }
+            probe_message = "[奇迹兑换调试] " + json.dumps(
+                {"exchange_id": exchange_id, "stage": stage, **probe},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            if chunk and len(probe_message) >= 900:
+                emit(
+                    {
+                        "record_type": record_type,
+                        "part": part,
+                        "start": start,
+                        field: chunk,
+                    }
+                )
+                start = index
+                part += 1
+                chunk = [value]
+            else:
+                chunk = candidate
+        if chunk:
+            emit(
+                {
+                    "record_type": record_type,
+                    "part": part,
+                    "start": start,
+                    field: chunk,
+                }
+            )
+
     payload = {
         "user_id": str(getattr(user, "user_id", "unknown")),
-        "stage": stage,
         "held_count": held_count,
         "backpack_count": len(backpack),
         "legacy_meteor_count": legacy_count,
         "candidate_count": len(candidates),
-        "candidate_ids": candidate_ids,
-        "candidate_sources": [source for source, _item in candidates],
-        "legacy_items": {
-            str(key): int(entry.get("count", 0) or 0)
-            for key, entry in legacy_items.items()
-            if str(key).endswith("|meteor_fish")
-        },
         "search_offset": search_offset,
         "search_count": len(search_ids),
-        "search_ids": search_ids,
         "search_sum": search_sum,
         "search_sum_mod": search_sum % MIRACLE_MOD_BASE,
         "target": MIRACLE_TARGET,
-        "matched_indices": matched_indices,
-        "matched_ids": matched_ids,
-        "matched_sources": [candidates[index][0] for index in matched_indices],
+        "matched_count": len(matched_records),
         "matched_sum": matched_sum,
         "matched_sum_mod": matched_sum % MIRACLE_MOD_BASE,
     }
@@ -125,21 +172,64 @@ def _log_large_miracle_exchange(
         payload["star_frames_after"] = star_frames_after
     if remaining_backpack is not None:
         payload["remaining_backpack_count"] = len(remaining_backpack)
-        payload["remaining_backpack_ids"] = [
-            str(item.get("id", "")) for item in remaining_backpack
-        ]
     if remaining_items is not None:
-        payload["remaining_legacy_items"] = {
-            str(key): int(entry.get("count", 0) or 0)
-            for key, entry in remaining_items.items()
-            if str(key).endswith("|meteor_fish")
-        }
         payload["remaining_count"] = len(remaining_backpack or []) + sum(
             max(0, int(entry.get("count", 0) or 0))
             for key, entry in remaining_items.items()
             if str(key).endswith("|meteor_fish")
         )
-    logger.info("[奇迹兑换调试] " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    emit({"record_type": "summary", **payload})
+
+    if stage == "search":
+        emit_chunks("candidates", "values", candidate_records)
+        emit_chunks(
+            "legacy_items",
+            "values",
+            [
+                {
+                    "key": str(key),
+                    "count": int(entry.get("count", 0) or 0),
+                }
+                for key, entry in legacy_items.items()
+                if str(key).endswith("|meteor_fish")
+            ],
+        )
+        emit(
+            {
+                "record_type": "search_window",
+                "offset": search_offset,
+                "count": len(search_ids),
+                "indices": list(
+                    range(search_offset, search_offset + len(search_ids))
+                ),
+                "ids": search_ids,
+                "sum": search_sum,
+                "sum_mod": search_sum % MIRACLE_MOD_BASE,
+                "target": MIRACLE_TARGET,
+            }
+        )
+    elif stage == "claimed":
+        emit_chunks("matched", "values", matched_records)
+
+    if remaining_backpack is not None:
+        emit_chunks(
+            "remaining_backpack",
+            "ids",
+            [str(item.get("id", "")) for item in remaining_backpack],
+        )
+    if remaining_items is not None:
+        emit_chunks(
+            "remaining_legacy_items",
+            "values",
+            [
+                {
+                    "key": str(key),
+                    "count": int(entry.get("count", 0) or 0),
+                }
+                for key, entry in remaining_items.items()
+                if str(key).endswith("|meteor_fish")
+            ],
+        )
 
 
 def _normalize_collection(collection: dict) -> tuple[dict, bool]:
@@ -688,9 +778,11 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
     # 不能先截断高位，否则会改变历史数据的奇迹判定。
     ids = [int(item.get("id", 0)) for _, item in search_candidates]
+    debug_exchange_id = uuid.uuid4().hex[:12] if len(candidates) > 100 else None
     if len(candidates) > 100:
         _log_large_miracle_exchange(
             user,
+            exchange_id=debug_exchange_id,
             stage="search",
             backpack=backpack,
             legacy_items=legacy_items,
@@ -704,6 +796,7 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
         if len(candidates) > 100:
             _log_large_miracle_exchange(
                 user,
+                exchange_id=debug_exchange_id,
                 stage="miss",
                 backpack=backpack,
                 legacy_items=legacy_items,
@@ -748,6 +841,7 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     if len(candidates) > 100:
         _log_large_miracle_exchange(
             user,
+            exchange_id=debug_exchange_id,
             stage="claimed",
             backpack=backpack,
             legacy_items=legacy_items,

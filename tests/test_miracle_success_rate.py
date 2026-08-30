@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import random
 
@@ -21,6 +22,11 @@ from zhenxun.plugins.zhenxun_plugin_fishing.models.user_mutations import (
 
 BACKPACK_SIZES = (24, 25, 26)
 FIXED_SEEDS = (0, 1, 7, 42, 20260715)
+DEBUG_LOG_PREFIX = "[奇迹兑换调试] "
+
+
+def parse_debug_records(messages):
+    return [json.loads(message.removeprefix(DEBUG_LOG_PREFIX)) for message in messages]
 
 
 def theoretical_rate(n: int, mod_base: int = MIRACLE_MOD_BASE) -> float:
@@ -127,14 +133,28 @@ class TestMiracleSubsetSearch:
         claim = apply_try_claim_miracle(user, set())
 
         assert claim is None
-        assert len(messages) == 2
-        assert all(message.startswith("[奇迹兑换调试] ") for message in messages)
-        assert '"user_id":"large-miss-user"' in messages[0]
-        assert '"stage":"miss"' in messages[1]
-        assert '"candidate_count":101' in messages[1]
-        assert '"search_count":26' in messages[1]
-        assert '"matched_indices":[]' in messages[1]
-        assert '"remaining_count":101' in messages[1]
+        assert all(message.startswith(DEBUG_LOG_PREFIX) for message in messages)
+        assert all(len(message) < 900 for message in messages)
+        records = parse_debug_records(messages)
+        exchange_ids = {record["exchange_id"] for record in records}
+        assert len(exchange_ids) == 1
+        assert {record["stage"] for record in records} == {"search", "miss"}
+        search_records = [record for record in records if record["stage"] == "search"]
+        miss_summary = next(
+            record
+            for record in records
+            if record["stage"] == "miss" and record["record_type"] == "summary"
+        )
+        assert search_records[0]["user_id"] == "large-miss-user"
+        assert search_records[0]["candidate_count"] == 101
+        assert search_records[0]["search_count"] == 26
+        assert any(record["record_type"] == "candidates" for record in search_records)
+        window = next(
+            record for record in search_records if record["record_type"] == "search_window"
+        )
+        assert len(window["ids"]) == 26
+        assert miss_summary["matched_count"] == 0
+        assert miss_summary["remaining_count"] == 101
 
     def test_large_backpack_claim_log_contains_match_and_remaining_inventory(
         self, monkeypatch
@@ -158,10 +178,19 @@ class TestMiracleSubsetSearch:
         claim = apply_try_claim_miracle(user, set())
 
         assert claim is not None
-        claimed = next(message for message in messages if '"stage":"claimed"' in message)
-        assert '"matched_sum_mod":7777777' in claimed
-        assert '"matched_ids":["123456","7654321"]' in claimed
-        assert '"remaining_count":100' in claimed
+        records = parse_debug_records(messages)
+        claimed = next(
+            record
+            for record in records
+            if record["stage"] == "claimed" and record["record_type"] == "summary"
+        )
+        assert claimed["matched_sum_mod"] == 7777777
+        matched = [record for record in records if record["record_type"] == "matched"]
+        assert [item["id"] for record in matched for item in record["values"]] == [
+            "123456",
+            "7654321",
+        ]
+        assert claimed["remaining_count"] == 100
 
     def test_legacy_fish_displays_the_full_id_used_by_miracle(self):
         user = SimpleNamespace(
