@@ -183,7 +183,56 @@ class TestMiracleSubsetSearch:
         )
         assert len(window["ids"]) == 26
         assert miss_summary["matched_count"] == 0
+        assert miss_summary["failure_reason"] == "no_subset_in_search_window"
         assert miss_summary["remaining_count"] == 101
+
+    def test_any_miss_writes_full_inventory_and_window(self, monkeypatch):
+        user = SimpleNamespace(
+            user_id="small-miss-user",
+            starry_fish=[
+                {"id": "000001"},
+                {"id": "000002"},
+                {"id": "000003"},
+            ],
+            items={},
+            star_frames=0,
+        )
+        messages = []
+        monkeypatch.setattr(
+            user_mutations.logger, "info", lambda message: messages.append(message)
+        )
+
+        assert apply_try_claim_miracle(user, set()) is None
+
+        records = parse_debug_records(messages)
+        assert {record["stage"] for record in records} == {"search", "miss"}
+        search_records = [record for record in records if record["stage"] == "search"]
+        candidates = next(
+            record for record in search_records if record["record_type"] == "candidates"
+        )
+        window = next(
+            record
+            for record in search_records
+            if record["record_type"] == "search_window"
+        )
+        miss_summary = next(
+            record
+            for record in records
+            if record["stage"] == "miss" and record["record_type"] == "summary"
+        )
+        assert [item["id"] for item in candidates["values"]] == [
+            "000001",
+            "000002",
+            "000003",
+        ]
+        assert window["offset"] == 0
+        assert window["count"] == 3
+        assert window["indices"] == [0, 1, 2]
+        assert window["ids"] == ["000001", "000002", "000003"]
+        assert miss_summary["candidate_count"] == 3
+        assert miss_summary["window_start"] == 0
+        assert miss_summary["window_end"] == 2
+        assert miss_summary["remaining_count"] == 3
 
     def test_large_backpack_claim_log_contains_match_and_remaining_inventory(
         self, monkeypatch

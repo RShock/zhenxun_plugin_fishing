@@ -64,7 +64,7 @@ def _ensure_list(data: Any) -> list:
 MIRACLE_DEBUG_MIN_HELD_COUNT = 40
 
 
-def _log_large_miracle_exchange(
+def _log_miracle_exchange(
     user,
     *,
     exchange_id: str,
@@ -174,6 +174,8 @@ def _log_large_miracle_exchange(
         "candidate_count": len(candidates),
         "search_offset": search_offset,
         "search_count": len(search_ids),
+        "window_start": search_offset,
+        "window_end": search_offset + len(search_ids) - 1,
         "search_sum": search_sum,
         "search_sum_mod": search_sum % MIRACLE_MOD_BASE,
         "target": MIRACLE_TARGET,
@@ -181,6 +183,8 @@ def _log_large_miracle_exchange(
         "matched_sum": matched_sum,
         "matched_sum_mod": matched_sum % MIRACLE_MOD_BASE,
     }
+    if stage == "miss":
+        payload["failure_reason"] = "no_subset_in_search_window"
     if star_frames_before is not None:
         payload["star_frames_before"] = star_frames_before
     if star_frames_after is not None:
@@ -806,7 +810,7 @@ def apply_try_claim_miracle(
     if debug_exchange_id is None and current_held_count > MIRACLE_DEBUG_MIN_HELD_COUNT:
         debug_exchange_id = uuid.uuid4().hex[:12]
     if debug_exchange_id is not None:
-        _log_large_miracle_exchange(
+        _log_miracle_exchange(
             user,
             exchange_id=debug_exchange_id,
             attempt=debug_attempt,
@@ -822,24 +826,39 @@ def apply_try_claim_miracle(
         )
     indices = find_miracle_subset(ids)
     if not indices:
-        if debug_exchange_id is not None:
-            _log_large_miracle_exchange(
+        if debug_exchange_id is None:
+            debug_exchange_id = uuid.uuid4().hex[:12]
+            _log_miracle_exchange(
                 user,
                 exchange_id=debug_exchange_id,
                 attempt=debug_attempt,
                 initial_held_count=debug_initial_held_count,
-                stage="miss",
+                stage="search",
                 backpack=backpack,
                 legacy_items=legacy_items,
                 candidates=candidates,
                 search_offset=search_offset,
                 search_ids=ids,
                 search_id_texts=search_id_texts,
-                remaining_backpack=backpack,
-                remaining_items=legacy_items,
                 star_frames_before=current_frames,
-                star_frames_after=current_frames,
             )
+        _log_miracle_exchange(
+            user,
+            exchange_id=debug_exchange_id,
+            attempt=debug_attempt,
+            initial_held_count=debug_initial_held_count,
+            stage="miss",
+            backpack=backpack,
+            legacy_items=legacy_items,
+            candidates=candidates,
+            search_offset=search_offset,
+            search_ids=ids,
+            search_id_texts=search_id_texts,
+            remaining_backpack=backpack,
+            remaining_items=legacy_items,
+            star_frames_before=current_frames,
+            star_frames_after=current_frames,
+        )
         return None
     indices = [index + search_offset for index in indices]
 
@@ -871,7 +890,7 @@ def apply_try_claim_miracle(
     subset_count = len(subset_records)
     mark_dirty(dirty, "starry_fish", "items", "star_frames")
     if debug_exchange_id is not None:
-        _log_large_miracle_exchange(
+        _log_miracle_exchange(
             user,
             exchange_id=debug_exchange_id,
             attempt=debug_attempt,
