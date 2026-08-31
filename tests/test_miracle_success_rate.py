@@ -100,7 +100,7 @@ class TestMiracleSubsetSearch:
         assert set(claim["consumed_ids"]) == {"999999", "777784"}
         assert [item["id"] for item in user.starry_fish] == [2] * 19
 
-    def test_large_backpack_tail_start_falls_back_to_first_window(self, monkeypatch):
+    def test_large_backpack_tail_start_uses_last_valid_window(self, monkeypatch):
         user = SimpleNamespace(
             starry_fish=(
                 [{"id": 2} for _ in range(19)]
@@ -114,8 +114,37 @@ class TestMiracleSubsetSearch:
 
         claim = apply_try_claim_miracle(user, set())
 
-        assert claim is None
-        assert len(user.starry_fish) == 27
+        assert claim is not None
+        assert set(claim["consumed_ids"]) == {"999999", "777784"}
+        assert len(user.starry_fish) == 19
+
+    def test_large_backpack_sampling_uses_only_uniform_valid_start_range(
+        self, monkeypatch
+    ):
+        user = SimpleNamespace(
+            starry_fish=[{"id": "000123"}] + [{"id": 0} for _ in range(131)],
+            items={},
+            star_frames=0,
+        )
+        draws = []
+        messages = []
+        monkeypatch.setattr(
+            user_mutations.random,
+            "randrange",
+            lambda size: draws.append(size) or 0,
+        )
+        monkeypatch.setattr(
+            user_mutations.logger, "info", lambda message: messages.append(message)
+        )
+
+        assert apply_try_claim_miracle(user, set()) is None
+        assert draws == [107]
+        window = next(
+            record
+            for record in parse_debug_records(messages)
+            if record["record_type"] == "search_window"
+        )
+        assert window["ids"][0] == "000123"
 
     def test_large_backpack_miss_writes_detailed_debug_log(self, monkeypatch):
         user = SimpleNamespace(
@@ -191,6 +220,52 @@ class TestMiracleSubsetSearch:
             "7654321",
         ]
         assert claimed["remaining_count"] == 100
+
+    def test_monitoring_batch_continues_after_inventory_drops_to_40(
+        self, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import starry_system
+
+        user = SimpleNamespace(
+            user_id="batch-monitor-user",
+            starry_fish=[{"id": 0} for _ in range(41)],
+            items={},
+            star_frames=0,
+        )
+        messages = []
+        calls = []
+
+        def fake_find_miracle_subset(values):
+            calls.append(len(values))
+            return [0] if len(calls) == 1 else None
+
+        monkeypatch.setattr(starry_system, "find_miracle_subset", fake_find_miracle_subset)
+        monkeypatch.setattr(
+            user_mutations.logger, "info", lambda message: messages.append(message)
+        )
+
+        claims = user_mutations.apply_try_claim_miracles(user, dirty=set())
+
+        records = parse_debug_records(messages)
+        summaries = [
+            record for record in records if record["record_type"] == "summary"
+        ]
+        assert len(claims) == 1
+        assert calls == [26, 26]
+        assert len({record["exchange_id"] for record in records}) == 1
+        assert [(record["attempt"], record["stage"]) for record in summaries] == [
+            (1, "search"),
+            (1, "claimed"),
+            (2, "search"),
+            (2, "miss"),
+        ]
+        assert all(record["initial_held_count"] == 41 for record in summaries)
+        search_summaries = [
+            record for record in summaries if record["stage"] == "search"
+        ]
+        assert [record["candidate_count"] for record in search_summaries] == [41, 40]
+        assert summaries[-1]["held_count"] == 40
+        assert summaries[-1]["remaining_count"] == 40
 
     def test_legacy_fish_displays_the_full_id_used_by_miracle(self):
         user = SimpleNamespace(

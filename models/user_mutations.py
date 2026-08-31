@@ -61,16 +61,22 @@ def _ensure_list(data: Any) -> list:
     return data
 
 
+MIRACLE_DEBUG_MIN_HELD_COUNT = 40
+
+
 def _log_large_miracle_exchange(
     user,
     *,
     exchange_id: str,
+    attempt: int,
+    initial_held_count: int,
     stage: str,
     backpack: list,
     legacy_items: dict,
     candidates: list[tuple[str, dict]],
     search_offset: int,
     search_ids: list[int],
+    search_id_texts: list[str],
     matched_indices: list[int] | None = None,
     remaining_backpack: list | None = None,
     remaining_items: dict | None = None,
@@ -84,8 +90,6 @@ def _log_large_miracle_exchange(
         if str(key).endswith("|meteor_fish")
     )
     held_count = len(backpack) + legacy_count
-    if held_count <= 100:
-        return
 
     from ..core.starry_system import MIRACLE_MOD_BASE, MIRACLE_TARGET
 
@@ -101,7 +105,12 @@ def _log_large_miracle_exchange(
 
     def emit(record: dict) -> None:
         message = "[奇迹兑换调试] " + json.dumps(
-            {"exchange_id": exchange_id, "stage": stage, **record},
+            {
+                "exchange_id": exchange_id,
+                "attempt": attempt,
+                "stage": stage,
+                **record,
+            },
             ensure_ascii=False,
             separators=(",", ":"),
         )
@@ -123,7 +132,12 @@ def _log_large_miracle_exchange(
                 field: candidate,
             }
             probe_message = "[奇迹兑换调试] " + json.dumps(
-                {"exchange_id": exchange_id, "stage": stage, **probe},
+                {
+                    "exchange_id": exchange_id,
+                    "attempt": attempt,
+                    "stage": stage,
+                    **probe,
+                },
                 ensure_ascii=False,
                 separators=(",", ":"),
             )
@@ -153,6 +167,7 @@ def _log_large_miracle_exchange(
 
     payload = {
         "user_id": str(getattr(user, "user_id", "unknown")),
+        "initial_held_count": initial_held_count,
         "held_count": held_count,
         "backpack_count": len(backpack),
         "legacy_meteor_count": legacy_count,
@@ -202,7 +217,7 @@ def _log_large_miracle_exchange(
                 "indices": list(
                     range(search_offset, search_offset + len(search_ids))
                 ),
-                "ids": search_ids,
+                "ids": search_id_texts,
                 "sum": search_sum,
                 "sum_mod": search_sum % MIRACLE_MOD_BASE,
                 "target": MIRACLE_TARGET,
@@ -741,7 +756,14 @@ def apply_add_starry_fish(
     return record
 
 
-def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
+def apply_try_claim_miracle(
+    user,
+    dirty: set[str] | None = None,
+    *,
+    debug_exchange_id: str | None = None,
+    debug_attempt: int = 1,
+    debug_initial_held_count: int | None = None,
+) -> dict | None:
     from ..core.starry_system import (
         MIRACLE_MAX_EXACT_N,
         MIRACLE_TARGET,
@@ -768,41 +790,51 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     search_offset = 0
     search_candidates = candidates
     if len(candidates) > MIRACLE_MAX_EXACT_N:
-        search_offset = random.randrange(len(candidates))
-        if len(candidates) - search_offset < MIRACLE_MAX_EXACT_N:
-            search_offset = 0
+        max_offset = len(candidates) - MIRACLE_MAX_EXACT_N
+        search_offset = random.randrange(max_offset + 1)
         search_candidates = candidates[
             search_offset : search_offset + MIRACLE_MAX_EXACT_N
         ]
 
     # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
     # 不能先截断高位，否则会改变历史数据的奇迹判定。
-    ids = [int(item.get("id", 0)) for _, item in search_candidates]
-    debug_exchange_id = uuid.uuid4().hex[:12] if len(candidates) > 100 else None
-    if len(candidates) > 100:
+    search_id_texts = [str(item.get("id", "")) for _, item in search_candidates]
+    ids = [int(value) for value in search_id_texts]
+    current_held_count = len(candidates)
+    if debug_initial_held_count is None:
+        debug_initial_held_count = current_held_count
+    if debug_exchange_id is None and current_held_count > MIRACLE_DEBUG_MIN_HELD_COUNT:
+        debug_exchange_id = uuid.uuid4().hex[:12]
+    if debug_exchange_id is not None:
         _log_large_miracle_exchange(
             user,
             exchange_id=debug_exchange_id,
+            attempt=debug_attempt,
+            initial_held_count=debug_initial_held_count,
             stage="search",
             backpack=backpack,
             legacy_items=legacy_items,
             candidates=candidates,
             search_offset=search_offset,
             search_ids=ids,
+            search_id_texts=search_id_texts,
             star_frames_before=current_frames,
         )
     indices = find_miracle_subset(ids)
     if not indices:
-        if len(candidates) > 100:
+        if debug_exchange_id is not None:
             _log_large_miracle_exchange(
                 user,
                 exchange_id=debug_exchange_id,
+                attempt=debug_attempt,
+                initial_held_count=debug_initial_held_count,
                 stage="miss",
                 backpack=backpack,
                 legacy_items=legacy_items,
                 candidates=candidates,
                 search_offset=search_offset,
                 search_ids=ids,
+                search_id_texts=search_id_texts,
                 remaining_backpack=backpack,
                 remaining_items=legacy_items,
                 star_frames_before=current_frames,
@@ -838,16 +870,19 @@ def apply_try_claim_miracle(user, dirty: set[str] | None = None) -> dict | None:
     user.star_frames = current_frames + 1
     subset_count = len(subset_records)
     mark_dirty(dirty, "starry_fish", "items", "star_frames")
-    if len(candidates) > 100:
+    if debug_exchange_id is not None:
         _log_large_miracle_exchange(
             user,
             exchange_id=debug_exchange_id,
+            attempt=debug_attempt,
+            initial_held_count=debug_initial_held_count,
             stage="claimed",
             backpack=backpack,
             legacy_items=legacy_items,
             candidates=candidates,
             search_offset=search_offset,
             search_ids=ids,
+            search_id_texts=search_id_texts,
             matched_indices=indices,
             remaining_backpack=new_backpack,
             remaining_items=new_items,
@@ -882,8 +917,19 @@ def apply_try_claim_miracles(
         if str(key).endswith("|meteor_fish")
     )
     limit = max_claims if max_claims is not None else held_count
-    for _ in range(max(0, int(limit))):
-        info = apply_try_claim_miracle(user, dirty)
+    debug_exchange_id = (
+        uuid.uuid4().hex[:12]
+        if held_count > MIRACLE_DEBUG_MIN_HELD_COUNT
+        else None
+    )
+    for attempt in range(1, max(0, int(limit)) + 1):
+        info = apply_try_claim_miracle(
+            user,
+            dirty,
+            debug_exchange_id=debug_exchange_id,
+            debug_attempt=attempt,
+            debug_initial_held_count=held_count,
+        )
         if not info:
             break
         claims.append(info)
