@@ -82,69 +82,44 @@ class TestMiracleSubsetSearch:
         assert user.star_frames == 1
         assert "items" in dirty
 
-    def test_large_backpack_uses_random_sliding_window(self, monkeypatch):
+    def test_large_backpack_prefers_distinct_ids(self):
+        candidates = [("backpack", {"id": value}) for value in range(30)]
+        candidates.extend(("backpack", {"id": 0}) for _ in range(10))
+
+        indices = user_mutations._select_miracle_search_indices(candidates, 26)
+
+        assert len(indices) == 26
+        assert len({candidates[index][1]["id"] for index in indices}) == 26
+
+    def test_large_backpack_retries_with_a_new_candidate_set(self, monkeypatch):
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import starry_system
+
         user = SimpleNamespace(
-            starry_fish=(
-                [{"id": 2} for _ in range(19)]
-                + [{"id": 999999} for _ in range(7)]
-                + [{"id": 777784}]
-            ),
+            user_id="retry-user",
+            starry_fish=[{"id": value} for value in range(41)],
             items={},
             star_frames=0,
         )
-        monkeypatch.setattr(user_mutations.random, "randrange", lambda _size: 1)
+        sample_calls = []
+        find_calls = []
+
+        def fake_sample(population, count):
+            sample_calls.append(list(population))
+            return list(population[:count]) if len(sample_calls) == 1 else list(population[-count:])
+
+        def fake_find(values):
+            find_calls.append(list(values))
+            return None if len(find_calls) == 1 else [0]
+
+        monkeypatch.setattr(user_mutations.random, "sample", fake_sample)
+        monkeypatch.setattr(starry_system, "find_miracle_subset", fake_find)
 
         claim = apply_try_claim_miracle(user, set())
 
         assert claim is not None
-        assert set(claim["consumed_ids"]) == {"999999", "777784"}
-        assert [item["id"] for item in user.starry_fish] == [2] * 19
-
-    def test_large_backpack_tail_start_uses_last_valid_window(self, monkeypatch):
-        user = SimpleNamespace(
-            starry_fish=(
-                [{"id": 2} for _ in range(19)]
-                + [{"id": 999999} for _ in range(7)]
-                + [{"id": 777784}]
-            ),
-            items={},
-            star_frames=0,
-        )
-        monkeypatch.setattr(user_mutations.random, "randrange", lambda size: size - 1)
-
-        claim = apply_try_claim_miracle(user, set())
-
-        assert claim is not None
-        assert set(claim["consumed_ids"]) == {"999999", "777784"}
-        assert len(user.starry_fish) == 19
-
-    def test_large_backpack_sampling_uses_only_uniform_valid_start_range(
-        self, monkeypatch
-    ):
-        user = SimpleNamespace(
-            starry_fish=[{"id": "000123"}] + [{"id": 0} for _ in range(131)],
-            items={},
-            star_frames=0,
-        )
-        draws = []
-        messages = []
-        monkeypatch.setattr(
-            user_mutations.random,
-            "randrange",
-            lambda size: draws.append(size) or 0,
-        )
-        monkeypatch.setattr(
-            user_mutations.logger, "info", lambda message: messages.append(message)
-        )
-
-        assert apply_try_claim_miracle(user, set()) is None
-        assert draws == [107]
-        window = next(
-            record
-            for record in parse_debug_records(messages)
-            if record["record_type"] == "search_window"
-        )
-        assert window["ids"][0] == "000123"
+        assert find_calls == [list(range(26)), list(range(15, 41))]
+        assert claim["consumed_ids"] == ["000015"]
+        assert len(user.starry_fish) == 40
 
     def test_large_backpack_miss_writes_detailed_debug_log(self, monkeypatch):
         user = SimpleNamespace(
@@ -157,17 +132,30 @@ class TestMiracleSubsetSearch:
         monkeypatch.setattr(
             user_mutations.logger, "info", lambda message: messages.append(message)
         )
-        monkeypatch.setattr(user_mutations.random, "randrange", lambda _size: 0)
+        find_calls = []
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import starry_system
+
+        def fake_find(values):
+            find_calls.append(values)
+            return None
+
+        monkeypatch.setattr(starry_system, "find_miracle_subset", fake_find)
 
         claim = apply_try_claim_miracle(user, set())
 
         assert claim is None
+        assert len(find_calls) == 2
         assert all(message.startswith(DEBUG_LOG_PREFIX) for message in messages)
         assert all(len(message) < 900 for message in messages)
         records = parse_debug_records(messages)
         exchange_ids = {record["exchange_id"] for record in records}
         assert len(exchange_ids) == 1
         assert {record["stage"] for record in records} == {"search", "miss"}
+        assert {
+            record["search_round"]
+            for record in records
+            if record["record_type"] == "summary"
+        } == {1, 2}
         search_records = [record for record in records if record["stage"] == "search"]
         miss_summary = next(
             record
@@ -300,19 +288,23 @@ class TestMiracleSubsetSearch:
             record for record in records if record["record_type"] == "summary"
         ]
         assert len(claims) == 1
-        assert calls == [26, 26]
+        assert calls == [26, 26, 26]
         assert len({record["exchange_id"] for record in records}) == 1
-        assert [(record["attempt"], record["stage"]) for record in summaries] == [
-            (1, "search"),
-            (1, "claimed"),
-            (2, "search"),
-            (2, "miss"),
+        assert [
+            (record["attempt"], record["search_round"], record["stage"])
+            for record in summaries
+        ] == [
+            (1, 1, "search"),
+            (1, 1, "claimed"),
+            (2, 1, "search"),
+            (2, 2, "search"),
+            (2, 2, "miss"),
         ]
         assert all(record["initial_held_count"] == 41 for record in summaries)
         search_summaries = [
             record for record in summaries if record["stage"] == "search"
         ]
-        assert [record["candidate_count"] for record in search_summaries] == [41, 40]
+        assert [record["candidate_count"] for record in search_summaries] == [41, 40, 40]
         assert summaries[-1]["held_count"] == 40
         assert summaries[-1]["remaining_count"] == 40
 

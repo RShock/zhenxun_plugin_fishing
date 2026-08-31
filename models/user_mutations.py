@@ -62,6 +62,31 @@ def _ensure_list(data: Any) -> list:
 
 
 MIRACLE_DEBUG_MIN_HELD_COUNT = 40
+MIRACLE_SEARCH_RETRIES = 2
+
+
+def _select_miracle_search_indices(
+    candidates: list[tuple[str, dict]], max_count: int
+) -> list[int]:
+    """Select a bounded search set, preferring one record per distinct ID."""
+    if len(candidates) <= max_count:
+        return list(range(len(candidates)))
+
+    first_by_id: dict[int, int] = {}
+    for index, (_source, item) in enumerate(candidates):
+        first_by_id.setdefault(int(str(item.get("id", "0"))), index)
+
+    unique_indices = list(first_by_id.values())
+    if len(unique_indices) >= max_count:
+        return random.sample(unique_indices, max_count)
+
+    selected = unique_indices[:]
+    selected_set = set(selected)
+    duplicate_indices = [
+        index for index in range(len(candidates)) if index not in selected_set
+    ]
+    selected.extend(random.sample(duplicate_indices, max_count - len(selected)))
+    return selected
 
 
 def _log_miracle_exchange(
@@ -69,12 +94,14 @@ def _log_miracle_exchange(
     *,
     exchange_id: str,
     attempt: int,
+    search_round: int,
     initial_held_count: int,
     stage: str,
     backpack: list,
     legacy_items: dict,
     candidates: list[tuple[str, dict]],
     search_offset: int,
+    search_indices: list[int],
     search_ids: list[int],
     search_id_texts: list[str],
     matched_indices: list[int] | None = None,
@@ -102,12 +129,17 @@ def _log_miracle_exchange(
     matched_values = [int(record["id"]) for record in matched_records]
     search_sum = sum(search_ids)
     matched_sum = sum(matched_values)
+    is_contiguous = search_indices == list(
+        range(search_offset, search_offset + len(search_indices))
+    )
+    search_selection = "contiguous" if is_contiguous else "unique_priority"
 
     def emit(record: dict) -> None:
         message = "[奇迹兑换调试] " + json.dumps(
             {
                 "exchange_id": exchange_id,
                 "attempt": attempt,
+                "search_round": search_round,
                 "stage": stage,
                 **record,
             },
@@ -173,9 +205,11 @@ def _log_miracle_exchange(
         "legacy_meteor_count": legacy_count,
         "candidate_count": len(candidates),
         "search_offset": search_offset,
+        "search_indices": list(search_indices),
+        "search_selection": search_selection,
         "search_count": len(search_ids),
-        "window_start": search_offset,
-        "window_end": search_offset + len(search_ids) - 1,
+        "window_start": search_indices[0] if search_indices else 0,
+        "window_end": search_indices[-1] if search_indices else -1,
         "search_sum": search_sum,
         "search_sum_mod": search_sum % MIRACLE_MOD_BASE,
         "target": MIRACLE_TARGET,
@@ -218,9 +252,8 @@ def _log_miracle_exchange(
                 "record_type": "search_window",
                 "offset": search_offset,
                 "count": len(search_ids),
-                "indices": list(
-                    range(search_offset, search_offset + len(search_ids))
-                ),
+                "indices": list(search_indices),
+                "selection": search_selection,
                 "ids": search_id_texts,
                 "sum": search_sum,
                 "sum_mod": search_sum % MIRACLE_MOD_BASE,
@@ -789,42 +822,54 @@ def apply_try_claim_miracle(
     if not candidates:
         return None
 
-    # 展馆是受保护存储，任何奇迹都不能读取或扣除其中的鱼。
-    # 旧版 items 流星鱼可参与，但必须按来源精确扣除，不能触碰展馆。
-    search_offset = 0
-    search_candidates = candidates
-    if len(candidates) > MIRACLE_MAX_EXACT_N:
-        max_offset = len(candidates) - MIRACLE_MAX_EXACT_N
-        search_offset = random.randrange(max_offset + 1)
-        search_candidates = candidates[
-            search_offset : search_offset + MIRACLE_MAX_EXACT_N
-        ]
-
-    # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
-    # 不能先截断高位，否则会改变历史数据的奇迹判定。
-    search_id_texts = [str(item.get("id", "")) for _, item in search_candidates]
-    ids = [int(value) for value in search_id_texts]
     current_held_count = len(candidates)
     if debug_initial_held_count is None:
         debug_initial_held_count = current_held_count
     if debug_exchange_id is None and current_held_count > MIRACLE_DEBUG_MIN_HELD_COUNT:
         debug_exchange_id = uuid.uuid4().hex[:12]
-    if debug_exchange_id is not None:
-        _log_miracle_exchange(
-            user,
-            exchange_id=debug_exchange_id,
-            attempt=debug_attempt,
-            initial_held_count=debug_initial_held_count,
-            stage="search",
-            backpack=backpack,
-            legacy_items=legacy_items,
-            candidates=candidates,
-            search_offset=search_offset,
-            search_ids=ids,
-            search_id_texts=search_id_texts,
-            star_frames_before=current_frames,
+
+    selected_indices: list[int] = []
+    search_offset = 0
+    search_ids: list[int] = []
+    search_id_texts: list[str] = []
+    indices: list[int] | None = None
+    search_rounds = 2 if len(candidates) > MIRACLE_MAX_EXACT_N else 1
+    for search_round in range(1, search_rounds + 1):
+        selected_indices = _select_miracle_search_indices(
+            candidates, MIRACLE_MAX_EXACT_N
         )
-    indices = find_miracle_subset(ids)
+        selected_indices.sort()
+
+        # 奇迹按流星鱼实际保存的编号求和。旧版 items 可能保留更长的原始编号，
+        # 不能先截断高位，否则会改变历史数据的奇迹判定。
+        search_id_texts = [
+            str(candidates[index][1].get("id", "")) for index in selected_indices
+        ]
+        search_ids = [int(value) for value in search_id_texts]
+        search_offset = selected_indices[0] if selected_indices else 0
+        if debug_exchange_id is not None:
+            _log_miracle_exchange(
+                user,
+                exchange_id=debug_exchange_id,
+                attempt=debug_attempt,
+                search_round=search_round,
+                initial_held_count=debug_initial_held_count,
+                stage="search",
+                backpack=backpack,
+                legacy_items=legacy_items,
+                candidates=candidates,
+                search_offset=search_offset,
+                search_indices=selected_indices,
+                search_ids=search_ids,
+                search_id_texts=search_id_texts,
+                star_frames_before=current_frames,
+            )
+
+        local_indices = find_miracle_subset(search_ids)
+        if local_indices:
+            indices = [selected_indices[index] for index in local_indices]
+            break
+
     if not indices:
         if debug_exchange_id is None:
             debug_exchange_id = uuid.uuid4().hex[:12]
@@ -832,13 +877,15 @@ def apply_try_claim_miracle(
                 user,
                 exchange_id=debug_exchange_id,
                 attempt=debug_attempt,
+                search_round=search_round,
                 initial_held_count=debug_initial_held_count,
                 stage="search",
                 backpack=backpack,
                 legacy_items=legacy_items,
                 candidates=candidates,
                 search_offset=search_offset,
-                search_ids=ids,
+                search_indices=selected_indices,
+                search_ids=search_ids,
                 search_id_texts=search_id_texts,
                 star_frames_before=current_frames,
             )
@@ -846,13 +893,15 @@ def apply_try_claim_miracle(
             user,
             exchange_id=debug_exchange_id,
             attempt=debug_attempt,
+            search_round=search_round,
             initial_held_count=debug_initial_held_count,
             stage="miss",
             backpack=backpack,
             legacy_items=legacy_items,
             candidates=candidates,
             search_offset=search_offset,
-            search_ids=ids,
+            search_indices=selected_indices,
+            search_ids=search_ids,
             search_id_texts=search_id_texts,
             remaining_backpack=backpack,
             remaining_items=legacy_items,
@@ -860,7 +909,6 @@ def apply_try_claim_miracle(
             star_frames_after=current_frames,
         )
         return None
-    indices = [index + search_offset for index in indices]
 
     index_set = set(indices)
     subset_candidates = [candidates[i] for i in sorted(indices)]
@@ -894,13 +942,15 @@ def apply_try_claim_miracle(
             user,
             exchange_id=debug_exchange_id,
             attempt=debug_attempt,
+            search_round=search_round,
             initial_held_count=debug_initial_held_count,
             stage="claimed",
             backpack=backpack,
             legacy_items=legacy_items,
             candidates=candidates,
             search_offset=search_offset,
-            search_ids=ids,
+            search_indices=selected_indices,
+            search_ids=search_ids,
             search_id_texts=search_id_texts,
             matched_indices=indices,
             remaining_backpack=new_backpack,
