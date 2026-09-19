@@ -1,446 +1,264 @@
-(() => {
-  "use strict";
+import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-helper-3";
 
-  const SAVE_KEY = "s2-vnext-browser-save-v2";
-  const TARGET_DEPTH = 600_000_000_000;
-  const ORES = [
-    { key: "tin", name: "锡矿", icon: "Sn", color: "tin", value: 1, use: "基础工程材料" },
-    { key: "copper", name: "铜矿", icon: "Cu", color: "copper", value: 2.8, use: "工业科技材料" },
-    { key: "quartz", name: "紫晶", icon: "Qz", color: "quartz", value: 9, use: "电力科技材料" },
-    { key: "gold", name: "金猫锭", icon: "Au", color: "gold", value: 32, use: "现代与未来科技材料" },
-    { key: "coreshard", name: "虹核晶", icon: "◇", color: "coreshard", value: 120, use: "未来、行星与异常科技材料" },
-  ];
-  const ERA_LIST = [
-    { key: "foundation", name: "基础工程", short: "基础", unlock: 0 },
-    { key: "industrial", name: "工业时代", short: "工业", unlock: 0.00001 },
-    { key: "electrical", name: "电力时代", short: "电力", unlock: 0.00020 },
-    { key: "modern", name: "现代时代", short: "现代", unlock: 0.00150 },
-    { key: "future", name: "未来时代", short: "未来", unlock: 0.00600 },
-    { key: "planetary", name: "行星时代", short: "行星", unlock: 0.0300 },
-    { key: "anomaly", name: "异常科技", short: "异常", unlock: 0.1500 },
-  ];
-  const ERA_MASTERY = { industrial: 8, electrical: 15, modern: 15, future: 15, planetary: 15, anomaly: 15 };
-  const SPECIAL_UNLOCK_DELAY_RATIO = 0.03;
-  const SPECIAL_BURST_THRESHOLD = 0.005;
-  const SPECIALS = [
-    "relativity_burst", "phase_skip", "singularity_finish", "ore_echo", "time_dilation",
-    "entropy_guard", "quantum_tunnel", "gravity_sling", "cat_overclock", "core_resonance",
-    "parallel_bore", "vacuum_cache",
-  ];
-  const SPECIAL_NAMES = {
-    relativity_burst: "相对论爆发", phase_skip: "相位跳跃", singularity_finish: "奇点收尾",
-    ore_echo: "矿脉回响", time_dilation: "时间膨胀", entropy_guard: "熵减防护",
-    quantum_tunnel: "量子隧穿", gravity_sling: "引力弹弓", cat_overclock: "猫群超频",
-    core_resonance: "核心共振", parallel_bore: "平行钻孔", vacuum_cache: "真空缓存",
-  };
-  const EFFECTS = [
-    ["speed_add", 0.1, "推进效率"], ["depth_efficiency", 0.012, "深度效率"],
-    ["yield_add", 0.018, "矿物产量"], ["credit_add", 0.02, "矿币收益"],
-    ["carry_add", 0.022, "携带量"], ["rare_find", 0.004, "稀有发现"],
-    ["ore_value", 0.015, "矿石价值"], ["noise_reduction", 0.006, "扰动稳定"],
-    ["crit_chance", 0.003, "暴击概率"], ["crit_power", 0.012, "暴击倍率"],
-    ["salvage", 0.025, "回收收益"], ["cat_sync", 0.01, "猫群协同"],
-  ];
-  const NAMES = {
-    foundation: ["地质罗盘", "猫爪耐磨层", "手摇绞盘", "碎石筛分台", "矿灯电池", "双路通风", "水压排渣", "安全绳网", "回收熔炉", "应急猫粮", "地层标记", "便携矿仓", "低温冷却", "矿脉听诊", "基础测绘", "矿车轴承"],
-    industrial: ["高压爆破", "定向炸药", "蒸汽活塞", "锅炉绝热", "重型铰链", "钢轨铺设", "矿渣压块", "工业除尘", "液压支架", "连续装载", "熔炉增压", "耐热猫爪", "矿井升降机", "燃料回收", "爆破时序", "工业安全协议"],
-    electrical: ["电磁钻头", "三相供能", "蓄电矿车", "绝缘猫服", "电弧熔炼", "高频震岩", "智能照明", "电网调度", "电容脉冲", "矿石电析", "感应雷达", "电机冷却", "远程断路", "备用电池", "电磁吊臂", "电力回收"],
-    modern: ["全断面掘进", "激光测距", "无人运输", "液氮破岩", "模块化钻臂", "智能排水", "岩层预测", "材料复合", "超硬刀头", "自动换头", "矿尘净化", "地下中继", "机械臂编队", "应力平衡", "精密取样", "现代安全网"],
-    future: ["纳米钻群", "量子定位", "相位切割", "真空输送", "拓扑矿车", "引力补偿", "光子熔炼", "冷核供能", "猫群神经链", "概率采样", "时间标记", "空间折叠", "暗能量电池", "量子回收", "奇点预警", "未来工厂"],
-    planetary: ["行星地壳扫描", "地核共振", "潮汐钻井", "磁场牵引", "地幔导流", "星球环轨", "重力矿车", "地核散热", "行星级猫群", "熔岩隔离", "极点同步", "核心护盾", "地质时间压缩", "星球裂隙", "引力透镜", "行星工厂"],
-    anomaly: ["相对论回响", "宏观量子纠缠", "真空涨落", "因果回收", "时间膨胀舱", "奇点穿刺", "熵减协议", "多维猫爪", "虚数矿脉", "观测者偏置", "宇宙弦牵引", "反物质排渣", "无穷压缩", "星门装载", "宇宙背景采样", "终极挖掘许可"],
-  };
-  const CORE_SPECS = [
-    { key: "planetary_power", name: "行星之力", max: 100, cost: 1, effect: "每级 +1.00 全局速度，首级使下一轮速度翻倍" },
-    { key: "stage_skip", name: "阶段跳过", max: 20, cost: 2, effect: "每级减少 8% 星球深度需求，最低保留 2%" },
-    { key: "core_survey", name: "核心勘探", max: 50, cost: 3, effect: "每次爆星额外获得 1 核心" },
-    { key: "entanglement", name: "宏观量子纠缠", max: 40, cost: 5, effect: "爆星时有额外星球被同时摧毁" },
-    { key: "auto_all", name: "全自动采购", max: 1, cost: 8, effect: "所有本地科技获得自动采购资格" },
-    { key: "core_quantum", name: "核心量子加速", max: 50, cost: 8, effect: "每级 +1.50 全局速度" },
-  ];
+const STORAGE_KEY = "s2-vnext-save-v3-helper";
+const number = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 });
+const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 2 });
+const $ = (selector) => document.querySelector(selector);
+const formatNumber = (value) => Math.abs(value) >= 1e7 ? compact.format(value) : number.format(value);
+const formatMultiplier = (value) => `×${formatNumber(value)}`;
+let data; let engine; let timer = null; let view = "construction"; let pendingOrders = []; let saveBlocked = false;
+const eraName = (key) => data.eras.find((item) => item.key === key)?.name || key;
+const clock = (minute) => `D${Math.floor(minute / 1440) + 1} ${String(Math.floor(minute % 1440 / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+const duration = (minutes) => minutes < 60 ? `${Math.ceil(minutes)}分钟` : `${number.format(minutes / 60)}小时`;
+const notice = (text) => { $("#actionNotice").textContent = text; };
 
-  const baseSpecs = [
-    // 初始资源只支持做出一条明确选择；达到 3 级后自动采购再接管成长，避免 D1 手动刷满四条基础线。
-    ["pickaxe", "矿镐", 100, { credits: 500 }, 1.34, 0, "speed_add", 0.35, "每级 +0.35 基础挖掘力"],
-    ["cart", "矿车", 100, { credits: 750 }, 1.35, 0, "carry_add", 0.04, "每级 +0.04 携带量"],
-    ["refinery", "矿石精炼", 100, { credits: 1100 }, 1.36, 0, "credit_add", 0.22, "每级 +0.22 精炼收益"],
-    ["survey", "洞穴勘探", 100, { credits: 1500 }, 1.37, 0, "speed_add", 0.25, "每级 +0.25 推进效率"],
-    ["cat", "猫矿工", 12, { credits: 1500 }, 2.8, 0, "cat_sync", 0.03, "每级复制一份基础挖掘数据"],
-    ["industrial_blaster", "爆破镐", 40, { credits: 12000, copper: 50000 }, 1.43, 0.00001, "speed_add", 0.30, "每级 +0.30 推进效率"],
-    ["steam_cart", "蒸汽矿车", 40, { credits: 15000, copper: 65000 }, 1.43, 0.00001, "carry_add", 0.05, "每级 +0.05 携带量"],
-    ["electric_pickaxe", "电动镐", 40, { credits: 80000, quartz: 80000 }, 1.47, 0.00020, "speed_add", 0.55, "每级 +0.55 基础挖掘力"],
-    ["electric_cart", "电力车", 40, { credits: 90000, quartz: 90000 }, 1.47, 0.00020, "carry_add", 0.08, "每级 +0.08 携带量"],
-    ["modern_drill", "掘进机", 40, { credits: 500000, gold: 50000 }, 1.50, 0.00150, "speed_add", 0.90, "每级 +0.90 推进效率"],
-    ["future_quantum", "微观量子挖掘", 30, { credits: 4000000, gold: 200000, coreshard: 20000 }, 1.55, 0.00600, "speed_add", 1.50, "每级 +1.50 推进效率"],
-    ["relativity", "相对论效应", 10, { credits: 2e6, coreshard: 40 }, 1.72, 0.1700, "none", 0, "重生后 60 秒速度 ×100", "relativity_burst"],
-  ];
-
-  const specs = {};
-  const localKeys = [];
-  const coreKeys = CORE_SPECS.map((item) => item.key);
-  const specialForIndex = (eraIndex, index) => index % 4 === 0 ? SPECIALS[(index + eraIndex) % SPECIALS.length] : "";
-  baseSpecs.forEach((item) => {
-    const [key, name, max, cost, growth, unlock, effectKind, perLevel, effect, special = ""] = item;
-    specs[key] = { key, name, max, cost, growth, unlock, era: key === "relativity" ? "anomaly" : key === "industrial_blaster" || key === "steam_cart" ? "industrial" : key === "electric_pickaxe" || key === "electric_cart" ? "electrical" : key === "modern_drill" ? "modern" : key === "future_quantum" ? "future" : "foundation", effectKind, perLevel, effect, special, secondaryKind: "none", secondaryPerLevel: 0, prerequisites: [] };
-    localKeys.push(key);
-  });
-  ERA_LIST.forEach((era, eraIndex) => {
-    NAMES[era.key].forEach((name, index) => {
-      const key = `${era.key}_${String(index + 1).padStart(2, "0")}`;
-      const [effectKind, basePer, label] = EFFECTS[(index + eraIndex * 3) % EFFECTS.length];
-      const special = specialForIndex(eraIndex, index);
-      const secondary = index % 3 === 0 ? EFFECTS[(index * 2 + eraIndex + 5) % EFFECTS.length] : null;
-      const perLevel = basePer * (1 + eraIndex * .08 + index * .006);
-      const eraEnd = ERA_LIST[eraIndex + 1]?.unlock ?? .90;
-      const eraSpan = eraEnd - era.unlock;
-      const unlockRatio = .05 + .82 * index / Math.max(1, NAMES[era.key].length - 1);
-      specs[key] = {
-        key, name, max: 8 + ((index + eraIndex) % 5), cost: eraCost(era.key), growth: 1.30 + eraIndex * .025 + (index % 3) * .015,
-        unlock: era.unlock + eraSpan * (unlockRatio + (special ? SPECIAL_UNLOCK_DELAY_RATIO : 0)), era: era.key, effectKind, perLevel,
-        effect: `每级 +${trim(perLevel)} ${label}${secondary ? `；+${trim(secondary[1] * (1 + eraIndex * .05))} ${secondary[2]}` : ""}`,
-        special, secondaryKind: secondary ? secondary[0] : "none", secondaryPerLevel: secondary ? secondary[1] * (1 + eraIndex * .05) : 0,
-        // 顺序由时代门槛和资源成本表达；特殊节点不能把同一时代的科技树截断成前三项。
-        prerequisites: [],
-      };
-      localKeys.push(key);
-    });
-  });
-
-  function eraCost(era) {
-    return {
-      foundation: { credits: 180, tin: 500 }, industrial: { credits: 12000, copper: 50000 }, electrical: { credits: 80000, quartz: 80000 },
-      modern: { credits: 500000, gold: 50000 }, future: { credits: 4000000, gold: 200000, coreshard: 20000 },
-      planetary: { credits: 50000000, gold: 1000000, coreshard: 100000 }, anomaly: { credits: 500000000, coreshard: 500000 },
-    }[era];
+function loadSaved(seed) {
+  let raw; let legacy;
+  try { raw = localStorage.getItem(STORAGE_KEY); legacy = localStorage.getItem("s2-vnext-save-v2"); }
+  catch {
+    $("#saveNotice").textContent = "浏览器存储不可用，本次进度无法保存。";
+    return new S2Engine(data, { seed });
   }
-  function trim(value) { return Number(value.toFixed(3)).toString(); }
-
-  function newState() {
-    const localLevels = Object.fromEntries(localKeys.map((key) => [key, 0]));
-    const permanentLevels = Object.fromEntries(coreKeys.map((key) => [key, 0]));
-    return {
-      version: 2, totalMinutes: 0, depth: 0, targetDepth: TARGET_DEPTH, planets: 0, cores: 0,
-      resources: { credits: 0, tin: 0, copper: 0, quartz: 0, gold: 0, coreshard: 0 },
-      localLevels, permanentLevels, autoUnlocked: [], everLocalKeys: [], resetDays: [],
-      dailyMessages: 0, messageDay: 1, totalMessages: 0, speedChoice: 1, events: [], maxSpeed: 1,
-      autoCursor: 0, burstSeconds: 0, selectedEra: "foundation", running: false,
-    };
-  }
-
-  let state = newState();
-  let renderQueued = false;
-  let saveTimer = null;
-  let toastTimer = null;
-
-  const $ = (id) => document.getElementById(id);
-  const els = {
-    cacheState: $("cacheState"), runState: $("runState"), eraName: $("eraName"), depthValue: $("depthValue"),
-    targetDepth: $("targetDepth"), depthProgress: $("depthProgress"), progressLabel: $("progressLabel"), speedLabel: $("speedLabel"),
-    planetCount: $("planetCount"), coreCount: $("coreCount"), coreValue: $("coreValue"), resourceStrip: $("resourceStrip"),
-    techCount: $("techCount"), eraTabs: $("eraTabs"), techSearch: $("techSearch"), techSummary: $("techSummary"), techList: $("techList"),
-    coreList: $("coreList"), eventLog: $("eventLog"), runBtn: $("runBtn"), runIcon: $("runIcon"), runText: $("runText"),
-    saveMeta: $("saveMeta"), toast: $("toast"), drillBeam: $("drillBeam"), messageBudget: $("messageBudget"),
-  };
-
-  function progress() { return Math.max(0, Math.min(1, state.depth / state.targetDepth)); }
-  function day() { return 1 + Math.floor(state.totalMinutes / 1440); }
-  function minuteOfDay() { return state.totalMinutes % 1440; }
-  function formatNumber(value, decimals = 2) {
-    if (!Number.isFinite(value)) return "∞";
-    const abs = Math.abs(value);
-    if (abs === 0) return "0";
-    if (abs < 1000) return value.toFixed(decimals).replace(/\.00$/, "");
-    if (abs < 1e6) return Math.round(value).toLocaleString("zh-CN");
-    const exponent = Math.floor(Math.log10(abs));
-    const mantissa = value / (10 ** exponent);
-    return `${mantissa.toFixed(2).replace(/\.00$/, "")}e${exponent}`;
-  }
-  function formatPercent(value) { return `${(value * 100).toFixed(value < .01 ? 3 : 2)}%`; }
-  function formatDuration(minutes) {
-    if (minutes < 60) return `${Math.round(minutes)} 分钟`;
-    if (minutes < 1440) return `${(minutes / 60).toFixed(1)} 小时`;
-    return `${(minutes / 1440).toFixed(1)} 天`;
-  }
-  function eraMastery(eraKey) { return state.everLocalKeys.filter((key) => specs[key].era === eraKey).length; }
-  function eraUnlocked(eraKey) {
-    if (eraKey === "foundation") return true;
-    const eraIndex = ERA_LIST.findIndex((era) => era.key === eraKey);
-    const previous = ERA_LIST[eraIndex - 1];
-    const era = ERA_LIST[eraIndex];
-    return progress() + 1e-12 >= era.unlock && eraMastery(previous.key) >= ERA_MASTERY[eraKey];
-  }
-  function currentEra() { return ERA_LIST.slice().reverse().find((era) => eraUnlocked(era.key)) || ERA_LIST[0]; }
-  function eraGateText(eraKey) {
-    if (eraKey === "foundation") return "";
-    const eraIndex = ERA_LIST.findIndex((era) => era.key === eraKey);
-    const previous = ERA_LIST[eraIndex - 1];
-    const era = ERA_LIST[eraIndex];
-    if (progress() + 1e-12 < era.unlock) return `时代深度 ${formatPercent(era.unlock)} 解锁`;
-    const reached = eraMastery(previous.key);
-    const required = ERA_MASTERY[eraKey];
-    return reached < required ? `需掌握${previous.name}科技 ${reached}/${required}` : "";
-  }
-  function syncDailyMessages() {
-    const currentDay = day();
-    if (state.messageDay !== currentDay) { state.messageDay = currentDay; state.dailyMessages = 0; }
-  }
-  function resourceTotal(key) { return state.resources[key] || 0; }
-  function costAt(spec, level, amount = 1) {
-    const result = {};
-    for (let offset = 0; offset < amount; offset += 1) {
-      const multiplier = spec.growth ** (level + offset);
-      Object.entries(spec.cost).forEach(([key, value]) => { result[key] = (result[key] || 0) + value * multiplier; });
-    }
-    return result;
-  }
-  function costText(cost) { return Object.entries(cost).map(([key, value]) => `${resourceLabel(key)} ${formatNumber(value, 0)}`).join(" · "); }
-  function resourceLabel(key) { return key === "credits" ? "矿币" : (ORES.find((item) => item.key === key)?.name || key); }
-  function sumEffects() {
-    const result = {};
-    localKeys.forEach((key) => {
-      const spec = specs[key]; const level = state.localLevels[key] || 0;
-      if (!level) return;
-      if (spec.effectKind !== "none") result[spec.effectKind] = (result[spec.effectKind] || 0) + level * spec.perLevel;
-      if (spec.secondaryKind !== "none") result[spec.secondaryKind] = (result[spec.secondaryKind] || 0) + level * spec.secondaryPerLevel;
-    });
-    return result;
-  }
-  function specialLevel(special) { return localKeys.reduce((total, key) => total + (specs[key].special === special ? state.localLevels[key] : 0), 0); }
-  function activeAutoKeys() { return state.permanentLevels.auto_all ? localKeys : state.autoUnlocked; }
-  function speedMultiplier() {
-    const effects = sumEffects();
-    let base = 1 + (effects.speed_add || 0);
-    base *= 1 + (effects.depth_efficiency || 0);
-    base *= (1 + Math.min(12, state.localLevels.cat || 0)) * (1 + (effects.cat_sync || 0));
-    base *= 1 + (effects.carry_add || 0) * .35;
-    let permanent = 1 + state.permanentLevels.planetary_power + 1.5 * state.permanentLevels.core_quantum;
-    if (state.burstSeconds > 0) permanent *= 100;
-    return Math.max(1, base * permanent);
-  }
-  function available(key) {
-    const spec = specs[key];
-    if (!spec) return false;
-    if (state.permanentLevels.auto_all || state.autoUnlocked.includes(key)) return state.localLevels[key] < spec.max;
-    if (!eraUnlocked(spec.era)) return false;
-    if (progress() + 1e-12 < spec.unlock) return false;
-    return spec.prerequisites.every((required) => (state.localLevels[required] || 0) >= 1);
-  }
-  function canAfford(cost) { return Object.entries(cost).every(([key, value]) => resourceTotal(key) + 1e-9 >= value); }
-  function spend(cost) { Object.entries(cost).forEach(([key, value]) => { state.resources[key] = resourceTotal(key) - value; }); }
-  function pushEvent(message, tone = "normal") {
-    state.events.unshift({ message, tone, at: `D${day()} ${String(Math.floor(minuteOfDay() / 60)).padStart(2, "0")}:${String(minuteOfDay() % 60).padStart(2, "0")}` });
-    state.events = state.events.slice(0, 60);
-  }
-  function buyLocal(key, amount = 1, automatic = false) {
-    const spec = specs[key];
-    if (!spec || !Number.isInteger(amount) || amount < 1) return false;
-    if (!automatic) {
-      syncDailyMessages();
-      if (state.dailyMessages >= 3) return false;
-    }
-    const level = state.localLevels[key] || 0;
-    const maxAmount = Math.min(amount, spec.max - level);
-    if (!maxAmount || (!automatic && !available(key))) return false;
-    const cost = costAt(spec, level, maxAmount);
-    if (!canAfford(cost)) return false;
-    spend(cost);
-    state.localLevels[key] += maxAmount;
-    if (!state.everLocalKeys.includes(key)) state.everLocalKeys.push(key);
-    if (state.localLevels[key] >= 3 && !state.autoUnlocked.includes(key)) {
-      state.autoUnlocked.push(key);
-      pushEvent(`${spec.name} 达到 3 级，永久自动采购已解锁`, "good");
-    }
-    if (!automatic) {
-      state.dailyMessages += 1;
-      state.totalMessages += 1;
-      pushEvent(`购买 ${spec.name} +${maxAmount}（升级消息 ${state.dailyMessages}/3）`, "upgrade");
-    }
-    return true;
-  }
-  function buyCore(key) {
-    const spec = CORE_SPECS.find((item) => item.key === key); const level = state.permanentLevels[key] || 0;
-    if (!spec || level >= spec.max || state.cores < spec.cost) return false;
-    state.cores -= spec.cost; state.permanentLevels[key] += 1;
-    pushEvent(`核心科技：${spec.name} Lv.${state.permanentLevels[key]}`, "core");
-    return true;
-  }
-  function autoPurchase() {
-    const active = activeAutoKeys().slice().sort();
-    if (!active.length) return;
-    // 后台采购按固定预算轮转，避免自动线增多后每个结算点瞬间扫描并购买全部科技。
-    const budget = Math.min(24, active.length);
-    const start = (Number.isInteger(state.autoCursor) ? state.autoCursor : 0) % active.length;
-    for (let offset = 0; offset < budget; offset += 1) {
-      const key = active[(start + offset) % active.length];
-      if (available(key)) buyLocal(key, 1, true);
-    }
-    state.autoCursor = (start + budget) % active.length;
-  }
-  function oreYield() {
-    const p = progress(); const effects = sumEffects();
-    const weights = [0.68, 0.25, 0.055, 0.014, 0.001];
-    if (p > .12) { weights[0] -= .08; weights[1] += .05; weights[2] += .02; weights[3] += .009; weights[4] += .001; }
-    if (p > .58) { weights[0] -= .08; weights[1] -= .02; weights[2] += .04; weights[3] += .04; weights[4] += .02; }
-    const rare = Math.min(.4, (effects.rare_find || 0) + specialLevel("ore_echo") * .01);
-    weights[0] = Math.max(.1, weights[0] - rare * .5); weights[1] += rare * .24; weights[2] += rare * .16; weights[3] += rare * .08; weights[4] += rare * .02;
-    let total = 10 * speedMultiplier() * (1 + (effects.carry_add || 0)) * (1 + (effects.yield_add || 0));
-    if (specialLevel("parallel_bore") && Math.random() < Math.min(.25, .01 * specialLevel("parallel_bore"))) total *= 2;
-    const noise = Math.max(.7, Math.min(1.3, 1 + (Math.random() - .5) * .12));
-    return ORES.map((ore, index) => total * weights[index] * noise);
-  }
-  function simulateMinute() {
-    if (state.depth >= state.targetDepth) prestige();
-    const effects = sumEffects(); let gain = 8 * speedMultiplier();
-    gain *= 1 + (effects.speed_add || 0) * .02;
-    gain *= Math.max(.7, Math.min(1.3, 1 + (Math.random() - .5) * .05));
-    if (specialLevel("gravity_sling") && progress() > .25 && progress() < .75) gain *= 1 + .1 * specialLevel("gravity_sling");
-    if (specialLevel("time_dilation")) gain *= 1 + .015 * specialLevel("time_dilation");
-    if (specialLevel("cat_overclock") && state.localLevels.cat && Math.random() < Math.min(.25, .02 * state.localLevels.cat * specialLevel("cat_overclock"))) gain *= 2;
-    if ((effects.crit_chance || 0) && Math.random() < Math.min(.4, effects.crit_chance)) gain *= 1 + Math.max(.2, effects.crit_power || 0);
-    state.depth = Math.min(state.targetDepth, state.depth + gain);
-    const burstReady = progress() >= SPECIAL_BURST_THRESHOLD;
-    if (burstReady && specialLevel("phase_skip") && Math.random() < .001 * specialLevel("phase_skip")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .0005);
-    if (burstReady && specialLevel("quantum_tunnel") && Math.random() < .0002 * specialLevel("quantum_tunnel")) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .001);
-    if (specialLevel("singularity_finish") && progress() >= .97) state.depth = Math.min(state.targetDepth, state.depth + state.targetDepth * .01 * specialLevel("singularity_finish"));
-    const yields = oreYield(); const refine = .72 + (effects.credit_add || 0); const value = 1 + (effects.ore_value || 0); const salvage = 1 + (effects.salvage || 0);
-    yields.forEach((amount, index) => { const ore = ORES[index]; state.resources[ore.key] += amount; state.resources.credits += amount * ore.value * refine * value * salvage; });
-    if (specialLevel("vacuum_cache")) state.resources.credits += speedMultiplier() * .5 * specialLevel("vacuum_cache");
-    state.totalMinutes += 1;
-    syncDailyMessages();
-    state.maxSpeed = Math.max(state.maxSpeed, speedMultiplier());
-    if (state.burstSeconds > 0) state.burstSeconds = Math.max(0, state.burstSeconds - 60);
-    // 固定步进测试每 10 分钟结算一次自动采购；玩家的小时决策不阻塞后台成长。
-    if (state.totalMinutes % 10 === 0) autoPurchase();
-    if (state.depth >= state.targetDepth) prestige();
-  }
-  function simulateMinutes(minutes) {
-    const count = Math.max(0, Math.floor(minutes));
-    for (let index = 0; index < count; index += 1) simulateMinute();
-    queueSave(); render();
-  }
-  function prestige() {
-    const survey = state.permanentLevels.core_survey || 0; const resonance = specialLevel("core_resonance");
-    const relativityActive = specialLevel("relativity_burst") > 0;
-    const extra = Math.floor((state.permanentLevels.entanglement || 0) * .25); const destroyed = 1 + extra;
-    state.planets += destroyed; state.cores += 1 + survey + resonance; state.resetDays.push(day());
-    state.depth = 0; state.resources = { credits: 0, tin: 0, copper: 0, quartz: 0, gold: 0, coreshard: 0 };
-    localKeys.forEach((key) => { state.localLevels[key] = 0; }); state.autoCursor = 0; state.burstSeconds = relativityActive ? 60 : 0;
-    pushEvent(`星球爆裂：摧毁 ${destroyed} 颗，获得 ${1 + survey + resonance} 核心`, "core");
-  }
-
-  function renderResources() {
-    const list = [{ key: "credits", name: "矿币", icon: "¢", color: "credits", use: "全部本地科技的通用货币" }, ...ORES];
-    els.resourceStrip.innerHTML = list.map((item) => `<div class="resource-chip ${item.color}" title="${item.name}：${item.use}"><span class="resource-name"><i class="resource-icon">${item.icon}</i>${item.name}</span><strong class="resource-value">${formatNumber(resourceTotal(item.key), 1)}</strong></div>`).join("");
-  }
-  function renderOverview() {
-    syncDailyMessages();
-    const p = progress(); const era = currentEra(); const speed = speedMultiplier();
-    els.runState.textContent = state.running ? "自动挖掘中" : "暂停中"; els.eraName.textContent = era.name;
-    els.messageBudget.textContent = `升级消息 ${state.dailyMessages}/3`;
-    els.messageBudget.classList.toggle("exhausted", state.dailyMessages >= 3);
-    els.depthValue.textContent = formatNumber(state.depth, 2); els.targetDepth.textContent = formatNumber(state.targetDepth, 0);
-    els.depthProgress.style.width = `${p * 100}%`; els.progressLabel.textContent = formatPercent(p); els.speedLabel.textContent = `推进 ×${formatNumber(speed, 2)} · D${day()} ${String(Math.floor(minuteOfDay() / 60)).padStart(2, "0")}:${String(minuteOfDay() % 60).padStart(2, "0")}`;
-    els.planetCount.textContent = formatNumber(state.planets, 0); els.coreCount.textContent = formatNumber(state.cores, 0); els.coreValue.textContent = formatNumber(state.cores, 0);
-    els.runBtn.classList.toggle("running", state.running); els.runIcon.textContent = state.running ? "Ⅱ" : "▶"; els.runText.textContent = state.running ? "暂停自动挖矿" : "开始自动挖矿";
-    const beamScale = .3 + Math.min(.7, p); els.drillBeam.setAttribute("transform", `rotate(${(p * 35).toFixed(1)} 126 101) scale(${beamScale.toFixed(3)})`);
-  }
-  function renderEraTabs() {
-    els.eraTabs.innerHTML = ERA_LIST.map((era) => {
-      const unlocked = eraUnlocked(era.key) || state.everLocalKeys.some((key) => specs[key].era === era.key);
-      const gate = unlocked ? "" : eraGateText(era.key);
-      return `<button class="era-tab ${state.selectedEra === era.key ? "active" : ""}" data-era="${era.key}" type="button" ${unlocked ? "" : "disabled"} title="${gate}">${era.short}<small>${unlocked ? "" : "锁"}</small></button>`;
-    }).join("");
-  }
-  function renderTech() {
-    const activeEra = state.selectedEra; const search = (els.techSearch.value || "").trim().toLowerCase();
-    const keys = localKeys.filter((key) => specs[key].era === activeEra && (!search || specs[key].name.toLowerCase().includes(search)));
-    const reached = state.everLocalKeys.length; const specialReached = state.everLocalKeys.filter((key) => specs[key].special).length;
-    const eraIndex = ERA_LIST.findIndex((era) => era.key === activeEra);
-    const activeEraSpec = ERA_LIST[eraIndex];
-    const activeReached = eraMastery(activeEra);
-    const activeTotal = localKeys.filter((key) => specs[key].era === activeEra).length;
-    const nextEra = ERA_LIST[eraIndex + 1];
-    const masteryHint = nextEra ? ` · 下一时代掌握 ${activeReached}/${ERA_MASTERY[nextEra.key]}` : "";
-    els.techCount.textContent = `${reached} / ${localKeys.length}`; els.techSummary.innerHTML = `<span>${activeEraSpec?.name || "科技"} · 已接触 ${activeReached}/${activeTotal}${masteryHint}</span><span>特殊 ${specialReached}/29 · 自动 ${state.autoUnlocked.length}/${localKeys.length}</span>`;
-    if (!keys.length) { els.techList.innerHTML = `<div class="empty-state">没有匹配的科技节点</div>`; return; }
-    els.techList.innerHTML = keys.map((key) => techCard(key)).join("");
-  }
-  function techCard(key) {
-    const spec = specs[key]; const level = state.localLevels[key] || 0; const isAvailable = available(key); const maxed = level >= spec.max; const special = spec.special ? `<span class="special-tag">${SPECIAL_NAMES[spec.special] || "特殊"}</span>` : "";
-    const status = maxed ? "max" : !isAvailable ? "locked" : ""; const cost = costAt(spec, level, 1);
-    const remaining = spec.max - level;
-    const hasMessage = state.dailyMessages < 3;
-    let lockText = costText(cost);
-    if (maxed) lockText = "已达到等级上限";
-    else if (!isAvailable) {
-      lockText = eraGateText(spec.era) || (progress() + 1e-12 < spec.unlock ? `深度 ${formatPercent(spec.unlock)} 解锁` : "需要前置科技");
-    } else if (!hasMessage) lockText = "今日 3 条成功升级消息已用完";
-    const action = (amount) => {
-      const affordable = amount <= remaining && canAfford(costAt(spec, level, amount));
-      if (isAvailable && !maxed && !hasMessage && amount <= remaining) {
-        return `<button class="buy-btn budget-blocked" data-buy="${key}" data-amount="${amount}" type="button" aria-disabled="true" title="今日升级消息已用完">+${amount}</button>`;
+  if (raw) {
+    try { return new S2Engine(data, { seed, state: JSON.parse(raw) }); }
+    catch (error) {
+      try {
+        localStorage.setItem(`${STORAGE_KEY}-backup-${Date.now()}`, raw);
+        $("#saveNotice").textContent = `存档无法载入，已保留备份并新开矿井：${error.message}`;
+      } catch {
+        saveBlocked = true;
+        $("#saveNotice").textContent = "存档无法载入且备份失败。原存档保留，本次临时进度不覆盖它。";
       }
-      return `<button class="buy-btn" data-buy="${key}" data-amount="${amount}" type="button" ${isAvailable && !maxed && affordable ? "" : "disabled"}>+${amount}</button>`;
-    };
-    return `<article class="tech-card"><div class="tech-card-head"><div><div class="tech-name">${spec.name}</div>${special}</div><span class="tech-level ${status}">${maxed ? "MAX" : `Lv.${level}/${spec.max}`}</span></div><p class="tech-effect">${spec.effect}</p><div class="tech-foot"><span class="tech-cost">${isAvailable && !maxed && hasMessage ? `<b>${lockText}</b>` : lockText}</span><span class="tech-actions">${action(1)}${action(2)}${action(3)}</span></div></article>`;
+    }
+  } else if (legacy) {
+    $("#saveNotice").textContent = "已开启独立的助手版矿井；原版试玩存档仍保留。";
   }
-  function renderCore() {
-    els.coreList.innerHTML = CORE_SPECS.map((spec) => { const level = state.permanentLevels[spec.key] || 0; const disabled = level >= spec.max || state.cores < spec.cost; return `<div class="core-item"><div><div class="core-item-name">${spec.name} <span class="core-item-level">Lv.${level}/${spec.max}</span></div><div class="core-item-effect">${spec.effect}</div><button class="core-buy" data-core="${spec.key}" type="button" ${disabled ? "disabled" : ""}>消耗 ${spec.cost} 核心升级</button></div></div>`; }).join("");
+  return new S2Engine(data, { seed });
+}
+function save() {
+  if (saveBlocked) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(engine.snapshot())); }
+  catch { $("#saveNotice").textContent = "浏览器存储不可用，本次进度未保存。"; }
+}
+function stop() { clearInterval(timer); timer = null; }
+function advance(minutes) {
+  const before = { credits: engine.state.credits, depth: engine.state.depth, auto: engine.state.totalAutoLevels, helper: engine.state.totalHelperLevels };
+  engine.mineBlock(minutes);
+  save(); render();
+  notice(`已过${duration(minutes)} · 深度 +${formatNumber(engine.state.depth - before.depth)} · 助手建设 ${engine.state.totalHelperLevels - before.helper} 级 · 自动采购 ${engine.state.totalAutoLevels - before.auto} 级 · 矿币净变动 ${formatNumber(engine.state.credits - before.credits)}`);
+}
+function lockedReason(key) {
+  const spec = engine.specs[key];
+  if (spec.status !== "active") return "尚未开放";
+  if (engine.level(key) >= spec.maxLevel) return "本时代已满级";
+  if (engine.state.autoUnlocked.includes(key)) return "每小时参与自动采购";
+  if (!engine.eraUnlocked(spec.era)) {
+    const era = engine.eraByKey[spec.era];
+    const previous = engine.eraSequence[engine.eraSequence.indexOf(spec.era) - 1];
+    return `${era.name}：深度 ${formatNumber(era.unlockDepth)}，${eraName(previous)}自动线 ${engine.eraAutomationCount(previous)}/${era.previousEraAutomations}`;
   }
-  function renderEvents() { els.eventLog.innerHTML = state.events.length ? state.events.map((event) => `<div class="event ${event.tone}"><strong>${event.at}</strong> · ${event.message}</div>`).join("") : `<div class="event empty">等待第一次挖掘结算</div>`; }
-  function render() {
-    if (renderQueued) return; renderQueued = true;
-    requestAnimationFrame(() => { renderQueued = false; renderOverview(); renderResources(); renderEraTabs(); renderTech(); renderCore(); renderEvents(); });
+  if (engine.state.depth < spec.unlockDepth) return `深度 ${formatNumber(engine.state.depth)} / ${formatNumber(spec.unlockDepth)}`;
+  const missing = spec.prerequisites.filter((key) => engine.level(key) < 1);
+  if (missing.length) return `前置工程：${missing.map((key) => engine.specs[key].name).join("、")}`;
+  if (engine.state.credits < engine.costFor(key)) return `还差 ${formatNumber(engine.costFor(key) - engine.state.credits)} 矿币`;
+  return "";
+}
+function renderStatus() {
+  const s = engine.state;
+  $("#timeValue").textContent = clock(s.minute); $("#seedValue").textContent = `seed ${s.seed}`;
+  $("#creditsValue").textContent = formatNumber(s.credits); $("#depthValue").textContent = formatNumber(s.depth);
+  $("#incomeRate").textContent = `+${formatNumber(data.rules.baseCreditsPerMinute * engine.incomeMultiplier())} / 分钟`;
+  $("#depthRate").textContent = `+${formatNumber(data.rules.baseDepthPerMinute * engine.depthMultiplier())} / 分钟`;
+  $("#eraValue").textContent = eraName(engine.currentEra());
+  $("#automationValue").textContent = `${s.autoUnlocked.length} 条自动线`;
+  $("#totalBuiltValue").textContent = s.totalManualLevels + s.totalHelperLevels + s.totalAutoLevels;
+  $("#purchaseCounts").textContent = `手动 ${s.totalManualLevels} · 助手 ${s.totalHelperLevels} · 自动 ${s.totalAutoLevels}`;
+  $("#sceneEra").textContent = eraName(engine.currentEra());
+  $("#sceneStatus").textContent = `${s.autoUnlocked.length} 条自动线运转中`;
+  $("#toggleButton").textContent = timer ? "暂停推进" : "连续挖矿";
+  $("#planButton").disabled = !engine.chooseUpgrade("balanced");
+}
+function renderHelper() {
+  const s = engine.state; const report = s.lastHelperReport;
+  $("#helperToggle").checked = s.helperEnabled;
+  $("#helperNext").textContent = s.helperEnabled ? clock(s.nextHelperMinute) : "已暂停值班";
+  $("#helperCountdown").textContent = s.helperEnabled ? `还有${duration(s.nextHelperMinute - s.minute)} · 低价优先` : "装备自动采购继续运行";
+  $("#helperResult").textContent = report ? `建设 ${report.levels} 级` : "等待第一班";
+  $("#helperSpent").textContent = report ? `${clock(report.minute)} · 花费 ${formatNumber(report.spent)} 矿币` : "每日00:00采购";
+  const root = $("#helperItems"); root.replaceChildren();
+  const items = new Map();
+  for (const item of report?.items || []) items.set(item.key, (items.get(item.key) || 0) + 1);
+  for (const [key, levels] of items) {
+    const span = document.createElement("span"); span.textContent = `${engine.specs[key].name} +${levels}`; root.append(span);
   }
-  function toast(message) { els.toast.textContent = message; els.toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2200); }
-  function queueSave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveState(false), 350); }
-  function saveState(manual = true) { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, savedAt: new Date().toISOString(), running: false })); els.cacheState.innerHTML = "<i></i>缓存已写入"; els.saveMeta.textContent = `最近保存：${new Date().toLocaleString()}`; if (manual) toast("存档已保存到浏览器缓存"); }
-  function loadState(manual = true) {
-    const raw = localStorage.getItem(SAVE_KEY); if (!raw) { if (manual) toast("没有找到浏览器存档"); return false; }
-    try { const incoming = JSON.parse(raw); const fresh = newState(); state = Object.assign(fresh, incoming, { running: false }); state.localLevels = Object.assign(fresh.localLevels, incoming.localLevels || {}); state.permanentLevels = Object.assign(fresh.permanentLevels, incoming.permanentLevels || {}); state.resources = Object.assign(fresh.resources, incoming.resources || {}); render(); if (manual) toast("存档已读取"); return true; } catch (error) { if (manual) toast("存档格式无法读取"); return false; }
+  if (!items.size) root.textContent = report ? "本班没有新增建设。" : "值班记录尚为空。";
+}
+function renderNext() {
+  const candidates = engine.manualCandidates().sort((a, b) => engine.costFor(a) - engine.costFor(b));
+  const next = candidates[0] || data.upgrades.filter((spec) => spec.status === "active" && !engine.state.autoUnlocked.includes(spec.key))
+    .sort((a, b) => a.unlockDepth - b.unlockDepth)[0]?.key;
+  if (!next) {
+    $("#nextName").textContent = "本段工程已全部自动化";
+    $("#nextReason").textContent = "矿井继续生产，后续星层尚未开放。";
+    $("#nextProgress").value = 1; $("#nextProgressText").textContent = "前十天工程完成"; $("#nextEta").textContent = "";
+    return;
   }
-  function resetState() { if (!window.confirm("确定删档吗？当前浏览器中的 S2 测试进度将全部清除。")) return; stopRunning(); clearTimeout(saveTimer); saveTimer = null; state = newState(); localStorage.removeItem(SAVE_KEY); els.cacheState.innerHTML = "<i></i>缓存已清空"; els.saveMeta.textContent = "本地缓存尚未写入"; pushEvent("新的矿工档案已建立", "good"); render(); toast("测试档案已删除，可以重新开始"); }
-  function stopRunning() { state.running = false; if (window.runTimer) { clearInterval(window.runTimer); window.runTimer = null; } render(); }
-  function toggleRunning() {
-    state.running = !state.running;
-    if (state.running) { window.runTimer = setInterval(() => simulateMinutes(state.speedChoice), 500); toast(`自动挖矿 ×${state.speedChoice}`); } else { clearInterval(window.runTimer); window.runTimer = null; toast("自动挖矿已暂停"); }
-    render();
+  const spec = engine.specs[next]; let current; let target; let rate; let unit;
+  $("#nextName").textContent = spec.name; $("#nextReason").textContent = lockedReason(next) || "矿币充足，可以开工";
+  if (engine.available(next)) {
+    current = engine.state.credits; target = engine.costFor(next);
+    rate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier(); unit = "矿币";
+  } else {
+    current = engine.state.depth; target = Math.max(spec.unlockDepth, engine.eraByKey[spec.era].unlockDepth);
+    rate = data.rules.baseDepthPerMinute * engine.depthMultiplier(); unit = "深度";
   }
-  function cheat(type) {
-    if (type === "hour") simulateMinutes(60);
-    if (type === "day") simulateMinutes(1440 - minuteOfDay());
-    if (type === "week") simulateMinutes(10080);
-    if (type === "depth") { state.depth = state.targetDepth * .5; pushEvent("测试：深度跳至 50%", "core"); render(); queueSave(); }
-    if (type === "planet") { state.depth = state.targetDepth; simulateMinutes(1); toast("测试：已触发爆星"); }
-    if (type === "resources") { Object.keys(state.resources).forEach((key) => { state.resources[key] = key === "credits" ? 1e12 : 1e9; }); pushEvent("测试：资源已补满", "core"); render(); queueSave(); }
-    if (type === "cores") { state.cores += 100; pushEvent("测试：获得 100 核心", "core"); render(); queueSave(); }
-    if (type === "tech") { localKeys.forEach((key) => { state.localLevels[key] = 3; if (!state.everLocalKeys.includes(key)) state.everLocalKeys.push(key); if (!state.autoUnlocked.includes(key)) state.autoUnlocked.push(key); }); pushEvent("测试：全部本地科技达到 3 级", "core"); render(); queueSave(); }
-  }
-  function exportSave() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `s2-vnext-d${day()}.json`; anchor.click(); URL.revokeObjectURL(url); toast("JSON 存档已导出"); }
-  function importSave(file) { const reader = new FileReader(); reader.onload = () => { try { const incoming = JSON.parse(reader.result); const fresh = newState(); state = Object.assign(fresh, incoming, { running: false }); state.localLevels = Object.assign(fresh.localLevels, incoming.localLevels || {}); state.permanentLevels = Object.assign(fresh.permanentLevels, incoming.permanentLevels || {}); state.resources = Object.assign(fresh.resources, incoming.resources || {}); saveState(false); render(); toast("JSON 存档已导入"); } catch (error) { toast("JSON 文件无法导入"); } }; reader.readAsText(file); }
-
-  els.runBtn.addEventListener("click", toggleRunning);
-  $("tickBtn").addEventListener("click", () => cheat("hour"));
-  $("dayBtn").addEventListener("click", () => cheat("day"));
-  $("saveBtn").addEventListener("click", () => saveState(true));
-  $("loadBtn").addEventListener("click", () => loadState(true));
-  $("resetBtn").addEventListener("click", resetState);
-  $("clearLogBtn").addEventListener("click", () => { state.events = []; render(); });
-  $("exportBtn").addEventListener("click", exportSave);
-  $("importInput").addEventListener("change", (event) => { if (event.target.files[0]) importSave(event.target.files[0]); event.target.value = ""; });
-  els.techSearch.addEventListener("input", renderTech);
-  els.eraTabs.addEventListener("click", (event) => { const button = event.target.closest("[data-era]"); if (button && !button.disabled) { state.selectedEra = button.dataset.era; renderTech(); renderEraTabs(); } });
-  els.techList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-buy]");
-    if (!button) return;
-    syncDailyMessages();
-    if (button.getAttribute("aria-disabled") === "true" || state.dailyMessages >= 3) { toast("今天 3 条成功升级消息已用完，明天再规划；查看与自动采购不受影响"); return; }
-    if (buyLocal(button.dataset.buy, Number(button.dataset.amount))) { queueSave(); render(); } else toast("资源不足或尚未达到解锁条件");
+  $("#nextProgress").value = target ? Math.min(1, current / target) : 1;
+  $("#nextProgressText").textContent = `${unit} ${formatNumber(current)} / ${formatNumber(target)}`;
+  $("#nextEta").textContent = target > current ? `按当前产速约${duration((target - current) / rate)}` : "已满足数值条件";
+}
+function buy(orders) {
+  const result = engine.upgradeCommand(orders);
+  if (result.ok) {
+    save(); render();
+    const spent = result.purchases.reduce((sum, item) => sum + item.cost, 0);
+    notice(`完成 ${result.purchases.length} 级建设 · 花费 ${formatNumber(spent)} 矿币${result.reason ? " · 余下工程暂未满足条件" : ""}`);
+  } else notice("当前条件不足，未扣除矿币。");
+}
+function renderTechTree() {
+  const active = data.upgrades.filter((spec) => spec.status === "active");
+  const groups = {
+    construction: active.filter((spec) => engine.available(spec.key)),
+    automated: active.filter((spec) => engine.state.autoUnlocked.includes(spec.key)),
+    frontier: active.filter((spec) => !engine.available(spec.key) && !engine.state.autoUnlocked.includes(spec.key)),
+  };
+  for (const [key, specs] of Object.entries(groups)) $(`#${key}Count`).textContent = specs.length;
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.setAttribute("aria-selected", String(button.dataset.view === view));
+    button.tabIndex = button.dataset.view === view ? 0 : -1;
   });
-  els.coreList.addEventListener("click", (event) => { const button = event.target.closest("[data-core]"); if (!button) return; if (buyCore(button.dataset.core)) { queueSave(); render(); } else toast("核心不足或已达到上限"); });
-  document.querySelectorAll("[data-speed]").forEach((button) => button.addEventListener("click", () => { state.speedChoice = Number(button.dataset.speed); document.querySelectorAll("[data-speed]").forEach((item) => item.classList.toggle("active", item === button)); render(); }));
-  document.querySelectorAll("[data-cheat]").forEach((button) => button.addEventListener("click", () => cheat(button.dataset.cheat)));
-
-  if (!loadState(false)) { pushEvent("新的矿工档案已建立", "good"); }
-  render();
-})();
+  const root = $("#techTree"); root.replaceChildren(); root.setAttribute("aria-labelledby", `tab-${view}`);
+  for (const era of data.eras) {
+    const specs = groups[view].filter((spec) => spec.era === era.key);
+    if (!specs.length) continue;
+    const group = document.createElement("section"); group.className = "era-group";
+    const header = document.createElement("header"); const title = document.createElement("h3");
+    title.textContent = era.name; header.append(title); group.append(header);
+    const grid = document.createElement("div"); grid.className = "tech-grid";
+    for (const spec of specs) {
+      const card = $("#techTemplate").content.firstElementChild.cloneNode(true);
+      const commissioned = engine.state.manualLevels[spec.key]; const auto = engine.state.autoUnlocked.includes(spec.key);
+      card.classList.toggle("automated", auto); card.classList.toggle("locked", view === "frontier");
+      card.querySelector("h3").textContent = spec.name; card.querySelector(".description").textContent = spec.description;
+      card.querySelector(".level-chip").textContent = `Lv.${engine.level(spec.key)} / ${spec.maxLevel}`;
+      card.querySelector(".region").textContent = data.multiplierRegions.find((item) => item.key === spec.region)?.name || spec.region;
+      card.querySelector(".cost").textContent = engine.level(spec.key) >= spec.maxLevel ? "已满级" : `${formatNumber(engine.costFor(spec.key))} 矿币`;
+      card.querySelector(".progress-label").textContent = auto ? "已自动化" : `调试 ${commissioned} / ${spec.manualTarget}`;
+      [...card.querySelectorAll(".manual-progress i")].forEach((dot, index) => dot.classList.toggle("filled", index < commissioned));
+      const reason = lockedReason(spec.key);
+      const upgrade = card.querySelector(".upgrade-button"); upgrade.disabled = Boolean(reason);
+      upgrade.addEventListener("click", () => buy([[spec.key, 1]]));
+      const complete = card.querySelector(".commission-button"); const remaining = spec.manualTarget - commissioned;
+      const fullCost = Array.from({ length: remaining }, (_, i) => engine.costFor(spec.key, engine.level(spec.key) + i)).reduce((sum, cost) => sum + cost, 0);
+      complete.disabled = Boolean(reason) || engine.state.credits < fullCost;
+      complete.title = `剩余 ${remaining} 级，共 ${formatNumber(fullCost)} 矿币`;
+      complete.addEventListener("click", () => buy([[spec.key, remaining]]));
+      card.querySelector(".lock-reason").textContent = reason || `再建设 ${remaining} 级后自动采购`;
+      grid.append(card);
+    }
+    group.append(grid); root.append(group);
+  }
+  if (!root.children.length) {
+    const p = document.createElement("p"); p.className = "empty";
+    p.textContent = view === "construction" ? "当前装备已交给自动生产线。矿井正在接近下一项工程。" : view === "automated" ? "尚无自动生产线。" : "当前阶段的工程均已发现。";
+    root.append(p);
+  }
+}
+function renderMultipliers() {
+  const root = $("#multiplierList"); root.replaceChildren();
+  Object.entries(engine.multiplierBreakdown()).filter(([, value]) => value > 1.000001).forEach(([key, value]) => {
+    const region = data.multiplierRegions.find((item) => item.key === key || item.key === key.replace("_", ""));
+    const row = document.createElement("div"); const label = document.createElement("span"); const count = document.createElement("b");
+    label.textContent = key === "critical" ? "暴击期望" : region?.name || key; count.textContent = formatMultiplier(value); row.append(label, count); root.append(row);
+  });
+  $("#incomeMultiplier").textContent = formatMultiplier(engine.incomeMultiplier());
+  $("#depthMultiplier").textContent = formatMultiplier(engine.depthMultiplier());
+}
+function previewPlan() {
+  stop(); renderStatus();
+  const copy = new S2Engine(data, { state: engine.snapshot() });
+  pendingOrders = [];
+  while (pendingOrders.length < data.rules.batchCommandMaxLevels) {
+    const key = copy.chooseUpgrade($("#routeSelect").value);
+    if (!key) break;
+    copy.upgradeCommand([[key, 1]]); pendingOrders.push([key, 1]);
+  }
+  const spent = engine.state.credits - copy.state.credits; const items = new Map();
+  for (const [key] of pendingOrders) items.set(key, (items.get(key) || 0) + 1);
+  $("#planItems").replaceChildren();
+  for (const [key, count] of items) {
+    const li = document.createElement("li"); li.textContent = `${engine.specs[key].name} +${count} 级`; $("#planItems").append(li);
+  }
+  $("#planSummary").textContent = `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。`;
+  $("#confirmPlan").disabled = !pendingOrders.length; $("#planDialog").showModal();
+}
+function renderAudit() {
+  const profiles = ["daily", "absent", "active"].map((key) => [key, runReplay(data, { profile: key, route: $("#routeSelect").value })]);
+  const rows = $("#profileRows"); rows.replaceChildren();
+  for (const [key, replay] of profiles) {
+    const s = replay.engine.state; const tr = document.createElement("tr");
+    const values = [data.strategy.profiles[key].name, s.totalManualLevels, s.totalHelperLevels, s.totalAutoLevels, replay.snapshots.reduce((sum, day) => sum + day.visits, 0), formatNumber(s.depth), eraName(replay.engine.currentEra())];
+    values.forEach((value, index) => { const cell = document.createElement(index ? "td" : "th"); cell.textContent = value; tr.append(cell); }); rows.append(tr);
+  }
+  const daily = profiles[0][1]; const active = profiles[2][1]; const max = Math.max(...active.snapshots.map((day) => day.manualLevels));
+  $("#auditSummary").replaceChildren();
+  [
+    ["每日一次 / 手动", daily.snapshots.map((day) => day.manualLevels).join(" · "), "D1 至 D10"],
+    ["全程托管 / D10", eraName(profiles[1][1].engine.currentEra()), "没有手动购买"],
+    ["高频 / 单日最多", `${max} 级`, max > data.rules.manualBurstWarningLevels ? "操作量偏高，需复核" : "本路线未触发操作量预警"],
+  ].forEach(([label, value, caption]) => {
+    const card = document.createElement("article");
+    for (const [tag, text] of [["span", label], ["strong", value], ["small", caption]]) {
+      const child = document.createElement(tag); child.textContent = text; card.append(child);
+    }
+    $("#auditSummary").append(card);
+  });
+}
+function render() { renderStatus(); renderHelper(); renderNext(); renderTechTree(); renderMultipliers(); }
+function reset() {
+  const seed = Number($("#seedInput").value);
+  if (!Number.isSafeInteger(seed)) { notice("Seed 必须是安全范围内的整数。"); return; }
+  stop(); engine = new S2Engine(data, { seed });
+  saveBlocked = false; view = "construction"; save(); render(); notice("新矿井已就绪，笨助手将于次日00:00开始采购。");
+}
+async function boot() {
+  data = await loadGameData(); engine = loadSaved(Number($("#seedInput").value));
+  document.querySelectorAll("[data-advance]").forEach((button) => button.addEventListener("click", () => advance(Number(button.dataset.advance))));
+  $("#toggleButton").addEventListener("click", () => {
+    if (timer) stop(); else timer = setInterval(() => advance(10), 550);
+    renderStatus();
+  });
+  $("#helperToggle").addEventListener("change", (event) => {
+    engine.setHelperEnabled(event.target.checked); save(); renderHelper();
+    notice(engine.state.helperEnabled ? "夜班值班已恢复，将在下一个00:00采购。" : "夜班值班已暂停，已建成的自动线继续生产。");
+  });
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.addEventListener("click", () => { view = button.dataset.view; renderTechTree(); });
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...document.querySelectorAll("[data-view]")];
+      const next = tabs[(tabs.indexOf(button) + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.click(); next.focus();
+    });
+  });
+  $("#planButton").addEventListener("click", previewPlan);
+  $("#confirmPlan").addEventListener("click", () => { buy(pendingOrders); pendingOrders = []; $("#planDialog").close(); });
+  $("#resetButton").addEventListener("click", () => { stop(); renderStatus(); $("#resetDialog").showModal(); });
+  $("#confirmReset").addEventListener("click", () => { reset(); $("#resetDialog").close(); });
+  $("#replayButton").addEventListener("click", renderAudit);
+  render(); renderAudit(); save();
+}
+boot().catch((error) => {
+  const message = document.createElement("pre"); message.className = "fatal";
+  message.textContent = `矿井启动失败\n${error.message}`; document.body.replaceChildren(message);
+});

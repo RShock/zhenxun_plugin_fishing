@@ -1,32 +1,37 @@
-# S2 vNext：星穹矿脉模拟实验室
+﻿# S2 vNext：星穹矿脉模拟实验室
 
-这里是推翻旧 S2 方案后的独立实验区。旧版 `GAME_DESIGN*.md`、网页 Demo 和主程序全部保留，vNext 包含命令行模拟器、数值记录和独立浏览器原型，暂不接入 NoneBot 或数据库。
+这里是 S2 独立实验区，暂不接 NoneBot 或数据库。当前是 schema v3 夜班笨助手版，先验证首星前十天。
 
 ## 运行
 
-在项目根目录执行：
-
 ```powershell
-.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_mining_simulator.py scenario --days 45 --target-log10 11
-.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_mining_simulator.py repl --target-log10 11
+.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_first_ten_days.py --days 10 --seed 42 --output HELPER_TEN_DAYS_TRACE.md
+
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
+.venv\Scripts\python.exe -m pytest zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_mining_simulator.py -q
+
+node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_engine.test.mjs
+
+.venv\Scripts\python.exe -m http.server 8766 --bind 127.0.0.1 --directory zhenxun/plugins/zhenxun_plugin_fishing/web/static/s2-vnext
 ```
 
-`scenario` 是阶段一长线压力测试，仍保留早期的宽松策略，主要用于观察重生、节点覆盖和特殊效果，不能替代前十天体验验收。`repl` 支持 `挖矿`、`升级 镐子=2 矿车=1`、`模拟 3`、`状态`。
+以上命令从机器人项目根目录运行；端口占用时换用空闲端口。网页与 Python 共用 `game_data.json`，不是两套数值。用时间控制台推进模拟日，不会根据现实关页时长自动补算。
 
-当前基础工程的首级价格为矿镐 500、矿车 750、矿石精炼 1100、洞穴勘探 1500 矿币。这个价格带有意把第一天拉成长为“先选一条主线、再等自动采购”的节奏；网页原型与模拟器共用这组数值。
+## v3 规则摘要
 
-前十天固定序列使用 10 分钟步进，自动采购也在每个 10 分钟块结算；活跃玩家默认每小时查看一次，但每天最多只能发送三条成功升级消息。运行 `s2_first_ten_days.py --days 10` 会同时审计每小时、每 3 小时和每天 3 次查看的玩家画像，并生成 `FIRST_TEN_DAYS_TRACE.md`，记录所有查看、手动升级和自动采购时点。
+- 唯一资源是矿币。
+- 一次命令可购买多项多级；网页先显示清单，确认后建设。
+- 玩家与助手共同完成科技的 3 个调试等级后永久自动化。
+- 笨助手默认开启，每个游戏日 00:00 购买便宜的未自动化等级，支付矿币、不留预算；关闭后恢复不补班。
+- 自动采购使用全局队列，每小时最多一级，保护当前最便宜的 3 个调试等级预算。
+- 每日 3-6 级只是软参考，不设每日上限；等级数、命令数、查看次数分开审计。
+- D10 每日一次和全托管画像均应进入电气时代；首星通关与第二阶段还未实现。
+- 活动科技和后期储备都在共享数据中；`reserve` 不进入试玩建设列表。
 
-资源不是展示值：矿币用于全部本地科技；锡矿、铜矿、紫晶、金猫锭和虹核晶分别承担基础、工业、电力、现代、未来及行星科技的材料成本。独立浏览器原型位于 `web/static/s2-vnext/`，同步执行每日三条成功升级消息、`+1/+2/+3` 购买、时代掌握门槛与永久自动采购；它仅用于路线测试，不是正式 UI，也未接主程序。
+## 当前验证
 
-## 当前文档
+固定 seed=42、每天 20:00 操作的手动等级为 `6/2/3/3/3/3/3/3/5/3`，共 34 级；助手 17 级，自动采购 79 级。网页实际十次批量采购与模拟经济结果相同，逐级回放的命令数为 34，网页批量仅 10 条，不能混为一个指标。
 
-- [GAME_DESIGN_VNEXT.md](./GAME_DESIGN_VNEXT.md)：规则、升级树、玩家体验和外推方法。
-- [DESIGN_INTENT.md](./DESIGN_INTENT.md)：不可回归的交互约束、时代节奏和模拟验收标准。
-- [NEXT_THREAD_HANDOFF.md](./NEXT_THREAD_HANDOFF.md)：新对话应先阅读的当前状态、未解决问题和下一步顺序。
-- [s2_mining_simulator.py](./s2_mining_simulator.py)：可重复的固定时间步模拟器。
-- [FIRST_TEN_DAYS_TRACE.md](./FIRST_TEN_DAYS_TRACE.md)：固定 seed=42 的前十天手动与自动升级明细。
-- [test_s2_mining_simulator.py](./test_s2_mining_simulator.py)：硬约束、特殊效果和多 seed 阶段一集成测试。
-- [tools/APPLY_PATCH_WINDOWS.md](../../../../tools/APPLY_PATCH_WINDOWS.md)：Windows Codex 多行补丁兼容工具说明。
+助手版使用独立存档键，原版试玩存档仍保留，不静默迁移。当前测试覆盖有限路线与前十天，不代表四个月数值已平衡。
 
-目标深度参数默认使用 `11` 档，对应校准后的约 `6×10^11` 深度作为可在普通电脑上观察的阶段一曲线；阶段二的 `10^308` 外推暂时冻结，等阶段一签收后再恢复。这个目标只是开发观测线，正式数值仍可继续向 `10^308` 扩展，通关天数不设硬限制。
+现行要求见 `DESIGN_INTENT.md`，本轮结果与已知体验问题见 `HELPER_PLAYTEST.md`，逐日数据见 `HELPER_TEN_DAYS_TRACE.md`。`GAME_DESIGN_VNEXT.md`、`FIRST_TEN_DAYS_TRACE.md`、`NEXT_THREAD_HANDOFF.md` 保留的是早期方案，不作为 v3 验收标准。

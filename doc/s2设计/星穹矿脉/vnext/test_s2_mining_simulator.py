@@ -1,155 +1,400 @@
-from s2_mining_simulator import LOCAL_KEYS, SPECS, LogNumber, SimulationState, run_scenario
+from __future__ import annotations
+
+import json
+import math
+import pathlib
+import subprocess
+from dataclasses import replace
+
+import pytest
+
 from s2_first_ten_days import (
-    first_era_day,
-    run as run_first_ten_days,
+    PLAYER_PROFILES,
+    audit_opportunities,
+    audit_profiles,
+    resolve_output_path,
+    run,
+    run_helper_ten_day_matrix,
+    run_opportunity_matrix,
     run_profile_matrix,
 )
+from s2_mining_simulator import GAME_DATA, RULES, SPECS, SimulationState, strategy_visit
 
 
-def test_batch_upgrade_uses_one_message_and_daily_limit_is_three():
-    state = SimulationState(target_depth=1_000_000, seed=1)
-    state.resources["credits"] = 100_000
-
-    ok, _ = state.upgrade_command([("pickaxe", 2), ("cart", 2)])
-    assert ok
-    assert state.daily_upgrade_messages == 1
-    assert state.local_levels["pickaxe"] == 2
-    assert state.local_levels["cart"] == 2
-
-    assert state.upgrade_command([("refinery", 1)])[0]
-    assert state.upgrade_command([("survey", 1)])[0]
-    assert not state.upgrade_command([("pickaxe", 1)])[0]
-    assert state.daily_upgrade_messages == 3
+HERE = pathlib.Path(__file__).resolve().parent
+RUNNER = HERE / "s2_web_parity_runner.mjs"
 
 
-def test_level_three_unlocks_auto_and_auto_unlock_survives_prestige():
-    state = SimulationState(target_depth=100, seed=2)
-    state.resources["credits"] = 100_000
-    assert state.upgrade_command([("pickaxe", 3)])[0]
-    assert "pickaxe" in state.auto_unlocked
-    state.depth = state.target_depth
-    state.mine_minute(1)
-    assert state.planets == LogNumber.from_int(1)
-    assert state.local_levels["pickaxe"] == 0
-    assert "pickaxe" in state.active_auto_keys
+def manually_unlock(state: SimulationState, key: str) -> None:
+    spec = SPECS[key]
+    state.depth = max(state.depth, spec.unlock_depth)
+    for required in spec.prerequisites:
+        state.levels[required] = max(1, state.levels[required])
+    state.credits = 1e30
+    for _ in range(spec.manual_target):
+        ok, reason = state.upgrade_command([(key, 1)])
+        assert ok, reason
 
 
-def test_prestige_resets_local_economy_but_keeps_core_upgrades():
-    state = SimulationState(target_depth=100, seed=3)
-    state.resources["credits"] = 10_000
-    state.cores = LogNumber.from_int(4)
-    assert state.upgrade_command([("planetary_power", 1)])[0]
-    state.local_levels["pickaxe"] = 8
-    state.resources["tin"] = 99
-    state.prestige()
-    assert state.permanent_levels["planetary_power"] == 1
-    assert state.local_levels["pickaxe"] == 0
-    assert state.resources["tin"] == 0
-    assert state.cores == LogNumber.from_int(4)
+def test_v3_uses_one_shared_currency_and_has_multiplier_reserve() -> None:
+    assert GAME_DATA["schemaVersion"] == 3
+    assert GAME_DATA["gameVersion"] == "s2-vnext-v3-helper-1"
+    assert [item["key"] for item in GAME_DATA["resources"]] == ["credits"]
+    assert len(GAME_DATA["multiplierRegions"]) >= 20
+    assert sum(item["status"] != "active" for item in GAME_DATA["multiplierRegions"]) >= 8
 
 
-def test_stage_two_projection_does_not_construct_huge_integer():
-    state = SimulationState(target_depth=1_000_000, seed=4)
-    projection = state.project_stage_two(308)
-    assert projection["target_log10"] == 308
-    assert projection["log10_minutes_to_target"] > 300
-    assert state.planets == LogNumber.zero()
+def test_batch_command_validates_before_mutating_and_counts_once() -> None:
+    state = SimulationState(deterministic=True)
+    state.credits = 1e9
+    for orders in ([], [("rotary_pick", 0)], [("rotary_pick", -1)],
+                   [("rotary_pick", True)], [("rotary_pick", 1.5)],
+                   [("rotary_pick", 1), ("unknown", 1)],
+                   [("rotary_pick", 101)]):
+        assert state.upgrade_command(orders) == (False, "invalid")
+        assert state.level("rotary_pick") == 0
+    assert state.upgrade_command([("rotary_pick", 2), ("split_tunnel", 1)]) == (True, "locked")
+    assert state.level("rotary_pick") == 2
+    assert state.total_manual_levels == 2
+    assert state.total_manual_commands == 1
+    assert state.upgrade_command([("rotary_pick", 1)]) == (True, "")
+    assert "rotary_pick" in state.auto_unlocked
+    assert state.total_manual_commands == 2
 
 
-def test_seeded_scenario_reaches_first_reset_in_development_window():
-    state, log = run_scenario(days=30, seed=42, target_log10=11)
-    assert state.planets >= LogNumber.one()
-    assert state.permanent_levels["planetary_power"] >= 1
-    assert state.first_reset_day is not None
-    assert 15 <= state.first_reset_day <= 45
-    assert any("D25" in line for line in log)
+def test_batch_partial_affordability_and_direct_purchase_command_count() -> None:
+    state = SimulationState(deterministic=True)
+    state.credits = state.cost_for("rotary_pick") + 1
+    assert state.upgrade_command([("rotary_pick", 3)]) == (True, "credits")
+    assert state.level("rotary_pick") == 1
+    assert state.total_manual_commands == 1
+    assert state.upgrade_command([("rotary_pick", 1)]) == (False, "credits")
+    assert state.total_manual_commands == 1
+    state.credits = state.cost_for("rotary_pick")
+    assert state.purchase("rotary_pick") == (True, "")
+    assert state.total_manual_levels == 2
+    assert state.total_manual_commands == 1
 
 
-def test_stage_one_registry_has_distinct_effectful_nodes():
-    assert len(LOCAL_KEYS) >= 100
-    assert len({SPECS[key].name for key in LOCAL_KEYS}) == len(LOCAL_KEYS)
-    assert all(SPECS[key].effect_kind != "none" or SPECS[key].special for key in LOCAL_KEYS)
+def test_purchase_near_epsilon_clamps_balance_to_zero() -> None:
+    state = SimulationState(deterministic=True)
+    cost = state.cost_for("rotary_pick")
+    state.credits = cost - 5e-10
+
+    assert state.purchase("rotary_pick") == (True, "")
+    assert state.credits == 0.0
+    assert state.total_manual_levels == 1
 
 
-def test_relative_burst_is_applied_before_its_timer_expires():
-    state = SimulationState(target_depth=1_000_000, seed=5)
-    state.local_levels["relativity"] = 1
-    state.burst_seconds = 60
-    state.mine_minute(1)
-    assert state.burst_seconds == 0
-    assert state.depth > 500
+def test_third_manual_level_permanently_unlocks_automation() -> None:
+    state = SimulationState(deterministic=True)
+    manually_unlock(state, "rotary_pick")
+    assert state.manual_levels["rotary_pick"] == 3
+    assert "rotary_pick" in state.auto_unlocked
+    assert not state.available("rotary_pick")
+    assert state.available("rotary_pick", automatic=True)
 
 
-def test_stage_one_matrix_keeps_reset_window_and_coverage_across_seeds():
-    from s2_mining_simulator import run_stage_one_matrix
-
-    audits = run_stage_one_matrix(seeds=(1, 42, 2026), days=45, target_log10=11)
-    assert all(a.passed for a in audits)
-    assert all(15 <= a.first_reset_day <= 45 for a in audits if a.first_reset_day is not None)
-    assert all(a.local_nodes_reached == 124 for a in audits)
-    assert all(a.special_nodes_reached == a.special_nodes_total for a in audits)
-    assert all(a.max_daily_messages <= 3 for a in audits)
-
-
-def test_stage_one_45_day_integration_reaches_every_local_node():
-    state, log = run_scenario(days=45, seed=42, target_log10=11)
-    assert len(state.ever_local_keys) == len(LOCAL_KEYS)
-    assert sum(1 for key in state.ever_local_keys if SPECS[key].special) >= 12
-    assert any("阶段一审查" in line for line in log)
+def test_auto_queue_has_global_budget_and_protects_three_manual_levels() -> None:
+    state = SimulationState(deterministic=True)
+    manually_unlock(state, "rotary_pick")
+    state.depth = 10000
+    manually_unlock(state, "split_tunnel")
+    state.credits = state.reserve_cost() + min(state.cost_for("rotary_pick"), state.cost_for("split_tunnel")) + 1
+    before = state.total_auto_levels
+    bought = state.auto_purchase()
+    assert len(bought) <= int(RULES["autoPurchaseBudget"]) == 1
+    assert state.total_auto_levels - before == len(bought)
+    assert state.credits + 1e-9 >= state.reserve_cost()
 
 
-def test_first_ten_days_uses_real_message_limit_and_records_auto_purchases():
-    _, snapshots, events, checks = run_first_ten_days(days=10, seed=42)
-
-    assert all(snapshot.manual_messages <= 3 for snapshot in snapshots)
-    assert all(snapshot.checks >= 20 for snapshot in snapshots)
-    assert any(not check.acted for check in checks)
-    assert any(event.source == "manual" for event in events)
-    assert any(event.source == "auto" for event in events)
-    assert snapshots[-1].nodes_reached > snapshots[0].nodes_reached
+def test_speed_is_compound_but_other_regions_are_linear_inside_their_technology() -> None:
+    state = SimulationState(deterministic=True)
+    state.levels["rotary_pick"] = 3
+    state.levels["split_tunnel"] = 3
+    factors = state.multiplier_breakdown()
+    assert math.isclose(factors["speed"], 1.18**3)
+    assert math.isclose(factors["parallel"], 1 + 0.22 * 3)
 
 
-def test_active_profile_first_upgrade_and_message_timing_match_d1_d10_intent():
-    _, snapshots, events, _ = run_first_ten_days(days=10, seed=42, profile="active")
-    manual = [event for event in events if event.source == "manual"]
+def test_critical_chance_has_immediate_benefit_without_damage_upgrade() -> None:
+    state = SimulationState(deterministic=True)
+    key = next(key for key, spec in SPECS.items() if spec.effect_kind == "crit_chance" and spec.status == "active")
+    before = state.multiplier_breakdown()["critical"]
+    state.levels[key] = 1
+    assert before == 1
+    assert state.multiplier_breakdown()["critical"] > before
+    assert math.isclose(state.multiplier_breakdown()["critical"], 1 + SPECS[key].effect_per_level * RULES["baseCriticalDamage"])
 
+
+def test_helper_purchases_cheapest_commissioning_without_reserve_or_rng() -> None:
+    state = SimulationState(deterministic=True)
+    state.depth = 1e7
+    state.credits = 1e12
+    before_rng = state.rng.getstate()
+    report = state.helper_purchase()
+    assert state.rng.getstate() == before_rng
+    assert report["levels"] == state.total_helper_levels == len(report["items"])
+    assert report["spent"] == pytest.approx(sum(item["cost"] for item in report["items"]))
+    assert state.total_manual_levels == state.total_manual_commands == 0
+    assert state.daily_helper_levels == report["levels"]
+    assert all(state.manual_levels[key] == SPECS[key].manual_target for key in state.auto_unlocked)
+    assert all(item["level"] <= SPECS[item["key"]].max_level for item in report["items"])
+    assert report["items"][0]["key"] == "rotary_pick"
+    assert report["items"][0]["level"] == 1
+
+
+def test_helper_can_spend_reserved_budget_but_never_automatic_levels() -> None:
+    state = SimulationState(deterministic=True)
+    first_cost = state.cost_for("rotary_pick")
+    assert state.reserve_cost() > first_cost
+    state.credits = first_cost
+    report = state.helper_purchase()
+    assert report["items"] == [{"key": "rotary_pick", "level": 1, "cost": first_cost}]
+    assert state.credits == 0
+    assert state.total_helper_levels == 1
+    assert state.total_auto_levels == 0
+    assert state.manual_levels["rotary_pick"] == 1
+
+
+def test_helper_waits_until_midnight_and_auto_runs_first() -> None:
+    state = SimulationState(deterministic=True)
+    manually_unlock(state, "rotary_pick")
+    state._next_auto_minute = 1440
+    state.credits = 1e30
+    state.mine_block(1430)
+    assert state.total_helper_levels == 0
+    assert state.day == 1
+    state.mine_block(10)
+    assert state.day == 2
+    assert state.last_helper_report["minute"] == 1440
+    assert state.last_helper_report["levels"] > 0
+    assert state.daily_helper_levels == state.last_helper_report["levels"]
+    assert state.daily_manual_levels == 0
+    sources = [item["source"] for item in state.last_block_events]
+    assert "auto" in sources and "helper" in sources
+    midnight = [item for item in state.last_block_events if item["minute"] == 1440]
+    assert midnight[0]["source"] == "auto"
+    assert any(item["source"] == "helper" for item in midnight)
+    state.mine_block(10)
+    assert state.last_block_events == []
+    assert state.start_new_day() is None
+    assert state.day == 2
+
+
+def test_large_mine_block_matches_small_blocks_and_resets_event_buffer() -> None:
+    large = SimulationState(seed=42)
+    small = SimulationState(seed=42)
+    large.mine_block(2880)
+    observed = []
+    for _ in range(2880 // 10):
+        small.mine_block(10)
+        observed.extend(small.last_block_events)
+    assert large.last_block_events == observed
+    assert large.levels == small.levels
+    assert large.credits == small.credits
+    assert large.depth == small.depth
+    assert large.day == small.day == 3
+    assert large.last_helper_report == small.last_helper_report
+    assert large.total_helper_levels == small.total_helper_levels
+
+
+def test_disabled_helper_does_not_backfill_missed_days() -> None:
+    state = SimulationState(deterministic=True)
+    state.set_helper_enabled(False)
+    state.credits = 1e9
+    state.mine_block(2880)
+    assert state.last_helper_report == {"minute": 2880, "levels": 0, "spent": 0.0, "items": []}
+    assert state.total_helper_levels == 0
+    assert state._next_helper_minute == 4320
+    state.set_helper_enabled(True)
+    assert state.total_helper_levels == 0
+    state.mine_block(10)
+    assert state.last_helper_report["minute"] == 2880
+    state.mine_block(1430)
+    assert state.last_helper_report["minute"] == 4320
+    assert state.total_helper_levels > 0
+    with pytest.raises(ValueError):
+        state.set_helper_enabled(1)
+
+
+def test_empty_daily_helper_report_and_no_login_day_reset() -> None:
+    state = SimulationState(deterministic=True)
+    state.set_helper_enabled(False)
+    state.credits = 1e9
+    state.mine_block(1440)
+    assert state.day == 2
+    assert state.daily_helper_levels == state.daily_manual_levels == 0
+    assert state.last_helper_report == {"minute": 1440, "levels": 0, "spent": 0.0, "items": []}
+    state.set_helper_enabled(True)
+    for key, spec in SPECS.items():
+        state.levels[key] = spec.max_level
+    state.mine_block(1440)
+    assert state.day == 3
+    assert state.last_helper_report == {"minute": 2880, "levels": 0, "spent": 0.0, "items": []}
+    assert state.last_block_events == []
+
+
+def test_d1_first_upgrade_and_daily_replay_counts() -> None:
+    state, snapshots, events = run(10, 42, profile="daily", route="balanced")
+    manual = [item for item in events if item.source == "manual"]
     assert manual[0].day == 1
-    assert 30 <= manual[0].minute <= 180
-    last_message_by_day = {
-        day: max(event.minute for event in manual if event.day == day)
-        for day in range(1, 11)
-    }
-    assert sum(minute >= 720 for minute in last_message_by_day.values()) >= 5
-    assert sum(minute <= 180 for minute in last_message_by_day.values()) <= 1
-    assert all(snapshot.manual_messages <= 3 for snapshot in snapshots)
+    assert manual[0].minute == 1200
+    assert all(item.visits == 1 for item in snapshots)
+    assert all(item.manual_commands == item.manual_levels for item in snapshots)
+    assert any(item.helper_levels > 0 for item in snapshots)
+    assert sum(item.manual_levels for item in snapshots) == len(manual)
+    assert sum(item.helper_levels for item in snapshots) == sum(event.source == "helper" for event in events)
+    assert snapshots[0].current_era == "foundation"
+    assert snapshots[-1].depth > snapshots[0].depth
+    assert state.minute == 10 * 1440
+    assert state.day == 11
+    assert state.total_manual_levels == 34
+    assert state.total_helper_levels == 17
+    assert state.total_auto_levels == 79
 
 
-def test_first_ten_days_limits_direct_plus_three_to_once_per_day():
-    _, _, events, _ = run_first_ten_days(days=10, seed=42, profile="active")
-    direct_three_days = [
-        event.day
-        for event in events
-        if event.source == "manual" and any(amount == 3 for _, amount in event.orders)
-    ]
-
-    assert len(direct_three_days) == len(set(direct_three_days))
+def test_opportunity_matrix_reports_bursts_not_three_to_six_cap() -> None:
+    matrix = run_opportunity_matrix()
+    assert audit_opportunities(matrix) == []
+    assert len(matrix) == 20
+    assert all(len(counts) == 10 for counts in matrix.values())
+    assert max(max(counts) for counts in matrix.values()) <= RULES["manualBurstWarningLevels"]
+    assert audit_opportunities({(42, "balanced"): [31]}) == ["seed=42 route=balanced: [31]"]
 
 
-def test_player_profiles_share_the_same_d1_d10_stage_shape():
-    results = run_profile_matrix(days=10, seed=42)
+def test_daily_absent_and_legacy_profiles_are_replayed() -> None:
+    results = run_profile_matrix(10, 42)
+    audit_profiles(results)
+    assert set(results) == set(PLAYER_PROFILES)
+    assert PLAYER_PROFILES["daily"].check_minutes == (1200,)
+    assert PLAYER_PROFILES["absent"].check_minutes == ()
+    assert all(item.manual_levels == item.manual_commands == item.visits == 0 for item in results["absent"][1])
+    assert results["absent"][0].total_helper_levels > 0
+    assert results["daily"][1][-1].current_era == "electrical"
+    assert results["absent"][1][-1].current_era == "electrical"
 
-    for _, snapshots, events, _ in results.values():
-        manual_events = [event for event in events if event.source == "manual"]
-        manual_amounts = {amount for event in manual_events for _, amount in event.orders}
-        direct_three_days = [
-            event.day
-            for event in manual_events
-            if any(amount == 3 for _, amount in event.orders)
-        ]
-        assert len(direct_three_days) == len(set(direct_three_days))
-        industrial_day = first_era_day(snapshots, "industrial")
-        assert industrial_day is not None
-        assert 4 <= industrial_day <= 6
-        assert first_era_day(snapshots, "electrical") is None
-        assert snapshots[9].nodes_reached >= 12
-        assert {1, 2, 3} <= manual_amounts
+
+def test_profile_audit_only_applies_d10_acceptance_to_exact_ten_day_runs() -> None:
+    with pytest.raises(ValueError, match="positive integer"):
+        run(0)
+    audit_profiles(run_profile_matrix(1, 42))
+    twenty_day = run_profile_matrix(20, 42)
+    for key in ("daily", "absent"):
+        state, snapshots, events = twenty_day[key]
+        snapshots[-1] = replace(snapshots[-1], current_era="foundation")
+        twenty_day[key] = (state, snapshots, events)
+    audit_profiles(twenty_day)
+
+    ten_day = run_profile_matrix(10, 42)
+    state, snapshots, events = ten_day["daily"]
+    snapshots[-1] = replace(snapshots[-1], current_era="foundation")
+    ten_day["daily"] = (state, snapshots, events)
+    with pytest.raises(AssertionError, match="D10"):
+        audit_profiles(ten_day)
+
+
+def test_daily_and_absent_five_seed_four_route_helper_matrix() -> None:
+    matrix = run_helper_ten_day_matrix()
+    assert len(matrix) == 20
+    assert {item.seed for item in matrix} == {1, 7, 42, 99, 2026}
+    assert {item.route for item in matrix} == set(GAME_DATA["strategy"]["routeVariants"])
+    assert all(item.daily_industrial_minute is not None for item in matrix)
+    assert all(item.absent_industrial_minute is not None for item in matrix)
+    assert all(item.daily_electrical_minute is not None for item in matrix)
+    assert all(item.absent_electrical_minute is not None for item in matrix)
+    assert all(item.daily_electrical_minute <= 10 * 1440 for item in matrix)
+    assert all(item.absent_electrical_minute <= 10 * 1440 for item in matrix)
+    assert all(
+        item.electrical_lag_minutes
+        == item.absent_electrical_minute - item.daily_electrical_minute
+        for item in matrix
+    )
+    assert all(item.daily_max_manual_levels <= RULES["manualBurstWarningLevels"] for item in matrix)
+    assert all(item.daily_max_helper_levels > 0 for item in matrix)
+    assert all(item.absent_max_helper_levels > 0 for item in matrix)
+    assert all(item.daily_max_total_purchases >= item.daily_max_manual_levels for item in matrix)
+    assert all(item.absent_max_total_purchases >= item.absent_max_helper_levels for item in matrix)
+    assert all(item.absent_depth < item.daily_depth for item in matrix)
+
+
+def test_output_path_defaults_to_new_helper_trace_and_protects_historical_trace() -> None:
+    assert resolve_output_path(pathlib.Path("HELPER_TEN_DAYS_TRACE.md")) == HERE / "HELPER_TEN_DAYS_TRACE.md"
+    with pytest.raises(ValueError, match="拒绝覆盖历史"):
+        resolve_output_path(HERE / "FIRST_TEN_DAYS_TRACE.md")
+
+
+def test_replay_same_seed_is_repeatable_and_strategy_visit_drains_affordable() -> None:
+    a, sa, ea = run(10, 7, profile="daily")
+    b, sb, eb = run(10, 7, profile="daily")
+    assert sa == sb and ea == eb and a.levels == b.levels
+    fresh = SimulationState(deterministic=True)
+    fresh.credits = 1e9
+    orders = strategy_visit(fresh)
+    assert orders
+    assert fresh.total_manual_commands == len(orders)
+    assert not strategy_visit(fresh)
+
+
+@pytest.mark.parametrize("profile", ["daily", "absent", "active", "regular", "low"])
+def test_python_and_web_engine_match(profile: str) -> None:
+    state, snapshots, events = run(10, 42, profile=profile, route="balanced")
+    completed = subprocess.run(
+        ["node", str(RUNNER), "42", "10", profile, "balanced"],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8-sig",
+    )
+    web = json.loads(completed.stdout)
+    for py, js in zip(snapshots, web["snapshots"], strict=True):
+        assert py.day == js["day"]
+        assert py.manual_levels == js["manualLevels"]
+        assert py.auto_levels == js["autoLevels"]
+        assert py.helper_levels == js["helperLevels"]
+        assert py.manual_commands == js["manualCommands"]
+        assert py.visits == js["visits"]
+        assert py.current_era == js["currentEra"]
+        assert math.isclose(py.depth, js["depth"], rel_tol=1e-12)
+        assert math.isclose(py.credits, js["credits"], rel_tol=1e-12)
+        assert math.isclose(py.income_multiplier, js["incomeMultiplier"], rel_tol=1e-12)
+        assert math.isclose(py.depth_multiplier, js["depthMultiplier"], rel_tol=1e-12)
+    py_events = [(item.day, item.minute, item.source, item.key, item.level, item.cost) for item in events]
+    js_events = [(item["day"], item["minute"], item["source"], item["key"], item["level"], item["cost"]) for item in web["events"]]
+    assert len(py_events) == len(js_events)
+    for py, js in zip(py_events, js_events, strict=True):
+        assert py[:5] == js[:5]
+        assert math.isclose(py[5], js[5], rel_tol=1e-12)
+    assert state.levels == web["levels"]
+    assert state.manual_levels == web["manualLevels"]
+    assert sorted(state.auto_unlocked) == web["autoUnlocked"]
+    assert state.helper_enabled == web["helperEnabled"]
+    assert state._next_helper_minute == web["nextHelperMinute"]
+    assert state.total_helper_levels == web["totalHelperLevels"]
+    assert state.total_manual_levels == web["totalManualLevels"]
+    assert state.total_manual_commands == web["totalManualCommands"]
+    assert state.total_auto_levels == web["totalAutoLevels"]
+    assert state.last_helper_report == web["lastHelperReport"]
+
+
+def test_web_opportunity_matrix_matches_python() -> None:
+    matrix = run_opportunity_matrix()
+    for (seed, route), counts in matrix.items():
+        completed = subprocess.run(
+            ["node", str(RUNNER), str(seed), "10", "opportunity", route],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8-sig",
+        )
+        web = json.loads(completed.stdout)
+        assert [item["manualLevels"] for item in web["snapshots"]] == counts
+
+@pytest.mark.skip(reason="v3 仅签收 D1-D10；首次爆星窗口尚未实现")
+def test_historical_d30_rebirth_window() -> None:
+    pass
+
+
+@pytest.mark.skip(reason="v3 尚未实现长期科技覆盖验收")
+def test_historical_d45_node_coverage() -> None:
+    pass

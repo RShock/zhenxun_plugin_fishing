@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "s2-vnext-game-data.schema.json",
+  "title": "S2 vNext shared game definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "gameVersion", "rules", "resources", "eras", "multiplierRegions", "upgrades", "strategy"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 3 },
+    "gameVersion": { "type": "string", "minLength": 1 },
+    "rules": {
+      "type": "object",
+      "required": ["settlementMinutes", "baseCreditsPerMinute", "baseDepthPerMinute", "manualAutomationThreshold", "autoPurchaseIntervalMinutes", "autoPurchaseBudget", "autoReserveManualLevels", "randomAlgorithm", "randomSigma", "dailyUpgradeAuditMin", "dailyUpgradeAuditMax", "developmentTargetDepth", "helperIntervalMinutes", "baseCriticalDamage", "manualBurstWarningLevels", "batchCommandMaxLevels"],
+      "properties": {
+        "helperIntervalMinutes": { "const": 1440 },
+        "baseCriticalDamage": { "type": "number", "minimum": 0 },
+        "manualBurstWarningLevels": { "type": "integer", "minimum": 1 },
+        "batchCommandMaxLevels": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": { "type": "object", "required": ["key", "name", "icon", "color", "use"] }
+    },
+    "eras": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "type": "object", "required": ["key", "name", "short", "unlockDepth", "previousEraAutomations", "status"] }
+    },
+    "multiplierRegions": {
+      "type": "array",
+      "minItems": 12,
+      "items": { "type": "object", "required": ["key", "name", "scope", "formula", "status", "note"] }
+    },
+    "upgrades": {
+      "type": "array",
+      "minItems": 18,
+      "items": {
+        "type": "object",
+        "required": ["key", "name", "era", "region", "description", "effectKind", "effectPerLevel", "maxLevel", "baseCost", "costGrowth", "unlockDepth", "prerequisites", "manualTarget", "status"]
+      }
+    },
+    "strategy": {
+      "type": "object",
+      "required": ["mode", "profiles", "priority", "routeVariants", "opportunityCheckIntervalMinutes"]
+    }
+  }
+}
