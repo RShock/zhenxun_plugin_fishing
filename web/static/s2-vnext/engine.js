@@ -1,5 +1,11 @@
 const UINT32_RANGE = 4294967296;
 const TWO_PI = Math.PI * 2;
+const IMPLEMENTED_EFFECT_KINDS = new Set([
+  "speed_compound", "parallel", "cats", "sharpness", "income", "fragility",
+  "extra_depth", "coordination", "crit_chance", "crit_damage", "shift_relay",
+  "momentum", "teamwork", "penetration", "resonance", "pressure", "network",
+  "heat", "diversity", "cascade", "precision", "compression", "lens",
+]);
 
 export function validateGameData(data) {
   if (!data || data.schemaVersion !== 3) throw new Error(`Unsupported S2 schema: ${data?.schemaVersion}`);
@@ -18,6 +24,9 @@ export function validateGameData(data) {
     keys.add(item.key);
     if (!eras.has(item.era) || !regions.has(item.region)) throw new Error(`Invalid era/region for ${item.key}`);
     if (item.manualTarget !== data.rules.manualAutomationThreshold) throw new Error(`Invalid manual target for ${item.key}`);
+    if (item.status === "active" && !IMPLEMENTED_EFFECT_KINDS.has(item.effectKind)) {
+      throw new Error(`Unsupported active effect ${item.effectKind} for ${item.key}`);
+    }
   });
   data.upgrades.forEach((item) => item.prerequisites.forEach((key) => {
     if (!keys.has(key)) throw new Error(`Unknown prerequisite ${key}`);
@@ -134,7 +143,8 @@ export class S2Engine {
 
   newState(seed = 42) {
     return {
-      schemaVersion: this.data.schemaVersion, gameVersion: this.data.gameVersion, seed: Number(seed),
+      schemaVersion: this.data.schemaVersion, gameVersion: this.data.gameVersion,
+      contentVersion: this.data.contentVersion, seed: Number(seed),
       day: 1, minute: 0, depth: 0, credits: 0,
       targetDepth: Number(this.rules.developmentTargetDepth),
       levels: objectOf(this.localKeys), manualLevels: objectOf(this.localKeys),
@@ -149,8 +159,9 @@ export class S2Engine {
 
   snapshot() { return { state: structuredClone(this.state), rng: this.rng.snapshot() }; }
   restore(payload) {
-    if (!payload || payload.state?.schemaVersion !== 3 || payload.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
-    const state = payload.state;
+    const saved = structuredClone(payload);
+    if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
+    const state = saved.state;
     const counters = ["day", "minute", "dailyManualLevels", "maxDailyManualLevels", "totalManualLevels",
       "totalAutoLevels", "autoCursor", "totalHelperLevels", "dailyHelperLevels", "totalManualCommands"];
     const invalid = () => { throw new Error("存档字段损坏"); };
@@ -162,9 +173,22 @@ export class S2Engine {
     for (const [key, interval] of [["nextAutoMinute", this.rules.autoPurchaseIntervalMinutes], ["nextHelperMinute", this.rules.helperIntervalMinutes]]) {
       if (!Number.isSafeInteger(state[key]) || state[key] !== (Math.floor(state.minute / interval) + 1) * interval) invalid();
     }
-    for (const field of ["levels", "manualLevels"]) {
-      if (!state[field] || this.localKeys.some((key) => !Number.isInteger(state[field][key])
-        || state[field][key] < 0 || state[field][key] > (field === "levels" ? this.specs[key].maxLevel : this.specs[key].manualTarget))) invalid();
+    if (!state.levels || typeof state.levels !== "object"
+      || !state.manualLevels || typeof state.manualLevels !== "object") invalid();
+    const isFirstTenDaySave = !Object.hasOwn(state, "contentVersion");
+    for (const key of this.localKeys) {
+      const hasLevel = Object.hasOwn(state.levels, key);
+      const hasManualLevel = Object.hasOwn(state.manualLevels, key);
+      if (hasLevel !== hasManualLevel) invalid();
+      if (!hasLevel) {
+        if (!isFirstTenDaySave || this.specs[key].addedIn !== "thirty-day") invalid();
+        state.levels[key] = 0;
+        state.manualLevels[key] = 0;
+      }
+      if (!Number.isInteger(state.levels[key]) || state.levels[key] < 0
+        || state.levels[key] > this.specs[key].maxLevel
+        || !Number.isInteger(state.manualLevels[key]) || state.manualLevels[key] < 0
+        || state.manualLevels[key] > this.specs[key].manualTarget) invalid();
     }
     for (const field of ["autoUnlocked", "everKeys"]) {
       if (!Array.isArray(state[field]) || state[field].some((key) => !Object.hasOwn(this.specs, key))
@@ -178,8 +202,9 @@ export class S2Engine {
       || report.levels !== report.items.length || !Number.isFinite(report.spent) || report.spent < 0
       || report.items.some((item) => !item || !Object.hasOwn(this.specs, item.key)
         || !Number.isInteger(item.level) || item.level <= 0 || !Number.isFinite(item.cost) || item.cost < 0))) invalid();
-    this.rng.restore(payload.rng);
-    this.state = structuredClone(state);
+    state.contentVersion = this.data.contentVersion;
+    this.rng.restore(saved.rng);
+    this.state = state;
   }
   level(key) { return Number(this.state.levels[key] || 0); }
   costFor(key, level = this.level(key)) {
@@ -312,15 +337,31 @@ export class S2Engine {
     const pressure = 1 + (e.pressure || 0) * Math.log10(1 + this.state.depth) / 10;
     const activeRegions = new Set(this.localKeys.filter((key) => this.level(key)).map((key) => this.specs[key].region)).size;
     const diversity = 1 + (e.diversity || 0) * activeRegions;
-    return { speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth, critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay, penetration, pressure, diversity };
+    const network = 1 + (e.network || 0) * Math.sqrt(parallel * cats);
+    const heat = 1 + (e.heat || 0) * (momentum + Math.log10(speed));
+    const cascade = this.eraSequence.reduce((product, era) => {
+      const activeSpecs = this.localKeys.filter((key) => this.specs[key].era === era && this.specs[key].status === "active");
+      if (!activeSpecs.length) return product;
+      const automated = activeSpecs.filter((key) => this.state.autoUnlocked.includes(key)).length;
+      return product * (1 + (e.cascade || 0) * automated / activeSpecs.length);
+    }, 1);
+    const precision = 1 + (e.precision || 0) * fragility * critical
+      * (1 + Math.max(0, (e.crit_chance || 0) - 0.65));
+    const compression = 1 + (e.compression || 0) * Math.sqrt(penetration * pressure);
+    const lens = 1 + (e.lens || 0) * Math.log10(1 + this.state.depth) / 10 * compression;
+    return {
+      speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth,
+      critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay,
+      penetration, pressure, diversity, network, heat, cascade, precision, compression, lens,
+    };
   }
   incomeMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "diversity"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "diversity", "network", "heat", "cascade", "precision"].reduce((product, key) => product * f[key], 1);
   }
   depthMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"].reduce((product, key) => product * f[key], 1);
   }
   autoPurchase() {
     const active = [...this.state.autoUnlocked].sort(); if (!active.length) return [];
@@ -371,8 +412,8 @@ export class S2Engine {
     const priority = Object.fromEntries(this.priority.map((key, index) => [key, index]));
     if (route === "cheapest") return affordable.sort((a, b) => this.costFor(a) - this.costFor(b) || (priority[a] ?? 999) - (priority[b] ?? 999))[0];
     if (route === "depth" || route === "income") {
-      const depthKinds = new Set(["speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure"]);
-      const incomeKinds = new Set([...depthKinds].filter((key) => !["extra_depth", "penetration", "pressure"].includes(key)).concat(["income", "shift_relay", "diversity"]));
+      const depthKinds = new Set(["speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"]);
+      const incomeKinds = new Set([...depthKinds].filter((key) => !["extra_depth", "penetration", "pressure", "compression", "lens"].includes(key)).concat(["income", "shift_relay", "diversity", "heat"]));
       const preferred = route === "depth" ? depthKinds : incomeKinds;
       const matching = affordable.filter((key) => preferred.has(this.specs[key].effectKind));
       if (matching.length) affordable = matching;

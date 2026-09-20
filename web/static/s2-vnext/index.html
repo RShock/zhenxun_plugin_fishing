@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-helper-3">
+  <link rel="stylesheet" href="./style.css?v=3-thirty-1">
 </head>
 <body>
   <main class="shell">
@@ -41,7 +41,7 @@
       </div>
     </section>
     <section class="control-section">
-      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">前十天试玩</span></div>
+      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">首星 · 三十天试玩</span></div>
       <div class="control-row">
         <button data-advance="60">推进1小时</button>
         <button data-advance="1200">推进20小时</button>
@@ -68,18 +68,19 @@
       <div class="engineering-inner">
         <div class="settings">
           <label>路线 <select id="routeSelect"><option value="balanced">均衡建设</option><option value="cheapest">最低价格</option><option value="depth">深度优先</option><option value="income">收入优先</option></select></label>
-          <button id="replayButton">运行十天回放</button>
+          <label>时段 <select id="replayDays"><option value="10">前十天</option><option value="20">前二十天</option><option value="30" selected>前三十天</option></select></label>
+          <button id="replayButton">运行回放</button>
           <label>Seed <input id="seedInput" type="number" value="42" step="1"></label>
           <button id="resetButton" class="danger-ghost">新开矿井</button>
         </div>
         <p class="subtle">独立新局回放 / seed 42 / 与当前存档分开</p>
         <div id="auditSummary" class="audit-summary"></div>
-        <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th>D10 深度</th><th>D10 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th id="replayDepthHeading">D30 深度</th><th id="replayEraHeading">D30 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
         <div class="multiplier-heading"><h3>产能乘数</h3><span>收入 <b id="incomeMultiplier"></b> / 深度 <b id="depthMultiplier"></b></span></div>
         <div id="multiplierList" class="multiplier-list"></div>
       </div>
     </details>
-    <footer>星穹矿脉 / 助手版原型 · 首星阶段</footer>
+    <footer>星穹矿脉 / 三十天原型 · 首星阶段</footer>
   </main>
   <template id="techTemplate">
     <article class="tech-card">
@@ -100,6 +101,6 @@
     <h2>新开矿井？</h2><p>当前助手版进度将被替换。旧版试玩存档保持不变。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认新开</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-helper-3"></script>
+  <script type="module" src="./app.js?v=3-thirty-1"></script>
 </body>
 </html>

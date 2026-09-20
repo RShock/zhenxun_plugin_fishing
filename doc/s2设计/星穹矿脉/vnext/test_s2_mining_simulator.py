@@ -39,9 +39,18 @@ def manually_unlock(state: SimulationState, key: str) -> None:
 def test_v3_uses_one_shared_currency_and_has_multiplier_reserve() -> None:
     assert GAME_DATA["schemaVersion"] == 3
     assert GAME_DATA["gameVersion"] == "s2-vnext-v3-helper-1"
+    assert GAME_DATA["contentVersion"] == "thirty-day-1"
+    assert GAME_DATA["playtestDays"] == 30
     assert [item["key"] for item in GAME_DATA["resources"]] == ["credits"]
     assert len(GAME_DATA["multiplierRegions"]) >= 20
-    assert sum(item["status"] != "active" for item in GAME_DATA["multiplierRegions"]) >= 8
+    regions = {item["key"]: item for item in GAME_DATA["multiplierRegions"]}
+    active = [item for item in GAME_DATA["upgrades"] if item["status"] == "active"]
+    assert len(active) == 43
+    assert all(regions[item["region"]]["status"] == "active" for item in active)
+    assert regions["opening_burst"]["status"] != "active"
+    planetary = [item for item in GAME_DATA["upgrades"] if item["era"] == "planetary"]
+    assert len(planetary) == 3
+    assert all(item["status"] != "active" for item in planetary)
 
 
 def test_batch_command_validates_before_mutating_and_counts_once() -> None:

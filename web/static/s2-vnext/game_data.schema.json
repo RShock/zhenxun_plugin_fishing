@@ -9,6 +9,8 @@
     "$schema": { "type": "string" },
     "schemaVersion": { "const": 3 },
     "gameVersion": { "type": "string", "minLength": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "playtestDays": { "type": "integer", "minimum": 1, "maximum": 120 },
     "rules": {
       "type": "object",
       "required": ["settlementMinutes", "baseCreditsPerMinute", "baseDepthPerMinute", "manualAutomationThreshold", "autoPurchaseIntervalMinutes", "autoPurchaseBudget", "autoReserveManualLevels", "randomAlgorithm", "randomSigma", "dailyUpgradeAuditMin", "dailyUpgradeAuditMax", "developmentTargetDepth", "helperIntervalMinutes", "baseCriticalDamage", "manualBurstWarningLevels", "batchCommandMaxLevels"],
@@ -40,7 +42,8 @@
       "minItems": 18,
       "items": {
         "type": "object",
-        "required": ["key", "name", "era", "region", "description", "effectKind", "effectPerLevel", "maxLevel", "baseCost", "costGrowth", "unlockDepth", "prerequisites", "manualTarget", "status"]
+        "required": ["key", "name", "era", "region", "description", "effectKind", "effectPerLevel", "maxLevel", "baseCost", "costGrowth", "unlockDepth", "prerequisites", "manualTarget", "status"],
+        "properties": { "addedIn": { "const": "thirty-day" } }
       }
     },
     "strategy": {

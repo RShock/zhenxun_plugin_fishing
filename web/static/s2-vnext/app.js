@@ -1,10 +1,11 @@
-import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-helper-3";
+import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-1";
 
-const STORAGE_KEY = "s2-vnext-save-v3-helper";
+const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
+const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
 const number = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 });
 const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 2 });
 const $ = (selector) => document.querySelector(selector);
-const formatNumber = (value) => Math.abs(value) >= 1e7 ? compact.format(value) : number.format(value);
+const formatNumber = (value) => Math.abs(value) >= 1e15 ? value.toExponential(2) : Math.abs(value) >= 1e7 ? compact.format(value) : number.format(value);
 const formatMultiplier = (value) => `×${formatNumber(value)}`;
 let data; let engine; let timer = null; let view = "construction"; let pendingOrders = []; let saveBlocked = false;
 const eraName = (key) => data.eras.find((item) => item.key === key)?.name || key;
@@ -20,7 +21,20 @@ function loadSaved(seed) {
     return new S2Engine(data, { seed });
   }
   if (raw) {
-    try { return new S2Engine(data, { seed, state: JSON.parse(raw) }); }
+    try {
+      const payload = JSON.parse(raw);
+      const restored = new S2Engine(data, { seed, state: payload });
+      if (payload.state.contentVersion !== data.contentVersion) {
+        try {
+          localStorage.setItem(`${STORAGE_KEY}-before-${data.contentVersion}`, raw);
+          $("#saveNotice").textContent = "已接续三十天矿井，更新前的进度已备份。";
+        } catch {
+          saveBlocked = true;
+          $("#saveNotice").textContent = "旧进度可继续试玩，但备份失败，暂不覆盖原存档。";
+        }
+      }
+      return restored;
+    }
     catch (error) {
       try {
         localStorage.setItem(`${STORAGE_KEY}-backup-${Date.now()}`, raw);
@@ -100,7 +114,7 @@ function renderNext() {
   if (!next) {
     $("#nextName").textContent = "本段工程已全部自动化";
     $("#nextReason").textContent = "矿井继续生产，后续星层尚未开放。";
-    $("#nextProgress").value = 1; $("#nextProgressText").textContent = "前十天工程完成"; $("#nextEta").textContent = "";
+    $("#nextProgress").value = 1; $("#nextProgressText").textContent = "本轮三十天工程已交付"; $("#nextEta").textContent = "";
     return;
   }
   const spec = engine.specs[next]; let current; let target; let rate; let unit;
@@ -169,7 +183,9 @@ function renderTechTree() {
   }
   if (!root.children.length) {
     const p = document.createElement("p"); p.className = "empty";
-    p.textContent = view === "construction" ? "当前装备已交给自动生产线。矿井正在接近下一项工程。" : view === "automated" ? "尚无自动生产线。" : "当前阶段的工程均已发现。";
+    p.textContent = view === "construction"
+      ? groups.frontier.length ? "当前装备已交给自动生产线。矿井正在接近下一项工程。" : "本段工程均已自动化，矿井继续生产。"
+      : view === "automated" ? "尚无自动生产线。" : "当前阶段的工程均已发现。";
     root.append(p);
   }
 }
@@ -198,11 +214,16 @@ function previewPlan() {
   for (const [key, count] of items) {
     const li = document.createElement("li"); li.textContent = `${engine.specs[key].name} +${count} 级`; $("#planItems").append(li);
   }
-  $("#planSummary").textContent = `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。`;
+  const incomeGain = (copy.incomeMultiplier() / engine.incomeMultiplier() - 1) * 100;
+  const depthGain = (copy.depthMultiplier() / engine.depthMultiplier() - 1) * 100;
+  $("#planSummary").textContent = `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。当前产能：收入 +${number.format(incomeGain)}%，钻进 +${number.format(depthGain)}%。`;
   $("#confirmPlan").disabled = !pendingOrders.length; $("#planDialog").showModal();
 }
 function renderAudit() {
-  const profiles = ["daily", "absent", "active"].map((key) => [key, runReplay(data, { profile: key, route: $("#routeSelect").value })]);
+  const days = Number($("#replayDays").value);
+  const profiles = ["daily", "absent", "active"].map((key) => [key, runReplay(data, { days, profile: key, route: $("#routeSelect").value })]);
+  $("#replayDepthHeading").textContent = `D${days} 深度`;
+  $("#replayEraHeading").textContent = `D${days} 时代`;
   const rows = $("#profileRows"); rows.replaceChildren();
   for (const [key, replay] of profiles) {
     const s = replay.engine.state; const tr = document.createElement("tr");
@@ -212,8 +233,8 @@ function renderAudit() {
   const daily = profiles[0][1]; const active = profiles[2][1]; const max = Math.max(...active.snapshots.map((day) => day.manualLevels));
   $("#auditSummary").replaceChildren();
   [
-    ["每日一次 / 手动", daily.snapshots.map((day) => day.manualLevels).join(" · "), "D1 至 D10"],
-    ["全程托管 / D10", eraName(profiles[1][1].engine.currentEra()), "没有手动购买"],
+    ["每日一次 / 手动", daily.snapshots.map((day) => day.manualLevels).join(" · "), `D1 至 D${days}`],
+    [`全程托管 / D${days}`, eraName(profiles[1][1].engine.currentEra()), "没有手动购买"],
     ["高频 / 单日最多", `${max} 级`, max > data.rules.manualBurstWarningLevels ? "操作量偏高，需复核" : "本路线未触发操作量预警"],
   ].forEach(([label, value, caption]) => {
     const card = document.createElement("article");
@@ -232,6 +253,7 @@ function reset() {
 }
 async function boot() {
   data = await loadGameData(); engine = loadSaved(Number($("#seedInput").value));
+  if (sandbox) $("#saveNotice").textContent = ["独立验收矿井", $("#saveNotice").textContent].filter(Boolean).join(" · ");
   document.querySelectorAll("[data-advance]").forEach((button) => button.addEventListener("click", () => advance(Number(button.dataset.advance))));
   $("#toggleButton").addEventListener("click", () => {
     if (timer) stop(); else timer = setInterval(() => advance(10), 550);

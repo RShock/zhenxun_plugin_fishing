@@ -1,990 +1,1263 @@
 {
-    "$schema":  "./game_data.schema.json",
-    "schemaVersion":  3,
-    "gameVersion":  "s2-vnext-v3-helper-1",
-    "rules":  {
-                  "settlementMinutes":  10,
-                  "baseCreditsPerMinute":  8,
-                  "baseDepthPerMinute":  25,
-                  "manualAutomationThreshold":  3,
-                  "autoPurchaseIntervalMinutes":  60,
-                  "autoReserveManualLevels":  3,
-                  "randomAlgorithm":  "python-mt19937-v1",
-                  "randomSigma":  0.025,
-                  "dailyUpgradeAuditMin":  3,
-                  "dailyUpgradeAuditMax":  6,
-                  "developmentTargetDepth":  1000000000000,
-                  "autoPurchaseBudget":  1,
-                  "helperIntervalMinutes": 1440,
-                  "baseCriticalDamage": 1,
-                  "manualBurstWarningLevels": 30,
-                  "batchCommandMaxLevels": 100
-              },
-    "resources":  [
-                      {
-                          "key":  "credits",
-                          "name":  "矿币",
-                          "icon":  "◆",
-                          "color":  "#f4b942",
-                          "use":  "唯一的本地科技货币，由全部采矿收入直接结算"
-                      }
-                  ],
-    "eras":  [
-                 {
-                     "key":  "foundation",
-                     "name":  "基础工程",
-                     "short":  "基础",
-                     "unlockDepth":  0,
-                     "previousEraAutomations":  0,
-                     "status":  "d1-d3"
-                 },
-                 {
-                     "key":  "industrial",
-                     "name":  "工业协作",
-                     "short":  "工业",
-                     "unlockDepth":  1500000,
-                     "previousEraAutomations":  4,
-                     "status":  "d4-d7"
-                 },
-                 {
-                     "key":  "electrical",
-                     "name":  "电气矿网",
-                     "short":  "电气",
-                     "unlockDepth":  140000000,
-                     "previousEraAutomations":  4,
-                     "status":  "d8-d10"
-                 },
-                 {
-                     "key":  "modern",
-                     "name":  "现代深井",
-                     "short":  "现代",
-                     "unlockDepth":  1000000000000,
-                     "previousEraAutomations":  5,
-                     "status":  "reserve"
-                 },
-                 {
-                     "key":  "future",
-                     "name":  "未来奇点",
-                     "short":  "未来",
-                     "unlockDepth":  1000000000000,
-                     "previousEraAutomations":  5,
-                     "status":  "reserve"
-                 },
-                 {
-                     "key":  "planetary",
-                     "name":  "行星工程",
-                     "short":  "行星",
-                     "unlockDepth":  1000000000000000,
-                     "previousEraAutomations":  5,
-                     "status":  "reserve"
-                 }
-             ],
-    "multiplierRegions":  [
-                              {
-                                  "key":  "speed",
-                                  "name":  "挖矿速度",
-                                  "scope":  "both",
-                                  "formula":  "1.18^等级",
-                                  "status":  "active",
-                                  "note":  "唯一一个单科技按级复乘的区域"
-                              },
-                              {
-                                  "key":  "parallel",
-                                  "name":  "同时矿脉",
-                                  "scope":  "both",
-                                  "formula":  "1 + 0.22×等级",
-                                  "status":  "active",
-                                  "note":  "并行开采面"
-                              },
-                              {
-                                  "key":  "cats",
-                                  "name":  "猫矿工",
-                                  "scope":  "both",
-                                  "formula":  "1 + 0.20×等级",
-                                  "status":  "active",
-                                  "note":  "增加独立矿工"
-                              },
-                              {
-                                  "key":  "extra_depth",
-                                  "name":  "额外深度",
-                                  "scope":  "depth",
-                                  "formula":  "1 + 0.26×等级",
-                                  "status":  "active",
-                                  "note":  "不增加收入"
-                              },
-                              {
-                                  "key":  "crit_chance",
-                                  "name":  "暴击率",
-                                  "scope":  "both",
-                                  "formula":  "期望暴击乘数",
-                                  "status":  "active",
-                                  "note":  "上限 65%"
-                              },
-                              {
-                                  "key":  "crit_damage",
-                                  "name":  "暴击伤害",
-                                  "scope":  "both",
-                                  "formula":  "期望暴击乘数",
-                                  "status":  "active",
-                                  "note":  "与暴击率共同形成一层"
-                              },
-                              {
-                                  "key":  "income",
-                                  "name":  "额外收入",
-                                  "scope":  "income",
-                                  "formula":  "1 + 0.25×等级",
-                                  "status":  "active",
-                                  "note":  "不增加挖掘深度"
-                              },
-                              {
-                                  "key":  "coordination",
-                                  "name":  "猫群协同",
-                                  "scope":  "both",
-                                  "formula":  "1 + 猫数量层×协同等级",
-                                  "status":  "active",
-                                  "note":  "猫越多收益越高"
-                              },
-                              {
-                                  "key":  "fragility",
-                                  "name":  "矿石脆弱度",
-                                  "scope":  "both",
-                                  "formula":  "1 + 0.16×等级",
-                                  "status":  "active",
-                                  "note":  "独立于工具锐利度"
-                              },
-                              {
-                                  "key":  "sharpness",
-                                  "name":  "矿镐锐利度",
-                                  "scope":  "both",
-                                  "formula":  "1 + 0.17×等级",
-                                  "status":  "active",
-                                  "note":  "工具乘区"
-                              },
-                              {
-                                  "key":  "teamwork",
-                                  "name":  "齐心协力",
-                                  "scope":  "both",
-                                  "formula":  "1 + 在线时长根号项×等级",
-                                  "status":  "active",
-                                  "note":  "随本轮累计时间缓慢上升"
-                              },
-                              {
-                                  "key":  "opening_burst",
-                                  "name":  "一鼓作气",
-                                  "scope":  "both",
-                                  "formula":  "开局限时巨额乘数",
-                                  "status":  "late-reserve",
-                                  "note":  "挖穿首颗星球后才考虑启用"
-                              },
-                              {
-                                  "key":  "momentum",
-                                  "name":  "钻进动量",
-                                  "scope":  "both",
-                                  "formula":  "当日连续作业逐步升至上限",
-                                  "status":  "active",
-                                  "note":  "每日重置，制造日内节奏"
-                              },
-                              {
-                                  "key":  "resonance",
-                                  "name":  "科技共振",
-                                  "scope":  "both",
-                                  "formula":  "1 + 自动化科技数×等级",
-                                  "status":  "active",
-                                  "note":  "奖励横向铺开自动化"
-                              },
-                              {
-                                  "key":  "penetration",
-                                  "name":  "过量穿透",
-                                  "scope":  "depth",
-                                  "formula":  "1 + 暴击层×等级",
-                                  "status":  "active",
-                                  "note":  "暴击对深度的额外转化"
-                              },
-                              {
-                                  "key":  "shift_relay",
-                                  "name":  "班次接力",
-                                  "scope":  "income",
-                                  "formula":  "1 + 已自动科技数×等级",
-                                  "status":  "active",
-                                  "note":  "自动线越多，交接损耗越低"
-                              },
-                              {
-                                  "key":  "pressure",
-                                  "name":  "地层压力转化",
-                                  "scope":  "depth",
-                                  "formula":  "随当前深度对数增长",
-                                  "status":  "reserve",
-                                  "note":  "现代时代候选"
-                              },
-                              {
-                                  "key":  "cascade",
-                                  "name":  "能源级联",
-                                  "scope":  "both",
-                                  "formula":  "按完成的时代科技组相乘",
-                                  "status":  "reserve",
-                                  "note":  "电气后期候选"
-                              },
-                              {
-                                  "key":  "heat",
-                                  "name":  "热量回收",
-                                  "scope":  "income",
-                                  "formula":  "动量越高回收越强",
-                                  "status":  "reserve",
-                                  "note":  "工业后期候选"
-                              },
-                              {
-                                  "key":  "lens",
-                                  "name":  "引力透镜",
-                                  "scope":  "depth",
-                                  "formula":  "按星球进度弯曲有效距离",
-                                  "status":  "reserve",
-                                  "note":  "行星时代候选"
-                              },
-                              {
-                                  "key":  "network",
-                                  "name":  "矿网拓扑",
-                                  "scope":  "both",
-                                  "formula":  "同时矿脉×猫矿工交叉项",
-                                  "status":  "reserve",
-                                  "note":  "现代时代候选"
-                              },
-                              {
-                                  "key":  "precision",
-                                  "name":  "弱点标定",
-                                  "scope":  "both",
-                                  "formula":  "脆弱度×暴击交叉项",
-                                  "status":  "reserve",
-                                  "note":  "未来时代候选"
-                              },
-                              {
-                                  "key":  "compression",
-                                  "name":  "路程压缩",
-                                  "scope":  "depth",
-                                  "formula":  "减少等效剩余深度",
-                                  "status":  "reserve",
-                                  "note":  "首次重生后候选"
-                              },
-                              {
-                                  "key":  "diversity",
-                                  "name":  "工艺多样性",
-                                  "scope":  "income",
-                                  "formula":  "按不同乘区的已购等级增长",
-                                  "status":  "reserve",
-                                  "note":  "用于抑制单线最优解"
-                              }
-                          ],
-    "upgrades":  [
-                     {
-                         "key":  "rotary_pick",
-                         "name":  "回转矿镐",
-                         "era":  "foundation",
-                         "region":  "speed",
-                         "description":  "每级令挖矿速度复乘 1.18",
-                         "effectKind":  "speed_compound",
-                         "effectPerLevel":  0.18,
-                         "maxLevel":  9,
-                         "baseCost":  300,
-                         "costGrowth":  1.92,
-                         "unlockDepth":  0,
-                         "prerequisites":  [
-
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "split_tunnel",
-                         "name":  "分岔矿道",
-                         "era":  "foundation",
-                         "region":  "parallel",
-                         "description":  "每级增加 22% 同时作业面",
-                         "effectKind":  "parallel",
-                         "effectPerLevel":  0.22,
-                         "maxLevel":  8,
-                         "baseCost":  760,
-                         "costGrowth":  1.88,
-                         "unlockDepth":  2000,
-                         "prerequisites":  [
-                                               "rotary_pick"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "cat_crew",
-                         "name":  "猫矿工小队",
-                         "era":  "foundation",
-                         "region":  "cats",
-                         "description":  "每级增加 20% 独立猫矿工产能",
-                         "effectKind":  "cats",
-                         "effectPerLevel":  0.2,
-                         "maxLevel":  8,
-                         "baseCost":  4000,
-                         "costGrowth":  1.82,
-                         "unlockDepth":  180000,
-                         "prerequisites":  [
-                                               "rotary_pick"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "honed_edge",
-                         "name":  "精磨镐刃",
-                         "era":  "foundation",
-                         "region":  "sharpness",
-                         "description":  "每级增加 17% 锐利度",
-                         "effectKind":  "sharpness",
-                         "effectPerLevel":  0.17,
-                         "maxLevel":  7,
-                         "baseCost":  9000,
-                         "costGrowth":  1.8,
-                         "unlockDepth":  280000,
-                         "prerequisites":  [
-                                               "split_tunnel"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "ore_ledger",
-                         "name":  "矿石账本",
-                         "era":  "foundation",
-                         "region":  "income",
-                         "description":  "每级增加 25% 矿币，不改变深度",
-                         "effectKind":  "income",
-                         "effectPerLevel":  0.25,
-                         "maxLevel":  7,
-                         "baseCost":  18000,
-                         "costGrowth":  1.78,
-                         "unlockDepth":  520000,
-                         "prerequisites":  [
-                                               "cat_crew"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "fault_mapping",
-                         "name":  "裂隙测绘",
-                         "era":  "foundation",
-                         "region":  "fragility",
-                         "description":  "每级增加 16% 矿石脆弱度",
-                         "effectKind":  "fragility",
-                         "effectPerLevel":  0.16,
-                         "maxLevel":  7,
-                         "baseCost":  36000,
-                         "costGrowth":  1.76,
-                         "unlockDepth":  700000,
-                         "prerequisites":  [
-                                               "honed_edge"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "deep_marker",
-                         "name":  "深层标尺",
-                         "era":  "foundation",
-                         "region":  "extra_depth",
-                         "description":  "每级增加 26% 深度，不改变收入",
-                         "effectKind":  "extra_depth",
-                         "effectPerLevel":  0.26,
-                         "maxLevel":  7,
-                         "baseCost":  72000,
-                         "costGrowth":  1.74,
-                         "unlockDepth":  1400000,
-                         "prerequisites":  [
-                                               "ore_ledger"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "steam_array",
-                         "name":  "蒸汽钻列",
-                         "era":  "industrial",
-                         "region":  "parallel",
-                         "description":  "工业并行层，每级增加 28% 作业面",
-                         "effectKind":  "parallel",
-                         "effectPerLevel":  0.28,
-                         "maxLevel":  8,
-                         "baseCost":  70000,
-                         "costGrowth":  1.7,
-                         "unlockDepth":  1500000,
-                         "prerequisites":  [
-                                               "fault_mapping"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "crew_whistle",
-                         "name":  "猫班汽笛",
-                         "era":  "industrial",
-                         "region":  "coordination",
-                         "description":  "猫越多，每级协同收益越高",
-                         "effectKind":  "coordination",
-                         "effectPerLevel":  0.055,
-                         "maxLevel":  8,
-                         "baseCost":  180000,
-                         "costGrowth":  1.68,
-                         "unlockDepth":  5000000,
-                         "prerequisites":  [
-                                               "cat_crew"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "impact_hammer",
-                         "name":  "冲击锤头",
-                         "era":  "industrial",
-                         "region":  "crit_chance",
-                         "description":  "每级增加 4% 挖矿暴击率",
-                         "effectKind":  "crit_chance",
-                         "effectPerLevel":  0.04,
-                         "maxLevel":  8,
-                         "baseCost":  350000,
-                         "costGrowth":  1.67,
-                         "unlockDepth":  7000000,
-                         "prerequisites":  [
-                                               "steam_array"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "blast_charge",
-                         "name":  "定向爆破",
-                         "era":  "industrial",
-                         "region":  "crit_damage",
-                         "description":  "每级增加 35% 暴击伤害",
-                         "effectKind":  "crit_damage",
-                         "effectPerLevel":  0.35,
-                         "maxLevel":  8,
-                         "baseCost":  700000,
-                         "costGrowth":  1.66,
-                         "unlockDepth":  22000000,
-                         "prerequisites":  [
-                                               "impact_hammer"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "relay_shift",
-                         "name":  "三班接力",
-                         "era":  "industrial",
-                         "region":  "shift_relay",
-                         "description":  "自动化线路越多，收入加成越高",
-                         "effectKind":  "shift_relay",
-                         "effectPerLevel":  0.018,
-                         "maxLevel":  7,
-                         "baseCost":  1200000,
-                         "costGrowth":  1.65,
-                         "unlockDepth":  35000000,
-                         "prerequisites":  [
-                                               "crew_whistle"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "drill_momentum",
-                         "name":  "钻进动量",
-                         "era":  "industrial",
-                         "region":  "momentum",
-                         "description":  "每个游戏日连续作业四小时后达到满额",
-                         "effectKind":  "momentum",
-                         "effectPerLevel":  0.08,
-                         "maxLevel":  7,
-                         "baseCost":  2200000,
-                         "costGrowth":  1.64,
-                         "unlockDepth":  60000000,
-                         "prerequisites":  [
-                                               "blast_charge"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "union_rhythm",
-                         "name":  "齐心协力",
-                         "era":  "industrial",
-                         "region":  "teamwork",
-                         "description":  "随本轮累计天数持续增加挖矿力量",
-                         "effectKind":  "teamwork",
-                         "effectPerLevel":  0.045,
-                         "maxLevel":  7,
-                         "baseCost":  4000000,
-                         "costGrowth":  1.63,
-                         "unlockDepth":  150000000,
-                         "prerequisites":  [
-                                               "relay_shift"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "arc_pick",
-                         "name":  "电弧矿镐",
-                         "era":  "electrical",
-                         "region":  "speed",
-                         "description":  "新时代速度科技，每级继续复乘 1.15",
-                         "effectKind":  "speed_compound",
-                         "effectPerLevel":  0.15,
-                         "maxLevel":  9,
-                         "baseCost":  7000000,
-                         "costGrowth":  1.62,
-                         "unlockDepth":  140000000,
-                         "prerequisites":  [
-                                               "drill_momentum"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "weakpoint_scope",
-                         "name":  "弱点示波器",
-                         "era":  "electrical",
-                         "region":  "crit_chance",
-                         "description":  "每级增加 5% 挖矿暴击率",
-                         "effectKind":  "crit_chance",
-                         "effectPerLevel":  0.05,
-                         "maxLevel":  8,
-                         "baseCost":  12000000,
-                         "costGrowth":  1.61,
-                         "unlockDepth":  600000000,
-                         "prerequisites":  [
-                                               "arc_pick"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "plasma_edge",
-                         "name":  "等离子刃",
-                         "era":  "electrical",
-                         "region":  "sharpness",
-                         "description":  "每级增加 23% 锐利度",
-                         "effectKind":  "sharpness",
-                         "effectPerLevel":  0.23,
-                         "maxLevel":  8,
-                         "baseCost":  20000000,
-                         "costGrowth":  1.6,
-                         "unlockDepth":  3000000000,
-                         "prerequisites":  [
-                                               "arc_pick"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "overpenetration",
-                         "name":  "过量穿透",
-                         "era":  "electrical",
-                         "region":  "penetration",
-                         "description":  "把暴击层额外转化为深度",
-                         "effectKind":  "penetration",
-                         "effectPerLevel":  0.12,
-                         "maxLevel":  7,
-                         "baseCost":  35000000,
-                         "costGrowth":  1.59,
-                         "unlockDepth":  12000000000,
-                         "prerequisites":  [
-                                               "weakpoint_scope"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "grid_resonance",
-                         "name":  "矿网共振",
-                         "era":  "electrical",
-                         "region":  "resonance",
-                         "description":  "每条已自动科技放大该乘区",
-                         "effectKind":  "resonance",
-                         "effectPerLevel":  0.012,
-                         "maxLevel":  7,
-                         "baseCost":  60000000,
-                         "costGrowth":  1.58,
-                         "unlockDepth":  50000000000,
-                         "prerequisites":  [
-                                               "plasma_edge"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "induction_ledger",
-                         "name":  "感应结算器",
-                         "era":  "electrical",
-                         "region":  "income",
-                         "description":  "每级增加 32% 矿币，不改变深度",
-                         "effectKind":  "income",
-                         "effectPerLevel":  0.32,
-                         "maxLevel":  7,
-                         "baseCost":  100000000,
-                         "costGrowth":  1.57,
-                         "unlockDepth":  200000000000,
-                         "prerequisites":  [
-                                               "grid_resonance"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "active"
-                     },
-                     {
-                         "key":  "pressure_converter",
-                         "name":  "压力换能器",
-                         "era":  "modern",
-                         "region":  "pressure",
-                         "description":  "深度越大，穿透效率越高",
-                         "effectKind":  "pressure",
-                         "effectPerLevel":  0.05,
-                         "maxLevel":  8,
-                         "baseCost":  8500000,
-                         "costGrowth":  1.61,
-                         "unlockDepth":  3000000000,
-                         "prerequisites":  [
-                                               "overpenetration"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "mesh_topology",
-                         "name":  "矿网拓扑",
-                         "era":  "modern",
-                         "region":  "network",
-                         "description":  "并行矿脉与猫矿工形成交叉乘区",
-                         "effectKind":  "network",
-                         "effectPerLevel":  0.018,
-                         "maxLevel":  8,
-                         "baseCost":  13500000,
-                         "costGrowth":  1.6,
-                         "unlockDepth":  5000000000,
-                         "prerequisites":  [
-                                               "pressure_converter"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "thermal_recovery",
-                         "name":  "热量回收",
-                         "era":  "modern",
-                         "region":  "heat",
-                         "description":  "把钻进动量的一部分转为收入",
-                         "effectKind":  "heat",
-                         "effectPerLevel":  0.08,
-                         "maxLevel":  7,
-                         "baseCost":  21500000,
-                         "costGrowth":  1.59,
-                         "unlockDepth":  9000000000,
-                         "prerequisites":  [
-                                               "mesh_topology"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "craft_diversity",
-                         "name":  "工艺多样性",
-                         "era":  "modern",
-                         "region":  "diversity",
-                         "description":  "已投入的不同乘区越多，收入越高",
-                         "effectKind":  "diversity",
-                         "effectPerLevel":  0.012,
-                         "maxLevel":  7,
-                         "baseCost":  34000000,
-                         "costGrowth":  1.58,
-                         "unlockDepth":  15000000000,
-                         "prerequisites":  [
-                                               "thermal_recovery"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "cascade_bus",
-                         "name":  "能源级联母线",
-                         "era":  "modern",
-                         "region":  "cascade",
-                         "description":  "完整自动化的时代形成独立乘区",
-                         "effectKind":  "cascade",
-                         "effectPerLevel":  0.1,
-                         "maxLevel":  7,
-                         "baseCost":  54000000,
-                         "costGrowth":  1.57,
-                         "unlockDepth":  25000000000,
-                         "prerequisites":  [
-                                               "craft_diversity"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "precision_matrix",
-                         "name":  "弱点矩阵",
-                         "era":  "future",
-                         "region":  "precision",
-                         "description":  "脆弱度与暴击形成交叉乘区",
-                         "effectKind":  "precision",
-                         "effectPerLevel":  0.014,
-                         "maxLevel":  8,
-                         "baseCost":  90000000,
-                         "costGrowth":  1.56,
-                         "unlockDepth":  1000000000000,
-                         "prerequisites":  [
-                                               "cascade_bus"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "distance_fold",
-                         "name":  "路程压缩",
-                         "era":  "future",
-                         "region":  "compression",
-                         "description":  "压缩剩余有效地层距离",
-                         "effectKind":  "compression",
-                         "effectPerLevel":  0.04,
-                         "maxLevel":  8,
-                         "baseCost":  145000000,
-                         "costGrowth":  1.55,
-                         "unlockDepth":  1500000000000,
-                         "prerequisites":  [
-                                               "precision_matrix"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "gravity_lens",
-                         "name":  "引力透镜",
-                         "era":  "future",
-                         "region":  "lens",
-                         "description":  "行星进度转化为额外深度",
-                         "effectKind":  "lens",
-                         "effectPerLevel":  0.08,
-                         "maxLevel":  8,
-                         "baseCost":  230000000,
-                         "costGrowth":  1.54,
-                         "unlockDepth":  2500000000000,
-                         "prerequisites":  [
-                                               "distance_fold"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "singularity_crew",
-                         "name":  "奇点猫班",
-                         "era":  "future",
-                         "region":  "cats",
-                         "description":  "新时代猫矿工乘区",
-                         "effectKind":  "cats",
-                         "effectPerLevel":  0.3,
-                         "maxLevel":  8,
-                         "baseCost":  370000000,
-                         "costGrowth":  1.53,
-                         "unlockDepth":  4000000000000,
-                         "prerequisites":  [
-                                               "gravity_lens"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "quantum_fault",
-                         "name":  "量子裂隙",
-                         "era":  "future",
-                         "region":  "fragility",
-                         "description":  "新时代脆弱度乘区",
-                         "effectKind":  "fragility",
-                         "effectPerLevel":  0.26,
-                         "maxLevel":  8,
-                         "baseCost":  590000000,
-                         "costGrowth":  1.52,
-                         "unlockDepth":  7000000000000,
-                         "prerequisites":  [
-                                               "singularity_crew"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "opening_salvo",
-                         "name":  "一鼓作气",
-                         "era":  "planetary",
-                         "region":  "opening_burst",
-                         "description":  "每颗星球开局获得限时巨额加速",
-                         "effectKind":  "opening_burst",
-                         "effectPerLevel":  2.0,
-                         "maxLevel":  6,
-                         "baseCost":  1000000000,
-                         "costGrowth":  1.6,
-                         "unlockDepth":  1000000000000000,
-                         "prerequisites":  [
-                                               "quantum_fault"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "late-reserve"
-                     },
-                     {
-                         "key":  "planetary_lens",
-                         "name":  "行星透镜阵",
-                         "era":  "planetary",
-                         "region":  "lens",
-                         "description":  "引力透镜的行星时代延伸",
-                         "effectKind":  "lens",
-                         "effectPerLevel":  0.14,
-                         "maxLevel":  8,
-                         "baseCost":  1800000000,
-                         "costGrowth":  1.58,
-                         "unlockDepth":  2000000000000000,
-                         "prerequisites":  [
-                                               "opening_salvo"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     },
-                     {
-                         "key":  "planetary_parallel",
-                         "name":  "多星并行钻井",
-                         "era":  "planetary",
-                         "region":  "parallel",
-                         "description":  "把同时矿脉扩展到多星球",
-                         "effectKind":  "parallel",
-                         "effectPerLevel":  0.42,
-                         "maxLevel":  8,
-                         "baseCost":  3000000000,
-                         "costGrowth":  1.56,
-                         "unlockDepth":  4000000000000000,
-                         "prerequisites":  [
-                                               "planetary_lens"
-                                           ],
-                         "manualTarget":  3,
-                         "status":  "reserve"
-                     }
-                 ],
-    "strategy":  {
-                     "mode":  "daily-helper-v3",
-                     "profiles":  {
-                                      "daily": {
-                                          "name": "每日一次 / 20:00",
-                                          "checkMinutes": [1200]
-                                      },
-                                      "absent": {
-                                          "name": "全程托管 / 不操作",
-                                          "checkMinutes": []
-                                      },
-                                      "active":  {
-                                                     "name":  "高频 / 每日47次",
-                                                     "checkMinutes":  [
-                                                                          30,
-                                                                          60,
-                                                                          90,
-                                                                          120,
-                                                                          150,
-                                                                          180,
-                                                                          210,
-                                                                          240,
-                                                                          270,
-                                                                          300,
-                                                                          330,
-                                                                          360,
-                                                                          390,
-                                                                          420,
-                                                                          450,
-                                                                          480,
-                                                                          510,
-                                                                          540,
-                                                                          570,
-                                                                          600,
-                                                                          630,
-                                                                          660,
-                                                                          690,
-                                                                          720,
-                                                                          750,
-                                                                          780,
-                                                                          810,
-                                                                          840,
-                                                                          870,
-                                                                          900,
-                                                                          930,
-                                                                          960,
-                                                                          990,
-                                                                          1020,
-                                                                          1050,
-                                                                          1080,
-                                                                          1110,
-                                                                          1140,
-                                                                          1170,
-                                                                          1200,
-                                                                          1230,
-                                                                          1260,
-                                                                          1290,
-                                                                          1320,
-                                                                          1350,
-                                                                          1380,
-                                                                          1410
-                                                                      ]
-                                                 },
-                                      "regular":  {
-                                                      "name":  "多次 / 每日9次",
-                                                      "checkMinutes":  [
-                                                                           60,
-                                                                           180,
-                                                                           360,
-                                                                           540,
-                                                                           720,
-                                                                           900,
-                                                                           1080,
-                                                                           1260,
-                                                                           1410
-                                                                       ]
-                                                  },
-                                      "low":  {
-                                                  "name":  "多次 / 每日5次",
-                                                  "checkMinutes":  [
-                                                                       120,
-                                                                       480,
-                                                                       840,
-                                                                       1200,
-                                                                       1410
-                                                                   ]
-                                              }
-                                  },
-                     "priority":  [
-                                      "rotary_pick",
-                                      "split_tunnel",
-                                      "cat_crew",
-                                      "honed_edge",
-                                      "ore_ledger",
-                                      "fault_mapping",
-                                      "deep_marker",
-                                      "steam_array",
-                                      "crew_whistle",
-                                      "impact_hammer",
-                                      "blast_charge",
-                                      "relay_shift",
-                                      "drill_momentum",
-                                      "union_rhythm",
-                                      "arc_pick",
-                                      "weakpoint_scope",
-                                      "plasma_edge",
-                                      "overpenetration",
-                                      "grid_resonance",
-                                      "induction_ledger"
-                                  ],
-                     "routeVariants":  [
-                                           "balanced",
-                                           "cheapest",
-                                           "depth",
-                                           "income"
-                                       ],
-                     "opportunityCheckIntervalMinutes":  10
-                 }
+  "$schema": "./game_data.schema.json",
+  "schemaVersion": 3,
+  "gameVersion": "s2-vnext-v3-helper-1",
+  "contentVersion": "thirty-day-1",
+  "playtestDays": 30,
+  "rules": {
+    "settlementMinutes": 10,
+    "baseCreditsPerMinute": 8,
+    "baseDepthPerMinute": 25,
+    "manualAutomationThreshold": 3,
+    "autoPurchaseIntervalMinutes": 60,
+    "autoReserveManualLevels": 3,
+    "randomAlgorithm": "python-mt19937-v1",
+    "randomSigma": 0.025,
+    "dailyUpgradeAuditMin": 3,
+    "dailyUpgradeAuditMax": 6,
+    "developmentTargetDepth": 4.46e+21,
+    "autoPurchaseBudget": 1,
+    "helperIntervalMinutes": 1440,
+    "baseCriticalDamage": 1,
+    "manualBurstWarningLevels": 30,
+    "batchCommandMaxLevels": 100
+  },
+  "resources": [
+    {
+      "key": "credits",
+      "name": "矿币",
+      "icon": "◆",
+      "color": "#f4b942",
+      "use": "唯一的本地科技货币，由全部采矿收入直接结算"
+    }
+  ],
+  "eras": [
+    {
+      "key": "foundation",
+      "name": "基础工程",
+      "short": "基础",
+      "unlockDepth": 0,
+      "previousEraAutomations": 0,
+      "status": "d1-d3"
+    },
+    {
+      "key": "industrial",
+      "name": "工业协作",
+      "short": "工业",
+      "unlockDepth": 1500000,
+      "previousEraAutomations": 4,
+      "status": "d4-d7"
+    },
+    {
+      "key": "electrical",
+      "name": "电气矿网",
+      "short": "电气",
+      "unlockDepth": 140000000,
+      "previousEraAutomations": 4,
+      "status": "d8-d14"
+    },
+    {
+      "key": "modern",
+      "name": "现代深井",
+      "short": "现代",
+      "unlockDepth": 454000000000,
+      "previousEraAutomations": 5,
+      "status": "d15-d21"
+    },
+    {
+      "key": "future",
+      "name": "未来奇点",
+      "short": "未来",
+      "unlockDepth": 101000000000000,
+      "previousEraAutomations": 5,
+      "status": "d22-d30"
+    },
+    {
+      "key": "planetary",
+      "name": "行星工程",
+      "short": "行星",
+      "unlockDepth": 4.46e+21,
+      "previousEraAutomations": 5,
+      "status": "reserve"
+    }
+  ],
+  "multiplierRegions": [
+    {
+      "key": "speed",
+      "name": "挖矿速度",
+      "scope": "both",
+      "formula": "1.18^等级",
+      "status": "active",
+      "note": "唯一一个单科技按级复乘的区域"
+    },
+    {
+      "key": "parallel",
+      "name": "同时矿脉",
+      "scope": "both",
+      "formula": "1 + 0.22×等级",
+      "status": "active",
+      "note": "并行开采面"
+    },
+    {
+      "key": "cats",
+      "name": "猫矿工",
+      "scope": "both",
+      "formula": "1 + 0.20×等级",
+      "status": "active",
+      "note": "增加独立矿工"
+    },
+    {
+      "key": "extra_depth",
+      "name": "额外深度",
+      "scope": "depth",
+      "formula": "1 + 0.26×等级",
+      "status": "active",
+      "note": "不增加收入"
+    },
+    {
+      "key": "crit_chance",
+      "name": "暴击率",
+      "scope": "both",
+      "formula": "期望暴击乘数",
+      "status": "active",
+      "note": "上限 65%"
+    },
+    {
+      "key": "crit_damage",
+      "name": "暴击伤害",
+      "scope": "both",
+      "formula": "期望暴击乘数",
+      "status": "active",
+      "note": "与暴击率共同形成一层"
+    },
+    {
+      "key": "income",
+      "name": "额外收入",
+      "scope": "income",
+      "formula": "1 + 0.25×等级",
+      "status": "active",
+      "note": "不增加挖掘深度"
+    },
+    {
+      "key": "coordination",
+      "name": "猫群协同",
+      "scope": "both",
+      "formula": "1 + 猫数量层×协同等级",
+      "status": "active",
+      "note": "猫越多收益越高"
+    },
+    {
+      "key": "fragility",
+      "name": "矿石脆弱度",
+      "scope": "both",
+      "formula": "1 + 0.16×等级",
+      "status": "active",
+      "note": "独立于工具锐利度"
+    },
+    {
+      "key": "sharpness",
+      "name": "矿镐锐利度",
+      "scope": "both",
+      "formula": "1 + 0.17×等级",
+      "status": "active",
+      "note": "工具乘区"
+    },
+    {
+      "key": "teamwork",
+      "name": "齐心协力",
+      "scope": "both",
+      "formula": "1 + 本轮累计天数根号项×等级",
+      "status": "active",
+      "note": "随本轮累计时间缓慢上升"
+    },
+    {
+      "key": "opening_burst",
+      "name": "一鼓作气",
+      "scope": "both",
+      "formula": "开局限时巨额乘数",
+      "status": "late-reserve",
+      "note": "挖穿首颗星球后才考虑启用"
+    },
+    {
+      "key": "momentum",
+      "name": "钻进动量",
+      "scope": "both",
+      "formula": "当日连续作业逐步升至上限",
+      "status": "active",
+      "note": "每日重置，制造日内节奏"
+    },
+    {
+      "key": "resonance",
+      "name": "科技共振",
+      "scope": "both",
+      "formula": "1 + 自动化科技数×等级",
+      "status": "active",
+      "note": "奖励横向铺开自动化"
+    },
+    {
+      "key": "penetration",
+      "name": "过量穿透",
+      "scope": "depth",
+      "formula": "1 + 暴击层×等级",
+      "status": "active",
+      "note": "暴击对深度的额外转化"
+    },
+    {
+      "key": "shift_relay",
+      "name": "班次接力",
+      "scope": "income",
+      "formula": "1 + 已自动科技数×等级",
+      "status": "active",
+      "note": "自动线越多，交接损耗越低"
+    },
+    {
+      "key": "pressure",
+      "name": "地层压力转化",
+      "scope": "depth",
+      "formula": "随当前深度对数增长",
+      "status": "active",
+      "note": "钻得越深，压力转换收益越强"
+    },
+    {
+      "key": "cascade",
+      "name": "能源级联",
+      "scope": "both",
+      "formula": "各时代的 (1 + 级联强度×自动化覆盖率) 连乘",
+      "status": "active",
+      "note": "基础、工业与后续时代共同参与，不要求整组全部建成"
+    },
+    {
+      "key": "heat",
+      "name": "热量回收",
+      "scope": "income",
+      "formula": "1 + 热回收强度×(动量 + log10(速度))",
+      "status": "active",
+      "note": "把速度与连续作业带来的热量转成额外矿币"
+    },
+    {
+      "key": "lens",
+      "name": "引力透镜",
+      "scope": "depth",
+      "formula": "1 + 透镜强度×log10(1+深度)/10×路程压缩",
+      "status": "active",
+      "note": "与钻进深度、路程压缩联动，不依赖开发用目标深度"
+    },
+    {
+      "key": "network",
+      "name": "矿网拓扑",
+      "scope": "both",
+      "formula": "1 + 拓扑强度×sqrt(并行乘数×矿工乘数)",
+      "status": "active",
+      "note": "已有矿道和矿工共同成为新矿网的基础"
+    },
+    {
+      "key": "precision",
+      "name": "弱点标定",
+      "scope": "both",
+      "formula": "1 + 标定强度×脆弱度×暴击期望×(1+溢出暴击率)",
+      "status": "active",
+      "note": "暴击率仍封顶65%，超过的部分在此转化为标定收益"
+    },
+    {
+      "key": "compression",
+      "name": "路程压缩",
+      "scope": "depth",
+      "formula": "1 + 压缩强度×sqrt(穿透乘数×压力乘数)",
+      "status": "active",
+      "note": "压力与穿透共同放大深度产能，不直接扣除目标深度"
+    },
+    {
+      "key": "diversity",
+      "name": "工艺多样性",
+      "scope": "income",
+      "formula": "1 + 多样性强度×已投入乘区种类数",
+      "status": "active",
+      "note": "奖励工艺种类覆盖；同一区域多项科技不重复计种类"
+    }
+  ],
+  "upgrades": [
+    {
+      "key": "rotary_pick",
+      "name": "回转矿镐",
+      "era": "foundation",
+      "region": "speed",
+      "description": "每级令挖矿速度复乘 1.18",
+      "effectKind": "speed_compound",
+      "effectPerLevel": 0.18,
+      "maxLevel": 9,
+      "baseCost": 300,
+      "costGrowth": 1.92,
+      "unlockDepth": 0,
+      "prerequisites": [],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "split_tunnel",
+      "name": "分岔矿道",
+      "era": "foundation",
+      "region": "parallel",
+      "description": "每级增加 22% 同时作业面",
+      "effectKind": "parallel",
+      "effectPerLevel": 0.22,
+      "maxLevel": 8,
+      "baseCost": 760,
+      "costGrowth": 1.88,
+      "unlockDepth": 2000,
+      "prerequisites": [
+        "rotary_pick"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "cat_crew",
+      "name": "猫矿工小队",
+      "era": "foundation",
+      "region": "cats",
+      "description": "每级增加 20% 独立猫矿工产能",
+      "effectKind": "cats",
+      "effectPerLevel": 0.2,
+      "maxLevel": 8,
+      "baseCost": 4000,
+      "costGrowth": 1.82,
+      "unlockDepth": 180000,
+      "prerequisites": [
+        "rotary_pick"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "honed_edge",
+      "name": "精磨镐刃",
+      "era": "foundation",
+      "region": "sharpness",
+      "description": "每级增加 17% 锐利度",
+      "effectKind": "sharpness",
+      "effectPerLevel": 0.17,
+      "maxLevel": 7,
+      "baseCost": 9000,
+      "costGrowth": 1.8,
+      "unlockDepth": 280000,
+      "prerequisites": [
+        "split_tunnel"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "ore_ledger",
+      "name": "矿石账本",
+      "era": "foundation",
+      "region": "income",
+      "description": "每级增加 25% 矿币，不改变深度",
+      "effectKind": "income",
+      "effectPerLevel": 0.25,
+      "maxLevel": 7,
+      "baseCost": 18000,
+      "costGrowth": 1.78,
+      "unlockDepth": 520000,
+      "prerequisites": [
+        "cat_crew"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "fault_mapping",
+      "name": "裂隙测绘",
+      "era": "foundation",
+      "region": "fragility",
+      "description": "每级增加 16% 矿石脆弱度",
+      "effectKind": "fragility",
+      "effectPerLevel": 0.16,
+      "maxLevel": 7,
+      "baseCost": 36000,
+      "costGrowth": 1.76,
+      "unlockDepth": 700000,
+      "prerequisites": [
+        "honed_edge"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "deep_marker",
+      "name": "深层标尺",
+      "era": "foundation",
+      "region": "extra_depth",
+      "description": "每级增加 26% 深度，不改变收入",
+      "effectKind": "extra_depth",
+      "effectPerLevel": 0.26,
+      "maxLevel": 7,
+      "baseCost": 72000,
+      "costGrowth": 1.74,
+      "unlockDepth": 1400000,
+      "prerequisites": [
+        "ore_ledger"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "steam_array",
+      "name": "蒸汽钻列",
+      "era": "industrial",
+      "region": "parallel",
+      "description": "工业并行层，每级增加 28% 作业面",
+      "effectKind": "parallel",
+      "effectPerLevel": 0.28,
+      "maxLevel": 8,
+      "baseCost": 70000,
+      "costGrowth": 1.7,
+      "unlockDepth": 1500000,
+      "prerequisites": [
+        "fault_mapping"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "crew_whistle",
+      "name": "猫班汽笛",
+      "era": "industrial",
+      "region": "coordination",
+      "description": "猫越多，每级协同收益越高",
+      "effectKind": "coordination",
+      "effectPerLevel": 0.055,
+      "maxLevel": 8,
+      "baseCost": 180000,
+      "costGrowth": 1.68,
+      "unlockDepth": 5000000,
+      "prerequisites": [
+        "cat_crew"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "impact_hammer",
+      "name": "冲击锤头",
+      "era": "industrial",
+      "region": "crit_chance",
+      "description": "每级增加 4% 挖矿暴击率",
+      "effectKind": "crit_chance",
+      "effectPerLevel": 0.04,
+      "maxLevel": 8,
+      "baseCost": 350000,
+      "costGrowth": 1.67,
+      "unlockDepth": 7000000,
+      "prerequisites": [
+        "steam_array"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "blast_charge",
+      "name": "定向爆破",
+      "era": "industrial",
+      "region": "crit_damage",
+      "description": "每级增加 35% 暴击伤害",
+      "effectKind": "crit_damage",
+      "effectPerLevel": 0.35,
+      "maxLevel": 8,
+      "baseCost": 700000,
+      "costGrowth": 1.66,
+      "unlockDepth": 22000000,
+      "prerequisites": [
+        "impact_hammer"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "relay_shift",
+      "name": "三班接力",
+      "era": "industrial",
+      "region": "shift_relay",
+      "description": "自动化线路越多，收入加成越高",
+      "effectKind": "shift_relay",
+      "effectPerLevel": 0.018,
+      "maxLevel": 7,
+      "baseCost": 1200000,
+      "costGrowth": 1.65,
+      "unlockDepth": 35000000,
+      "prerequisites": [
+        "crew_whistle"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "drill_momentum",
+      "name": "钻进动量",
+      "era": "industrial",
+      "region": "momentum",
+      "description": "每个游戏日连续作业四小时后达到满额",
+      "effectKind": "momentum",
+      "effectPerLevel": 0.08,
+      "maxLevel": 7,
+      "baseCost": 2200000,
+      "costGrowth": 1.64,
+      "unlockDepth": 60000000,
+      "prerequisites": [
+        "blast_charge"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "union_rhythm",
+      "name": "齐心协力",
+      "era": "industrial",
+      "region": "teamwork",
+      "description": "随本轮累计天数持续增加挖矿力量",
+      "effectKind": "teamwork",
+      "effectPerLevel": 0.045,
+      "maxLevel": 7,
+      "baseCost": 4000000,
+      "costGrowth": 1.63,
+      "unlockDepth": 150000000,
+      "prerequisites": [
+        "relay_shift"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "arc_pick",
+      "name": "电弧矿镐",
+      "era": "electrical",
+      "region": "speed",
+      "description": "新时代速度科技，每级继续复乘 1.15",
+      "effectKind": "speed_compound",
+      "effectPerLevel": 0.15,
+      "maxLevel": 9,
+      "baseCost": 7000000,
+      "costGrowth": 1.62,
+      "unlockDepth": 140000000,
+      "prerequisites": [
+        "drill_momentum"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "weakpoint_scope",
+      "name": "弱点示波器",
+      "era": "electrical",
+      "region": "crit_chance",
+      "description": "每级增加 5% 挖矿暴击率",
+      "effectKind": "crit_chance",
+      "effectPerLevel": 0.05,
+      "maxLevel": 8,
+      "baseCost": 12000000,
+      "costGrowth": 1.61,
+      "unlockDepth": 600000000,
+      "prerequisites": [
+        "arc_pick"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "plasma_edge",
+      "name": "等离子刃",
+      "era": "electrical",
+      "region": "sharpness",
+      "description": "每级增加 23% 锐利度",
+      "effectKind": "sharpness",
+      "effectPerLevel": 0.23,
+      "maxLevel": 8,
+      "baseCost": 20000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 3000000000,
+      "prerequisites": [
+        "arc_pick"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "overpenetration",
+      "name": "过量穿透",
+      "era": "electrical",
+      "region": "penetration",
+      "description": "把暴击层额外转化为深度",
+      "effectKind": "penetration",
+      "effectPerLevel": 0.12,
+      "maxLevel": 7,
+      "baseCost": 35000000,
+      "costGrowth": 1.59,
+      "unlockDepth": 12000000000,
+      "prerequisites": [
+        "weakpoint_scope"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "grid_resonance",
+      "name": "矿网共振",
+      "era": "electrical",
+      "region": "resonance",
+      "description": "每条已自动科技放大该乘区",
+      "effectKind": "resonance",
+      "effectPerLevel": 0.012,
+      "maxLevel": 7,
+      "baseCost": 448000000,
+      "costGrowth": 1.58,
+      "unlockDepth": 26000000000,
+      "prerequisites": [
+        "plasma_edge"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "induction_ledger",
+      "name": "感应结算器",
+      "era": "electrical",
+      "region": "income",
+      "description": "每级增加 32% 矿币，不改变深度",
+      "effectKind": "income",
+      "effectPerLevel": 0.32,
+      "maxLevel": 7,
+      "baseCost": 1330000000,
+      "costGrowth": 1.57,
+      "unlockDepth": 106000000000,
+      "prerequisites": [
+        "grid_resonance"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "pressure_converter",
+      "name": "压力换能器",
+      "era": "modern",
+      "region": "pressure",
+      "description": "深度越大，穿透效率越高",
+      "effectKind": "pressure",
+      "effectPerLevel": 0.05,
+      "maxLevel": 8,
+      "baseCost": 8820000000,
+      "costGrowth": 1.61,
+      "unlockDepth": 454000000000,
+      "prerequisites": [
+        "overpenetration"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "mesh_topology",
+      "name": "矿网拓扑",
+      "era": "modern",
+      "region": "network",
+      "description": "并行矿脉与猫矿工形成交叉乘区",
+      "effectKind": "network",
+      "effectPerLevel": 0.018,
+      "maxLevel": 8,
+      "baseCost": 5710000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 704000000000,
+      "prerequisites": [
+        "pressure_converter"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "thermal_recovery",
+      "name": "热量回收",
+      "era": "modern",
+      "region": "heat",
+      "description": "把钻进动量的一部分转为收入",
+      "effectKind": "heat",
+      "effectPerLevel": 0.08,
+      "maxLevel": 7,
+      "baseCost": 26300000000,
+      "costGrowth": 1.59,
+      "unlockDepth": 1120000000000,
+      "prerequisites": [
+        "mesh_topology"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "craft_diversity",
+      "name": "工艺多样性",
+      "era": "modern",
+      "region": "diversity",
+      "description": "已投入的不同乘区越多，收入越高",
+      "effectKind": "diversity",
+      "effectPerLevel": 0.012,
+      "maxLevel": 7,
+      "baseCost": 38200000000,
+      "costGrowth": 1.58,
+      "unlockDepth": 1780000000000,
+      "prerequisites": [
+        "thermal_recovery"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "cascade_bus",
+      "name": "能源级联母线",
+      "era": "modern",
+      "region": "cascade",
+      "description": "完整自动化的时代形成独立乘区",
+      "effectKind": "cascade",
+      "effectPerLevel": 0.1,
+      "maxLevel": 7,
+      "baseCost": 349000000000,
+      "costGrowth": 1.57,
+      "unlockDepth": 2930000000000,
+      "prerequisites": [
+        "craft_diversity"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "precision_matrix",
+      "name": "弱点矩阵",
+      "era": "future",
+      "region": "precision",
+      "description": "脆弱度与暴击形成交叉乘区",
+      "effectKind": "precision",
+      "effectPerLevel": 0.014,
+      "maxLevel": 8,
+      "baseCost": 54500000000000,
+      "costGrowth": 1.56,
+      "unlockDepth": 101000000000000,
+      "prerequisites": [
+        "cascade_bus"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "distance_fold",
+      "name": "路程压缩",
+      "era": "future",
+      "region": "compression",
+      "description": "压缩剩余有效地层距离",
+      "effectKind": "compression",
+      "effectPerLevel": 0.04,
+      "maxLevel": 8,
+      "baseCost": 65100000000000,
+      "costGrowth": 1.55,
+      "unlockDepth": 247000000000000,
+      "prerequisites": [
+        "precision_matrix"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "gravity_lens",
+      "name": "引力透镜",
+      "era": "future",
+      "region": "lens",
+      "description": "行星进度转化为额外深度",
+      "effectKind": "lens",
+      "effectPerLevel": 0.08,
+      "maxLevel": 8,
+      "baseCost": 556000000000000,
+      "costGrowth": 1.54,
+      "unlockDepth": 982000000000000,
+      "prerequisites": [
+        "distance_fold"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "singularity_crew",
+      "name": "奇点猫班",
+      "era": "future",
+      "region": "cats",
+      "description": "新时代猫矿工乘区",
+      "effectKind": "cats",
+      "effectPerLevel": 0.3,
+      "maxLevel": 8,
+      "baseCost": 812000000000000,
+      "costGrowth": 1.53,
+      "unlockDepth": 3680000000000000,
+      "prerequisites": [
+        "gravity_lens"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "quantum_fault",
+      "name": "量子裂隙",
+      "era": "future",
+      "region": "fragility",
+      "description": "新时代脆弱度乘区",
+      "effectKind": "fragility",
+      "effectPerLevel": 0.26,
+      "maxLevel": 8,
+      "baseCost": 3230000000000000,
+      "costGrowth": 1.52,
+      "unlockDepth": 14800000000000000,
+      "prerequisites": [
+        "singularity_crew"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "opening_salvo",
+      "name": "一鼓作气",
+      "era": "planetary",
+      "region": "opening_burst",
+      "description": "每颗星球开局获得限时巨额加速",
+      "effectKind": "opening_burst",
+      "effectPerLevel": 2,
+      "maxLevel": 6,
+      "baseCost": 1000000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 1000000000000000,
+      "prerequisites": [
+        "quantum_fault"
+      ],
+      "manualTarget": 3,
+      "status": "late-reserve"
+    },
+    {
+      "key": "planetary_lens",
+      "name": "行星透镜阵",
+      "era": "planetary",
+      "region": "lens",
+      "description": "引力透镜的行星时代延伸",
+      "effectKind": "lens",
+      "effectPerLevel": 0.14,
+      "maxLevel": 8,
+      "baseCost": 1800000000,
+      "costGrowth": 1.58,
+      "unlockDepth": 2000000000000000,
+      "prerequisites": [
+        "opening_salvo"
+      ],
+      "manualTarget": 3,
+      "status": "reserve"
+    },
+    {
+      "key": "planetary_parallel",
+      "name": "多星并行钻井",
+      "era": "planetary",
+      "region": "parallel",
+      "description": "把同时矿脉扩展到多星球",
+      "effectKind": "parallel",
+      "effectPerLevel": 0.42,
+      "maxLevel": 8,
+      "baseCost": 3000000000,
+      "costGrowth": 1.56,
+      "unlockDepth": 4000000000000000,
+      "prerequisites": [
+        "planetary_lens"
+      ],
+      "manualTarget": 3,
+      "status": "reserve"
+    },
+    {
+      "key": "seismic_echo",
+      "name": "地震回声阵列",
+      "era": "electrical",
+      "region": "extra_depth",
+      "description": "用回声定位深层断面，每级增加 35% 额外深度。",
+      "effectKind": "extra_depth",
+      "effectPerLevel": 0.35,
+      "maxLevel": 8,
+      "baseCost": 440000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 26000000000,
+      "prerequisites": [
+        "overpenetration"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "capacitor_bank",
+      "name": "脉冲电容组",
+      "era": "electrical",
+      "region": "momentum",
+      "description": "储存连续作业的脉冲能量，每级增加 9% 满负荷动量。",
+      "effectKind": "momentum",
+      "effectPerLevel": 0.09,
+      "maxLevel": 8,
+      "baseCost": 1300000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 106000000000,
+      "prerequisites": [
+        "grid_resonance"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "sorting_optics",
+      "name": "光谱选矿台",
+      "era": "electrical",
+      "region": "income",
+      "description": "回收此前漏掉的细矿，每级增加 40% 额外收入。",
+      "effectKind": "income",
+      "effectPerLevel": 0.4,
+      "maxLevel": 8,
+      "baseCost": 5700000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 257000000000,
+      "prerequisites": [
+        "induction_ledger"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "ceramic_bearings",
+      "name": "磁悬陶瓷轴承",
+      "era": "modern",
+      "region": "speed",
+      "description": "消除主轴接触损耗，每级令挖矿速度复乘 1.10。",
+      "effectKind": "speed_compound",
+      "effectPerLevel": 0.1,
+      "maxLevel": 8,
+      "baseCost": 5620000000,
+      "costGrowth": 1.62,
+      "unlockDepth": 704000000000,
+      "prerequisites": [
+        "pressure_converter"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "support_lattice",
+      "name": "自愈支护网",
+      "era": "modern",
+      "region": "parallel",
+      "description": "让旧矿道重新承载钻机，每级增加 35% 并行作业面，并增强矿网拓扑。",
+      "effectKind": "parallel",
+      "effectPerLevel": 0.35,
+      "maxLevel": 8,
+      "baseCost": 37600000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 1780000000000,
+      "prerequisites": [
+        "mesh_topology"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "closed_loop_cooling",
+      "name": "闭环冷却井",
+      "era": "modern",
+      "region": "heat",
+      "description": "热量不再白白散失；提高回收强度，速度与动量越高，额外矿币越多。",
+      "effectKind": "heat",
+      "effectPerLevel": 0.12,
+      "maxLevel": 8,
+      "baseCost": 1970000000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 7360000000000,
+      "prerequisites": [
+        "thermal_recovery"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "autonomous_survey",
+      "name": "自主地质探针",
+      "era": "modern",
+      "region": "fragility",
+      "description": "先于钻头寻找脆弱层，每级增加 35% 脆弱度，并为弱点标定提供基础。",
+      "effectKind": "fragility",
+      "effectPerLevel": 0.35,
+      "maxLevel": 8,
+      "baseCost": 1970000000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 7360000000000,
+      "prerequisites": [
+        "craft_diversity"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "pressure_accumulator",
+      "name": "深压蓄能舱",
+      "era": "modern",
+      "region": "pressure",
+      "description": "把更深地层的压力转成钻进能量；每级提高压力转换强度。",
+      "effectKind": "pressure",
+      "effectPerLevel": 0.16,
+      "maxLevel": 8,
+      "baseCost": 41200000000000,
+      "costGrowth": 1.6,
+      "unlockDepth": 35000000000000,
+      "prerequisites": [
+        "cascade_bus"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "phase_anchor",
+      "name": "相位锚点",
+      "era": "future",
+      "region": "network",
+      "description": "跨矿道对齐钻机相位；并行面与矿工队伍共同放大矿网收益。",
+      "effectKind": "network",
+      "effectPerLevel": 0.14,
+      "maxLevel": 8,
+      "baseCost": 61500000000000,
+      "costGrowth": 1.62,
+      "unlockDepth": 247000000000000,
+      "prerequisites": [
+        "precision_matrix"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "vacuum_bus",
+      "name": "真空能流总线",
+      "era": "future",
+      "region": "cascade",
+      "description": "串联各时代的自动化矿网；时代内自动化覆盖越完整，级联收益越高。",
+      "effectKind": "cascade",
+      "effectPerLevel": 0.08,
+      "maxLevel": 8,
+      "baseCost": 5810000000000000,
+      "costGrowth": 1.65,
+      "unlockDepth": 52900000000000000,
+      "prerequisites": [
+        "gravity_lens"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "quantum_sorter",
+      "name": "量子分选仓",
+      "era": "future",
+      "region": "diversity",
+      "description": "综合不同工艺识别矿物结构；已投入的乘区种类越多，额外收入越高。",
+      "effectKind": "diversity",
+      "effectPerLevel": 0.035,
+      "maxLevel": 8,
+      "baseCost": 19500000000000000,
+      "costGrowth": 1.62,
+      "unlockDepth": 206000000000000000,
+      "prerequisites": [
+        "quantum_fault"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "tidal_bore",
+      "name": "潮汐钻探环",
+      "era": "future",
+      "region": "compression",
+      "description": "联动压力换能与过量穿透，进一步压缩钻头的等效作业路程。",
+      "effectKind": "compression",
+      "effectPerLevel": 0.18,
+      "maxLevel": 8,
+      "baseCost": 85700000000000000,
+      "costGrowth": 1.62,
+      "unlockDepth": 598000000000000000,
+      "prerequisites": [
+        "gravity_lens"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    },
+    {
+      "key": "stellar_sync",
+      "name": "星核同步钟",
+      "era": "future",
+      "region": "resonance",
+      "description": "把地表至深井的生产线同步到同一节拍；自动化科技越多，共振收益越强。",
+      "effectKind": "resonance",
+      "effectPerLevel": 0.028,
+      "maxLevel": 8,
+      "baseCost": 162000000000000000,
+      "costGrowth": 1.65,
+      "unlockDepth": 2620000000000000000,
+      "prerequisites": [
+        "tidal_bore",
+        "vacuum_bus"
+      ],
+      "manualTarget": 3,
+      "status": "active",
+      "addedIn": "thirty-day"
+    }
+  ],
+  "strategy": {
+    "mode": "daily-helper-v3",
+    "profiles": {
+      "daily": {
+        "name": "每日一次 / 20:00",
+        "checkMinutes": [
+          1200
+        ]
+      },
+      "absent": {
+        "name": "全程托管 / 不操作",
+        "checkMinutes": []
+      },
+      "active": {
+        "name": "高频 / 每日47次",
+        "checkMinutes": [
+          30,
+          60,
+          90,
+          120,
+          150,
+          180,
+          210,
+          240,
+          270,
+          300,
+          330,
+          360,
+          390,
+          420,
+          450,
+          480,
+          510,
+          540,
+          570,
+          600,
+          630,
+          660,
+          690,
+          720,
+          750,
+          780,
+          810,
+          840,
+          870,
+          900,
+          930,
+          960,
+          990,
+          1020,
+          1050,
+          1080,
+          1110,
+          1140,
+          1170,
+          1200,
+          1230,
+          1260,
+          1290,
+          1320,
+          1350,
+          1380,
+          1410
+        ]
+      },
+      "regular": {
+        "name": "多次 / 每日9次",
+        "checkMinutes": [
+          60,
+          180,
+          360,
+          540,
+          720,
+          900,
+          1080,
+          1260,
+          1410
+        ]
+      },
+      "low": {
+        "name": "多次 / 每日5次",
+        "checkMinutes": [
+          120,
+          480,
+          840,
+          1200,
+          1410
+        ]
+      }
+    },
+    "priority": [
+      "rotary_pick",
+      "split_tunnel",
+      "cat_crew",
+      "honed_edge",
+      "ore_ledger",
+      "fault_mapping",
+      "deep_marker",
+      "steam_array",
+      "crew_whistle",
+      "impact_hammer",
+      "blast_charge",
+      "relay_shift",
+      "drill_momentum",
+      "union_rhythm",
+      "arc_pick",
+      "weakpoint_scope",
+      "plasma_edge",
+      "overpenetration",
+      "grid_resonance",
+      "seismic_echo",
+      "induction_ledger",
+      "capacitor_bank",
+      "sorting_optics",
+      "pressure_converter",
+      "mesh_topology",
+      "ceramic_bearings",
+      "thermal_recovery",
+      "craft_diversity",
+      "support_lattice",
+      "cascade_bus",
+      "closed_loop_cooling",
+      "autonomous_survey",
+      "pressure_accumulator",
+      "precision_matrix",
+      "distance_fold",
+      "phase_anchor",
+      "gravity_lens",
+      "singularity_crew",
+      "quantum_fault",
+      "vacuum_bus",
+      "quantum_sorter",
+      "tidal_bore",
+      "stellar_sync"
+    ],
+    "routeVariants": [
+      "balanced",
+      "cheapest",
+      "depth",
+      "income"
+    ],
+    "opportunityCheckIntervalMinutes": 10
+  }
 }

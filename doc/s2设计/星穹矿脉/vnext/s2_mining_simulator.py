@@ -14,6 +14,12 @@ from typing import Iterable, Literal
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 PLUGIN_DIR = MODULE_DIR.parents[3]
 GAME_DATA_PATH = PLUGIN_DIR / "web" / "static" / "s2-vnext" / "game_data.json"
+IMPLEMENTED_EFFECT_KINDS = {
+    "speed_compound", "parallel", "cats", "sharpness", "income", "fragility",
+    "extra_depth", "coordination", "crit_chance", "crit_damage", "shift_relay",
+    "momentum", "teamwork", "penetration", "resonance", "pressure", "network",
+    "heat", "diversity", "cascade", "precision", "compression", "lens",
+}
 
 
 def validate_game_data(data: dict[str, object]) -> dict[str, object]:
@@ -58,6 +64,8 @@ def validate_game_data(data: dict[str, object]) -> dict[str, object]:
             raise ValueError(f"invalid era/region for {item['key']}")
         if item["manualTarget"] != data["rules"]["manualAutomationThreshold"]:
             raise ValueError(f"{item['key']} has a different automation threshold")
+        if item["status"] == "active" and item["effectKind"] not in IMPLEMENTED_EFFECT_KINDS:
+            raise ValueError(f"{item['key']} has unsupported active effect {item['effectKind']}")
     for item in data["upgrades"]:
         unknown = set(item["prerequisites"]) - keys
         if unknown:
@@ -304,21 +312,40 @@ class SimulationState:
         pressure = 1 + effects.get("pressure", 0) * math.log10(1 + self.depth) / 10
         active_regions = len({SPECS[key].region for key, level in self.levels.items() if level})
         diversity = 1 + effects.get("diversity", 0) * active_regions
+        network = 1 + effects.get("network", 0) * math.sqrt(parallel * cats)
+        heat = 1 + effects.get("heat", 0) * (momentum + math.log10(speed))
+        cascade = math.prod(
+            1 + effects.get("cascade", 0)
+            * sum(key in self.auto_unlocked for key in active_specs) / len(active_specs)
+            for era in ERA_SEQUENCE
+            if (active_specs := [
+                key for key in LOCAL_KEYS
+                if SPECS[key].era == era and SPECS[key].status == "active"
+            ])
+        )
+        precision = (
+            1 + effects.get("precision", 0) * fragility * critical
+            * (1 + max(0.0, effects.get("crit_chance", 0) - 0.65))
+        )
+        compression = 1 + effects.get("compression", 0) * math.sqrt(penetration * pressure)
+        lens = 1 + effects.get("lens", 0) * math.log10(1 + self.depth) / 10 * compression
         return {
             "speed": speed, "parallel": parallel, "cats": cats, "sharpness": sharpness,
             "fragility": fragility, "income": income, "extra_depth": extra_depth,
             "critical": critical, "coordination": coordination, "teamwork": teamwork,
             "momentum": momentum, "resonance": resonance, "shift_relay": shift_relay,
             "penetration": penetration, "pressure": pressure, "diversity": diversity,
+            "network": network, "heat": heat, "cascade": cascade,
+            "precision": precision, "compression": compression, "lens": lens,
         }
 
     def income_multiplier(self) -> float:
         f = self.multiplier_breakdown()
-        return math.prod(f[key] for key in ("speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "diversity"))
+        return math.prod(f[key] for key in ("speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "diversity", "network", "heat", "cascade", "precision"))
 
     def depth_multiplier(self) -> float:
         f = self.multiplier_breakdown()
-        return math.prod(f[key] for key in ("speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure"))
+        return math.prod(f[key] for key in ("speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"))
 
     def auto_purchase(self) -> list[str]:
         active = sorted(self.auto_unlocked)
@@ -419,8 +446,8 @@ def choose_upgrade(state: SimulationState, route: Route = "balanced") -> str | N
     if route == "cheapest":
         return min(affordable, key=lambda key: (state.cost_for(key), priority.get(key, 999)))
     if route in {"depth", "income"}:
-        depth_kinds = {"speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure"}
-        income_kinds = depth_kinds - {"extra_depth", "penetration", "pressure"} | {"income", "shift_relay", "diversity"}
+        depth_kinds = {"speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"}
+        income_kinds = depth_kinds - {"extra_depth", "penetration", "pressure", "compression", "lens"} | {"income", "shift_relay", "diversity", "heat"}
         preferred = depth_kinds if route == "depth" else income_kinds
         matching = [key for key in affordable if SPECS[key].effect_kind in preferred]
         if matching:
