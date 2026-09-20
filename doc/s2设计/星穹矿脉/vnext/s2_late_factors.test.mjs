@@ -12,26 +12,41 @@ const legacyData = JSON.parse(execFileSync(
   { cwd: pluginRoot, encoding: "utf8" },
 ));
 const clonedData = () => structuredClone(data);
-const keyFor = (kind) => data.upgrades.find((item) => item.effectKind === kind)?.key;
+const activeUpgrades = data.upgrades.filter((item) => item.status === "active");
+const legacyActiveKeys = new Set(legacyData.upgrades.filter((item) => item.status === "active").map((item) => item.key));
+const d11Upgrades = activeUpgrades.filter((item) => !legacyActiveKeys.has(item.key));
+const regions = Object.fromEntries(data.multiplierRegions.map((item) => [item.key, item]));
 
 function factorEngine() {
   const engine = new S2Engine(data, { seed: 42 });
-  engine.state.depth = 1e12;
+  engine.state.depth = 1e30;
   engine.state.minute = 1440 + 240;
-  engine.state.levels[keyFor("parallel")] = 2;
-  engine.state.levels[keyFor("cats")] = 2;
-  engine.state.levels[keyFor("speed_compound")] = 2;
-  engine.state.levels[keyFor("momentum")] = 2;
-  engine.state.levels[keyFor("fragility")] = 2;
-  engine.state.levels[keyFor("crit_chance")] = 16;
-  engine.state.levels[keyFor("crit_damage")] = 2;
-  engine.state.levels[keyFor("penetration")] = 2;
-  engine.state.levels[keyFor("pressure")] = 2;
-  engine.state.autoUnlocked = data.upgrades
-    .filter((item) => item.status === "active")
-    .slice(0, 6)
-    .map((item) => item.key);
+  engine.state.autoUnlocked = activeUpgrades.slice(0, 6).map((item) => item.key);
+  for (const kind of ["coordination", "crit_chance", "crit_damage"]) {
+    const support = activeUpgrades.find((item) => item.effectKind === kind);
+    if (support) engine.state.levels[support.key] = 1;
+  }
   return engine;
+}
+
+function expectedRegionFactor(engine, specs) {
+  if (specs[0].region === "speed") {
+    return specs.reduce(
+      (product, spec) => product * (1 + Number(spec.effectPerLevel)) ** engine.level(spec.key),
+      1,
+    );
+  }
+  const total = specs.reduce(
+    (sum, spec) => sum + Number(spec.effectPerLevel) * engine.level(spec.key),
+    0,
+  );
+  if (specs[0].region === "momentum") {
+    return 1 + total * Math.min(1, (engine.state.minute % 1440) / 240);
+  }
+  if (["resonance", "shift_relay"].includes(specs[0].region)) {
+    return 1 + total * engine.state.autoUnlocked.length;
+  }
+  return 1 + total;
 }
 
 function advanceDaily(engine, replayData, days) {
@@ -44,77 +59,89 @@ function advanceDaily(engine, replayData, days) {
   }
 }
 
-test("late effect kinds have real per-level gains on every multiplier they target", () => {
-  const targets = {
-    network: ["incomeMultiplier", "depthMultiplier"],
-    heat: ["incomeMultiplier"],
-    cascade: ["incomeMultiplier", "depthMultiplier"],
-    precision: ["incomeMultiplier", "depthMultiplier"],
-    compression: ["depthMultiplier"],
-    lens: ["depthMultiplier"],
-  };
-  for (const [kind, methods] of Object.entries(targets)) {
-    const key = keyFor(kind);
-    assert.ok(key, `missing ${kind} fixture`);
-    const maxLevel = data.upgrades.find((item) => item.key === key).maxLevel;
+test("every D11+ technology has a real per-level gain only in its configured scope", () => {
+  assert.ok(d11Upgrades.length > 0);
+  for (const spec of d11Upgrades) {
+    const scope = regions[spec.region]?.scope;
+    assert.ok(["both", "income", "depth"].includes(scope), `${spec.key} has invalid scope`);
     const engine = factorEngine();
-    let previous = Object.fromEntries(methods.map((method) => [method, engine[method]()]));
-    for (let level = 1; level <= maxLevel; level += 1) {
-      engine.state.levels[key] = level;
-      const current = Object.fromEntries(methods.map((method) => [method, engine[method]()]));
-      methods.forEach((method) => assert.ok(current[method] > previous[method], `${kind} L${level} must improve ${method}`));
+    engine.state.levels[spec.key] = 0;
+    let previous = {
+      income: engine.incomeMultiplier(),
+      depth: engine.depthMultiplier(),
+    };
+    for (let level = 1; level <= spec.maxLevel; level += 1) {
+      engine.state.levels[spec.key] = level;
+      const current = {
+        income: engine.incomeMultiplier(),
+        depth: engine.depthMultiplier(),
+      };
+      if (scope === "both" || scope === "income") {
+        assert.ok(current.income > previous.income, `${spec.key} L${level} must improve income`);
+      } else {
+        assert.equal(current.income, previous.income, `${spec.key} L${level} must not affect income`);
+      }
+      if (scope === "both" || scope === "depth") {
+        assert.ok(current.depth > previous.depth, `${spec.key} L${level} must improve depth`);
+      } else {
+        assert.equal(current.depth, previous.depth, `${spec.key} L${level} must not affect depth`);
+      }
       previous = current;
     }
   }
 });
 
-test("late factor formulas preserve their specified cross-factor interactions", () => {
-  const engine = factorEngine();
-  for (const kind of ["network", "heat", "cascade", "precision", "compression", "lens"]) {
-    engine.state.levels[keyFor(kind)] = 1;
+test("same-region era handoffs add simply while speed technologies multiply independently", () => {
+  let checked = 0;
+  for (const newer of d11Upgrades) {
+    const older = activeUpgrades.find((item) =>
+      legacyActiveKeys.has(item.key) && item.region === newer.region && item.era !== newer.era);
+    if (!older) continue;
+    const engine = new S2Engine(data, { seed: 42 });
+    engine.state.minute = 1440 + 240;
+    engine.state.autoUnlocked = activeUpgrades.slice(0, 6).map((item) => item.key);
+    engine.state.levels[older.key] = Math.min(2, older.maxLevel);
+    engine.state.levels[newer.key] = Math.min(2, newer.maxLevel);
+    const actual = engine.multiplierBreakdown()[newer.region];
+    const expected = expectedRegionFactor(engine, [older, newer]);
+    assert.ok(Math.abs(actual - expected) < 1e-12, `${older.key} -> ${newer.key}`);
+    checked += 1;
   }
-  const effects = engine.effectLevels();
-  const factors = engine.multiplierBreakdown();
-  assert.ok(Math.abs(factors.network - (1 + effects.network * Math.sqrt(factors.parallel * factors.cats))) < 1e-12);
-  assert.ok(Math.abs(factors.heat - (1 + effects.heat * (factors.momentum + Math.log10(factors.speed)))) < 1e-12);
-  const cascade = data.eras.reduce((product, era) => {
-    const active = data.upgrades.filter((item) => item.era === era.key && item.status === "active");
-    if (!active.length) return product;
-    const automated = active.filter((item) => engine.state.autoUnlocked.includes(item.key)).length;
-    return product * (1 + effects.cascade * automated / active.length);
-  }, 1);
-  assert.ok(Math.abs(factors.cascade - cascade) < 1e-12);
-  assert.ok(Math.abs(factors.precision - (1 + effects.precision * factors.fragility * factors.critical
-    * (1 + Math.max(0, effects.crit_chance - 0.65)))) < 1e-12);
-  assert.ok(Math.abs(factors.compression - (1 + effects.compression * Math.sqrt(factors.penetration * factors.pressure))) < 1e-12);
-  assert.ok(Math.abs(factors.lens - (1 + effects.lens * Math.log10(1 + engine.state.depth) / 10 * factors.compression)) < 1e-12);
+  assert.ok(checked > 0);
 });
 
-test("route classifications include both, income-only and depth-only late effects", () => {
-  const configured = (preferredKind) => {
-    const copy = clonedData();
-    copy.upgrades.forEach((item) => { item.status = "reserve"; });
-    const kinds = [preferredKind, "heat", "compression"];
-    const keys = kinds.map((kind) => copy.upgrades.find((item) => item.effectKind === kind).key);
-    keys.forEach((key) => {
-      const spec = copy.upgrades.find((item) => item.key === key);
-      spec.status = "active"; spec.era = copy.eras[0].key; spec.unlockDepth = 0; spec.prerequisites = []; spec.baseCost = 1;
-    });
-    copy.strategy.priority = keys;
-    const engine = new S2Engine(copy, { seed: 42 });
-    engine.state.credits = 10;
-    return { engine, keys };
-  };
-  for (const kind of ["network", "cascade", "precision"]) {
-    const { engine, keys } = configured(kind);
-    assert.equal(engine.chooseUpgrade("depth"), keys[0]);
-    assert.equal(engine.chooseUpgrade("income"), keys[0]);
+test("old technologies stop at max level and every later era requires depth plus prior automation", () => {
+  const oldSpec = activeUpgrades.find((item) => legacyActiveKeys.has(item.key));
+  assert.ok(oldSpec);
+  const capped = new S2Engine(data, { seed: 42 });
+  capped.state.depth = 1e30;
+  capped.state.credits = 1e300;
+  capped.state.levels[oldSpec.key] = oldSpec.maxLevel;
+  capped.state.autoUnlocked = [oldSpec.key];
+  assert.equal(capped.available(oldSpec.key), false);
+  assert.equal(capped.available(oldSpec.key, true), false);
+  assert.deepEqual(capped.purchase(oldSpec.key), { ok: false, reason: "locked" });
+  assert.deepEqual(capped.purchase(oldSpec.key, true), { ok: false, reason: "locked" });
+
+  for (let index = 1; index < data.eras.length; index += 1) {
+    const era = data.eras[index];
+    const previousEra = data.eras[index - 1].key;
+    const previousKeys = activeUpgrades.filter((item) => item.era === previousEra).map((item) => item.key);
+    const required = Number(era.previousEraAutomations);
+    assert.ok(previousKeys.length >= required, `${era.key} lacks prior automation fixtures`);
+
+    const engine = new S2Engine(data, { seed: 42 });
+    engine.state.depth = Number(era.unlockDepth);
+    engine.state.autoUnlocked = previousKeys.slice(0, Math.max(0, required - 1));
+    assert.equal(engine.eraUnlocked(era.key), false, `${era.key} must require prior automation`);
+
+    engine.state.depth = Number(era.unlockDepth) / 2;
+    engine.state.autoUnlocked = previousKeys.slice(0, required);
+    assert.equal(engine.eraUnlocked(era.key), false, `${era.key} must require depth`);
+
+    engine.state.depth = Number(era.unlockDepth);
+    assert.equal(engine.eraUnlocked(era.key), true, `${era.key} should unlock after both gates`);
   }
-  const { engine, keys } = configured("network");
-  engine.data.strategy.priority = [keys[1], keys[2], keys[0]];
-  engine.priority = [...engine.data.strategy.priority];
-  assert.equal(engine.chooseUpgrade("income"), keys[1]);
-  assert.equal(engine.chooseUpgrade("depth"), keys[2]);
 });
 
 test("active effects must be implemented while reserve effects may be unknown", () => {
@@ -232,7 +259,7 @@ test("first ten days preserve the previous economy and purchases across 80 profi
   }
 });
 
-test("thirty daily batch visits match single-level economics with only 29 commands", () => {
+test("thirty daily batch visits match replay economics and count only nonempty visits", () => {
   const engine = new S2Engine(data, { seed: 42 });
   const counts = [];
   for (let day = 0; day < 30; day++) {
@@ -255,12 +282,14 @@ test("thirty daily batch visits match single-level economics with only 29 comman
   }
   const replay = runReplay(data, { days: 30 });
   assert.deepEqual(counts, replay.snapshots.map((day) => day.manualLevels));
+  const commandDays = counts.filter((count) => count > 0).length;
   const expected = replay.engine.snapshot();
-  expected.state.totalManualCommands = 29;
+  expected.state.totalManualCommands = commandDays;
   assert.deepEqual(engine.snapshot(), expected);
+  assert.equal(engine.state.totalManualCommands, commandDays);
   assert.deepEqual(
     [engine.state.totalManualLevels, engine.state.totalHelperLevels, engine.state.totalAutoLevels],
-    [84, 45, 191],
+    [replay.engine.state.totalManualLevels, replay.engine.state.totalHelperLevels, replay.engine.state.totalAutoLevels],
   );
 });
 

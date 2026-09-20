@@ -1,4 +1,4 @@
-import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-1";
+import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-eras-1";
 
 const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
 const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
@@ -27,7 +27,7 @@ function loadSaved(seed) {
       if (payload.state.contentVersion !== data.contentVersion) {
         try {
           localStorage.setItem(`${STORAGE_KEY}-before-${data.contentVersion}`, raw);
-          $("#saveNotice").textContent = "已接续三十天矿井，更新前的进度已备份。";
+          $("#saveNotice").textContent = "已接续时代换代版，旧进度已备份；后续装备按新版效果与价格结算。";
         } catch {
           saveBlocked = true;
           $("#saveNotice").textContent = "旧进度可继续试玩，但备份失败，暂不覆盖原存档。";
@@ -64,7 +64,7 @@ function advance(minutes) {
 function lockedReason(key) {
   const spec = engine.specs[key];
   if (spec.status !== "active") return "尚未开放";
-  if (engine.level(key) >= spec.maxLevel) return "本时代已满级";
+  if (engine.level(key) >= spec.maxLevel) return "本代设备已满级";
   if (engine.state.autoUnlocked.includes(key)) return "每小时参与自动采购";
   if (!engine.eraUnlocked(spec.era)) {
     const era = engine.eraByKey[spec.era];

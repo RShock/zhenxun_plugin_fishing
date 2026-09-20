@@ -36,16 +36,20 @@ def manually_unlock(state: SimulationState, key: str) -> None:
         assert ok, reason
 
 
-def test_v3_uses_one_shared_currency_and_has_multiplier_reserve() -> None:
+def test_v3_uses_one_shared_currency_and_thirty_day_era_regions() -> None:
     assert GAME_DATA["schemaVersion"] == 3
     assert GAME_DATA["gameVersion"] == "s2-vnext-v3-helper-1"
-    assert GAME_DATA["contentVersion"] == "thirty-day-1"
+    assert GAME_DATA["contentVersion"] == "thirty-day-eras-1"
     assert GAME_DATA["playtestDays"] == 30
     assert [item["key"] for item in GAME_DATA["resources"]] == ["credits"]
-    assert len(GAME_DATA["multiplierRegions"]) >= 20
+    assert len(GAME_DATA["multiplierRegions"]) == 17
+    assert sum(item["status"] == "active" for item in GAME_DATA["multiplierRegions"]) == 15
+    assert sum(item["status"] != "active" for item in GAME_DATA["multiplierRegions"]) == 2
     regions = {item["key"]: item for item in GAME_DATA["multiplierRegions"]}
     active = [item for item in GAME_DATA["upgrades"] if item["status"] == "active"]
+    removed = {"pressure", "network", "heat", "diversity", "cascade", "precision", "compression", "lens"}
     assert len(active) == 43
+    assert not ({item["effectKind"] for item in active} & removed)
     assert all(regions[item["region"]]["status"] == "active" for item in active)
     assert regions["opening_burst"]["status"] != "active"
     planetary = [item for item in GAME_DATA["upgrades"] if item["era"] == "planetary"]
@@ -117,13 +121,77 @@ def test_auto_queue_has_global_budget_and_protects_three_manual_levels() -> None
     assert state.credits + 1e-9 >= state.reserve_cost()
 
 
-def test_speed_is_compound_but_other_regions_are_linear_inside_their_technology() -> None:
-    state = SimulationState(deterministic=True)
-    state.levels["rotary_pick"] = 3
-    state.levels["split_tunnel"] = 3
-    factors = state.multiplier_breakdown()
-    assert math.isclose(factors["speed"], 1.18**3)
-    assert math.isclose(factors["parallel"], 1 + 0.22 * 3)
+def test_same_region_era_handoffs_add_while_speed_lines_multiply() -> None:
+    active = [item for item in GAME_DATA["upgrades"] if item["status"] == "active"]
+    era_index = {item["key"]: index for index, item in enumerate(GAME_DATA["eras"])}
+    checked = 0
+    for region in {item["region"] for item in active}:
+        lines = sorted(
+            (item for item in active if item["region"] == region),
+            key=lambda item: era_index[item["era"]],
+        )
+        if len({item["era"] for item in lines}) < 2:
+            continue
+        old, new = lines[0], lines[-1]
+        state = SimulationState(deterministic=True)
+        state.minute = 1440 + 240
+        state.auto_unlocked = {item["key"] for item in active[:6]}
+        state.levels[old["key"]] = min(2, old["maxLevel"])
+        state.levels[new["key"]] = min(2, new["maxLevel"])
+        contribution = sum(
+            float(item["effectPerLevel"]) * state.level(item["key"])
+            for item in (old, new)
+        )
+        if region == "speed":
+            expected = math.prod(
+                (1 + float(item["effectPerLevel"])) ** state.level(item["key"])
+                for item in (old, new)
+            )
+        elif region in {"resonance", "shift_relay"}:
+            expected = 1 + contribution * len(state.auto_unlocked)
+        elif region == "momentum":
+            expected = 1 + contribution
+        elif region == "crit_chance":
+            expected = 1 + min(0.65, contribution) * float(RULES["baseCriticalDamage"])
+        else:
+            expected = 1 + contribution
+        factor_key = "critical" if region == "crit_chance" else region
+        assert math.isclose(state.multiplier_breakdown()[factor_key], expected, rel_tol=1e-12)
+        checked += 1
+    assert checked > 0
+
+
+def test_old_technology_caps_and_later_era_dual_gates() -> None:
+    old = next(item for item in GAME_DATA["upgrades"] if item["status"] == "active")
+    capped = SimulationState(deterministic=True)
+    capped.depth = 1e30
+    capped.credits = 1e300
+    capped.levels[old["key"]] = old["maxLevel"]
+    capped.auto_unlocked.add(old["key"])
+    assert not capped.available(old["key"])
+    assert not capped.available(old["key"], automatic=True)
+    assert capped.purchase(old["key"]) == (False, "locked")
+    assert capped.purchase(old["key"], automatic=True) == (False, "locked")
+
+    active = [item for item in GAME_DATA["upgrades"] if item["status"] == "active"]
+    eras = GAME_DATA["eras"]
+    for index, era in enumerate(eras[1:], start=1):
+        previous = eras[index - 1]["key"]
+        previous_keys = [item["key"] for item in active if item["era"] == previous]
+        required = int(era["previousEraAutomations"])
+        assert len(previous_keys) >= required
+
+        state = SimulationState(deterministic=True)
+        state.depth = float(era["unlockDepth"])
+        state.auto_unlocked = set(previous_keys[:max(0, required - 1)])
+        assert not state.era_unlocked(era["key"])
+
+        state.depth = float(era["unlockDepth"]) / 2
+        state.auto_unlocked = set(previous_keys[:required])
+        assert not state.era_unlocked(era["key"])
+
+        state.depth = float(era["unlockDepth"])
+        assert state.era_unlocked(era["key"])
 
 
 def test_critical_chance_has_immediate_benefit_without_damage_upgrade() -> None:

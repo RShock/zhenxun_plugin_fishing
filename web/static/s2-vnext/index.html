@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-thirty-1">
+  <link rel="stylesheet" href="./style.css?v=3-thirty-eras-1">
 </head>
 <body>
   <main class="shell">
@@ -16,17 +16,17 @@
     <section class="status-grid" aria-label="矿区状态">
       <article class="metric"><span>矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
       <article class="metric"><span>有效深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
-      <article class="metric"><span>当前时代</span><strong id="eraValue">基础工程</strong><small id="automationValue"></small></article>
+      <article class="metric"><span>当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
       <article class="metric"><span>累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
     </section>
     <section class="mine-overview">
       <div class="mine-scene">
         <img src="./mining-section.svg" alt="首星矿井剖面：地表设备通过竖井连接地下钻探工作面" width="700" height="260">
-        <div class="scene-caption"><span id="sceneEra">基础工程</span><b id="sceneStatus">采矿作业中</b></div>
+        <div class="scene-caption"><span id="sceneEra">原始时代</span><b id="sceneStatus">采矿作业中</b></div>
       </div>
       <div class="next-discovery">
         <p class="eyebrow">NEXT / 下一项工程</p>
-        <h2 id="nextName">旋转矿镐</h2>
+        <h2 id="nextName">手工矿镐</h2>
         <p id="nextReason"></p>
         <progress id="nextProgress" max="1" value="0" aria-label="下一项工程进度"></progress>
         <div class="discovery-meta"><span id="nextProgressText"></span><span id="nextEta"></span></div>
@@ -101,6 +101,6 @@
     <h2>新开矿井？</h2><p>当前助手版进度将被替换。旧版试玩存档保持不变。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认新开</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-thirty-1"></script>
+  <script type="module" src="./app.js?v=3-thirty-eras-1"></script>
 </body>
 </html>

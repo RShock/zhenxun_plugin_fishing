@@ -3,8 +3,7 @@ const TWO_PI = Math.PI * 2;
 const IMPLEMENTED_EFFECT_KINDS = new Set([
   "speed_compound", "parallel", "cats", "sharpness", "income", "fragility",
   "extra_depth", "coordination", "crit_chance", "crit_damage", "shift_relay",
-  "momentum", "teamwork", "penetration", "resonance", "pressure", "network",
-  "heat", "diversity", "cascade", "precision", "compression", "lens",
+  "momentum", "teamwork", "penetration", "resonance",
 ]);
 
 export function validateGameData(data) {
@@ -334,34 +333,19 @@ export class S2Engine {
     const resonance = 1 + (e.resonance || 0) * autoCount;
     const shiftRelay = 1 + (e.shift_relay || 0) * autoCount;
     const penetration = 1 + (e.penetration || 0) * Math.max(0, critical - 1);
-    const pressure = 1 + (e.pressure || 0) * Math.log10(1 + this.state.depth) / 10;
-    const activeRegions = new Set(this.localKeys.filter((key) => this.level(key)).map((key) => this.specs[key].region)).size;
-    const diversity = 1 + (e.diversity || 0) * activeRegions;
-    const network = 1 + (e.network || 0) * Math.sqrt(parallel * cats);
-    const heat = 1 + (e.heat || 0) * (momentum + Math.log10(speed));
-    const cascade = this.eraSequence.reduce((product, era) => {
-      const activeSpecs = this.localKeys.filter((key) => this.specs[key].era === era && this.specs[key].status === "active");
-      if (!activeSpecs.length) return product;
-      const automated = activeSpecs.filter((key) => this.state.autoUnlocked.includes(key)).length;
-      return product * (1 + (e.cascade || 0) * automated / activeSpecs.length);
-    }, 1);
-    const precision = 1 + (e.precision || 0) * fragility * critical
-      * (1 + Math.max(0, (e.crit_chance || 0) - 0.65));
-    const compression = 1 + (e.compression || 0) * Math.sqrt(penetration * pressure);
-    const lens = 1 + (e.lens || 0) * Math.log10(1 + this.state.depth) / 10 * compression;
     return {
       speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth,
       critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay,
-      penetration, pressure, diversity, network, heat, cascade, precision, compression, lens,
+      penetration,
     };
   }
   incomeMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "diversity", "network", "heat", "cascade", "precision"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay"].reduce((product, key) => product * f[key], 1);
   }
   depthMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration"].reduce((product, key) => product * f[key], 1);
   }
   autoPurchase() {
     const active = [...this.state.autoUnlocked].sort(); if (!active.length) return [];
@@ -412,8 +396,8 @@ export class S2Engine {
     const priority = Object.fromEntries(this.priority.map((key, index) => [key, index]));
     if (route === "cheapest") return affordable.sort((a, b) => this.costFor(a) - this.costFor(b) || (priority[a] ?? 999) - (priority[b] ?? 999))[0];
     if (route === "depth" || route === "income") {
-      const depthKinds = new Set(["speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "pressure", "network", "cascade", "precision", "compression", "lens"]);
-      const incomeKinds = new Set([...depthKinds].filter((key) => !["extra_depth", "penetration", "pressure", "compression", "lens"].includes(key)).concat(["income", "shift_relay", "diversity", "heat"]));
+      const depthKinds = new Set(["speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration"]);
+      const incomeKinds = new Set([...depthKinds].filter((key) => !["extra_depth", "penetration"].includes(key)).concat(["income", "shift_relay"]));
       const preferred = route === "depth" ? depthKinds : incomeKinds;
       const matching = affordable.filter((key) => preferred.has(this.specs[key].effectKind));
       if (matching.length) affordable = matching;
