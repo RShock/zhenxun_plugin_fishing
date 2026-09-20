@@ -28,6 +28,7 @@ from zhenxun.services.log import logger
 
 from ..models import FishingLedger
 
+LEDGER_VERSION = "增加鱼追踪"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 延迟写入缓冲
@@ -42,6 +43,7 @@ def queue_entry(
     user_id: str,
     entry_type: str,
     data: dict[str, Any],
+    version: str | None = None,
     gold_before: int | None = None,
     gold_after: int | None = None,
     gold_expected: int | None = None,
@@ -52,6 +54,7 @@ def queue_entry(
     _pending_entries.append({
         "user_id": user_id,
         "entry_type": entry_type,
+        "version": version or LEDGER_VERSION,
         "data": data,
         "gold_before": gold_before,
         "gold_after": gold_after,
@@ -78,6 +81,7 @@ async def flush_pending_entries() -> int:
 async def _safe_create(entry: dict) -> bool:
     """安全写入单条账本记录，失败仅记日志。"""
     try:
+        entry.setdefault("version", LEDGER_VERSION)
         await FishingLedger.create(**entry)
         return True
     except Exception as e:
@@ -104,6 +108,7 @@ async def log_fishing_session(
     duration_minutes: float = 0,
     weather: str = "",
     fish_caught: list[dict] | None = None,
+    catch_sequence: str = "",
     items_gained: list[dict] | None = None,
     starry_score: float = 0.0,
     starry_fish_count: int = 0,
@@ -135,6 +140,7 @@ async def log_fishing_session(
         "duration_minutes": round(duration_minutes, 1),
         "weather": weather,
         "fish_caught": fish_caught or [],
+        "catch_sequence": catch_sequence,
         "items_gained": items_gained or [],
         "starry_score": round(starry_score, 4),
         "starry_fish_count": starry_fish_count,

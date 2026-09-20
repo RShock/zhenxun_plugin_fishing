@@ -700,6 +700,30 @@ class TestFishingLoopIntegration:
 
         assert any("保底触发" in message for message in ctx.buff_messages)
 
+    async def test_remainder_utr_pity_notifies_after_guaranteed_catch(
+        self, db, monkeypatch
+    ):
+        from zhenxun.plugins.zhenxun_plugin_fishing.config import FishData
+        from zhenxun.plugins.zhenxun_plugin_fishing.core import engine
+
+        ctx = await self._context(db, duration_minutes=2)
+
+        def effects(*_args, **_kwargs):
+            return {"weather_lost_wind": True}
+
+        def catch(*args, **_kwargs):
+            args[4].append((FishData(id="test-utr", base_price=1), "UTR", 1))
+            return args[3], 0
+
+        monkeypatch.setattr(engine, "_compute_base_effects", effects)
+        monkeypatch.setattr(engine, "_calculate_fishing_interval", lambda *_: 5.0)
+        monkeypatch.setattr(engine.random, "random", lambda: 0.0)
+        monkeypatch.setattr(engine, "_catch_fish_at_interval", catch)
+
+        await engine.simulate_fishing_loop(ctx, initial_utr_pity=149)
+
+        assert any("保底触发" in message for message in ctx.buff_messages)
+
     async def test_frame_pity_149_notifies_after_guaranteed_catch(
         self, db, monkeypatch
     ):
@@ -810,6 +834,7 @@ class TestSimulationResultIntegration:
         async def capture_simulation(*args, **kwargs):
             call_kwargs.append(kwargs)
             result = await real_simulate(*args, **kwargs)
+            result.catch_sequence = f"阶段{len(captured) + 1}鱼N"
             captured.append(result)
             return result
 
@@ -819,6 +844,8 @@ class TestSimulationResultIntegration:
         await start_fishing(USER_ID, LOCATION_1, "TestUser")
         status = await db.status_get(USER_ID)
         previous_settle_time = status["last_settle_time"]
+        status["catch_sequence"] = "已有鱼R"
+        await db.status_update_fishing_status(USER_ID, status)
 
         ok, image = await use_time_potion_settle(USER_ID, 1)
 
@@ -830,6 +857,7 @@ class TestSimulationResultIntegration:
         assert updated["last_settle_time"] != previous_settle_time
         assert updated["frame_pity"] == captured[-1].frame_pity
         assert updated["utr_pity"] == captured[-1].utr_pity
+        assert updated["catch_sequence"] == "已有鱼R,阶段1鱼N,阶段2鱼N"
         # 第二阶段必须以第一阶段的整套鱼饵状态初始化，不能重新读取未扣库存。
         assert call_kwargs[1]["initial_available_baits"] == captured[0].available_baits
         assert call_kwargs[1]["initial_no_bait_mode"] is captured[0].no_bait_mode

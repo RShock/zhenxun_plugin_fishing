@@ -111,6 +111,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
             "cat_gifts": {"gold": 100},
             "meteor_fish_numbers": [111111],
             "time_potions_used": [],
+            "catch_sequence": "小鲫鱼N,流星鱼000111111",
             "shadow_scene": True,
         },
     )
@@ -156,6 +157,7 @@ async def test_rollback_potion_resettles_from_original_start_time(db, monkeypatc
     assert observed_status["meteor_fish_numbers"] == []
     assert observed_status["meteor_fish_records"] == []
     assert observed_status["time_potions_used"] == []
+    assert observed_status["catch_sequence"] == "小鲫鱼N,流星鱼000111111"
     assert observed_status["shadow_scene"] is True
     assert observed_status["bait_usage_log"] == {}
     # 回档应按 bait_usage_log 退还鱼饵，避免重新结算时重复扣除

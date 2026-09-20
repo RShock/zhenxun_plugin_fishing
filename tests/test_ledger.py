@@ -644,6 +644,7 @@ class TestFishingSessionLogging:
             duration_minutes=30,
             weather="晴天",
             fish_caught=fish_caught,
+            catch_sequence="鲫鱼N,鲫鱼N,鲫鱼N,鲤鱼R",
             items_gained=items_gained,
             starry_score=0.0,
             starry_fish_count=0,
@@ -668,12 +669,14 @@ class TestFishingSessionLogging:
         assert len(data["fish_caught"]) == 2
         assert data["fish_caught"][0]["name"] == "鲫鱼"
         assert data["fish_caught"][1]["rarity"] == "R"
+        assert data["catch_sequence"] == "鲫鱼N,鲫鱼N,鲫鱼N,鲤鱼R"
         assert len(data["items_gained"]) == 1
         assert data["gold_earned"] == 150
         assert data["auto_sold"] is False
         assert data["bait_consumed"] == 30
         assert data["gold_before"] == 500
         assert data["gold_after"] == 650
+        assert entries[0].version == "增加鱼追踪"
 
     async def test_log_fishing_session_deferred(self, db, ledger):
         from zhenxun.plugins.zhenxun_plugin_fishing.services import ledger_service
@@ -697,6 +700,7 @@ class TestFishingSessionLogging:
         entries = ledger.fishing_entries(user_id)
         assert len(entries) == 1
         assert entries[0].data["location_name"] == "湖泊"
+        assert entries[0].version == "增加鱼追踪"
 
     async def test_log_fishing_session_with_starry_data(self, db, ledger):
         from zhenxun.plugins.zhenxun_plugin_fishing.services import ledger_service

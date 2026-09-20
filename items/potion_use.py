@@ -259,6 +259,8 @@ async def use_rollback_potion(user_id: str) -> tuple[bool, bytes | str]:
         "meteor_fish_records": serialize_meteor_fish_records(keep_meteor),
         "time_potions_used": [],
         "bait_usage_log": new_bait_usage_log,
+        # 顺序串是实际发生过的审计轨迹；旧格式没有逐条时间，回档时不可可靠裁剪。
+        "catch_sequence": str(status_dict.get("catch_sequence", "") or ""),
     }
     if status_dict.get("shadow_scene"):
         reset_status["shadow_scene"] = True

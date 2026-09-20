@@ -41,6 +41,7 @@ class SimulationResult:
     utr_pity: int
     meteor_fish_numbers: list[int]
     meteor_fish_records: list[tuple[int, datetime | None]]
+    catch_sequence: str = ""
     # 供时光药水的多阶段模拟完整继承鱼饵状态，避免第二阶段从数据库恢复库存。
     available_baits: dict[str, dict[str, Any]] = field(default_factory=dict)
     no_bait_mode: bool = False
@@ -56,6 +57,7 @@ class StepResult:
     bait: FishData | None
     bait_remaining: int
     utr_pity: int = 0
+    catch_sequence: str = ""
     bait_usage: dict[str, int] = field(default_factory=dict)
     buff_messages: list[str] = field(default_factory=list)
     cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)

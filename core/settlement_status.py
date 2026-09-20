@@ -20,6 +20,7 @@ def build_settlement_status(
     meteor_fish_numbers: list[int] | None = None,
     meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     bait_usage: dict[str, int] | None = None,
+    catch_sequence: str = "",
 ) -> dict:
     existing_meteor_records = deserialize_meteor_fish_records(status_dict)
     if meteor_fish_records:
@@ -48,6 +49,7 @@ def build_settlement_status(
             "meteor_fish_records": serialize_meteor_fish_records(
                 existing_meteor_records
             ),
+            "catch_sequence": catch_sequence,
         }
     )
     # 按鱼饵类型累计已消耗明细，供回档药水精确退还（避免重复扣除）

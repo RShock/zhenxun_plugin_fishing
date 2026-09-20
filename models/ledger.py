@@ -26,6 +26,9 @@ class FishingLedger(Model):
     entry_type = fields.CharField(
         20, description="条目类型: fishing/item_use/gold/gm_op"
     )
+    version = fields.CharField(
+        100, null=True, description="账本语义版本；历史记录为空"
+    )
     # JSON 载荷：各类型的详细数据（鱼获列表、道具信息、金币操作明细等）
     data = fields.JSONField(description="类型相关的详细数据")
 
@@ -65,6 +68,7 @@ class FishingLedger(Model):
             ");",
             "CREATE INDEX IF NOT EXISTS idx_ledger_user_type ON fishing_ledger(user_id, entry_type);",
             "CREATE INDEX IF NOT EXISTS idx_ledger_user_time ON fishing_ledger(user_id, create_time);",
+            "ALTER TABLE fishing_ledger ADD COLUMN version VARCHAR(100);",
         ]
 
     @classmethod

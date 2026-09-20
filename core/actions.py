@@ -371,6 +371,10 @@ async def _compute_settle_step(
 
     existing_cat_eaten = deserialize_fish_caught(status_dict.get("cat_eaten_fish", []))
     total_cat_eaten = existing_cat_eaten + simulation.cat_eaten_fish
+    existing_sequence = str(status_dict.get("catch_sequence", "") or "")
+    catch_sequence = ",".join(
+        part for part in (existing_sequence, simulation.catch_sequence) if part
+    )
 
     existing_cat_gifts = status_dict.get("cat_gifts", default_cat_gifts())
     merged_cat_gifts = merge_cat_gifts(
@@ -390,6 +394,7 @@ async def _compute_settle_step(
         meteor_fish_numbers=simulation.meteor_fish_numbers,
         meteor_fish_records=simulation.meteor_fish_records,
         bait_usage=simulation.bait_usage,
+        catch_sequence=catch_sequence,
     )
 
     step = StepResult(
@@ -398,6 +403,7 @@ async def _compute_settle_step(
         frame_pity=simulation.frame_pity,
         cat_frame_pity=cat_frame_pity,
         utr_pity=simulation.utr_pity,
+        catch_sequence=simulation.catch_sequence,
         bait=simulation.bait,
         bait_remaining=simulation.bait_remaining,
         bait_usage=simulation.bait_usage,
@@ -668,6 +674,7 @@ class _StopSettlementPlan:
     cat_eaten_fish: list = field(default_factory=list)
     cat_gifts: dict = field(default_factory=dict)
     meteor_fish_numbers: list[int] = field(default_factory=list)
+    catch_sequence: str = ""
     bait_speed_bonus: float = 0
     start_time: datetime | None = None
     now: datetime | None = None
@@ -707,6 +714,7 @@ async def _apply_session_reward_stage(plan: _StopSettlementPlan) -> None:
     plan.cat_eaten_fish = deserialize_fish_caught(status.get("cat_eaten_fish", []))
     plan.cat_gifts = status.get("cat_gifts", default_cat_gifts())
     plan.meteor_fish_numbers = status.get("meteor_fish_numbers", [])
+    plan.catch_sequence = str(status.get("catch_sequence", "") or "")
     plan.location = ConfigManager.get_location(status["location_id"])
     if not plan.location:
         raise RuntimeError(f"收杆地点无效: {status.get('location_id')}")
@@ -1021,6 +1029,7 @@ def _build_stop_render_data(
         "fishing_start_time": plan.start_time,
         "now_time": plan.now,
         "meteor_fish_numbers": plan.meteor_fish_numbers,
+        "catch_sequence": plan.catch_sequence,
         "cat_park_materials": materials,
         "starry_score": plan.starry_score_info,
         "miracle": plan.miracle_info,
@@ -1249,6 +1258,7 @@ async def _record_fishing_ledger(
             duration_minutes=render_data.get("duration_minutes", 0),
             weather=weather,
             fish_caught=fish_caught_json,
+            catch_sequence=str(render_data.get("catch_sequence", "") or ""),
             items_gained=items_gained,
             starry_score=starry_score,
             starry_fish_count=starry_fish_count,

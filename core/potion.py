@@ -69,6 +69,7 @@ async def use_time_potion_settle(
     all_meteor: list[int] = []
     all_meteor_records: list = []
     all_buff_messages: list[str] = []
+    sequence_parts = [str(status_dict.get("catch_sequence", "") or "")]
     current_frame_pity = frame_pity
     current_cat_frame_pity = cat_frame_pity
     current_utr_pity = utr_pity
@@ -107,6 +108,7 @@ async def use_time_potion_settle(
                 all_meteor.extend(simulation1.meteor_fish_numbers)
                 all_meteor_records.extend(simulation1.meteor_fish_records)
             all_buff_messages.extend(ctx1.buff_messages)
+            sequence_parts.append(simulation1.catch_sequence)
 
             current_frame_pity = simulation1.frame_pity
             current_utr_pity = simulation1.utr_pity
@@ -173,6 +175,7 @@ async def use_time_potion_settle(
         all_meteor.extend(simulation2.meteor_fish_numbers)
         all_meteor_records.extend(simulation2.meteor_fish_records)
     all_buff_messages.extend(ctx2.buff_messages)
+    sequence_parts.append(simulation2.catch_sequence)
 
     final_frame_pity = simulation2.frame_pity
     final_utr_pity = simulation2.utr_pity
@@ -211,6 +214,7 @@ async def use_time_potion_settle(
         meteor_fish_numbers=all_meteor if all_meteor else None,
         meteor_fish_records=all_meteor_records if all_meteor_records else None,
         bait_usage=all_bait_usage,
+        catch_sequence=",".join(part for part in sequence_parts if part),
     )
     if potion_count > 0:
         # 记录每瓶时光药水的使用时间戳，供回档药水按 24h 窗口精确退还

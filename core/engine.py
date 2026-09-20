@@ -509,6 +509,17 @@ def _catch_fish_with_buffs(
     return fish, rarity, duoduo_mult, new_frame_pity, new_utr_pity
 
 
+@dataclass(frozen=True)
+class _CatchOutcome:
+    fish: FishData | None
+    rarity: str | None
+    frame_pity: int
+    quantity: int
+    utr_pity: int
+    utr_pity_triggered: bool = False
+    frame_pity_triggered: bool = False
+
+
 def _try_catch_one(
     fish_pool: list[str],
     effects: dict,
@@ -517,10 +528,10 @@ def _try_catch_one(
     frame_pity: int,
     utr_pity: int = 0,
     collected_set: set[tuple[str, str]] | None = None,
-) -> tuple[FishData | None, str | None, int, int, int]:
+) -> _CatchOutcome:
     """包装 _catch_fish_with_buffs 为一次判定。
 
-    返回: (fish, rarity, new_frame_pity, quantity, new_utr_pity)
+    返回捕获结果及本次是否触发 UTR/木框保底。
     """
     rod_level = effects["rod_level"]
     castle_rate = effects.get("cat_park_castle_rod_rate", 0)
@@ -550,9 +561,72 @@ def _try_catch_one(
         is_cat_park=effects.get("is_cat_park", False),
         cat_park_double_rate=effects.get("cat_park_double_rate", 0.0),
     )
+    from ..starry import is_starry_location
+
+    frame_pity_triggered = (
+        not is_starry_location(location.id)
+        and frame_pity + 1 >= FRAME_PITY_THRESHOLD
+        and fish is not None
+        and fish.id in ("展示木框", "木框")
+    )
+    utr_pity_triggered = (
+        not frame_pity_triggered
+        and bool(effects.get("weather_lost_wind", False))
+        and utr_pity + 1 >= UTR_PITY_THRESHOLD
+        and fish is not None
+        and rarity == "UTR"
+        and new_utr_pity == 0
+    )
     if fish is not None and rarity is not None:
-        return fish, rarity, new_frame_pity, quantity, new_utr_pity
-    return None, None, new_frame_pity, 0, new_utr_pity
+        return _CatchOutcome(
+            fish,
+            rarity,
+            new_frame_pity,
+            quantity,
+            new_utr_pity,
+            utr_pity_triggered,
+            frame_pity_triggered,
+        )
+    return _CatchOutcome(
+        None,
+        None,
+        new_frame_pity,
+        0,
+        new_utr_pity,
+        utr_pity_triggered,
+        frame_pity_triggered,
+    )
+
+
+def _append_reward_delta(
+    before: dict,
+    after: dict,
+    catch_sequence: list[str],
+) -> None:
+    scalar_rewards = (
+        ("gold", "金币"),
+        ("corn", "玉米"),
+        ("cat_frames", "猫框"),
+    )
+    for key, name in scalar_rewards:
+        delta = int(after.get(key, 0) or 0) - int(before.get(key, 0) or 0)
+        if delta > 0:
+            catch_sequence.append(f"reward+{name}{delta}")
+
+    before_baits = before.get("bait_gifts", {})
+    for bait_id, count in after.get("bait_gifts", {}).items():
+        delta = int(count or 0) - int(before_baits.get(bait_id, 0) or 0)
+        if delta <= 0:
+            continue
+        bait = ConfigManager.get_bait(bait_id)
+        bait_name = bait.name if bait else str(bait_id)
+        catch_sequence.append(f"reward+{bait_name}{delta}")
+
+    before_fish_count = len(before.get("fish_gifts", []))
+    for gift in after.get("fish_gifts", [])[before_fish_count:]:
+        catch_sequence.append(
+            f"reward+{gift.get('fish_name', '')}{gift.get('fish_rarity', '')}"
+        )
 
 
 def _try_append_starry_meteor_fish(
@@ -563,8 +637,9 @@ def _try_append_starry_meteor_fish(
     effects: dict | None = None,
     meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     catch_time: datetime | None = None,
+    catch_sequence: list[str] | None = None,
 ) -> None:
-    """星空地图额外掉落 6 位编号流星鱼（星空祈愿）。
+    """星空地图额外掉落流星鱼（星空祈愿），审计串统一显示为 9 位编号。
 
     现阶段仍复用历史字段名 meteor_fish_numbers 贯穿结算链路，
     真正的流星鱼规则由 core.starry_system 统一计算。
@@ -615,6 +690,10 @@ def _try_append_starry_meteor_fish(
             duoduo_active=duoduo_active,
         )
         meteor_fish_numbers.extend(new_numbers)
+        if catch_sequence is not None:
+            catch_sequence.extend(
+                f"流星鱼{int(number):09d}" for number in new_numbers
+            )
         if meteor_fish_records is not None:
             meteor_fish_records.extend(
                 (number, catch_time) for number in new_numbers
@@ -635,6 +714,8 @@ def _append_fish(
     cat_gifts: dict | None = None,
     bait_id: str = "",
     catch_time: datetime | None = None,
+    catch_sequence: list[str] | None = None,
+    utr_pity_triggered: bool = False,
 ) -> int:
     """将捕获的鱼追加到结果列表中，处理猫吃鱼逻辑。
 
@@ -642,14 +723,46 @@ def _append_fish(
     """
     lucky_double = bool(effects and effects.get("lucky_double_active", False))
     if fish and rarity:
-        if quantity == 0:
+        pity_pending = utr_pity_triggered
+        token = (
+            f"material+{fish.id.removeprefix('cat_park_material:')}"
+            if fish.id.startswith("cat_park_material:")
+            else f"{fish.id}{rarity}"
+        )
+
+        def append_audit(value: str) -> None:
+            nonlocal pity_pending
+            if catch_sequence is None:
+                return
+            catch_sequence.append(value)
+            if pity_pending:
+                catch_sequence.append("保底")
+                pity_pending = False
+
+        def append_kept() -> None:
+            append_audit(token)
+
+        def append_eaten() -> None:
+            append_audit(f"eaten+{fish.id}{rarity}")
             if cat_eaten_fish is not None:
                 cat_eaten_fish.append((fish, rarity, 1, catch_time))
             if cat_gifts is not None:
+                before = {
+                    "gold": cat_gifts.get("gold", 0),
+                    "corn": cat_gifts.get("corn", 0),
+                    "cat_frames": cat_gifts.get("cat_frames", 0),
+                    "bait_gifts": dict(cat_gifts.get("bait_gifts", {})),
+                    "fish_gifts": list(cat_gifts.get("fish_gifts", [])),
+                }
                 process_cat_gift(
                     fish, rarity, cat_gifts, location, collected_set, bait_id,
                     lucky_double=lucky_double,
                 )
+                if catch_sequence is not None:
+                    _append_reward_delta(before, cat_gifts, catch_sequence)
+
+        if quantity == 0:
+            append_eaten()
         elif (
             effects
             and effects.get("weather_cat_eat", False)
@@ -663,13 +776,9 @@ def _append_fish(
                 )
                 if random.random() < cat_eat_chance:
                     eaten_count += 1
-                    if cat_eaten_fish is not None:
-                        cat_eaten_fish.append((fish, rarity, 1, catch_time))
-                    if cat_gifts is not None:
-                        process_cat_gift(
-                            fish, rarity, cat_gifts, location, collected_set, bait_id,
-                            lucky_double=lucky_double,
-                        )
+                    append_eaten()
+                else:
+                    append_kept()
             kept = quantity - eaten_count
             if kept > 0:
                 fish_caught.append((fish, rarity, kept, catch_time))
@@ -677,6 +786,8 @@ def _append_fish(
         else:
             fish_caught.append((fish, rarity, quantity, catch_time))
             collected_fish_names.add(fish.id)
+            for _ in range(quantity):
+                append_kept()
     return frame_pity
 
 
@@ -694,6 +805,8 @@ def _catch_fish_at_interval(
     meteor_fish_numbers: list[int] | None = None,
     meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     catch_time: datetime | None = None,
+    catch_sequence: list[str] | None = None,
+    pity_events: list[str] | None = None,
 ) -> tuple[int, int]:
     """在一次钓鱼间隔执行捕获（含双倍捕获和额外掉落）。
 
@@ -703,7 +816,7 @@ def _catch_fish_at_interval(
 
     base_catch_count = 2 if effects["double_catch"] else 1
     for _ in range(base_catch_count):
-        fish, rarity, frame_pity, quantity, utr_pity = _try_catch_one(
+        outcome = _try_catch_one(
             location.fish_pool,
             effects,
             collected_fish_names,
@@ -712,6 +825,11 @@ def _catch_fish_at_interval(
             utr_pity,
             collected_set=collected_set,
         )
+        fish = outcome.fish
+        rarity = outcome.rarity
+        frame_pity = outcome.frame_pity
+        quantity = outcome.quantity
+        utr_pity = outcome.utr_pity
         _append_fish(
             fish,
             rarity,
@@ -726,7 +844,14 @@ def _catch_fish_at_interval(
             cat_gifts=cat_gifts,
             bait_id=bait_id,
             catch_time=catch_time,
+            catch_sequence=catch_sequence,
+            utr_pity_triggered=outcome.utr_pity_triggered,
         )
+        if pity_events is not None:
+            if outcome.utr_pity_triggered:
+                pity_events.append("utr")
+            if outcome.frame_pity_triggered:
+                pity_events.append("frame")
         _try_append_starry_meteor_fish(
             location,
             fish,
@@ -735,6 +860,7 @@ def _catch_fish_at_interval(
             effects=effects,
             meteor_fish_records=meteor_fish_records,
             catch_time=catch_time,
+            catch_sequence=catch_sequence,
         )
         # 掉到材料时结束本次间隔（与原逻辑一致：材料不触发双倍捕获）
         if fish is not None and fish.id.startswith("cat_park_material:"):
@@ -746,7 +872,7 @@ def _catch_fish_at_interval(
 
     drop_bonus = effects.get("drop_bonus", 0)
     if drop_bonus > 0 and random.random() < drop_bonus * 0.05:
-        fish, rarity, frame_pity, quantity, utr_pity = _try_catch_one(
+        outcome = _try_catch_one(
             location.fish_pool,
             effects,
             collected_fish_names,
@@ -754,6 +880,11 @@ def _catch_fish_at_interval(
             frame_pity,
             utr_pity,
         )
+        fish = outcome.fish
+        rarity = outcome.rarity
+        frame_pity = outcome.frame_pity
+        quantity = outcome.quantity
+        utr_pity = outcome.utr_pity
         _append_fish(
             fish,
             rarity,
@@ -768,7 +899,14 @@ def _catch_fish_at_interval(
             cat_gifts=cat_gifts,
             bait_id=bait_id,
             catch_time=catch_time,
+            catch_sequence=catch_sequence,
+            utr_pity_triggered=outcome.utr_pity_triggered,
         )
+        if pity_events is not None:
+            if outcome.utr_pity_triggered:
+                pity_events.append("utr")
+            if outcome.frame_pity_triggered:
+                pity_events.append("frame")
 
     return frame_pity, utr_pity
 
@@ -820,6 +958,8 @@ def _try_catch_in_remaining_time(
     meteor_fish_numbers: list[int] | None = None,
     meteor_fish_records: list[tuple[int, datetime | None]] | None = None,
     catch_time: datetime | None = None,
+    catch_sequence: list[str] | None = None,
+    pity_events: list[str] | None = None,
 ) -> tuple[int, int, bool, int, int]:
     """在剩余时间内按概率尝试一次捕获。
 
@@ -845,6 +985,8 @@ def _try_catch_in_remaining_time(
         meteor_fish_numbers=meteor_fish_numbers,
         meteor_fish_records=meteor_fish_records,
         catch_time=catch_time,
+        catch_sequence=catch_sequence,
+        pity_events=pity_events,
     )
     return 1, bait_remaining, no_bait_mode, frame_pity, utr_pity
 
@@ -868,6 +1010,7 @@ class _SimulationState:
     cat_eaten_fish: list[tuple[FishData, str, int, datetime | None]] = field(default_factory=list)
     meteor_fish_numbers: list[int] = field(default_factory=list)
     meteor_fish_records: list[tuple[int, datetime | None]] = field(default_factory=list)
+    catch_sequence: list[str] = field(default_factory=list)
     bait_usage: dict[str, int] = field(default_factory=dict)
     available_baits: dict[str, dict] = field(default_factory=dict)
     collected_fish_names: set[str] = field(default_factory=set)
@@ -1204,6 +1347,26 @@ def _record_bait_consumption(
             state.available_baits[bait_id]["remaining"] -= consumed
 
 
+def _append_pity_messages(
+    ctx: FishingContext,
+    location: LocationData,
+    pity_events: list[str],
+) -> None:
+    if not pity_events:
+        return
+    from ..starry import is_starry_location
+
+    for event in pity_events:
+        if event == "utr":
+            ctx.buff_messages.append(
+                "✨ UTR保底触发！必出UTR鱼！"
+                if is_starry_location(location.id)
+                else "🌀 迷途风保底触发！必出UTR鱼！"
+            )
+        elif event == "frame":
+            ctx.buff_messages.append("🖼️ 木框保底触发！必出木框！")
+
+
 async def simulate_fishing_loop(
     ctx: FishingContext,
     initial_frame_pity: int | None = None,
@@ -1279,6 +1442,9 @@ async def simulate_fishing_loop(
         elif action is _WindowAction.TRY_REMAINDER:
             remaining_time = float(window_value)
             if remaining_time > 0:
+                pity_events: list[str] = []
+                frame_pity_before = state.frame_pity
+                utr_pity_before = state.utr_pity
                 fish_count_before = len(state.fish_caught)
                 cat_eaten_count_before = len(state.cat_eaten_fish)
                 remainder_result = _try_catch_in_remaining_time(
@@ -1299,6 +1465,8 @@ async def simulate_fishing_loop(
                     meteor_fish_numbers=state.meteor_fish_numbers,
                     meteor_fish_records=state.meteor_fish_records,
                     catch_time=state.current_time,
+                    catch_sequence=state.catch_sequence,
+                    pity_events=pity_events,
                 )
                 (
                     caught,
@@ -1308,27 +1476,27 @@ async def simulate_fishing_loop(
                     state.utr_pity,
                 ) = remainder_result
                 if caught > 0:
+                    if (
+                        not pity_events
+                        and utr_pity_before + 1 >= UTR_PITY_THRESHOLD
+                        and state.utr_pity == 0
+                    ):
+                        pity_events.append("utr")
+                    if (
+                        not pity_events
+                        and frame_pity_before + 1 >= FRAME_PITY_THRESHOLD
+                        and state.frame_pity == 0
+                    ):
+                        pity_events.append("frame")
                     _record_bait_consumption(
                         state, effects, fish_count_before, cat_eaten_count_before
                     )
+                    _append_pity_messages(ctx, ctx.location, pity_events)
             break
 
-        # 1-10/S1 看迷途风；11-20 看 collect_scene 解锁后 max_rarity=UTR
-        from ..starry import is_starry_location as _is_starry_loc
-        _starry = _is_starry_loc(ctx.location.id)
-        _utr_active = (
-            (not _starry and effects.get("weather_lost_wind", False))
-            or (_starry and effects.get("max_rarity", ctx.location.max_rarity) == "UTR")
-        )
-        utr_was_guaranteed = (
-            state.utr_pity + 1 >= UTR_PITY_THRESHOLD and _utr_active
-        )
-        from ..starry import is_starry_location as _is_starry
-
-        frame_was_guaranteed = (
-            state.frame_pity + 1 >= FRAME_PITY_THRESHOLD
-            and not _is_starry(ctx.location.id)
-        )
+        pity_events = []
+        frame_pity_before = state.frame_pity
+        utr_pity_before = state.utr_pity
         fish_count_before = len(state.fish_caught)
         cat_eaten_count_before = len(state.cat_eaten_fish)
         state.frame_pity, state.utr_pity = _catch_fish_at_interval(
@@ -1345,20 +1513,26 @@ async def simulate_fishing_loop(
             meteor_fish_numbers=state.meteor_fish_numbers,
             meteor_fish_records=state.meteor_fish_records,
             catch_time=state.current_time,
+            catch_sequence=state.catch_sequence,
+            pity_events=pity_events,
         )
         _record_bait_consumption(
             state, effects, fish_count_before, cat_eaten_count_before
         )
 
-        if utr_was_guaranteed and state.utr_pity == 0:
-            msg = (
-                "✨ UTR保底触发！必出UTR鱼！"
-                if _starry
-                else "🌀 迷途风保底触发！必出UTR鱼！"
-            )
-            ctx.buff_messages.append(msg)
-        if frame_was_guaranteed and state.frame_pity == 0:
-            ctx.buff_messages.append("🖼️ 木框保底触发！必出木框！")
+        if (
+            not pity_events
+            and utr_pity_before + 1 >= UTR_PITY_THRESHOLD
+            and state.utr_pity == 0
+        ):
+            pity_events.append("utr")
+        if (
+            not pity_events
+            and frame_pity_before + 1 >= FRAME_PITY_THRESHOLD
+            and state.frame_pity == 0
+        ):
+            pity_events.append("frame")
+        _append_pity_messages(ctx, ctx.location, pity_events)
         if time_credit_minutes is None:
             state.current_time = window_value
 
@@ -1373,6 +1547,7 @@ async def simulate_fishing_loop(
         utr_pity=state.utr_pity,
         meteor_fish_numbers=state.meteor_fish_numbers,
         meteor_fish_records=state.meteor_fish_records,
+        catch_sequence=",".join(state.catch_sequence),
         available_baits=state.available_baits,
         no_bait_mode=state.no_bait_mode,
     )

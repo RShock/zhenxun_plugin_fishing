@@ -152,6 +152,73 @@ class TestRarityProbabilities:
 
 
 class TestCatchFish:
+    def test_catch_sequence_repeats_kept_fish_and_marks_only_pity_utr(self):
+        fish = ConfigManager.get_fish("小鲫鱼")
+        assert fish is not None
+        sequence = []
+        caught = []
+
+        fishing_engine._append_fish(
+            fish,
+            "N",
+            0,
+            fish_caught=caught,
+            collected_fish_names=set(),
+            quantity=2,
+            catch_sequence=sequence,
+        )
+        fishing_engine._append_fish(
+            fish,
+            "UTR",
+            0,
+            fish_caught=caught,
+            collected_fish_names=set(),
+            quantity=1,
+            catch_sequence=sequence,
+        )
+        fishing_engine._append_fish(
+            fish,
+            "UTR",
+            0,
+            fish_caught=caught,
+            collected_fish_names=set(),
+            quantity=1,
+            catch_sequence=sequence,
+            utr_pity_triggered=True,
+        )
+
+        assert sequence == [
+            "小鲫鱼N",
+            "小鲫鱼N",
+            "小鲫鱼UTR",
+            "小鲫鱼UTR",
+            "保底",
+        ]
+
+    def test_cat_eaten_sequence_is_followed_by_reward(self, monkeypatch):
+        fish = ConfigManager.get_fish("小鲫鱼")
+        assert fish is not None
+        sequence = []
+        cat_gifts = {"gold": 0}
+
+        def reward_gold(*args, **kwargs):
+            args[2]["gold"] = 7
+
+        monkeypatch.setattr(fishing_engine, "process_cat_gift", reward_gold)
+        fishing_engine._append_fish(
+            fish,
+            "R",
+            0,
+            fish_caught=[],
+            collected_fish_names=set(),
+            quantity=0,
+            cat_eaten_fish=[],
+            cat_gifts=cat_gifts,
+            catch_sequence=sequence,
+        )
+
+        assert sequence == ["eaten+小鲫鱼R", "reward+金币7"]
+
     def test_catch_fish_returns_fish(self):
         fish_pool = ["小鲫鱼", "麦穗鱼", "白条鱼"]
         fish, rarity, quantity, frame_pity, utr_pity = _catch_fish_with_buffs(
@@ -217,6 +284,7 @@ class TestCatchFish:
         location = ConfigManager.get_location("11")
         fish = ConfigManager.get_fish(location.fish_pool[0])
         meteor_numbers = []
+        sequence = []
         monkeypatch.setattr(
             "zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system.random.random",
             lambda: 0.0,
@@ -232,9 +300,11 @@ class TestCatchFish:
             "N",
             meteor_numbers,
             effects={"duoduo_count": 1},
+            catch_sequence=sequence,
         )
 
         assert meteor_numbers == [123456, 123456]
+        assert sequence == ["流星鱼000123456", "流星鱼000123456"]
 
     def test_starry_meteor_fish_not_doubled_without_duoduo(self, monkeypatch):
         """无多多时流星鱼只掉 1 条。"""
