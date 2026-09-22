@@ -1,4 +1,4 @@
-import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-eras-1";
+import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-eras-2";
 
 const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
 const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
@@ -248,6 +248,13 @@ function render() { renderStatus(); renderHelper(); renderNext(); renderTechTree
 function reset() {
   const seed = Number($("#seedInput").value);
   if (!Number.isSafeInteger(seed)) { notice("Seed 必须是安全范围内的整数。"); return; }
+  try {
+    const current = localStorage.getItem(STORAGE_KEY);
+    if (current) localStorage.setItem(`${STORAGE_KEY}-before-reset-${Date.now()}`, current);
+  } catch {
+    $("#saveNotice").textContent = "重置前备份失败，已取消重置以保护当前进度。";
+    return;
+  }
   stop(); engine = new S2Engine(data, { seed });
   saveBlocked = false; view = "construction"; save(); render(); notice("新矿井已就绪，笨助手将于次日00:00开始采购。");
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-thirty-eras-1">
+  <link rel="stylesheet" href="./style.css?v=3-thirty-eras-2">
 </head>
 <body>
   <main class="shell">
@@ -48,6 +48,7 @@
         <button data-advance="1440" class="primary">推进1天</button>
         <button data-advance="4320">推进3天</button>
         <button id="toggleButton">连续挖矿</button>
+        <button id="resetButton" class="danger-ghost">重置测试进度</button>
       </div>
       <p id="actionNotice" class="action-notice" role="status" aria-live="polite">矿井已就绪。</p>
     </section>
@@ -71,7 +72,6 @@
           <label>时段 <select id="replayDays"><option value="10">前十天</option><option value="20">前二十天</option><option value="30" selected>前三十天</option></select></label>
           <button id="replayButton">运行回放</button>
           <label>Seed <input id="seedInput" type="number" value="42" step="1"></label>
-          <button id="resetButton" class="danger-ghost">新开矿井</button>
         </div>
         <p class="subtle">独立新局回放 / seed 42 / 与当前存档分开</p>
         <div id="auditSummary" class="audit-summary"></div>
@@ -98,9 +98,9 @@
     <div class="dialog-actions"><button id="confirmPlan" class="primary">确认建设</button></div>
   </dialog>
   <dialog id="resetDialog">
-    <h2>新开矿井？</h2><p>当前助手版进度将被替换。旧版试玩存档保持不变。</p>
-    <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认新开</button></div>
+    <h2>重置测试进度？</h2><p>当前助手版进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
+    <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-thirty-eras-1"></script>
+  <script type="module" src="./app.js?v=3-thirty-eras-2"></script>
 </body>
 </html>
