@@ -297,10 +297,14 @@ def build_meteor_fish_items(meteor_fish_numbers: list[int] | None) -> list[dict]
     for num in meteor_fish_numbers:
         if int(num) <= 999_999:
             scored = score_starry_fish(num)
-            # Use meteor-fish texture; display name keeps the score.
+            rarity = _pool_mark_rarity(
+                scored.reward_pool,
+                display_score=scored.display_score,
+            )
+            # Use meteor-fish texture; card color follows the score reward pool.
             item = build_fish_item_data(
                 "流星鱼",
-                "UTR",
+                rarity,
                 show_count=False,
                 numeric_id=format_starry_fish_id(num),
                 show_utr_starry=False,

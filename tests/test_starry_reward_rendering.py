@@ -1,6 +1,42 @@
+from types import SimpleNamespace
+
+import pytest
+
+from zhenxun.plugins.zhenxun_plugin_fishing.config import RARITY_COLORS
+from zhenxun.plugins.zhenxun_plugin_fishing.render.base import (
+    build_meteor_fish_items,
+)
 from zhenxun.plugins.zhenxun_plugin_fishing.render.fishing_result import (
     _attach_starry_rewards,
 )
+
+
+@pytest.mark.parametrize(
+    ("reward_pool", "display_score", "rarity"),
+    [
+        ("none", 0, "N"),
+        ("low", 2, "R"),
+        ("middle", 5, "SR"),
+        ("high", 10, "SSR"),
+        ("ultimate", 15, "UR"),
+        ("ultimate", 16, "UTR"),
+    ],
+)
+def test_meteor_fish_card_color_matches_reward_pool(
+    monkeypatch, reward_pool, display_score, rarity
+):
+    monkeypatch.setattr(
+        "zhenxun.plugins.zhenxun_plugin_fishing.core.starry_system.score_starry_fish",
+        lambda _number: SimpleNamespace(
+            reward_pool=reward_pool,
+            display_score=display_score,
+        ),
+    )
+
+    items = build_meteor_fish_items([123456])
+
+    assert items[0]["color"] == RARITY_COLORS[rarity]
+    assert items[0]["name"] == f"流星鱼[{display_score}分]"
 
 
 def test_duplicate_starry_fish_only_show_their_own_draw_rewards():
