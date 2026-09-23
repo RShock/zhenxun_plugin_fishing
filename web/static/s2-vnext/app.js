@@ -1,4 +1,5 @@
 import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-thirty-eras-2";
+import { renderDescription } from "./description.js?v=3-readable-tech-1";
 
 const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
 const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
@@ -73,7 +74,7 @@ function lockedReason(key) {
   }
   if (engine.state.depth < spec.unlockDepth) return `深度 ${formatNumber(engine.state.depth)} / ${formatNumber(spec.unlockDepth)}`;
   const missing = spec.prerequisites.filter((key) => engine.level(key) < 1);
-  if (missing.length) return `前置工程：${missing.map((key) => engine.specs[key].name).join("、")}`;
+  if (missing.length) return `前置工程：${missing.map((key) => `**${engine.specs[key].name}**`).join("、")}`;
   if (engine.state.credits < engine.costFor(key)) return `还差 ${formatNumber(engine.costFor(key) - engine.state.credits)} 矿币`;
   return "";
 }
@@ -81,7 +82,7 @@ function renderStatus() {
   const s = engine.state;
   $("#timeValue").textContent = clock(s.minute); $("#seedValue").textContent = `seed ${s.seed}`;
   $("#creditsValue").textContent = formatNumber(s.credits); $("#depthValue").textContent = formatNumber(s.depth);
-  $("#incomeRate").textContent = `+${formatNumber(data.rules.baseCreditsPerMinute * engine.incomeMultiplier())} / 分钟`;
+  $("#incomeRate").textContent = `矿币收益 +${formatNumber(data.rules.baseCreditsPerMinute * engine.incomeMultiplier())} / 分钟`;
   $("#depthRate").textContent = `+${formatNumber(data.rules.baseDepthPerMinute * engine.depthMultiplier())} / 分钟`;
   $("#eraValue").textContent = eraName(engine.currentEra());
   $("#automationValue").textContent = `${s.autoUnlocked.length} 条自动线`;
@@ -112,19 +113,25 @@ function renderNext() {
   const next = candidates[0] || data.upgrades.filter((spec) => spec.status === "active" && !engine.state.autoUnlocked.includes(spec.key))
     .sort((a, b) => a.unlockDepth - b.unlockDepth)[0]?.key;
   if (!next) {
-    $("#nextName").textContent = "本段工程已全部自动化";
-    $("#nextReason").textContent = "矿井继续生产，后续星层尚未开放。";
-    $("#nextProgress").value = 1; $("#nextProgressText").textContent = "本轮三十天工程已交付"; $("#nextEta").textContent = "";
+    const remaining = data.upgrades.filter((spec) => spec.status === "active")
+      .reduce((sum, spec) => sum + Math.max(0, spec.maxLevel - engine.level(spec.key)), 0);
+    $("#nextName").textContent = remaining ? "本段工程已全部自动化" : "本段设备已全部满级";
+    $("#nextReason").textContent = remaining
+      ? "矿井继续生产，自动采购会在矿币足够时升级设备。"
+      : "矿井继续生产；当前原型尚未开放首星通关与下一阶段。";
+    $("#nextProgress").value = 1;
+    $("#nextProgressText").textContent = remaining ? `还剩 ${remaining} 级自动升级` : "现有科技已全部升满";
+    $("#nextEta").textContent = "";
     return;
   }
   const spec = engine.specs[next]; let current; let target; let rate; let unit;
-  $("#nextName").textContent = spec.name; $("#nextReason").textContent = lockedReason(next) || "矿币充足，可以开工";
+  $("#nextName").textContent = spec.name; renderDescription($("#nextReason"), lockedReason(next) || "矿币充足，可以开工");
   if (engine.available(next)) {
     current = engine.state.credits; target = engine.costFor(next);
     rate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier(); unit = "矿币";
   } else {
     current = engine.state.depth; target = Math.max(spec.unlockDepth, engine.eraByKey[spec.era].unlockDepth);
-    rate = data.rules.baseDepthPerMinute * engine.depthMultiplier(); unit = "深度";
+    rate = data.rules.baseDepthPerMinute * engine.depthMultiplier(); unit = "挖矿深度";
   }
   $("#nextProgress").value = target ? Math.min(1, current / target) : 1;
   $("#nextProgressText").textContent = `${unit} ${formatNumber(current)} / ${formatNumber(target)}`;
@@ -162,7 +169,7 @@ function renderTechTree() {
       const card = $("#techTemplate").content.firstElementChild.cloneNode(true);
       const commissioned = engine.state.manualLevels[spec.key]; const auto = engine.state.autoUnlocked.includes(spec.key);
       card.classList.toggle("automated", auto); card.classList.toggle("locked", view === "frontier");
-      card.querySelector("h3").textContent = spec.name; card.querySelector(".description").textContent = spec.description;
+      card.querySelector("h3").textContent = spec.name; renderDescription(card.querySelector(".description"), spec.description);
       card.querySelector(".level-chip").textContent = `Lv.${engine.level(spec.key)} / ${spec.maxLevel}`;
       card.querySelector(".region").textContent = data.multiplierRegions.find((item) => item.key === spec.region)?.name || spec.region;
       card.querySelector(".cost").textContent = engine.level(spec.key) >= spec.maxLevel ? "已满级" : `${formatNumber(engine.costFor(spec.key))} 矿币`;
@@ -176,7 +183,7 @@ function renderTechTree() {
       complete.disabled = Boolean(reason) || engine.state.credits < fullCost;
       complete.title = `剩余 ${remaining} 级，共 ${formatNumber(fullCost)} 矿币`;
       complete.addEventListener("click", () => buy([[spec.key, remaining]]));
-      card.querySelector(".lock-reason").textContent = reason || `再建设 ${remaining} 级后自动采购`;
+      renderDescription(card.querySelector(".lock-reason"), reason || `再建设 ${remaining} 级后自动采购`);
       grid.append(card);
     }
     group.append(grid); root.append(group);
@@ -216,7 +223,7 @@ function previewPlan() {
   }
   const incomeGain = (copy.incomeMultiplier() / engine.incomeMultiplier() - 1) * 100;
   const depthGain = (copy.depthMultiplier() / engine.depthMultiplier() - 1) * 100;
-  $("#planSummary").textContent = `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。当前产能：收入 +${number.format(incomeGain)}%，钻进 +${number.format(depthGain)}%。`;
+  renderDescription($("#planSummary"), `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。当前产能：**矿币收益** +${number.format(incomeGain)}%，**挖矿深度** +${number.format(depthGain)}%。`);
   $("#confirmPlan").disabled = !pendingOrders.length; $("#planDialog").showModal();
 }
 function renderAudit() {

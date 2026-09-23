@@ -70,7 +70,8 @@ progress::-moz-progress-bar { background: var(--green); }
 .tech-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
 .level-chip { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tech-card h3 { margin-bottom: 9px; }
-.description { font-size: 12px; color: var(--muted); line-height: 1.8; min-height: 44px; }
+.description { font-size: 13px; color: var(--muted); line-height: 1.8; min-height: 44px; overflow-wrap: anywhere; }
+.description strong, .lock-reason strong, #nextReason strong, #planSummary strong { color: var(--text); font-weight: 700; }
 .manual-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 15px 0 9px; }
 .manual-progress i { background: #e1e7e3; height: 4px; }
 .manual-progress i.filled { background: #c2943a; }

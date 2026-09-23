@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-thirty-eras-2">
+  <link rel="stylesheet" href="./style.css?v=3-readable-tech-1">
 </head>
 <body>
   <main class="shell">
@@ -15,7 +15,7 @@
     <p id="saveNotice" class="notice" role="status"></p>
     <section class="status-grid" aria-label="矿区状态">
       <article class="metric"><span>矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
-      <article class="metric"><span>有效深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
+      <article class="metric"><span>挖矿深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
       <article class="metric"><span>当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
       <article class="metric"><span>累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
     </section>
@@ -76,7 +76,7 @@
         <p class="subtle">独立新局回放 / seed 42 / 与当前存档分开</p>
         <div id="auditSummary" class="audit-summary"></div>
         <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th id="replayDepthHeading">D30 深度</th><th id="replayEraHeading">D30 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
-        <div class="multiplier-heading"><h3>产能乘数</h3><span>收入 <b id="incomeMultiplier"></b> / 深度 <b id="depthMultiplier"></b></span></div>
+        <div class="multiplier-heading"><h3>产能乘数</h3><span>矿币收益 <b id="incomeMultiplier"></b> / 挖矿深度 <b id="depthMultiplier"></b></span></div>
         <div id="multiplierList" class="multiplier-list"></div>
       </div>
     </details>
@@ -101,6 +101,6 @@
     <h2>重置测试进度？</h2><p>当前助手版进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-thirty-eras-2"></script>
+  <script type="module" src="./app.js?v=3-readable-tech-1"></script>
 </body>
 </html>

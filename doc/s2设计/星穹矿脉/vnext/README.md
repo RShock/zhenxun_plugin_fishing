@@ -13,7 +13,7 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
 $env:PYTHONDONTWRITEBYTECODE = '1'
 .venv\Scripts\python.exe -m pytest zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_mining_simulator.py zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_thirty_days.py -q -p no:cacheprovider
 
-node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_engine.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_late_factors.test.mjs
+node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_engine.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_late_factors.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_descriptions.test.mjs
 
 .venv\Scripts\python.exe -m http.server 8766 --bind 127.0.0.1 --directory zhenxun/plugins/zhenxun_plugin_fishing/web/static/s2-vnext
 ```
@@ -31,7 +31,9 @@ node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vne
 - D10 每日一次和全托管画像均应进入电气时代；首星通关与第二阶段还未实现。
 - 原始、工业、电气、计算机、未来时代依次换代。D11-D20 延伸电气与计算机设备，D21-D30 建设未来矿场；共 43 项活动科技，`reserve` 不进入试玩建设列表。
 - 旧设备满级后保留贡献，由更强新设备接棒。同乘区贡献相加、速度设备分别复乘，不再增加矿网、热回收、级联等复杂公式。
-- 批量预览显示收入、钻进提升，回放可选 10/20/30 天；后期大数使用科学计数显示。
+- 批量预览显示矿币收益、挖矿深度提升，回放可选 10/20/30 天；后期大数使用科学计数显示。
+- 科技说明解释实际开采作用，用 `**专有名词**` 安全加粗属性与科技引用；不解析 HTML。同类倍率相加与速度逐级复乘分别说明，不把内部加成误写成总收益百分比。
+- 首星计划以未来时代收尾，不固定为 30 天或两个月。约五天的自动升级收尾、未来科技或旧设备扩级都是后续可调方向，本版尚未实现首星终点、扩级与转生。
 
 ## 当前验证
 
@@ -45,6 +47,8 @@ node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vne
 
 离线调参工具 `calibrate_thirty_days.mjs` 默认只输出，显式 `--write` 才写入共享数据。价格一经写入就是固定价格，不随玩家当前收入变化。迁移回归用固定历史提交 `25f9313`，运行测试的克隆需保留该历史对象。
 
-独立测试必须禁用 pytest 插件自动加载，否则 nonebug 会要求正式机器人环境。当前 JavaScript 19 项、Python 41 项通过，2 项未实现爆星/重生测试跳过。既有早期暴击率封顶造成的末级收益饱和暂保留，避免改动已认可的前十天。
+独立测试必须禁用 pytest 插件自动加载，否则 nonebug 会要求正式机器人环境。既有基线为 JavaScript 19 项、Python 41 项通过，2 项未实现爆星/重生测试跳过；新增说明测试检查安全渲染、引用名称、数值口径和作用域。既有早期暴击率封顶造成的末级收益饱和暂保留，避免改动已认可的前十天。
+
+说明修订验证见 `READABLE_TECH_PLAYTEST.md`：25 项 JavaScript 测试通过，五画像/四路线的三十天经济与修订前逐项一致；首星现有科技约在 D33-D40 全满级，但尚未接入通关。全部自动化时显示剩余升级数，不再把调试完成提示为整段交付。
 
 现行要求见 `DESIGN_INTENT.md`，本轮结果见 `THIRTY_DAYS_PLAYTEST.md`，逐日审计见 `THIRTY_DAYS_TRACE.md`。`HELPER_PLAYTEST.md` 和 `HELPER_TEN_DAYS_TRACE.md` 保留十天基线；`GAME_DESIGN_VNEXT.md`、`FIRST_TEN_DAYS_TRACE.md`、`NEXT_THREAD_HANDOFF.md` 是更早方案，不作为现行验收标准。
