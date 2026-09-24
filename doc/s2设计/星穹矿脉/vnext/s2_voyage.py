@@ -199,6 +199,22 @@ def compile_voyage(state: Any) -> dict[str, Any]:
             teamwork,
             momentum,
         )
+        burst_end = float(
+            state.prestige_config.get("openingBurstSeconds", 1)
+        ) / 60
+        if (
+            state.core_effect("opening_burst") > 0
+            and state.minute < burst_end
+            and next_age > burst_end
+        ):
+            next_age = burst_end
+            work = mining_work(
+                state.minute,
+                next_age,
+                teamwork,
+                momentum,
+            )
+            boundary_kind = None
         if not math.isfinite(next_age) or next_age <= state.minute:
             raise ValueError("non-progressing voyage event")
         segments.append(
@@ -215,7 +231,7 @@ def compile_voyage(state: Any) -> dict[str, Any]:
         state.depth = min(state.target_depth, state.depth + depth_rate * work)
         if boundary_kind == "depth":
             state.depth = max(state.depth, boundary_value)
-        else:
+        elif boundary_kind == "credits":
             state.credits = max(state.credits, boundary_value)
         state.minute = next_age
         state.day = math.floor(state.minute / 1440) + 1

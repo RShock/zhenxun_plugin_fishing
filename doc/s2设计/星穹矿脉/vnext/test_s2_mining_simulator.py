@@ -39,7 +39,7 @@ def manually_unlock(state: SimulationState, key: str) -> None:
 def test_v3_uses_local_and_prestige_currencies_with_existing_era_regions() -> None:
     assert GAME_DATA["schemaVersion"] == 3
     assert GAME_DATA["gameVersion"] == "s2-vnext-v3-helper-1"
-    assert GAME_DATA["contentVersion"] == "prestige-2"
+    assert GAME_DATA["contentVersion"] == "prestige-3"
     assert GAME_DATA["playtestDays"] == 30
     assert [item["key"] for item in GAME_DATA["resources"]] == ["credits", "cores"]
     assert len(GAME_DATA["multiplierRegions"]) == 17

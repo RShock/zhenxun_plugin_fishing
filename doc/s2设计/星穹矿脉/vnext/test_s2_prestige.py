@@ -12,6 +12,7 @@ from s2_mining_simulator import (
     CORE_SPECS,
     GAME_DATA,
     MAX_SAFE_INTEGER,
+    PRESTIGE_CONFIG,
     RULES,
     SETTLEMENT_MINUTES,
     SPECS,
@@ -20,14 +21,44 @@ from s2_mining_simulator import (
     replay_prestige,
     validate_game_data,
 )
+from s2_voyage import earned_cores
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 NODE = shutil.which("node")
 NODE_REPLAY = """
-import { replayPrestige } from "./s2_prestige_replay.mjs";
+import { S2Engine } from "../../../../web/static/s2-vnext/engine.js";
 import data from "../../../../web/static/s2-vnext/game_data.json" with { type: "json" };
 const options = JSON.parse(process.argv[1]);
-const { engine, milestones } = replayPrestige(data, options);
+const engine = new S2Engine(data, { seed: options.seed });
+const milestones = [];
+let recorded = 0;
+for (let i = 0; i < options.days * 144; i += 1) {
+  if (engine.state.completedPlanets >= options.planets) break;
+  engine.mineBlock();
+  if (engine.state.completedPlanets > recorded) {
+    const history = engine.state.planetHistory.at(-1);
+    milestones.push({
+      ...history,
+      resets: engine.state.resets,
+      cores: engine.state.cores,
+      coreLevels: { ...engine.state.coreLevels },
+      totalManualLevels: engine.state.totalManualLevels,
+      totalManualCommands: engine.state.totalManualCommands,
+    });
+    recorded = engine.state.completedPlanets;
+  }
+  if (engine.state.minute % 1440 === 1200) {
+    if (options.profile === "daily") engine.strategyVisit();
+    if (options.coreRoute !== "none"
+      && engine.state.coreAutoRoute === "off"
+      && engine.state.completedPlanets > 0) {
+      engine.setCoreAutoRoute(options.coreRoute);
+    }
+    if (engine.state.planetComplete && engine.state.resets === 0) {
+      engine.departPlanet();
+    }
+  }
+}
 console.log(JSON.stringify({
   milestones,
   state: engine.state,
@@ -299,15 +330,36 @@ def test_resets_grant_no_free_speed_and_planet_drive_is_paid_x2_x3() -> None:
     assert state.prestige_speed() == 3
 
 
+def core_key(effect_kind: str) -> str:
+    return next(
+        key
+        for key, spec in CORE_SPECS.items()
+        if spec.effect_kind == effect_kind
+    )
+
+
+def configured_core_spend(levels: dict[str, int]) -> int:
+    return sum(
+        spec.base_cost * sum(
+            spec.cost_growth**level
+            for level in range(levels[key])
+        )
+        for key, spec in CORE_SPECS.items()
+    )
+
+
 def test_core_effect_mapping_and_local_age_match_web_engine() -> None:
     state = SimulationState(deterministic=True)
-    state.core_levels["core_drill"] = 1
-    state.core_levels["core_refining"] = 1
-    state.core_levels["core_depth"] = 1
-    state.core_levels["stellar_forge"] = 1
-    state.core_levels["stellar_relay"] = 1
-    state.core_levels["planet_drive"] = 1
-    state.core_levels["galactic_drive"] = 1
+    for kind in (
+        "speed_strength",
+        "income_strength",
+        "depth_strength",
+        "equipment_strength",
+        "line_synergy",
+        "global_linear",
+        "global_speed",
+    ):
+        state.core_levels[core_key(kind)] = 1
     state.resets = 10
     state.levels["rotary_pick"] = 1
     state.levels["ore_ledger"] = 1
@@ -319,43 +371,83 @@ def test_core_effect_mapping_and_local_age_match_web_engine() -> None:
     state.planet_started_minute = state.minute
 
     factors = state.multiplier_breakdown()
-    assert factors["speed"] == pytest.approx(1 + 0.18 * 1.18)
-    assert factors["income"] == pytest.approx(1 + 0.25 * 1.2 * 1.5)
-    assert factors["extra_depth"] == pytest.approx(1 + 0.26 * 1.2 * 1.5)
+    speed_strength = 1 + state.core_effect("speed_strength")
+    equipment = 1 + state.core_effect("equipment_strength")
+    income_strength = 1 + state.core_effect("income_strength")
+    depth_strength = 1 + state.core_effect("depth_strength")
+    assert factors["speed"] == pytest.approx(
+        1 + SPECS["rotary_pick"].effect_per_level * speed_strength
+    )
+    assert factors["income"] == pytest.approx(
+        1
+        + SPECS["ore_ledger"].effect_per_level
+        * equipment
+        * income_strength
+    )
+    assert factors["extra_depth"] == pytest.approx(
+        1
+        + SPECS["deep_marker"].effect_per_level
+        * equipment
+        * depth_strength
+    )
     assert factors["critical"] == pytest.approx(1 + 0.04 * RULES["baseCriticalDamage"])
     assert factors["teamwork"] == 1
-    assert factors["stellar_relay"] == pytest.approx(1.03)
-    assert factors["prestige"] == pytest.approx(4)
+    assert factors["stellar_relay"] == pytest.approx(
+        1 + state.core_effect("line_synergy") * len(state.auto_unlocked)
+    )
+    assert factors["prestige"] == pytest.approx(
+        (1 + state.core_effect("global_linear"))
+        * 2 ** state.core_effect("global_speed")
+    )
 
     state.minute += 1440
     assert state.multiplier_breakdown()["teamwork"] == pytest.approx(
-        1 + 0.045 * 1.2
+        1
+        + SPECS["union_rhythm"].effect_per_level
+        * equipment
     )
 
 
-def test_core_purchase_cost_unlock_and_reward_step() -> None:
+def test_core_purchase_cost_unlock_and_rewards_are_exact_integers() -> None:
     state = SimulationState(deterministic=True)
-    key = "core_drill"
-    assert key in CORE_SPECS
+    key = next(iter(CORE_SPECS))
+    spec = CORE_SPECS[key]
     assert state.purchase_core(key) == (False, "locked")
 
-    state.completed_planets = 1
-    state.cores = 1
-    assert state.core_cost(key) == 1
+    state.completed_planets = spec.unlock_resets
+    state.cores = spec.base_cost
+    assert state.core_cost(key) == spec.base_cost
     assert state.purchase_core(key) == (True, "")
     assert state.core_levels[key] == 1
     assert state.cores == 0
-    assert state.core_cost(key) == 2
+    assert state.core_cost(key) == spec.base_cost * spec.cost_growth
     assert state.purchase_core(key) == (False, "cores")
 
+    planets = max(spec.unlock_resets, 500_000)
+    funded = SimulationState(deterministic=True)
+    funded.completed_planets = funded.resets = planets
+    funded.cores = earned_cores(
+        planets,
+        int(PRESTIGE_CONFIG["rewardStep"]),
+    )
+    before = funded.cores
+    funded.set_core_auto_route("balanced")
+    assert type(funded.cores) is int
+    assert funded.cores == before - configured_core_spend(funded.core_levels)
+
     reward_state = SimulationState(deterministic=True)
-    reward_state.resets = 5
-    reward_state.completed_planets = 5
-    reward_state.minute = 10
-    reward_state.depth = reward_state.target_depth
-    assert reward_state.finish_planet()
-    assert reward_state.cores == 2
-    assert reward_state.planet_history[-1]["reward"] == 2
+    step = int(PRESTIGE_CONFIG["rewardStep"])
+    for reset in range(step * 2 + 1):
+        reward_state.resets = reward_state.completed_planets = reset
+        reward_state.minute = reset + 1
+        reward_state.planet_started_minute = reset
+        reward_state.depth = reward_state.target_depth
+        before = reward_state.cores
+        assert reward_state.finish_planet()
+        expected = 1 + reset // step
+        assert reward_state.cores - before == expected
+        assert reward_state.planet_history[-1]["reward"] == expected
+        reward_state.planet_complete = False
 
 
 def test_mine_block_uses_javascript_safe_integer_contract() -> None:
@@ -386,37 +478,177 @@ def test_legacy_maxed_state_keeps_unknown_all_maxed_minute() -> None:
     assert state.all_maxed_minute is None
 
 
-def test_speed_core_route_never_falls_back() -> None:
+@pytest.mark.parametrize(
+    "route",
+    ["off", "balanced", "speed", "rebuild", "burst"],
+)
+def test_core_route_state_accepts_all_routes_and_uses_scored_target(
+    route: str,
+) -> None:
     state = SimulationState(deterministic=True)
-    state.completed_planets = 12
-    state.cores = 1000
-    state.core_levels["core_drill"] = CORE_SPECS["core_drill"].max_level
-    state.core_levels["planet_drive"] = CORE_SPECS[
-        "planet_drive"
-    ].max_level
-    state.core_levels["galactic_drive"] = CORE_SPECS[
-        "galactic_drive"
-    ].max_level
+    state.completed_planets = max(
+        spec.unlock_resets for spec in CORE_SPECS.values()
+    )
+    if route == "off":
+        state.cores = MAX_SAFE_INTEGER
+        assert state.set_core_auto_route(route) == []
+        assert not any(state.core_levels.values())
+        return
 
-    assert purchase_cores_for_route(state, "speed") == []
+    state.cores = 0
+    assert state.set_core_auto_route(route) == []
+    target = min(
+        (
+            spec
+            for spec in CORE_SPECS.values()
+            if state.core_available(spec.key)
+        ),
+        key=state.core_route_score,
+    )
+    state.cores = state.core_cost(target.key) - 1
+    assert state.auto_purchase_core() == []
+    assert not any(state.core_levels.values())
+
+    state.cores += 1
+    bought = state.auto_purchase_core()
+    assert bought[0] == target.key
+
+
+def test_route_helper_buys_nonpreferred_technology_after_priorities_max() -> None:
+    state = SimulationState(deterministic=True)
+    state.completed_planets = max(
+        spec.unlock_resets for spec in CORE_SPECS.values()
+    )
+    preferred = {"global_linear", "global_speed", "speed_strength"}
+    for key, spec in CORE_SPECS.items():
+        if spec.effect_kind in preferred:
+            state.core_levels[key] = spec.max_level
+    state.cores = MAX_SAFE_INTEGER
+
+    bought = purchase_cores_for_route(state, "speed")
+
+    assert bought
     assert all(
-        level == 0
-        for key, level in state.core_levels.items()
-        if key not in {
-            "planet_drive",
-            "core_drill",
-            "galactic_drive",
-        }
+        state.core_levels[key] == spec.max_level
+        for key, spec in CORE_SPECS.items()
     )
 
 
-def test_prestige_two_validates_galaxy_cap_and_drive_limits() -> None:
-    assert CORE_SPECS["planet_drive"].base_cost == 1
-    assert CORE_SPECS["planet_drive"].cost_growth == 3
-    assert CORE_SPECS["planet_drive"].effect_per_level == 1
-    assert CORE_SPECS["galactic_drive"].max_level == 20
+def test_route_preferences_start_only_after_common_ten_planet_bootstrap() -> None:
+    states = {
+        route: SimulationState(deterministic=True)
+        for route in ("speed", "rebuild", "burst")
+    }
+    for state in states.values():
+        state.completed_planets = 9
+        state.cores = MAX_SAFE_INTEGER
+        state.set_core_auto_route("off")
+    baseline = {
+        spec.key: states["speed"].core_cost(spec.key)
+        for spec in CORE_SPECS.values()
+    }
+    for route, state in states.items():
+        state.core_auto_route = route
+        assert {
+            spec.key: state.core_route_score(spec)
+            for spec in CORE_SPECS.values()
+        } == baseline
 
-    for target in (0, 1_000_001):
+    for route, state in states.items():
+        state.completed_planets = 10
+        preferred = {
+            "speed": {"global_linear", "global_speed", "speed_strength"},
+            "rebuild": {
+                "income_strength", "local_discount", "equipment_strength",
+            },
+            "burst": {
+                "opening_burst", "global_speed", "completion_depth",
+            },
+        }[route]
+        assert all(
+            state.core_route_score(spec)
+            == state.core_cost(spec.key)
+            / (4 if spec.effect_kind in preferred else 1)
+            for spec in CORE_SPECS.values()
+        )
+
+
+def test_discount_completion_and_opening_burst_scopes() -> None:
+    discount = SimulationState(deterministic=True)
+    discount_key = core_key("local_discount")
+    discount.core_levels[discount_key] = 1
+    local_key = next(iter(SPECS))
+    local_spec = SPECS[local_key]
+    expected_discount = 1 + discount.core_effect("local_discount")
+    assert discount.cost_for(local_key) == pytest.approx(
+        local_spec.base_cost / expected_discount
+    )
+    core_candidate = next(iter(CORE_SPECS))
+    assert discount.core_cost(core_candidate) == (
+        CORE_SPECS[core_candidate].base_cost
+        * CORE_SPECS[core_candidate].cost_growth
+        ** discount.core_levels[core_candidate]
+    )
+
+    completion = SimulationState(deterministic=True)
+    completion_key = core_key("completion_depth")
+    completion.core_levels[completion_key] = 1
+    before_depth = completion.depth_multiplier()
+    for key, spec in SPECS.items():
+        if spec.status == "active":
+            completion.levels[key] = spec.max_level
+    maxed_income = completion.income_multiplier()
+    completion.core_levels[completion_key] = 0
+    assert completion.income_multiplier() == pytest.approx(maxed_income)
+    completion.core_levels[completion_key] = 1
+    without_completion = completion.depth_multiplier() / (
+        1 + completion.core_effect("completion_depth")
+    )
+    assert before_depth == 1
+    assert completion.multiplier_breakdown()["completion_depth"] == pytest.approx(
+        1 + completion.core_effect("completion_depth")
+    )
+    assert completion.depth_multiplier() == pytest.approx(
+        without_completion
+        * (1 + completion.core_effect("completion_depth"))
+    )
+    completion.levels[next(
+        key for key, spec in SPECS.items() if spec.status == "active"
+    )] -= 1
+    assert completion.multiplier_breakdown()["completion_depth"] == 1
+
+    burst = SimulationState(deterministic=True)
+    burst.core_levels[core_key("opening_burst")] = 1
+    factor = 1 + burst.core_effect("opening_burst")
+    base_income = float(RULES["baseCreditsPerMinute"])
+    base_depth = float(RULES["baseDepthPerMinute"])
+    assert burst.income_multiplier() == pytest.approx(factor)
+    assert burst.depth_multiplier() == pytest.approx(factor)
+    burst.minute = float(PRESTIGE_CONFIG["openingBurstSeconds"]) / 60
+    assert burst.income_multiplier() == pytest.approx(1)
+    assert burst.depth_multiplier() == pytest.approx(1)
+    burst.cores = MAX_SAFE_INTEGER
+    burst.completed_planets = max(
+        spec.unlock_resets for spec in CORE_SPECS.values()
+    )
+    assert burst.purchase_core(core_key("opening_burst")) == (True, "")
+    assert burst.income_multiplier() == pytest.approx(1)
+    assert base_income * factor > base_income
+    assert base_depth * factor > base_depth
+
+
+def test_prestige_three_validates_configured_target_and_safe_rewards() -> None:
+    assert GAME_DATA["contentVersion"] == "prestige-3"
+    assert PRESTIGE_CONFIG["galaxyTargetPlanets"] > 0
+    assert PRESTIGE_CONFIG["openingBurstSeconds"] == 1
+    assert PRESTIGE_CONFIG["legacyCorePrices"]
+
+    unsafe_target = int(PRESTIGE_CONFIG["galaxyTargetPlanets"])
+    step = int(PRESTIGE_CONFIG["rewardStep"])
+    while earned_cores(unsafe_target, step) <= MAX_SAFE_INTEGER:
+        unsafe_target *= 2
+
+    for target in (0, unsafe_target):
         broken = copy.deepcopy(GAME_DATA)
         broken["prestige"]["galaxyTargetPlanets"] = target
         with pytest.raises(ValueError, match="prestige"):

@@ -25,6 +25,7 @@ IMPLEMENTED_EFFECT_KINDS = {
 IMPLEMENTED_CORE_EFFECT_KINDS = {
     "speed_strength", "income_strength", "depth_strength",
     "equipment_strength", "line_synergy", "global_speed", "global_linear",
+    "local_discount", "completion_depth", "opening_burst",
 }
 
 
@@ -64,22 +65,36 @@ def validate_game_data(data: dict[str, object]) -> dict[str, object]:
     if str(data.get("contentVersion", "")).startswith("prestige-") and not prestige:
         raise ValueError("prestige content requires prestige rules")
     if prestige:
+        reward_step = prestige.get("rewardStep")
+        galaxy_target = prestige.get("galaxyTargetPlanets")
         if (
             not math.isfinite(float(prestige.get("planetTargetDepth", 0)))
             or float(prestige["planetTargetDepth"]) <= 0
+            or type(reward_step) is not int
+            or reward_step < 1
             or (
-                data.get("contentVersion") == "prestige-2"
+                data.get("contentVersion") in {"prestige-2", "prestige-3"}
                 and (
-                    type(prestige.get("galaxyTargetPlanets")) is not int
-                    or not 1 <= prestige["galaxyTargetPlanets"] <= 1_000_000
+                    type(galaxy_target) is not int
+                    or galaxy_target < 1
+                    or (
+                        type(galaxy_target) is int
+                        and earned_cores(galaxy_target, reward_step) > 2**53 - 1
+                    )
                 )
             )
-            or type(prestige.get("rewardStep")) is not int
-            or prestige["rewardStep"] < 1
             or type(prestige.get("historyLimit")) is not int
             or prestige["historyLimit"] < 1
             or not isinstance(prestige.get("upgrades"), list)
             or not prestige["upgrades"]
+        ):
+            raise ValueError("invalid prestige rules")
+        if (
+            data.get("contentVersion") == "prestige-3"
+            and (
+                prestige.get("openingBurstSeconds") != 1
+                or not prestige.get("legacyCorePrices")
+            )
         ):
             raise ValueError("invalid prestige rules")
         core_keys: set[str] = set()
@@ -251,7 +266,9 @@ class SimulationState:
     planet_history: list[dict[str, int | float | None]] = field(
         default_factory=list
     )
-    core_auto_route: Literal["off", "balanced", "speed"] = "off"
+    core_auto_route: Literal[
+        "off", "balanced", "speed", "rebuild", "burst"
+    ] = "off"
     last_batch_summary: dict[str, int] = field(
         default_factory=lambda: {"planets": 0, "compiled": 0, "events": 0}
     )
@@ -296,6 +313,10 @@ class SimulationState:
         return RULES
 
     @property
+    def prestige_config(self) -> dict[str, object]:
+        return PRESTIGE_CONFIG or {}
+
+    @property
     def era_by_key(self) -> dict[str, dict[str, object]]:
         return ERA_BY_KEY
 
@@ -322,11 +343,11 @@ class SimulationState:
             * 2 ** self.core_effect("global_speed")
         )
 
-    def core_cost(self, key: str) -> float:
+    def core_cost(self, key: str) -> int | float:
         spec = CORE_SPECS.get(key)
         if spec is None:
             return math.inf
-        return float(spec.base_cost * spec.cost_growth ** self.core_levels[key])
+        return spec.base_cost * spec.cost_growth ** self.core_levels[key]
 
     def core_available(self, key: str) -> bool:
         spec = CORE_SPECS.get(key)
@@ -348,33 +369,40 @@ class SimulationState:
         return True, ""
 
     def core_route_specs(self) -> list[CoreSpec]:
-        return [
-            spec
-            for spec in CORE_SPECS.values()
+        return list(CORE_SPECS.values()) if self.core_auto_route != "off" else []
+
+    def core_route_score(self, spec: CoreSpec) -> float:
+        preferences = {
+            "speed": {"global_linear", "global_speed", "speed_strength"},
+            "rebuild": {
+                "income_strength", "local_discount", "equipment_strength",
+            },
+            "burst": {"opening_burst", "global_speed", "completion_depth"},
+        }
+        divisor = (
+            4
             if (
-                self.core_auto_route == "balanced"
-                or (
-                    self.core_auto_route == "speed"
-                    and spec.effect_kind
-                    in {"global_linear", "global_speed", "speed_strength"}
-                )
+                self.completed_planets >= 10
+                and spec.effect_kind
+                in preferences.get(self.core_auto_route, set())
             )
-        ]
+            else 1
+        )
+        return self.core_cost(spec.key) / divisor
 
     def auto_purchase_core(self) -> list[str]:
         bought: list[str] = []
         while True:
-            affordable = [
+            candidates = [
                 spec
                 for spec in self.core_route_specs()
-                if (
-                    self.core_available(spec.key)
-                    and self.core_cost(spec.key) <= self.cores
-                )
+                if self.core_available(spec.key)
             ]
-            if not affordable:
+            if not candidates:
                 return bought
-            spec = min(affordable, key=lambda item: self.core_cost(item.key))
+            spec = min(candidates, key=self.core_route_score)
+            if self.core_cost(spec.key) > self.cores:
+                return bought
             ok, _ = self.purchase_core(spec.key)
             if not ok:
                 return bought
@@ -382,17 +410,16 @@ class SimulationState:
 
     def set_core_auto_route(
         self,
-        route: Literal["off", "balanced", "speed"],
+        route: Literal["off", "balanced", "speed", "rebuild", "burst"],
     ) -> list[str]:
-        if route not in {"off", "balanced", "speed"}:
+        if route not in {"off", "balanced", "speed", "rebuild", "burst"}:
             raise ValueError("invalid core automation route")
         self.core_auto_route = route
         return self.auto_purchase_core()
 
     def galaxy_complete(self) -> bool:
-        return self.completed_planets >= int(
-            (PRESTIGE_CONFIG or {}).get("galaxyTargetPlanets", 1_000_000)
-        )
+        target = (PRESTIGE_CONFIG or {}).get("galaxyTargetPlanets")
+        return target is not None and self.completed_planets >= int(target)
 
     def set_auto_depart(self, enabled: bool) -> None:
         if type(enabled) is not bool:
@@ -468,7 +495,11 @@ class SimulationState:
     def cost_for(self, key: str, level: int | None = None) -> float:
         spec = SPECS[key]
         current = self.level(key) if level is None else level
-        return spec.base_cost * spec.cost_growth**current
+        return (
+            spec.base_cost
+            * spec.cost_growth**current
+            / (1 + self.core_effect("local_discount"))
+        )
 
     def era_automation_count(self, era: str) -> int:
         return sum(1 for key in self.auto_unlocked if SPECS[key].era == era)
@@ -633,6 +664,17 @@ class SimulationState:
         resonance = 1 + effects.get("resonance", 0) * auto_count
         shift_relay = 1 + effects.get("shift_relay", 0) * auto_count
         penetration = 1 + effects.get("penetration", 0) * max(0.0, critical - 1)
+        opening_burst = (
+            1 + self.core_effect("opening_burst")
+            if local_minute
+            < float((PRESTIGE_CONFIG or {}).get("openingBurstSeconds", 1)) / 60
+            else 1
+        )
+        completion_depth = (
+            1 + self.core_effect("completion_depth")
+            if self.all_local_maxed()
+            else 1
+        )
         return {
             "speed": speed, "parallel": parallel, "cats": cats, "sharpness": sharpness,
             "fragility": fragility, "income": income, "extra_depth": extra_depth,
@@ -640,6 +682,8 @@ class SimulationState:
             "momentum": momentum, "resonance": resonance, "shift_relay": shift_relay,
             "penetration": penetration, "prestige": self.prestige_speed(),
             "stellar_relay": 1 + self.core_effect("line_synergy") * auto_count,
+            "opening_burst": opening_burst,
+            "completion_depth": completion_depth,
         }
 
     def income_multiplier(self) -> float:
@@ -649,7 +693,7 @@ class SimulationState:
                 "speed", "parallel", "cats", "sharpness", "fragility",
                 "critical", "coordination", "teamwork", "momentum",
                 "resonance", "income", "shift_relay", "prestige",
-                "stellar_relay",
+                "stellar_relay", "opening_burst",
             )
         )
 
@@ -660,7 +704,7 @@ class SimulationState:
                 "speed", "parallel", "cats", "sharpness", "fragility",
                 "critical", "coordination", "teamwork", "momentum",
                 "resonance", "extra_depth", "penetration", "prestige",
-                "stellar_relay",
+                "stellar_relay", "opening_burst", "completion_depth",
             )
         )
 
@@ -850,6 +894,23 @@ class SimulationState:
         ]
         if not specs:
             return limit
+        for spec in specs:
+            if spec.unlock_resets > self.completed_planets:
+                limit = min(
+                    limit,
+                    spec.unlock_resets - self.completed_planets,
+                )
+        target = min(
+            (
+                spec
+                for spec in specs
+                if self.core_available(spec.key)
+            ),
+            key=self.core_route_score,
+            default=None,
+        )
+        if target is None:
+            return limit
         step = int(PRESTIGE_CONFIG["rewardStep"])
         earned = earned_cores(self.completed_planets, step)
 
@@ -859,11 +920,7 @@ class SimulationState:
                 + earned_cores(self.completed_planets + count, step)
                 - earned
             )
-            return any(
-                self.completed_planets + count >= spec.unlock_resets
-                and future_cores >= self.core_cost(spec.key)
-                for spec in specs
-            )
+            return future_cores >= self.core_cost(target.key)
 
         if not can_buy(limit):
             return limit
@@ -952,7 +1009,7 @@ class SimulationState:
     def advance_voyages(self, end_minute: float) -> None:
         boundaries = 0
         max_boundaries = sum(
-            spec.max_level for spec in CORE_SPECS.values()
+            spec.max_level + 2 for spec in CORE_SPECS.values()
         ) + 8
         while self.minute < end_minute:
             boundaries += 1
@@ -1131,7 +1188,7 @@ class SimulationState:
 
 
 Route = Literal["balanced", "cheapest", "depth", "income"]
-CoreRoute = Literal["none", "balanced", "speed"]
+CoreRoute = Literal["none", "balanced", "speed", "rebuild", "burst"]
 
 
 def choose_upgrade(state: SimulationState, route: Route = "balanced") -> str | None:
@@ -1179,35 +1236,38 @@ def purchase_cores_for_route(
 ) -> list[str]:
     if route == "none":
         return []
-    if route not in {"balanced", "speed"}:
+    if route not in {"balanced", "speed", "rebuild", "burst"}:
         raise ValueError(f"unknown core route {route}")
-    allowed_kinds = (
-        {"global_linear", "global_speed", "speed_strength"}
-        if route == "speed"
-        else None
-    )
-    order = {key: index for index, key in enumerate(CORE_SPECS)}
+    preferences = {
+        "speed": {"global_linear", "global_speed", "speed_strength"},
+        "rebuild": {
+            "income_strength", "local_discount", "equipment_strength",
+        },
+        "burst": {"opening_burst", "global_speed", "completion_depth"},
+    }
     bought: list[str] = []
     while True:
-        affordable = [
-            key
-            for key in CORE_SPECS
-            if (
-                allowed_kinds is None
-                or CORE_SPECS[key].effect_kind in allowed_kinds
-            )
-            and state.core_available(key)
-            and state.core_cost(key) <= state.cores
+        candidates = [
+            spec
+            for spec in CORE_SPECS.values()
+            if state.core_available(spec.key)
         ]
-        if not affordable:
+        if not candidates:
             break
-        key = min(
-            affordable,
-            key=lambda candidate: (
-                state.core_cost(candidate),
-                order[candidate],
+        spec = min(
+            candidates,
+            key=lambda item: state.core_cost(item.key) / (
+                4
+                if (
+                    state.completed_planets >= 10
+                    and item.effect_kind in preferences.get(route, set())
+                )
+                else 1
             ),
         )
+        if state.core_cost(spec.key) > state.cores:
+            break
+        key = spec.key
         ok, _ = state.purchase_core(key)
         if not ok:
             break
@@ -1225,7 +1285,7 @@ def replay_prestige(
 ) -> tuple[SimulationState, list[dict[str, object]]]:
     if (
         profile not in {"daily", "absent"}
-        or core_route not in {"balanced", "speed", "none"}
+        or core_route not in {"balanced", "speed", "rebuild", "burst", "none"}
         or type(planets) is not int
         or planets < 1
         or type(days) is not int
@@ -1252,7 +1312,12 @@ def replay_prestige(
         if state.minute % 1440 == 1200:
             if profile == "daily":
                 strategy_visit(state)
-            purchase_cores_for_route(state, core_route)
+            if (
+                core_route != "none"
+                and state.core_auto_route == "off"
+                and state.completed_planets > 0
+            ):
+                state.set_core_auto_route(core_route)
             if state.planet_complete and state.resets == 0:
                 state.depart_planet()
     return state, milestones
@@ -1273,7 +1338,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--core-route",
-        choices=("balanced", "speed", "none"),
+        choices=("balanced", "speed", "rebuild", "burst", "none"),
         default="balanced",
     )
     args = parser.parse_args()

@@ -172,7 +172,7 @@ test("core purchases preserve scope and amplify rebuilt equipment instead of pre
   e.departPlanet(); e.state.credits = 1e8;
   e.purchase("rotary_pick");
   const spec = e.specs.rotary_pick;
-  assert.equal(e.multiplierBreakdown().speed, 1 + spec.effectPerLevel * 1.18);
+  assert.equal(e.multiplierBreakdown().speed, 1 + spec.effectPerLevel * (1 + e.coreSpecs.core_drill.effectPerLevel));
   for (const [key, kind, otherKind] of [["core_refining", "income", "extra_depth"], ["core_depth", "extra_depth", "income"]]) {
     const f = fresh(); f.state.coreLevels[key] = 1;
     assert.equal(f.effectStrength(kind), 1.5);

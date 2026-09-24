@@ -1,4 +1,4 @@
-import { compileVoyage, sampleVoyage, earnedCores } from "./voyage.js?v=3-prestige-2";
+import { compileVoyage, sampleVoyage, earnedCores } from "./voyage.js?v=3-prestige-3";
 
 const UINT32_RANGE = 4294967296;
 const TWO_PI = Math.PI * 2;
@@ -20,12 +20,13 @@ export function validateGameData(data) {
   if (data.prestige) {
     const p = data.prestige;
     if (!Number.isFinite(p.planetTargetDepth) || p.planetTargetDepth <= 0
-      || (data.contentVersion === "prestige-2" && (!Number.isInteger(p.galaxyTargetPlanets)
-        || p.galaxyTargetPlanets < 1 || p.galaxyTargetPlanets > 1000000))
+      || (["prestige-2", "prestige-3"].includes(data.contentVersion) && (!Number.isSafeInteger(p.galaxyTargetPlanets)
+        || p.galaxyTargetPlanets < 1 || !Number.isSafeInteger(earnedCores(p.galaxyTargetPlanets, p.rewardStep))))
       || !Number.isInteger(p.rewardStep) || p.rewardStep < 1
       || !Number.isInteger(p.historyLimit) || p.historyLimit < 1
       || !Array.isArray(p.upgrades) || !p.upgrades.length) throw new Error("Invalid prestige rules");
-    const kinds = new Set(["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed", "global_linear"]);
+    if (data.contentVersion === "prestige-3" && (p.openingBurstSeconds !== 1 || !p.legacyCorePrices)) throw new Error("Missing interstellar rules");
+    const kinds = new Set(["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed", "global_linear", "local_discount", "completion_depth", "opening_burst"]);
     const keys = new Set();
     for (const spec of p.upgrades) {
       if (typeof spec.key !== "string" || keys.has(spec.key) || !kinds.has(spec.effectKind)
@@ -183,6 +184,7 @@ export class S2Engine {
       resets: 0, completedPlanets: 0, cores: 0, coreLevels: objectOf(Object.keys(this.coreSpecs)),
       planetComplete: false, planetStartedMinute: 0, allMaxedMinute: null,
       autoDepart: true, planetHistory: [], coreAutoRoute: "off",
+      legacyCoreLevels: objectOf(Object.keys(this.coreSpecs)),
     };
   }
 
@@ -199,11 +201,24 @@ export class S2Engine {
       for (const key of prestigeFields) state[key] = defaults[key];
       state.targetDepth = defaults.targetDepth;
     } else if (prestigeFields.some((key) => !Object.hasOwn(state, key))) throw new Error("转生存档字段损坏");
-    else if (!legacy && state.contentVersion && !["prestige-1", this.data.contentVersion].includes(state.contentVersion)) throw new Error("不支持此内容版本");
+    else if (!legacy && state.contentVersion && !["prestige-1", "prestige-2", this.data.contentVersion].includes(state.contentVersion)) throw new Error("不支持此内容版本");
     if (state.contentVersion !== this.data.contentVersion) {
       state.coreAutoRoute = "off";
       if (!legacy && state.coreLevels && !Object.hasOwn(state.coreLevels, "planet_drive")
-        && this.coreSpecs.planet_drive) state.coreLevels.planet_drive = 0;
+        && state.contentVersion === "prestige-1" && this.coreSpecs.planet_drive) state.coreLevels.planet_drive = 0;
+      state.legacyCoreLevels = objectOf(Object.keys(this.coreSpecs));
+      if (!legacy && state.coreLevels) {
+        for (const key of Object.keys(this.data.prestige.legacyCorePrices)) {
+          if (!Object.hasOwn(state.coreLevels, key)) throw new Error("旧版永久科技字段损坏");
+          state.legacyCoreLevels[key] = state.coreLevels[key];
+        }
+        for (const key of Object.keys(this.coreSpecs)) {
+          if (!Object.hasOwn(this.data.prestige.legacyCorePrices, key)) {
+            if (Object.hasOwn(state.coreLevels, key) && state.coreLevels[key] !== 0) throw new Error("旧版含未发布科技");
+            state.coreLevels[key] = 0;
+          }
+        }
+      }
     }
     if (legacy && state.resets === 0 && state.completedPlanets === 0) {
       state.targetDepth = this.newState(state.seed).targetDepth;
@@ -221,7 +236,7 @@ export class S2Engine {
       || typeof state.helperEnabled !== "boolean" || !state.eraFirstDays || typeof state.eraFirstDays !== "object") invalid();
     if (["resets", "completedPlanets", "cores"].some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
       || typeof state.planetComplete !== "boolean" || typeof state.autoDepart !== "boolean"
-      || !["off", "balanced", "speed"].includes(state.coreAutoRoute)
+      || !["off", "balanced", "speed", "rebuild", "burst"].includes(state.coreAutoRoute)
       || state.completedPlanets > (this.data.prestige?.galaxyTargetPlanets ?? 1000000)
       || state.completedPlanets !== state.resets + Number(state.planetComplete)
       || !Number.isFinite(state.planetStartedMinute) || state.planetStartedMinute < 0
@@ -231,13 +246,21 @@ export class S2Engine {
       || (state.allMaxedMinute !== null && (!Number.isFinite(state.allMaxedMinute)
         || state.allMaxedMinute < state.planetStartedMinute || state.allMaxedMinute > state.minute))
       || !state.coreLevels || typeof state.coreLevels !== "object" || Array.isArray(state.coreLevels)
-      || Object.keys(state.coreLevels).length !== Object.keys(this.coreSpecs).length) invalid();
+      || Object.keys(state.coreLevels).length !== Object.keys(this.coreSpecs).length
+      || !state.legacyCoreLevels || typeof state.legacyCoreLevels !== "object"
+      || Array.isArray(state.legacyCoreLevels)
+      || Object.keys(state.legacyCoreLevels).length !== Object.keys(this.coreSpecs).length) invalid();
     let spent = 0;
     for (const [key, spec] of Object.entries(this.coreSpecs)) {
       const level = state.coreLevels[key];
       if (!Number.isInteger(level) || level < 0 || level > spec.maxLevel
         || (level > 0 && state.completedPlanets < spec.unlockResets)) invalid();
-      for (let i = 0; i < level; i += 1) spent += spec.baseCost * spec.costGrowth ** i;
+      const oldLevel = state.legacyCoreLevels[key];
+      const oldPrice = this.data.prestige?.legacyCorePrices?.[key];
+      if (!Number.isInteger(oldLevel) || oldLevel < 0 || oldLevel > level
+        || oldLevel > (oldPrice?.[2] || 0)) invalid();
+      for (let i = 0; i < level; i += 1) spent += i < oldLevel
+        ? oldPrice[0] * oldPrice[1] ** i : spec.baseCost * spec.costGrowth ** i;
     }
     const rewardStep = this.data.prestige?.rewardStep || 1;
     const q = Math.floor(state.completedPlanets / rewardStep); const r = state.completedPlanets % rewardStep;
@@ -321,20 +344,28 @@ export class S2Engine {
     return { ok: true, key, cost, level: this.state.coreLevels[key] };
   }
   coreRouteSpecs() {
-    return Object.values(this.coreSpecs).filter((spec) => this.state.coreAutoRoute === "balanced"
-      || (this.state.coreAutoRoute === "speed" && ["global_linear", "global_speed", "speed_strength"].includes(spec.effectKind)));
+    return Object.values(this.coreSpecs).filter((spec) => this.state.coreAutoRoute !== "off");
+  }
+  coreRouteScore(spec) {
+    const preferences = {
+      speed: ["global_linear", "global_speed", "speed_strength"],
+      rebuild: ["income_strength", "local_discount", "equipment_strength"],
+      burst: ["opening_burst", "global_speed", "completion_depth"],
+    };
+    return this.coreCost(spec.key) / (this.state.completedPlanets >= 10
+      && preferences[this.state.coreAutoRoute]?.includes(spec.effectKind) ? 4 : 1);
   }
   autoPurchaseCore() {
     const purchases = [];
     for (;;) {
-      const spec = this.coreRouteSpecs().filter((item) => this.coreAvailable(item.key) && this.coreCost(item.key) <= this.state.cores)
-        .sort((a, b) => this.coreCost(a.key) - this.coreCost(b.key))[0];
-      if (!spec) return purchases;
+      const spec = this.coreRouteSpecs().filter((item) => this.coreAvailable(item.key))
+        .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+      if (!spec || this.coreCost(spec.key) > this.state.cores) return purchases;
       purchases.push(this.purchaseCore(spec.key));
     }
   }
   setCoreAutoRoute(route) {
-    if (!["off", "balanced", "speed"].includes(route)) throw new Error("Invalid core automation route");
+    if (!["off", "balanced", "speed", "rebuild", "burst"].includes(route)) throw new Error("Invalid core automation route");
     this.state.coreAutoRoute = route;
     return this.autoPurchaseCore();
   }
@@ -381,7 +412,7 @@ export class S2Engine {
     return strength;
   }
   costFor(key, level = this.level(key)) {
-    const spec = this.specs[key]; return Number(spec.baseCost) * Number(spec.costGrowth) ** level;
+    const spec = this.specs[key]; return Number(spec.baseCost) * Number(spec.costGrowth) ** level / (1 + this.coreEffect("local_discount"));
   }
   eraAutomationCount(era) {
     return this.state.autoUnlocked.filter((key) => this.specs[key].era === era).length;
@@ -518,15 +549,17 @@ export class S2Engine {
       speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth,
       critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay,
       penetration, prestige: this.prestigeSpeed(), stellar_relay: 1 + this.coreEffect("line_synergy") * autoCount,
+      opening_burst: localMinute < (this.data.prestige?.openingBurstSeconds || 1) / 60 ? 1 + this.coreEffect("opening_burst") : 1,
+      completion_depth: this.allLocalMaxed() ? 1 + this.coreEffect("completion_depth") : 1,
     };
   }
   incomeMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "prestige", "stellar_relay"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "prestige", "stellar_relay", "opening_burst"].reduce((product, key) => product * f[key], 1);
   }
   depthMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "prestige", "stellar_relay"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "prestige", "stellar_relay", "opening_burst", "completion_depth"].reduce((product, key) => product * f[key], 1);
   }
   autoPurchase() {
     if (this.state.resets > 0) {
@@ -613,10 +646,16 @@ export class S2Engine {
     const s = this.state;
     const specs = this.coreRouteSpecs().filter((spec) => s.coreLevels[spec.key] < spec.maxLevel);
     if (!specs.length) return limit;
+    // An unlock may change the savings target. Never binary-search across it.
+    for (const spec of specs) {
+      if (spec.unlockResets > s.completedPlanets) limit = Math.min(limit, spec.unlockResets - s.completedPlanets);
+    }
+    const target = specs.filter((spec) => this.coreAvailable(spec.key))
+      .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+    if (!target) return limit;
     const step = this.data.prestige.rewardStep;
     const earned = earnedCores(s.completedPlanets, step);
-    const canBuy = (count) => specs.some((spec) => s.completedPlanets + count >= spec.unlockResets
-      && s.cores + earnedCores(s.completedPlanets + count, step) - earned >= this.coreCost(spec.key));
+    const canBuy = (count) => s.cores + earnedCores(s.completedPlanets + count, step) - earned >= this.coreCost(target.key);
     if (!canBuy(limit)) return limit;
     let lo = 1; let hi = limit;
     while (lo < hi) {
@@ -662,7 +701,7 @@ export class S2Engine {
   advanceVoyages(endMinute) {
     const s = this.state;
     let boundaries = 0;
-    const maxBoundaries = Object.values(this.coreSpecs).reduce((n, spec) => n + spec.maxLevel, 0) + 8;
+    const maxBoundaries = Object.values(this.coreSpecs).reduce((n, spec) => n + spec.maxLevel + 2, 0) + 8;
     while (s.minute < endMinute) {
       if (++boundaries > maxBoundaries) throw new Error("Permanent event budget exceeded");
       if (s.planetComplete) {

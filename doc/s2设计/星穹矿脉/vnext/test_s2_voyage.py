@@ -49,12 +49,24 @@ const vectors = JSON.parse(process.argv[1]);
 function fixture({ resets = 3, maxed = false } = {}) {
   const e = new S2Engine(data);
   const s = e.state;
+  if (maxed) {
+    resets = Math.max(
+      resets,
+      500000,
+      ...data.prestige.upgrades.map((spec) => spec.unlockResets),
+    );
+  }
   s.resets = s.completedPlanets = resets;
   s.minute = s.planetStartedMinute = resets * 10;
   s.nextAutoMinute = (Math.floor(s.minute / 60) + 1) * 60;
   s.nextHelperMinute = (Math.floor(s.minute / 1440) + 1) * 1440;
   s.day = Math.floor(s.minute / 1440) + 1;
-  s.cores = earnedCores(resets, data.prestige.rewardStep);
+  s.cores = maxed
+    ? data.prestige.upgrades.reduce((total, spec) => total
+      + Array.from({ length: spec.maxLevel }, (_, level) =>
+        spec.baseCost * spec.costGrowth ** level)
+        .reduce((sum, cost) => sum + cost, 0), 0)
+    : earnedCores(resets, data.prestige.rewardStep);
   if (maxed) {
     for (const spec of data.prestige.upgrades) {
       for (let i = 0; i < spec.maxLevel; i += 1) {
@@ -131,23 +143,37 @@ function stateSummary(e) {
 }
 function replayGalaxy(profile) {
   const e = new S2Engine(data, { seed: 42 });
-  let compiled = 0; let events = 0;
-  for (let day = 0; day < 180 && !e.galaxyComplete(); day += 1) {
-    e.mineBlock(1200);
+  let compiled = 0; let events = 0; let coreMaxedMinute = null;
+  const allCoreMaxed = () => data.prestige.upgrades.every(
+    (spec) => e.state.coreLevels[spec.key] === spec.maxLevel,
+  );
+  for (let block = 0; block < 365 * 144 && !e.galaxyComplete(); block += 1) {
+    e.mineBlock(10);
     compiled += e.lastBatchSummary.compiled;
     events += e.lastBatchSummary.events;
-    if (profile === "daily") e.strategyVisit();
-    if (e.state.planetComplete && e.state.resets === 0) {
-      e.setCoreAutoRoute("balanced");
-      e.departPlanet();
+    if (coreMaxedMinute === null && allCoreMaxed()) {
+      coreMaxedMinute = e.state.minute;
     }
-    e.mineBlock(240);
-    compiled += e.lastBatchSummary.compiled;
-    events += e.lastBatchSummary.events;
+    if (e.state.minute % 1440 === 1200) {
+      if (profile === "daily") e.strategyVisit();
+      if (e.state.coreAutoRoute === "off" && e.state.completedPlanets > 0) {
+        e.setCoreAutoRoute("balanced");
+      }
+      if (coreMaxedMinute === null && allCoreMaxed()) {
+        coreMaxedMinute = e.state.minute;
+      }
+      if (e.state.planetComplete && e.state.resets === 0) {
+        e.departPlanet();
+      }
+    }
   }
   return {
     state: stateSummary(e), rng: e.rng.snapshot(), compiled, events,
     elapsedDays: e.state.planetHistory.at(-1).completedMinute / 1440,
+    coreMaxedMinute,
+    tailDays: (
+      e.state.planetHistory.at(-1).completedMinute - coreMaxedMinute
+    ) / 1440,
   };
 }
 
@@ -174,9 +200,13 @@ const beforePurchase = {
 partial.purchaseCore("core_refining");
 const rebuilt = partial.voyagePlan();
 
-const million = fixture({ resets: 20000, maxed: true });
-million.mineBlock(365 * 1440);
-const ms = million.state;
+const batch = fixture({ resets: 500000, maxed: true });
+const batchStart = batch.state.completedPlanets;
+const batchPlan = batch.voyagePlan();
+batch.mineBlock(
+  batchPlan.duration * (data.prestige.galaxyTargetPlanets - batchStart) + 1,
+);
+const bs = batch.state;
 console.log(JSON.stringify({
   integrals,
   rewards: [0, 1, 5, 6, 10, 100, 1000000]
@@ -191,16 +221,18 @@ console.log(JSON.stringify({
     rebuiltInitialAge: rebuilt.initialAge,
     rebuiltDuration: rebuilt.duration,
   },
-  million: {
-    minute: ms.minute,
-    planetStartedMinute: ms.planetStartedMinute,
-    completedPlanets: ms.completedPlanets,
-    resets: ms.resets,
-    cores: ms.cores,
-    planetComplete: ms.planetComplete,
-    history: ms.planetHistory,
-    lastBatchSummary: million.lastBatchSummary,
-    totalAutoLevels: ms.totalAutoLevels,
+  batch: {
+    start: batchStart,
+    planDuration: batchPlan.duration,
+    minute: bs.minute,
+    planetStartedMinute: bs.planetStartedMinute,
+    completedPlanets: bs.completedPlanets,
+    resets: bs.resets,
+    cores: bs.cores,
+    planetComplete: bs.planetComplete,
+    history: bs.planetHistory,
+    lastBatchSummary: batch.lastBatchSummary,
+    totalAutoLevels: bs.totalAutoLevels,
   },
   galaxy: {
     daily: replayGalaxy("daily"),
@@ -214,6 +246,9 @@ def assert_near_tree(
     actual: object,
     expected: object,
     path: str = "root",
+    *,
+    rel: float = 2e-10,
+    abs_: float = 2e-7,
 ) -> None:
     if (
         type(actual) is int
@@ -229,14 +264,20 @@ def assert_near_tree(
     ):
         assert actual == pytest.approx(
             expected,
-            rel=2e-10,
-            abs=2e-7,
+            rel=rel,
+            abs=abs_,
         ), path
         return
     if isinstance(actual, dict) and isinstance(expected, dict):
         assert actual.keys() == expected.keys(), path
         for key in actual:
-            assert_near_tree(actual[key], expected[key], f"{path}.{key}")
+            assert_near_tree(
+                actual[key],
+                expected[key],
+                f"{path}.{key}",
+                rel=rel,
+                abs_=abs_,
+            )
         return
     if isinstance(actual, (list, tuple)) and isinstance(
         expected,
@@ -244,7 +285,13 @@ def assert_near_tree(
     ):
         assert len(actual) == len(expected), path
         for index, (left, right) in enumerate(zip(actual, expected)):
-            assert_near_tree(left, right, f"{path}[{index}]")
+            assert_near_tree(
+                left,
+                right,
+                f"{path}[{index}]",
+                rel=rel,
+                abs_=abs_,
+            )
         return
     assert actual == expected, path
 
@@ -275,6 +322,12 @@ def voyage_fixture(
     maxed: bool = False,
 ) -> SimulationState:
     state = SimulationState(deterministic=True)
+    if maxed:
+        resets = max(
+            resets,
+            500_000,
+            *(spec.unlock_resets for spec in CORE_SPECS.values()),
+        )
     state.resets = state.completed_planets = resets
     state.minute = state.planet_started_minute = resets * 10
     state._next_auto_minute = (
@@ -287,7 +340,18 @@ def voyage_fixture(
     ) * int(RULES["helperIntervalMinutes"])
     state.day = math.floor(state.minute / 1440) + 1
     step = int(PRESTIGE_CONFIG["rewardStep"])
-    state.cores = earned_cores(resets, step)
+    state.cores = (
+        sum(
+            spec.base_cost
+            * sum(
+                spec.cost_growth**level
+                for level in range(spec.max_level)
+            )
+            for spec in CORE_SPECS.values()
+        )
+        if maxed
+        else earned_cores(resets, step)
+    )
     if maxed:
         for spec in CORE_SPECS.values():
             for _ in range(spec.max_level):
@@ -409,25 +473,40 @@ def assert_rng_matches_js(
         )
 
 
-def replay_galaxy(profile: str) -> tuple[SimulationState, int, int]:
+def replay_galaxy(
+    profile: str,
+) -> tuple[SimulationState, int, int, float | None]:
     state = SimulationState(seed=42)
     compiled = 0
     events = 0
-    for _ in range(180):
+    core_maxed_minute = None
+    for _ in range(365 * 144):
         if state.galaxy_complete():
             break
-        state.mine_block(1200)
+        state.mine_block(10)
         compiled += state.last_batch_summary["compiled"]
         events += state.last_batch_summary["events"]
-        if profile == "daily":
-            strategy_visit(state)
-        if state.planet_complete and state.resets == 0:
-            state.set_core_auto_route("balanced")
-            assert state.depart_planet() == (True, "")
-        state.mine_block(240)
-        compiled += state.last_batch_summary["compiled"]
-        events += state.last_batch_summary["events"]
-    return state, compiled, events
+        if core_maxed_minute is None and all(
+            state.core_levels[key] == spec.max_level
+            for key, spec in CORE_SPECS.items()
+        ):
+            core_maxed_minute = state.minute
+        if state.minute % 1440 == 1200:
+            if profile == "daily":
+                strategy_visit(state)
+            if (
+                state.core_auto_route == "off"
+                and state.completed_planets > 0
+            ):
+                state.set_core_auto_route("balanced")
+            if core_maxed_minute is None and all(
+                state.core_levels[key] == spec.max_level
+                for key, spec in CORE_SPECS.items()
+            ):
+                core_maxed_minute = state.minute
+            if state.planet_complete and state.resets == 0:
+                assert state.depart_planet() == (True, "")
+    return state, compiled, events, core_maxed_minute
 
 
 def test_integral_inverse_and_core_prefix_match_javascript() -> None:
@@ -485,7 +564,11 @@ def test_compiled_voyage_and_partial_samples_match_javascript() -> None:
         for age in (0, plan["duration"] / 3, plan["duration"])
     ]
     assert_near_tree(samples, reference["samples"], "samples")
-    assert len(plan["events"]) == 333
+    assert len(plan["events"]) == sum(
+        spec.max_level
+        for spec in state.specs.values()
+        if spec.status == "active"
+    )
     assert plan["duration"] - plan["end"]["all_maxed_age"] > 4 * 1440
 
 
@@ -558,11 +641,26 @@ def test_continuous_partitioning_and_auto_core_boundaries_are_stable() -> None:
         slow.mine_block(10)
         if index == 37:
             slow = copy.deepcopy(slow)
-    assert_near_tree(
-        state_summary(fast),
-        state_summary(slow),
-        "core_boundaries",
-    )
+    left = state_summary(fast)
+    right = state_summary(slow)
+    # Bound resource drift by the measured clock error, not a global tolerance.
+    clock_drift = abs(fast.planet_started_minute - slow.planet_started_minute)
+    assert clock_drift < 1e-8
+    for key, rate in (
+        (
+            "credits",
+            float(RULES["baseCreditsPerMinute"])
+            * max(fast.income_multiplier(), slow.income_multiplier()),
+        ),
+        (
+            "depth",
+            float(RULES["baseDepthPerMinute"])
+            * max(fast.depth_multiplier(), slow.depth_multiplier()),
+        ),
+    ):
+        assert abs(left[key] - right[key]) <= 2e-7 + 2 * clock_drift * rate, key
+        right[key] = left[key]
+    assert_near_tree(left, right, "core_boundaries")
     assert fast.last_batch_summary["compiled"] <= 80
 
 
@@ -633,7 +731,7 @@ def test_every_compiled_purchase_meets_actual_preconditions() -> None:
 def test_natural_balanced_galaxy_replay_matches_javascript(
     profile: str,
 ) -> None:
-    state, compiled, events = replay_galaxy(profile)
+    state, compiled, events, core_maxed_minute = replay_galaxy(profile)
     reference = js_reference()["galaxy"][profile]
 
     assert_near_tree(
@@ -642,37 +740,52 @@ def test_natural_balanced_galaxy_replay_matches_javascript(
         f"galaxy.{profile}.state",
     )
     assert_rng_matches_js(state, reference["rng"])
-    assert compiled == reference["compiled"] == 67
-    assert events == reference["events"] == 22_311
-    assert (
-        state.completed_planets
-        == reference["state"]["completed_planets"]
-        == 1_000_000
+    assert compiled == reference["compiled"]
+    assert events == reference["events"]
+    target = int(PRESTIGE_CONFIG["galaxyTargetPlanets"])
+    assert state.completed_planets == reference["state"]["completed_planets"] == target
+    expected_spend = sum(
+        spec.base_cost
+        * sum(
+            spec.cost_growth**level
+            for level in range(spec.max_level)
+        )
+        for spec in CORE_SPECS.values()
     )
-    assert state.cores == reference["state"]["cores"] == 99_990_007_655
+    expected_cores = (
+        earned_cores(target, int(PRESTIGE_CONFIG["rewardStep"]))
+        - expected_spend
+    )
+    assert state.cores == reference["state"]["cores"]
+    assert state.cores == expected_cores
     assert state.total_auto_levels == reference["state"]["total_auto_levels"]
-    assert 120 < reference["elapsedDays"] < 150
-    expected_levels = {
-        "planet_drive": 8,
-        "core_drill": 8,
-        "core_refining": 8,
-        "core_depth": 8,
-        "stellar_forge": 8,
-        "stellar_relay": 8,
-        "galactic_drive": 20,
-    }
     assert state.core_levels == reference["state"]["core_levels"]
-    assert state.core_levels == expected_levels
+    assert state.core_levels == {
+        key: spec.max_level
+        for key, spec in CORE_SPECS.items()
+    }
+    assert core_maxed_minute == reference["coreMaxedMinute"]
+    assert core_maxed_minute is not None
+    tail_days = (
+        state.planet_history[-1]["completed_minute"] - core_maxed_minute
+    ) / 1440
+    assert tail_days == pytest.approx(reference["tailDays"], abs=1e-9)
+    assert 4.9 < tail_days < 5.1
 
 
-def test_million_planet_batch_matches_javascript_and_stays_bounded() -> None:
-    state = voyage_fixture(resets=20_000, maxed=True)
+def test_configured_target_batch_matches_javascript_and_stays_bounded() -> None:
+    state = voyage_fixture(resets=500_000, maxed=True)
+    start = state.completed_planets
+    plan = state.voyage_plan()
+    target = int(PRESTIGE_CONFIG["galaxyTargetPlanets"])
     started = time.perf_counter()
-    state.mine_block(365 * 1440)
+    state.mine_block(plan["duration"] * (target - start) + 1)
     elapsed = time.perf_counter() - started
 
-    expected = js_reference()["million"]
+    expected = js_reference()["batch"]
     actual = {
+        "start": start,
+        "planDuration": plan["duration"],
         "minute": state.minute,
         "planetStartedMinute": state.planet_started_minute,
         "completedPlanets": state.completed_planets,
@@ -687,15 +800,82 @@ def test_million_planet_batch_matches_javascript_and_stays_bounded() -> None:
         **expected,
         "history": normalize_js_history(expected["history"]),
     }
-    assert_near_tree(actual, expected, "million")
-    assert state.completed_planets == 1_000_000
-    assert state.resets == 999_999
-    assert len(state.planet_history) == 20
-    assert state.last_batch_summary == {
-        "planets": 980_000,
-        "compiled": 1,
-        "events": 333,
-    }
+    assert_near_tree(actual, expected, "batch")
+    assert state.completed_planets == target
+    assert state.resets == target - 1
+    assert state.cores == (
+        earned_cores(target, int(PRESTIGE_CONFIG["rewardStep"]))
+        - earned_cores(start, int(PRESTIGE_CONFIG["rewardStep"]))
+    )
+    assert len(state.planet_history) == int(PRESTIGE_CONFIG["historyLimit"])
+    assert state.last_batch_summary["planets"] == target - start
+    assert state.last_batch_summary["compiled"] == 0
+    assert state.last_batch_summary["events"] == 0
     assert len(state.last_block_events) <= 1024
     assert elapsed < 2.0
     assert state.depart_planet() == (False, "galaxy")
+
+
+def test_opening_burst_splits_exactly_and_never_overawards_work() -> None:
+    burst_key = next(
+        key
+        for key, spec in CORE_SPECS.items()
+        if spec.effect_kind == "opening_burst"
+    )
+    state = SimulationState(deterministic=True)
+    state.completed_planets = state.resets = CORE_SPECS[
+        burst_key
+    ].unlock_resets
+    state.core_levels[burst_key] = 1
+    plan = state.voyage_plan()
+    boundary = float(PRESTIGE_CONFIG["openingBurstSeconds"]) / 60
+
+    assert plan["segments"][0]["age"] == 0
+    assert plan["segments"][0]["end_age"] == pytest.approx(boundary)
+    assert plan["segments"][1]["age"] == pytest.approx(boundary)
+    first = plan["segments"][0]
+    second = plan["segments"][1]
+    work = mining_work(
+        first["age"],
+        first["end_age"],
+        first["teamwork"],
+        first["momentum"],
+    )
+    assert second["credits"] == pytest.approx(
+        first["credits"] + first["income"] * work
+    )
+    assert second["depth"] == pytest.approx(
+        first["depth"] + first["depth_rate"] * work
+    )
+    assert second["credits"] < state.cost_for(next(iter(state.local_keys)))
+    assert second["depth"] < state.target_depth
+
+    epsilon = boundary / 1000
+    before = sample_voyage(plan, boundary - epsilon)
+    at = sample_voyage(plan, boundary)
+    after = sample_voyage(plan, boundary + epsilon)
+    assert before["credits"] < at["credits"] < after["credits"]
+    assert before["depth"] < at["depth"] < after["depth"]
+    assert first["income"] > second["income"]
+    assert first["depth_rate"] > second["depth_rate"]
+
+
+def test_short_voyage_stays_inside_opening_burst() -> None:
+    burst_key = next(
+        key
+        for key, spec in CORE_SPECS.items()
+        if spec.effect_kind == "opening_burst"
+    )
+    state = SimulationState(deterministic=True)
+    state.completed_planets = state.resets = CORE_SPECS[
+        burst_key
+    ].unlock_resets
+    state.core_levels[burst_key] = 1
+    state.target_depth = 1
+
+    plan = state.voyage_plan()
+    boundary = float(PRESTIGE_CONFIG["openingBurstSeconds"]) / 60
+
+    assert plan["duration"] < boundary
+    assert len(plan["segments"]) == 1
+    assert plan["end"]["depth"] == pytest.approx(state.target_depth)

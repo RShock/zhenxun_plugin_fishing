@@ -8,7 +8,8 @@ const data = JSON.parse(await readFile(new URL("../../../../web/static/s2-vnext/
 const active = data.upgrades.filter((spec) => spec.status === "active");
 const regions = Object.fromEntries(data.multiplierRegions.map((region) => [region.key, region]));
 const terms = new Set([
-  "矿币收益", "挖矿深度", "自动线",
+  "矿币收益", "挖矿深度", "自动线", "矿币价格",
+  ...data.resources.map((resource) => resource.name),
   ...data.multiplierRegions.map((region) => region.name),
   ...active.map((spec) => spec.name),
   ...data.prestige.upgrades.map((spec) => spec.name),

@@ -97,12 +97,18 @@ export function compileVoyage(engine) {
         work = distance; boundary = { kind: isDepth ? "depth" : "credits", value };
       }
     }
-    const nextAge = timeForWork(s.minute, work, teamwork, momentum);
+    let nextAge = timeForWork(s.minute, work, teamwork, momentum);
+    const burstEnd = engine.data.prestige.openingBurstSeconds / 60;
+    if (engine.coreEffect("opening_burst") > 0 && s.minute < burstEnd && nextAge > burstEnd) {
+      nextAge = burstEnd;
+      work = miningWork(s.minute, nextAge, teamwork, momentum);
+      boundary = null;
+    }
     if (!Number.isFinite(nextAge) || nextAge <= s.minute) throw new Error("Non-progressing voyage event");
     segments.push({ ...localSnapshot(engine, eraAges), endAge: nextAge, income, depthRate: depth, teamwork, momentum });
     s.credits += income * work;
     s.depth = Math.min(s.targetDepth, s.depth + depth * work);
-    s[boundary.kind] = Math.max(s[boundary.kind], boundary.value);
+    if (boundary) s[boundary.kind] = Math.max(s[boundary.kind], boundary.value);
     s.minute = nextAge;
     s.day = Math.floor(s.minute / 1440) + 1;
   }

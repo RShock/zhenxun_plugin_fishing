@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import test from "node:test";
-import { S2Engine } from "../../../../web/static/s2-vnext/engine.js";
-import { miningWork, timeForWork, earnedCores } from "../../../../web/static/s2-vnext/voyage.js";
-import { replayGalaxy } from "./s2_galaxy_replay.mjs";
+import { S2Engine, validateGameData } from "../../../../web/static/s2-vnext/engine.js";
+import { miningWork, timeForWork, earnedCores, compileVoyage, sampleVoyage } from "../../../../web/static/s2-vnext/voyage.js";
+import { replayGalaxy, calibrateGalaxyGoal } from "./s2_galaxy_replay.mjs";
 
 const data = JSON.parse(fs.readFileSync(new URL("../../../../web/static/s2-vnext/game_data.json", import.meta.url)));
 function close(a, b, label = "") {
@@ -106,13 +107,13 @@ test("core changes invalidate the partial voyage and completed template, core ba
   assert.notEqual(c, b);
 });
 
-test("million-planet settlement is bounded and stops at galaxy completion with valid history and save", () => {
-  const e = fixture({ resets: 20000, maxed: true });
+test("multi-million-planet settlement is bounded and stops at the configured goal with valid history and save", () => {
+  const e = fixture({ resets: 500000, maxed: true });
   const started = performance.now();
   e.mineBlock(365 * 1440);
   const elapsed = performance.now() - started;
-  assert.equal(e.state.completedPlanets, 1000000);
-  assert.equal(e.state.resets, 999999);
+  assert.equal(e.state.completedPlanets, data.prestige.galaxyTargetPlanets);
+  assert.equal(e.state.resets, data.prestige.galaxyTargetPlanets - 1);
   assert.equal(e.state.planetComplete, true);
   assert.equal(e.state.planetHistory.length, 20);
   assert.equal(e.lastBatchSummary.compiled, 1);
@@ -125,7 +126,7 @@ test("million-planet settlement is bounded and stops at galaxy completion with v
   assert.equal(e.departPlanet().reason, "galaxy");
   e.mineBlock(1440);
   assert.equal(e.state.cores, cores); assert.equal(e.state.totalAutoLevels, levels);
-  console.log(`million settlement: ${elapsed.toFixed(2)}ms, ${e.state.planetHistory.at(-1).minutes * 60}s/planet`);
+  console.log(`galaxy settlement: ${elapsed.toFixed(2)}ms, ${e.state.planetHistory.at(-1).minutes * 60}s/planet`);
 });
 
 test("batched settlement matches an independent per-planet reward/reset loop", () => {
@@ -172,7 +173,19 @@ test("core auto-purchase boundaries match small advances, including unlocks and 
     b.mineBlock(10);
     if (i === 37) b = new S2Engine(data, { state: b.snapshot() });
   }
-  compare(a.snapshot(), b.snapshot());
+  const left = a.snapshot(); const right = b.snapshot();
+  // Repeated global-clock additions may drift by nanoseconds. Propagate that
+  // measured drift through production; core balances and levels remain exact.
+  const clockDrift = Math.abs(a.state.planetStartedMinute - b.state.planetStartedMinute);
+  assert.ok(clockDrift < 1e-8, `clock drift: ${clockDrift} minutes`);
+  for (const [key, rate] of [
+    ["credits", data.rules.baseCreditsPerMinute * Math.max(a.incomeMultiplier(), b.incomeMultiplier())],
+    ["depth", data.rules.baseDepthPerMinute * Math.max(a.depthMultiplier(), b.depthMultiplier())],
+  ]) {
+    assert.ok(Math.abs(left.state[key] - right.state[key]) <= 2e-7 + 2 * clockDrift * rate, key);
+    right.state[key] = left.state[key];
+  }
+  compare(left, right);
   assert.ok(a.state.completedPlanets > 100);
   assert.ok(a.lastBatchSummary.compiled <= 80);
 });
@@ -277,11 +290,174 @@ test("each compiled purchase is paid, meets depth and prerequisites, and has the
 test("natural daily and absent starts reach second-level voyages and the galaxy without gifted research", () => {
   for (const profile of ["daily", "absent"]) {
     const { engine, result } = replayGalaxy(data, { profile, route: "balanced", days: 180 });
-    assert.equal(result.completedPlanets, 1000000);
-    assert.ok(result.elapsedDays > 120 && result.elapsedDays < 150);
+    assert.equal(result.completedPlanets, data.prestige.galaxyTargetPlanets);
+    assert.ok(result.elapsedDays > 120 && result.elapsedDays < 180);
     assert.equal(result.stages.at(-1).thresholdSeconds, 1);
     assert.ok(result.stages.at(-1).seconds <= 1);
-    assert.ok(result.compiled <= 80);
+    assert.ok(result.compiled <= 100);
+    assert.equal(result.research.length, data.prestige.upgrades.reduce((n, spec) => n + spec.maxLevel, 0));
+    assert.ok(result.productiveTailDays >= 5 && result.productiveTailDays < 5.02);
+    assert.ok(result.researchComplete.planets < result.completedPlanets);
     assert.deepEqual(new S2Engine(data, { state: engine.snapshot() }).snapshot(), engine.snapshot());
   }
+});
+
+test("burst is integrated only during the first second, including a purchase inside that second", () => {
+  const e = fixture({ resets: 1200 });
+  // This tiny controlled planet finishes before any local technology is affordable.
+  e.state.minute = 0; e.state.planetStartedMinute = 0; e.state.targetDepth = 20;
+  e.purchaseCore("big_bang");
+  const p = compileVoyage(e);
+  const boundary = 1 / 60;
+  assert.equal(p.segments[0].endAge, boundary);
+  close(p.segments[0].depthRate, 25 * 34);
+  close(p.segments[1].depthRate, 25);
+  close(sampleVoyage(p, boundary).depth, 25 * 34 / 60);
+  close(p.duration, boundary + (20 - 25 * 34 / 60) / 25);
+  close(p.end.credits, 20 * 8 / 25);
+
+  const late = fixture({ resets: 1200 });
+  late.mineBlock(0.5 / 60);
+  const prior = late.state.depth;
+  late.purchaseCore("big_bang");
+  late.mineBlock(1 / 60);
+  close(late.state.depth - prior, 25 * (34 * 0.5 + 0.5) / 60);
+  assert.equal(late.multiplierBreakdown().opening_burst, 1);
+  const levelBefore = late.state.coreLevels.big_bang;
+  late.state.cores += 1e6;
+  late.purchaseCore("big_bang");
+  assert.equal(late.state.coreLevels.big_bang, levelBefore + 1);
+  assert.equal(late.multiplierBreakdown().opening_burst, 1);
+});
+
+test("burst partial save, reload and one large step agree across the expiry boundary", () => {
+  const e = fixture({ resets: 1200 });
+  e.purchaseCore("big_bang");
+  e.mineBlock(0.4 / 60);
+  const a = new S2Engine(data, { state: e.snapshot() });
+  let b = new S2Engine(data, { state: e.snapshot() });
+  a.mineBlock(3 / 60);
+  for (let i = 0; i < 6; i += 1) {
+    b.mineBlock(0.5 / 60);
+    b = new S2Engine(data, { state: b.snapshot() });
+  }
+  compare(a.snapshot(), b.snapshot());
+});
+
+test("discount changes only local prices and full-build depth activates only after rebuilding every technology", () => {
+  const e = fixture({ resets: 100 });
+  const price = e.costFor("rotary_pick");
+  const corePrice = e.coreCost("core_drill");
+  const income = e.incomeMultiplier(); const depth = e.depthMultiplier();
+  e.purchaseCore("stellar_procurement");
+  assert.equal(e.costFor("rotary_pick"), price / 1.25);
+  assert.equal(e.coreCost("core_drill"), corePrice);
+  assert.equal(e.incomeMultiplier(), income); assert.equal(e.depthMultiplier(), depth);
+  e.purchaseCore("planetary_exhaustion");
+  assert.equal(e.multiplierBreakdown().completion_depth, 1);
+  for (const key of e.localKeys) e.state.levels[key] = e.specs[key].maxLevel;
+  assert.equal(e.multiplierBreakdown().completion_depth, 2);
+  const fullIncome = e.incomeMultiplier(); const fullDepth = e.depthMultiplier();
+  e.state.coreLevels.planetary_exhaustion = 0;
+  close(e.incomeMultiplier(), fullIncome); close(e.depthMultiplier(), fullDepth / 2);
+  e.state.coreLevels.planetary_exhaustion = 1;
+  e.clearLocalPlanet();
+  assert.equal(e.multiplierBreakdown().completion_depth, 1);
+});
+
+test("routes bootstrap cheaply, then save for their selected preference without crossing unlock boundaries", () => {
+  for (const route of ["balanced", "speed", "rebuild", "burst"]) {
+    const e = fixture({ resets: 1 });
+    e.setCoreAutoRoute(route);
+    assert.equal(e.state.coreLevels.planet_drive, 1);
+    assert.equal(e.state.cores, 0);
+  }
+  const e = fixture({ resets: 999 });
+  e.state.coreAutoRoute = "burst";
+  // The next planet unlocks Big Bang and may change the selected savings target.
+  assert.equal(e.planetsUntilCorePurchase(1000), 1);
+  const f = fixture({ resets: 10 });
+  f.state.cores = 2;
+  f.state.coreLevels.planet_drive = 1;
+  f.state.coreLevels.core_drill = 1;
+  f.setCoreAutoRoute("speed");
+  assert.equal(f.state.cores, 2, "wait for preferred 3-core engine instead of spending on 2-core refining");
+});
+
+test("research has value in its intended phase and burst changes from marginal to dominant", () => {
+  const full = fixture({ resets: 500000, maxed: true });
+  const duration = plan(full).duration;
+  for (const spec of data.prestige.upgrades) {
+    if (spec.effectKind === "completion_depth") continue;
+    const reduced = new S2Engine(data, { state: full.snapshot() });
+    reduced.state.coreLevels[spec.key] -= 1;
+    assert.ok(plan(reduced).duration > duration * 1.00001, spec.key);
+  }
+  const finisher = fixture({ resets: 100 });
+  const unfinishedDuration = plan(finisher).duration;
+  finisher.purchaseCore("planetary_exhaustion");
+  assert.ok(unfinishedDuration / plan(finisher).duration > 1.05);
+  assert.equal(finisher.coreSpecs.planetary_exhaustion.maxLevel, 3, "early specialist ends cheaply rather than pretending to scale late");
+  const early = fixture({ resets: 1200 });
+  const baseline = plan(early).duration;
+  early.purchaseCore("big_bang");
+  const earlyGain = baseline / plan(early).duration;
+  assert.ok(earlyGain > 1 && earlyGain < 1.001, String(earlyGain));
+  const without = new S2Engine(data, { state: full.snapshot() });
+  without.state.coreLevels.big_bang = 0;
+  assert.ok(plan(without).duration / duration > 90);
+});
+
+test("prestige-2 real historical save migrates spending at old prices, then new purchases use current prices", () => {
+  const oldData = JSON.parse(execFileSync("git", ["show", "1883bef:web/static/s2-vnext/game_data.json"],
+    { cwd: new URL("../../../../", import.meta.url), encoding: "utf8" }));
+  const old = fixture({ resets: 1000 }).snapshot();
+  old.state.contentVersion = "prestige-2";
+  delete old.state.legacyCoreLevels;
+  old.state.coreLevels = Object.fromEntries(oldData.prestige.upgrades.map((spec) => [spec.key, 2]));
+  old.state.cores = earnedCores(1000, data.prestige.rewardStep)
+    - oldData.prestige.upgrades.reduce((n, spec) => n + spec.baseCost * (1 + spec.costGrowth), 0);
+  const untouched = structuredClone(old);
+  const e = new S2Engine(data, { state: old });
+  assert.deepEqual(old, untouched);
+  assert.equal(e.state.coreAutoRoute, "off");
+  assert.equal(e.state.coreLevels.big_bang, 0);
+  assert.equal(e.state.legacyCoreLevels.core_drill, 2);
+  const before = e.state.cores;
+  assert.equal(e.purchaseCore("core_drill").ok, true);
+  assert.equal(e.state.cores, before - e.coreSpecs.core_drill.baseCost * e.coreSpecs.core_drill.costGrowth ** 2);
+  assert.deepEqual(new S2Engine(data, { state: e.snapshot() }).snapshot(), e.snapshot());
+  for (const damage of [
+    (s) => { delete s.legacyCoreLevels; },
+    (s) => { s.legacyCoreLevels.core_drill = 9; },
+    (s) => { s.legacyCoreLevels.big_bang = 1; },
+    (s) => { s.cores += 1; },
+  ]) {
+    const broken = e.snapshot(); damage(broken.state);
+    assert.throws(() => new S2Engine(data, { state: broken }));
+  }
+});
+
+test("all preset routes finish research before the configured productive tail", () => {
+  for (const route of ["speed", "rebuild", "burst"]) {
+    const { result, engine } = replayGalaxy(data, { route, days: 220 });
+    assert.equal(result.completedPlanets, data.prestige.galaxyTargetPlanets, route);
+    assert.ok(result.productiveTailDays >= 5 && result.productiveTailDays < 5.02, route);
+    assert.deepEqual(new S2Engine(data, { state: engine.snapshot() }).snapshot(), engine.snapshot());
+  }
+});
+
+test("galaxy target is derived from completed research plus five productive days", () => {
+  const original = structuredClone(data);
+  const result = calibrateGalaxyGoal(data, { days: 180 });
+  assert.equal(result.recommendedTarget, data.prestige.galaxyTargetPlanets);
+  assert.ok(result.actualTailDays >= 5 && result.actualTailDays < 5.02);
+  assert.ok(result.researchComplete.planets < result.recommendedTarget);
+  assert.ok(result.finalSeconds > 0 && result.finalSeconds < 1);
+  assert.deepEqual(data, original);
+  assert.throws(() => calibrateGalaxyGoal(data, { tailDays: 0 }));
+  assert.throws(() => calibrateGalaxyGoal(data, { roundTo: 0 }));
+  const unsafe = structuredClone(data);
+  unsafe.prestige.galaxyTargetPlanets = 1e9;
+  assert.throws(() => validateGameData(unsafe), /prestige/);
 });

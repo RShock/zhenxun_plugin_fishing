@@ -2,7 +2,7 @@
   "$schema": "./game_data.schema.json",
   "schemaVersion": 3,
   "gameVersion": "s2-vnext-v3-helper-1",
-  "contentVersion": "prestige-2",
+  "contentVersion": "prestige-3",
   "playtestDays": 30,
   "rules": {
     "settlementMinutes": 10,
@@ -24,7 +24,17 @@
   },
   "prestige": {
     "planetTargetDepth": 2.4e19,
-    "galaxyTargetPlanets": 1000000,
+    "galaxyTargetPlanets": 1952000,
+    "openingBurstSeconds": 1,
+    "legacyCorePrices": {
+      "planet_drive": [1, 3, 8],
+      "core_drill": [1, 2, 8],
+      "core_refining": [2, 2, 8],
+      "core_depth": [2, 2, 8],
+      "stellar_forge": [3, 2, 8],
+      "stellar_relay": [5, 2, 8],
+      "galactic_drive": [10, 2, 20]
+    },
     "rewardStep": 5,
     "historyLimit": 20,
     "upgrades": [
@@ -38,44 +48,65 @@
       {
         "key": "core_drill",
         "name": "行星核心钻头",
-        "description": "永久强化每代钻头。每级使所有**挖矿速度**科技的单级强度增加基础值的18%；从手工矿镐到未来设备都能受益，重新购买设备后生效。",
-        "unlockResets": 1, "baseCost": 1, "costGrowth": 2, "maxLevel": 8,
-        "effectKind": "speed_strength", "effectPerLevel": 0.18
+        "description": "永久强化每代钻头。每级使所有**挖矿速度**科技的单级强度增加基础值的30%；从手工矿镐到未来设备都能受益，重新购买设备后生效。",
+        "unlockResets": 1, "baseCost": 1, "costGrowth": 4, "maxLevel": 8,
+        "effectKind": "speed_strength", "effectPerLevel": 0.3
       },
       {
         "key": "core_refining",
         "name": "核心精炼工艺",
         "description": "每级使**额外收入**和**班次接力**类设备的单级强度增加基础值的50%，提高**矿币收益**。不直接增加**挖矿深度**，但可以更早买齐设备。",
-        "unlockResets": 1, "baseCost": 2, "costGrowth": 2, "maxLevel": 8,
+        "unlockResets": 1, "baseCost": 2, "costGrowth": 4, "maxLevel": 8,
         "effectKind": "income_strength", "effectPerLevel": 0.5
       },
       {
         "key": "core_depth",
         "name": "地核穿透材料",
         "description": "每级使**额外深度**和**过量穿透**类设备的单级强度增加基础值的50%，提高**挖矿深度**。不增加**矿币收益**，适合缩短设备满级后的挖掘时间。",
-        "unlockResets": 1, "baseCost": 2, "costGrowth": 2, "maxLevel": 8,
+        "unlockResets": 1, "baseCost": 2, "costGrowth": 5, "maxLevel": 8,
         "effectKind": "depth_strength", "effectPerLevel": 0.5
       },
       {
         "key": "stellar_forge",
         "name": "恒星系装备铸造",
         "description": "每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的20%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。",
-        "unlockResets": 3, "baseCost": 3, "costGrowth": 2, "maxLevel": 8,
+        "unlockResets": 3, "baseCost": 3, "costGrowth": 6, "maxLevel": 8,
         "effectKind": "equipment_strength", "effectPerLevel": 0.2
       },
       {
         "key": "stellar_relay",
         "name": "恒星系联合勘探",
         "description": "每级让当前星球每条已建成的**自动线**贡献1.5%的加成；各条线的贡献相加，再同时提升**矿币收益**和**挖矿深度**。换星后需重建设备，才能重新获得这些加成。",
-        "unlockResets": 5, "baseCost": 5, "costGrowth": 2, "maxLevel": 8,
+        "unlockResets": 5, "baseCost": 5, "costGrowth": 8, "maxLevel": 8,
         "effectKind": "line_synergy", "effectPerLevel": 0.015
       },
       {
         "key": "galactic_drive",
         "name": "银河远航引擎",
-        "description": "每级令**矿币收益**和**挖矿深度**同时翻倍。即使新星球还没有任何设备也会生效；本地科技仍然需要从零购买。",
-        "unlockResets": 10, "baseCost": 10, "costGrowth": 2, "maxLevel": 20,
-        "effectKind": "global_speed", "effectPerLevel": 1
+        "description": "每级令**矿币收益**和**挖矿深度**同时乘以约1.189；每4级合计翻倍。空矿井也生效，但本地科技仍需从零付费建设。",
+        "unlockResets": 10, "baseCost": 10, "costGrowth": 3, "maxLevel": 20,
+        "effectKind": "global_speed", "effectPerLevel": 0.25
+      },
+      {
+        "key": "stellar_procurement",
+        "name": "星际标准化建设",
+        "description": "永久降低全部本地设备的**矿币价格**。第L级将原价除以(1+0.25L)，8级时只需原价的三分之一；不降低**星球核心**价格，不改变**挖矿深度**和科技前置要求。适合反复重建设备。",
+        "unlockResets": 5, "baseCost": 8, "costGrowth": 4, "maxLevel": 8,
+        "effectKind": "local_discount", "effectPerLevel": 0.25
+      },
+      {
+        "key": "planetary_exhaustion",
+        "name": "行星解体工程",
+        "description": "本星全部本地科技满级后，额外提高**挖矿深度**。1/2/3级为×2/×3/×4；不增加**矿币收益**。换星后暂时失效，设备重新满级才恢复。这是前中期缩短最后挖掘时间的低价科技，后期重建占比提高后作用减小。",
+        "unlockResets": 3, "baseCost": 2, "costGrowth": 3, "maxLevel": 3,
+        "effectKind": "completion_depth", "effectPerLevel": 1
+      },
+      {
+        "key": "big_bang",
+        "name": "大爆发",
+        "description": "每次抵达新星球后的前1秒，**矿币收益**和**挖矿深度**同时获得爆发倍率：1/2/3级为×34/×67/×100。过期恢复正常，购买不会重启这一秒；长航程收益有限，短航程可让整颗星球都处于爆发期。",
+        "unlockResets": 1000, "baseCost": 100000, "costGrowth": 10, "maxLevel": 3,
+        "effectKind": "opening_burst", "effectPerLevel": 33
       }
     ]
   },

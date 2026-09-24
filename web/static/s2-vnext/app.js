@@ -1,5 +1,5 @@
-import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-prestige-2";
-import { renderDescription } from "./description.js?v=3-readable-tech-1";
+import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-prestige-3";
+import { renderDescription } from "./description.js?v=3-prestige-3";
 
 const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
 const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
@@ -188,7 +188,9 @@ function renderHelper() {
 }
 function renderNext() {
   if (engine.state.planetComplete) {
-    $("#nextName").textContent = engine.galaxyComplete() ? "一百万颗星球开采完成" : `第 ${currentPlanet()} 颗星球已挖穿`;
+    $("#nextName").textContent = engine.galaxyComplete()
+      ? `${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球开采完成`
+      : `第 ${currentPlanet()} 颗星球已挖穿`;
     renderDescription($("#nextReason"), engine.galaxyComplete()
       ? "**银河开采目标**已经完成，生产与启程均已永久停止。"
       : "星球核心奖励已结算，本星球不再生产。请在**行星航程**中确认重置内容并启程。");
@@ -313,9 +315,21 @@ function renderMultipliers() {
   Object.entries(engine.multiplierBreakdown()).filter(([, value]) => value > 1.000001).forEach(([key, value]) => {
     const region = data.multiplierRegions.find((item) => item.key === key || item.key === key.replace("_", ""));
     const row = document.createElement("div"); const label = document.createElement("span"); const count = document.createElement("b");
-    const prestigeNames = { prestige: "永久科技倍率", stellar_relay: "联合勘探" };
+    const prestigeNames = {
+      prestige: "永久科技倍率",
+      stellar_relay: "联合勘探",
+      opening_burst: "新星首秒大爆发",
+      completion_depth: "全科技满级深度",
+    };
     label.textContent = key === "critical" ? "暴击期望" : prestigeNames[key] || region?.name || key; count.textContent = formatMultiplier(value); row.append(label, count); root.append(row);
   });
+  const discount = engine.coreEffect("local_discount");
+  if (discount > 0) {
+    const row = document.createElement("div"); const label = document.createElement("span"); const count = document.createElement("b");
+    label.textContent = "本地设备成本";
+    count.textContent = `${formatMultiplier(1 / (1 + discount))} 原价`;
+    row.append(label, count); root.append(row);
+  }
   $("#incomeMultiplier").textContent = formatMultiplier(engine.incomeMultiplier());
   $("#depthMultiplier").textContent = formatMultiplier(engine.depthMultiplier());
 }
@@ -335,6 +349,51 @@ function coreGroup(spec) {
   if (Number(spec.unlockResets) <= 1) return ["planet", "行星技术"];
   if (Number(spec.unlockResets) <= 5) return ["star", "恒星系技术"];
   return ["galaxy", "银河技术"];
+}
+const coreStage = {
+  planet_drive: "适合阶段：**全航程**，尤其是新星空矿井与早期重建。",
+  core_drill: "适合阶段：**每颗星球的设备重建期**，速度科技等级逐步增多后更明显。",
+  core_refining: "适合阶段：**前中期攒矿币与重复建设**；它不直接增加深度。",
+  core_depth: "适合阶段：**设备成型后的冲深期**；它不直接增加矿币。",
+  stellar_forge: "适合阶段：**本地科技种类与等级较多后**，不强化速度和暴击率。",
+  stellar_relay: "适合阶段：**自动线逐步建成后**；新星开始时需重新建设自动线。",
+  galactic_drive: "适合阶段：**全航程与跨星推进**，每4级合计翻倍。",
+  stellar_procurement: "适合阶段：**每颗新星的重建期**，只降低本地设备矿币成本。",
+  planetary_exhaustion: "适合阶段：**前中期全部本地科技满级后的冲深**；后期重建时间占主导，整段航程收益会减弱。",
+  big_bang: "适合阶段：**极短的后期航程**；只覆盖抵达新星后的首1秒。",
+};
+function coreEffectSummary(spec, level) {
+  const nextLevel = Math.min(spec.maxLevel, level + 1);
+  const current = coreEffectAtLevel(spec, level);
+  if (level >= spec.maxLevel) return `当前：**${current}** · 已满级`;
+  return `当前：**${current}** · 下级：**${coreEffectAtLevel(spec, nextLevel)}**`;
+}
+function coreEffectAtLevel(spec, level) {
+  const amount = Number(spec.effectPerLevel) * level;
+  switch (spec.effectKind) {
+    case "global_linear":
+      return `矿币与深度 ${formatMultiplier(1 + amount)}`;
+    case "global_speed":
+      return `矿币与深度 ${formatMultiplier(2 ** amount)}`;
+    case "speed_strength":
+      return `速度科技单级强度 +${percent.format(amount)}`;
+    case "income_strength":
+      return `收入类单级强度 +${percent.format(amount)}`;
+    case "depth_strength":
+      return `深度类单级强度 +${percent.format(amount)}`;
+    case "equipment_strength":
+      return `适用本地科技单级强度 +${percent.format(amount)}`;
+    case "line_synergy":
+      return `每条自动线 +${percent.format(amount)}`;
+    case "local_discount":
+      return `本地成本 ÷${number.format(1 + amount)}（${percent.format(1 / (1 + amount))} 原价）`;
+    case "completion_depth":
+      return level ? `全满级后深度 ${formatMultiplier(1 + amount)}` : "全满级后深度效果未启用";
+    case "opening_burst":
+      return level ? `新星首1秒 ${formatMultiplier(1 + amount)}` : "新星首1秒效果未启用";
+    default:
+      return level ? `效果强度 ${number.format(amount)}` : "效果未启用";
+  }
 }
 function coreUnavailableReason(spec, level, cost) {
   if (level >= spec.maxLevel) return "已满级";
@@ -361,6 +420,7 @@ function buyCore(key) {
 function renderCoreShop() {
   const root = $("#coreShop"); root.replaceChildren();
   const upgrades = data.prestige?.upgrades || [];
+  $("#coreShopTitle").textContent = `星球核心技术（${upgrades.length}项）`;
   const grouped = new Map([["planet", []], ["star", []], ["galaxy", []]]);
   const labels = new Map();
   for (const spec of upgrades) {
@@ -390,21 +450,15 @@ function renderCoreShop() {
       const description = document.createElement("p"); description.className = "description";
       renderDescription(description, spec.description);
       const permanent = document.createElement("p"); permanent.className = "permanent-note";
-      if (spec.effectKind === "global_linear") {
-        const current = 1 + Number(spec.effectPerLevel) * level;
-        const next = 1 + Number(spec.effectPerLevel) * Math.min(spec.maxLevel, level + 1);
-        permanent.textContent = level >= spec.maxLevel
-          ? `当前总倍率 ${formatMultiplier(current)}`
-          : `当前总倍率 ${formatMultiplier(current)} · 下级 ${formatMultiplier(next)}`;
-      } else {
-        permanent.textContent = level > 0 ? `永久生效 ${level} 级` : "永久效果尚未启用";
-      }
+      renderDescription(permanent, coreEffectSummary(spec, level));
+      const stage = document.createElement("p"); stage.className = "core-stage";
+      renderDescription(stage, coreStage[spec.key] || "适合阶段：按当前航程需求选择。");
       const actions = document.createElement("div"); actions.className = "core-actions";
       const status = document.createElement("small"); status.textContent = reason || `可用星球核心 ${formatNumber(engine.state.cores)}`;
       const button = document.createElement("button"); button.className = "primary";
       button.textContent = level >= spec.maxLevel ? "已满级" : `购买 · ${formatNumber(cost)} 星球核心`;
       button.disabled = !available || engine.state.cores < cost; button.addEventListener("click", () => buyCore(spec.key));
-      actions.append(status, button); card.append(top, name, description, permanent, actions); grid.append(card);
+      actions.append(status, button); card.append(top, name, description, permanent, stage, actions); grid.append(card);
     }
     group.append(grid); root.append(group);
   }
@@ -447,6 +501,7 @@ function renderPrestige() {
   $("#completedValue").textContent = formatNumber(s.completedPlanets);
   $("#prestigeSpeed").textContent = formatMultiplier(engine.prestigeSpeed());
   $("#prestigeThreshold").textContent = thresholdSummary();
+  renderDescription($("#galaxyGoalNote"), `试玩终点为 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**，按本轮科技终点后约5天采矿标定；这是可继续调整的试玩目标，**不是倒计时**。`);
   const prestigeUnlocked = s.completedPlanets > 0;
   $("#prestigeLockedReward").hidden = prestigeUnlocked;
   $("#departurePanel").hidden = !prestigeUnlocked;
@@ -473,7 +528,7 @@ function renderPrestige() {
     renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与命令数**。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。`);
   } else {
     renderDescription($("#departureDescription"), engine.galaxyComplete()
-      ? "本银河的一百万颗星球已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技和全部累计统计**完整保留。"
+      ? `本银河的 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技和全部累计统计**完整保留。`
       : `挖穿目标深度后可前往下一颗星球。启程会重置**全部设备和全部本地科技等级**；**星球核心、永久科技和全部累计统计**会保留。当前永久基础速度 ${formatMultiplier(engine.prestigeSpeed())}，本星每项设备调试 ${thresholdSummary()}。`);
   }
   $("#autoDepartToggle").checked = s.autoDepart;
@@ -483,11 +538,17 @@ function renderPrestige() {
       : s.autoDepart ? "后续星球完成时自动启程；核心按托管路线处理。" : "后续星球完成后会停下，等待手动启程。"
     : "首次离开必须手动确认；此设置从下一颗星球起生效。";
   $("#coreAutoRoute").value = s.coreAutoRoute || "off";
-  $("#coreAutoRouteHint").textContent = s.coreAutoRoute === "balanced"
-    ? "每次设置或获得核心后，按可购买项目中的最低价格托管。"
-    : s.coreAutoRoute === "speed"
-      ? "只托管行星引擎、银河引擎与速度强化，按最低价格购买。"
-      : "关闭时所有永久科技保持手动购买；旧存档不会自动开启。";
+  const managedTargetRule = "从已解锁、未满级科技中选择目标；核心不足时固定目标存钱等待，不会改买别项。";
+  const preferenceUnlocked = s.completedPlanets >= 10;
+  const earlyRouteRule = `完成第10颗星球前，所有托管路线都先购买价格最低的科技；之后按所选路线安排研究。`;
+  const routeHints = {
+    off: "关闭：所有永久科技保持手动购买；旧存档不会自动开启。",
+    balanced: `${preferenceUnlocked ? "均衡低价：始终按实际价格计分。" : earlyRouteRule}${managedTargetRule}`,
+    speed: `${preferenceUnlocked ? "速度优先：全局倍率、银河速度和速度强化按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用速度偏好。`}${managedTargetRule}`,
+    rebuild: `${preferenceUnlocked ? "重建优先：收入、建设折扣和通用设备强化按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用重建偏好。`}${managedTargetRule}`,
+    burst: `${preferenceUnlocked ? "爆发优先：大爆发、银河速度和满级冲深按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用爆发偏好。`}${managedTargetRule}`,
+  };
+  $("#coreAutoRouteHint").textContent = routeHints[s.coreAutoRoute] || routeHints.off;
   renderCoreShop(); renderHistory();
 }
 function previewPlan() {

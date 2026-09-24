@@ -64,6 +64,8 @@ progress::-moz-progress-bar { background: var(--green); }
 .prestige-stats span, .prestige-stats small { display: block; color: var(--muted); font-size: 11px; }
 .prestige-stats strong { display: block; margin: 5px 0 3px; font-size: 19px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .prestige-locked-reward { margin: 0; padding-top: 13px; color: var(--muted); font-size: 12px; }
+.galaxy-goal-note { padding-top: 13px; color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.galaxy-goal-note strong { color: var(--text); }
 .completion-announcement { border-left: 3px solid var(--green); background: #e8f2ed; color: var(--green); margin-top: 16px; padding: 13px 15px; font-size: 13px; line-height: 1.7; }
 .departure-panel { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 28px; align-items: center; padding: 21px 0; border-bottom: 1px solid var(--line); }
 .departure-panel h3 { margin-bottom: 8px; }
@@ -88,6 +90,9 @@ progress::-moz-progress-bar { background: var(--green); }
 .core-card .description { min-height: 0; }
 .core-card.core-locked { background: #f7f8f7; }
 .permanent-note { color: var(--green); font-size: 11px; margin-top: 10px; }
+.permanent-note strong { color: var(--green); }
+.core-stage { color: var(--muted); font-size: 11px; line-height: 1.65; margin-top: 7px; overflow-wrap: anywhere; }
+.core-stage strong { color: var(--text); }
 .core-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-top: 14px; }
 .core-actions small { color: var(--muted); overflow-wrap: anywhere; }
 .core-actions button { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
