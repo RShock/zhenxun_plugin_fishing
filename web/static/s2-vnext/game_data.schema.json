@@ -30,10 +30,10 @@
     "prestige": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["planetTargetDepth", "speedDoublingCap", "rewardStep", "historyLimit", "upgrades"],
+      "required": ["planetTargetDepth", "galaxyTargetPlanets", "rewardStep", "historyLimit", "upgrades"],
       "properties": {
         "planetTargetDepth": { "type": "number", "exclusiveMinimum": 0 },
-        "speedDoublingCap": { "type": "integer", "minimum": 1, "maximum": 40 },
+        "galaxyTargetPlanets": { "type": "integer", "minimum": 1, "maximum": 1000000 },
         "rewardStep": { "type": "integer", "minimum": 1 },
         "historyLimit": { "type": "integer", "minimum": 1 },
         "upgrades": {
@@ -46,7 +46,7 @@
               "unlockResets": { "type": "integer", "minimum": 1 },
               "baseCost": { "type": "integer", "minimum": 1 }, "costGrowth": { "type": "integer", "minimum": 1 },
               "maxLevel": { "type": "integer", "minimum": 1, "maximum": 20 },
-              "effectKind": { "enum": ["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed"] },
+              "effectKind": { "enum": ["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed", "global_linear"] },
               "effectPerLevel": { "type": "number", "exclusiveMinimum": 0 }
             }
           }

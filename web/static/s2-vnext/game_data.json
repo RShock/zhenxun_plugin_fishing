@@ -2,7 +2,7 @@
   "$schema": "./game_data.schema.json",
   "schemaVersion": 3,
   "gameVersion": "s2-vnext-v3-helper-1",
-  "contentVersion": "prestige-1",
+  "contentVersion": "prestige-2",
   "playtestDays": 30,
   "rules": {
     "settlementMinutes": 10,
@@ -24,10 +24,17 @@
   },
   "prestige": {
     "planetTargetDepth": 2.4e19,
-    "speedDoublingCap": 20,
+    "galaxyTargetPlanets": 1000000,
     "rewardStep": 5,
     "historyLimit": 20,
     "upgrades": [
+      {
+        "key": "planet_drive",
+        "name": "行星开采引擎",
+        "description": "直接提高**矿币收益**和**挖矿深度**。总倍率从×1依次升到×2、×3……，不是每级翻倍；×2升到×3时，当前产能增加50%。换星保留，空矿井也生效。",
+        "unlockResets": 1, "baseCost": 1, "costGrowth": 3, "maxLevel": 8,
+        "effectKind": "global_linear", "effectPerLevel": 1
+      },
       {
         "key": "core_drill",
         "name": "行星核心钻头",
@@ -67,7 +74,7 @@
         "key": "galactic_drive",
         "name": "银河远航引擎",
         "description": "每级令**矿币收益**和**挖矿深度**同时翻倍。即使新星球还没有任何设备也会生效；本地科技仍然需要从零购买。",
-        "unlockResets": 10, "baseCost": 10, "costGrowth": 2, "maxLevel": 8,
+        "unlockResets": 10, "baseCost": 10, "costGrowth": 2, "maxLevel": 20,
         "effectKind": "global_speed", "effectPerLevel": 1
       }
     ]

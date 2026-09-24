@@ -24,7 +24,7 @@ export function replayPrestige(data, { seed = 42, profile = "daily", planets = 1
         for (;;) {
           const candidates = data.prestige.upgrades.filter((spec) => engine.coreAvailable(spec.key)
             && engine.coreCost(spec.key) <= engine.state.cores
-            && (coreRoute !== "speed" || spec.key === "core_drill" || spec.key === "galactic_drive"));
+            && (coreRoute !== "speed" || ["core_drill", "galactic_drive", "planet_drive"].includes(spec.key)));
           candidates.sort((a, b) => engine.coreCost(a.key) - engine.coreCost(b.key));
           if (!candidates.length) break;
           engine.purchaseCore(candidates[0].key);

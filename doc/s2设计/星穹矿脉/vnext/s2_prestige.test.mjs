@@ -8,7 +8,15 @@ import { replayPrestige } from "./s2_prestige_replay.mjs";
 const data = JSON.parse(fs.readFileSync(new URL("../../../../web/static/s2-vnext/game_data.json", import.meta.url)));
 const fresh = () => new S2Engine(data);
 const daily = replayPrestige(data);
-const absent = replayPrestige(data, { profile: "absent", coreRoute: "none" });
+const absent = replayPrestige(data, { profile: "absent", coreRoute: "none", days: 600 });
+function nearTree(a, b) {
+  if (typeof a === "number" && typeof b === "number") {
+    assert.ok(Math.abs(a - b) <= 2e-7 + Math.max(Math.abs(a), Math.abs(b)) * 2e-10, `${a} != ${b}`);
+  } else if (a && b && typeof a === "object" && typeof b === "object") {
+    assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort());
+    for (const key of Object.keys(a)) nearTree(a[key], b[key]);
+  } else assert.deepEqual(a, b);
+}
 function completedFirst() {
   return runReplay(data, { days: 45, profile: "absent" }).engine;
 }
@@ -77,8 +85,8 @@ test("departure clears every local upgrade and balance but retains purchased cor
   assert.equal(e.state.nextAutoMinute, before.state.nextAutoMinute);
   assert.equal(e.state.nextHelperMinute, before.state.nextHelperMinute);
   assert.equal(e.manualTarget("rotary_pick"), 2);
-  assert.equal(e.incomeMultiplier(), 2);
-  assert.equal(e.depthMultiplier(), 2);
+  assert.equal(e.incomeMultiplier(), 1);
+  assert.equal(e.depthMultiplier(), 1);
   assert.deepEqual(e.rng.snapshot(), before.rng);
   assert.deepEqual(new S2Engine(data, { state: e.snapshot() }).snapshot(), e.snapshot());
 });
@@ -100,11 +108,15 @@ test("zero commissioning does not grant imaginary lines, prerequisites, or free 
   assert.equal(e.state.totalManualLevels, 0);
 });
 
-test("twelve planets accelerate without requiring any local manual purchases after reset three", () => {
+test("core investments accelerate voyages; unspent cores do not, and reset three ends local manual purchases", () => {
   for (const replay of [daily, absent]) {
     assert.equal(replay.milestones.length, 12);
     const rows = replay.milestones;
-    for (let i = 1; i < rows.length; i += 1) assert.ok(rows[i].minutes < rows[i - 1].minutes);
+    if (replay === daily) {
+      assert.ok(rows.at(-1).minutes < rows[0].minutes / 20);
+    } else {
+      for (const row of rows.slice(4)) nearTree(row.minutes, rows[3].minutes);
+    }
     for (const row of rows.slice(3)) assert.equal(row.totalManualLevels, rows[2].totalManualLevels);
     assert.ok(replay.engine.state.maxDailyManualLevels <= 12);
     assert.deepEqual(new S2Engine(data, { state: replay.engine.snapshot() }).snapshot(), replay.engine.snapshot());
@@ -125,10 +137,11 @@ test("large advances and save/reload remain identical across many planet boundar
     events.push(...small.lastBlockEvents);
     if (i % 11 === 0) small = new S2Engine(data, { state: JSON.parse(JSON.stringify(small.snapshot())) });
   }
-  assert.deepEqual(large.snapshot(), small.snapshot());
-  assert.deepEqual(large.lastBlockEvents, events);
-  assert.ok(large.state.completedPlanets > 20);
-  assert.equal(large.state.planetHistory.length, data.prestige.historyLimit);
+  nearTree(large.snapshot(), small.snapshot());
+  // Full repeated cycles report aggregate counts, not an unbounded event array.
+  assert.ok(large.lastBlockEvents.length <= 1024);
+  assert.ok(large.state.completedPlanets > start.state.completedPlanets);
+  assert.equal(large.state.planetHistory.length, Math.min(large.state.completedPlanets, data.prestige.historyLimit));
   assert.ok(Number.isFinite(large.incomeMultiplier()));
 });
 
@@ -146,7 +159,7 @@ test("disabled automatic departure keeps the next completion parked with its cor
   assert.equal(e.state.completedPlanets, before + 1);
   e.setAutoDepart(true); e.mineBlock(10);
   assert.equal(e.state.resets, before + 1);
-  assert.equal(e.state.depth, 0);
+  assert.ok(e.state.depth > 0, "the ten-minute remainder now actually mines the next planet");
 });
 
 test("core purchases preserve scope and amplify rebuilt equipment instead of preserving old levels", () => {

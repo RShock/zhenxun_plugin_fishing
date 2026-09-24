@@ -74,6 +74,10 @@ progress::-moz-progress-bar { background: var(--green); }
 .prestige-content { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 28px; padding-top: 23px; }
 .subsection-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 15px; margin-bottom: 15px; }
 .subsection-heading > span { color: var(--muted); font-size: 11px; }
+.core-auto-control { display: grid; grid-template-columns: auto 130px minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 0 16px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.core-auto-control label { font-size: 12px; font-weight: 700; }
+.core-auto-control select { width: 100%; max-width: none; }
+.core-auto-control small { color: var(--muted); overflow-wrap: anywhere; }
 .core-group + .core-group { margin-top: 22px; }
 .core-group-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 .core-group-heading h3 { font-size: 14px; }
@@ -194,6 +198,8 @@ footer { padding: 23px 0 35px; color: var(--muted); font-size: 11px; }
   .departure-actions small { text-align: left; }
   .core-shop-wrap > .subsection-heading { flex-direction: column; align-items: flex-start; gap: 6px; }
   .core-shop-wrap > .subsection-heading > span { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .core-auto-control { grid-template-columns: 1fr 1fr; }
+  .core-auto-control small { grid-column: 1 / -1; }
   .core-grid { grid-template-columns: 1fr; }
   .core-actions { grid-template-columns: 1fr; }
   .core-actions button { width: 100%; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-prestige-1">
+  <link rel="stylesheet" href="./style.css?v=3-prestige-2">
 </head>
 <body>
   <main class="shell">
@@ -46,7 +46,7 @@
         <div class="prestige-stats" aria-label="轮回统计">
           <div><span>已完成</span><strong id="completedValue">0</strong><small>颗星球</small></div>
           <div><span>已离开</span><strong id="resetsValue">0</strong><small>次航程</small></div>
-          <div><span>永久速度</span><strong id="prestigeSpeed">×1</strong><small>基础轮回速度</small></div>
+          <div><span>永久科技倍率</span><strong id="prestigeSpeed">×1</strong><small>不含转生次数</small></div>
           <div><span>调试门槛</span><strong id="prestigeThreshold">3级</strong><small>当前动态值</small></div>
         </div>
       </div>
@@ -65,7 +65,16 @@
       </div>
       <div id="prestigeContent" class="prestige-content" hidden>
         <div class="core-shop-wrap">
-          <div class="subsection-heading"><div><p class="eyebrow">PERMANENT TECH / 永久科技</p><h2>星球核心技术</h2></div><span id="permanentSummary">购买只会手动进行</span></div>
+          <div class="subsection-heading"><div><p class="eyebrow">PERMANENT TECH / 永久科技</p><h2>星球核心技术</h2></div><span id="permanentSummary">永久科技倍率 ×1</span></div>
+          <div class="core-auto-control">
+            <label for="coreAutoRoute">核心托管</label>
+            <select id="coreAutoRoute">
+              <option value="off">关闭</option>
+              <option value="balanced">均衡低价</option>
+              <option value="speed">速度科技</option>
+            </select>
+            <small id="coreAutoRouteHint">关闭时所有永久科技保持手动购买；旧存档不会自动开启。</small>
+          </div>
           <div id="coreShop" class="core-shop"></div>
         </div>
         <aside class="planet-history-wrap" aria-labelledby="historyTitle">
@@ -84,12 +93,14 @@
       </div>
     </section>
     <section class="control-section">
-      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">10分钟结算 · 行星轮回</span></div>
+      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">全自动后连续事件采购 · 行星轮回</span></div>
       <div class="control-row">
+        <button data-advance="0.016666666666666666" data-continuous="true">推进1秒</button>
         <button data-advance="60">推进1小时</button>
         <button data-advance="1200">推进20小时</button>
         <button data-advance="1440" class="primary">推进1天</button>
         <button data-advance="4320">推进3天</button>
+        <button data-advance="43200">推进30天</button>
         <button id="toggleButton">连续挖矿</button>
         <button id="resetButton" class="danger-ghost">重置测试进度</button>
       </div>
@@ -144,9 +155,9 @@
     <div class="dialog-actions"><button id="confirmPlan" class="primary">确认建设</button></div>
   </dialog>
   <dialog id="resetDialog">
-    <h2>重置测试进度？</h2><p>当前助手版进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
+    <h2>重置测试进度？</h2><p>当前行星轮回进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-prestige-1"></script>
+  <script type="module" src="./app.js?v=3-prestige-2"></script>
 </body>
 </html>

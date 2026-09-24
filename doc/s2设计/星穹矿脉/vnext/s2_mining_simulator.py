@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import math
 import pathlib
 import random
 from dataclasses import dataclass, field
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
+
+from s2_voyage import compile_voyage, earned_cores, sample_voyage
 
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
@@ -21,7 +24,7 @@ IMPLEMENTED_EFFECT_KINDS = {
 }
 IMPLEMENTED_CORE_EFFECT_KINDS = {
     "speed_strength", "income_strength", "depth_strength",
-    "equipment_strength", "line_synergy", "global_speed",
+    "equipment_strength", "line_synergy", "global_speed", "global_linear",
 }
 
 
@@ -58,14 +61,19 @@ def validate_game_data(data: dict[str, object]) -> dict[str, object]:
     expected_resources = ["credits", "cores"] if prestige else ["credits"]
     if [item["key"] for item in data["resources"]] != expected_resources:
         raise ValueError(f"v3 resources must be {expected_resources}")
-    if data.get("contentVersion") == "prestige-1" and not prestige:
-        raise ValueError("prestige-1 requires prestige rules")
+    if str(data.get("contentVersion", "")).startswith("prestige-") and not prestige:
+        raise ValueError("prestige content requires prestige rules")
     if prestige:
         if (
             not math.isfinite(float(prestige.get("planetTargetDepth", 0)))
             or float(prestige["planetTargetDepth"]) <= 0
-            or type(prestige.get("speedDoublingCap")) is not int
-            or not 1 <= prestige["speedDoublingCap"] <= 40
+            or (
+                data.get("contentVersion") == "prestige-2"
+                and (
+                    type(prestige.get("galaxyTargetPlanets")) is not int
+                    or not 1 <= prestige["galaxyTargetPlanets"] <= 1_000_000
+                )
+            )
             or type(prestige.get("rewardStep")) is not int
             or prestige["rewardStep"] < 1
             or type(prestige.get("historyLimit")) is not int
@@ -211,7 +219,7 @@ class SimulationState:
     seed: int = 42
     deterministic: bool = False
     day: int = 1
-    minute: int = 0
+    minute: float = 0
     depth: float = 0.0
     credits: float = 0.0
     levels: dict[str, int] = field(default_factory=lambda: {key: 0 for key in LOCAL_KEYS})
@@ -237,12 +245,28 @@ class SimulationState:
         default_factory=lambda: {key: 0 for key in CORE_SPECS}
     )
     planet_complete: bool = False
-    planet_started_minute: int = 0
-    all_maxed_minute: int | None = None
+    planet_started_minute: float = 0
+    all_maxed_minute: float | None = None
     auto_depart: bool = True
-    planet_history: list[dict[str, int | None]] = field(default_factory=list)
+    planet_history: list[dict[str, int | float | None]] = field(
+        default_factory=list
+    )
+    core_auto_route: Literal["off", "balanced", "speed"] = "off"
+    last_batch_summary: dict[str, int] = field(
+        default_factory=lambda: {"planets": 0, "compiled": 0, "events": 0}
+    )
     _next_auto_minute: int = field(default=int(RULES["autoPurchaseIntervalMinutes"]), init=False)
     _next_helper_minute: int = field(default=int(RULES["helperIntervalMinutes"]), init=False)
+    _voyage: tuple[tuple[object, ...], dict[str, Any]] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+    )
+    _canonical_voyage: tuple[tuple[object, ...], dict[str, Any]] | None = field(
+        default=None,
+        init=False,
+        repr=False,
+    )
     rng: random.Random = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -259,6 +283,26 @@ class SimulationState:
     def progress(self) -> float:
         return min(1.0, self.depth / self.target_depth)
 
+    @property
+    def local_keys(self) -> tuple[str, ...]:
+        return LOCAL_KEYS
+
+    @property
+    def specs(self) -> dict[str, UpgradeSpec]:
+        return SPECS
+
+    @property
+    def rules(self) -> dict[str, object]:
+        return RULES
+
+    @property
+    def era_by_key(self) -> dict[str, dict[str, object]]:
+        return ERA_BY_KEY
+
+    @property
+    def era_sequence(self) -> tuple[str, ...]:
+        return ERA_SEQUENCE
+
     def level(self, key: str) -> int:
         return self.levels.get(key, 0)
 
@@ -273,10 +317,8 @@ class SimulationState:
         )
 
     def prestige_speed(self) -> float:
-        cap = int((PRESTIGE_CONFIG or {}).get("speedDoublingCap", 20))
         return (
-            2 ** min(self.resets, cap)
-            * (1 + max(0, self.resets - cap)) ** 2
+            (1 + self.core_effect("global_linear"))
             * 2 ** self.core_effect("global_speed")
         )
 
@@ -302,7 +344,55 @@ class SimulationState:
             return False, "cores"
         self.cores -= int(cost)
         self.core_levels[key] += 1
+        self._voyage = None
         return True, ""
+
+    def core_route_specs(self) -> list[CoreSpec]:
+        return [
+            spec
+            for spec in CORE_SPECS.values()
+            if (
+                self.core_auto_route == "balanced"
+                or (
+                    self.core_auto_route == "speed"
+                    and spec.effect_kind
+                    in {"global_linear", "global_speed", "speed_strength"}
+                )
+            )
+        ]
+
+    def auto_purchase_core(self) -> list[str]:
+        bought: list[str] = []
+        while True:
+            affordable = [
+                spec
+                for spec in self.core_route_specs()
+                if (
+                    self.core_available(spec.key)
+                    and self.core_cost(spec.key) <= self.cores
+                )
+            ]
+            if not affordable:
+                return bought
+            spec = min(affordable, key=lambda item: self.core_cost(item.key))
+            ok, _ = self.purchase_core(spec.key)
+            if not ok:
+                return bought
+            bought.append(spec.key)
+
+    def set_core_auto_route(
+        self,
+        route: Literal["off", "balanced", "speed"],
+    ) -> list[str]:
+        if route not in {"off", "balanced", "speed"}:
+            raise ValueError("invalid core automation route")
+        self.core_auto_route = route
+        return self.auto_purchase_core()
+
+    def galaxy_complete(self) -> bool:
+        return self.completed_planets >= int(
+            (PRESTIGE_CONFIG or {}).get("galaxyTargetPlanets", 1_000_000)
+        )
 
     def set_auto_depart(self, enabled: bool) -> None:
         if type(enabled) is not bool:
@@ -340,10 +430,16 @@ class SimulationState:
         return True
 
     def depart_planet(self) -> tuple[bool, str]:
+        if self.galaxy_complete():
+            return False, "galaxy"
         if not self.planet_complete:
             return False, "unfinished"
         self.resets += 1
         self.planet_complete = False
+        self.clear_local_planet()
+        return True, ""
+
+    def clear_local_planet(self) -> None:
         self.depth = 0.0
         self.credits = 0.0
         self.levels = {key: 0 for key in LOCAL_KEYS}
@@ -355,7 +451,7 @@ class SimulationState:
         self.last_helper_report = None
         self.planet_started_minute = self.minute
         self.all_maxed_minute = None
-        return True, ""
+        self._voyage = None
 
     def effect_strength(self, kind: str) -> float:
         if kind == "speed_compound":
@@ -571,11 +667,16 @@ class SimulationState:
     def auto_purchase(self) -> list[str]:
         if self.resets > 0:
             bought: list[str] = []
-            budget = min(
-                TOTAL_LOCAL_MAX_LEVEL,
-                math.ceil(
-                    self.prestige_speed() * int(RULES["autoPurchaseBudget"])
-                ),
+            budget = (
+                TOTAL_LOCAL_MAX_LEVEL
+                if self.resets >= 3
+                else min(
+                    TOTAL_LOCAL_MAX_LEVEL,
+                    math.ceil(
+                        self.prestige_speed()
+                        * int(RULES["autoPurchaseBudget"])
+                    ),
+                )
             )
             for _ in range(budget):
                 candidates = sorted(
@@ -644,20 +745,292 @@ class SimulationState:
         }
         return self.last_helper_report
 
-    def mine_block(self, minutes: int = SETTLEMENT_MINUTES) -> list[str]:
+    def voyage_plan(self) -> dict[str, Any]:
+        key: tuple[object, ...] = (
+            tuple(self.core_levels.items()),
+            self.target_depth,
+        )
+        if self._voyage and self._voyage[0] == key:
+            return self._voyage[1]
+        fresh = (
+            self.depth == 0
+            and self.credits == 0
+            and all(not self.levels[item] for item in LOCAL_KEYS)
+        )
+        if (
+            fresh
+            and self._canonical_voyage
+            and self._canonical_voyage[0] == key
+        ):
+            plan = self._canonical_voyage[1]
+        else:
+            scratch = copy.deepcopy(self)
+            scratch._voyage = None
+            scratch._canonical_voyage = None
+            scratch.minute = self.minute - self.planet_started_minute
+            scratch.planet_started_minute = 0
+            scratch.all_maxed_minute = (
+                None
+                if self.all_maxed_minute is None
+                else self.all_maxed_minute - self.planet_started_minute
+            )
+            plan = compile_voyage(scratch)
+            self.last_batch_summary["compiled"] += 1
+            self.last_batch_summary["events"] += len(plan["events"])
+            if fresh:
+                self._canonical_voyage = (key, plan)
+        self._voyage = (key, plan)
+        return plan
+
+    def sync_voyage_clock(self, minute: float) -> None:
+        self.minute = minute
+        self.start_new_day()
+        auto_interval = int(RULES["autoPurchaseIntervalMinutes"])
+        self._next_auto_minute = (
+            math.floor(minute / auto_interval) + 1
+        ) * auto_interval
+        last_midnight = math.floor(minute / 1440) * 1440
+        if (
+            last_midnight >= self._next_helper_minute
+            and last_midnight >= self.planet_started_minute
+        ):
+            self.last_helper_report = {
+                "minute": last_midnight,
+                "levels": 0,
+                "spent": 0,
+                "items": [],
+            }
+        self._next_helper_minute = last_midnight + 1440
+
+    def apply_voyage_sample(
+        self,
+        plan: dict[str, Any],
+        age: float,
+    ) -> None:
+        sample = sample_voyage(plan, age)
+        before_levels = dict(self.levels)
+        before = sum(self.levels.values())
+        previous_age = self.minute - self.planet_started_minute
+        self.total_auto_levels += int(sample["built"]) - before
+        self.depth = min(self.target_depth, float(sample["depth"]))
+        self.credits = float(sample["credits"])
+        self.levels = dict(sample["levels"])
+        self.manual_levels = dict(sample["manual_levels"])
+        self.auto_unlocked = set(sample["auto_unlocked"])
+        self.ever_keys = set(sample["ever_keys"])
+        for era, time in sample["era_ages"].items():
+            self.era_first_days[era] = (
+                math.floor((self.planet_started_minute + time) / 1440) + 1
+            )
+        self.all_maxed_minute = (
+            None
+            if sample["all_maxed_age"] is None
+            else self.planet_started_minute + sample["all_maxed_age"]
+        )
+        for event in plan["events"]:
+            if (
+                event["age"] >= previous_age
+                and event["age"] <= age
+                and event["level"] > before_levels[event["key"]]
+                and len(self.last_block_events) < 1024
+            ):
+                self.last_block_events.append(
+                    {
+                        **event,
+                        "minute": self.planet_started_minute + event["age"],
+                    }
+                )
+        self.sync_voyage_clock(self.planet_started_minute + age)
+
+    def planets_until_core_purchase(self, limit: int) -> int:
+        specs = [
+            spec
+            for spec in self.core_route_specs()
+            if self.core_levels[spec.key] < spec.max_level
+        ]
+        if not specs:
+            return limit
+        step = int(PRESTIGE_CONFIG["rewardStep"])
+        earned = earned_cores(self.completed_planets, step)
+
+        def can_buy(count: int) -> bool:
+            future_cores = (
+                self.cores
+                + earned_cores(self.completed_planets + count, step)
+                - earned
+            )
+            return any(
+                self.completed_planets + count >= spec.unlock_resets
+                and future_cores >= self.core_cost(spec.key)
+                for spec in specs
+            )
+
+        if not can_buy(limit):
+            return limit
+        low = 1
+        high = limit
+        while low < high:
+            middle = (low + high) // 2
+            if can_buy(middle):
+                high = middle
+            else:
+                low = middle + 1
+        return low
+
+    def settle_voyages(self, plan: dict[str, Any], count: int) -> None:
+        first = self.completed_planets
+        start = self.minute
+        step = int(PRESTIGE_CONFIG["rewardStep"])
+        duration = float(plan["duration"])
+        finish = start + duration * count
+        final_planet = first + count
+        self.cores += (
+            earned_cores(final_planet, step) - earned_cores(first, step)
+        )
+        self.total_auto_levels += count * int(plan["end"]["built"])
+        history_limit = int(PRESTIGE_CONFIG["historyLimit"])
+        for index in range(max(1, count - history_limit + 1), count + 1):
+            self.planet_history.append(
+                {
+                    "planet": first + index,
+                    "minutes": duration,
+                    "completed_minute": start + index * duration,
+                    "reward": 1 + (first + index - 1) // step,
+                    "all_maxed_minute": (
+                        None
+                        if plan["end"]["all_maxed_age"] is None
+                        else (
+                            start
+                            + (index - 1) * duration
+                            + plan["end"]["all_maxed_age"]
+                        )
+                    ),
+                }
+            )
+        self.planet_history = self.planet_history[-history_limit:]
+        self.completed_planets = final_planet
+        self.sync_voyage_clock(finish)
+        parked = not self.auto_depart or self.galaxy_complete()
+        self.resets = final_planet - int(parked)
+        self.planet_complete = parked
+        if parked:
+            self.planet_started_minute = start + (count - 1) * duration
+            self.levels = dict(plan["end"]["levels"])
+            self.manual_levels = dict(plan["end"]["manual_levels"])
+            self.depth = self.target_depth
+            self.credits = float(plan["end"]["credits"])
+            self.auto_unlocked = set(plan["end"]["auto_unlocked"])
+            self.ever_keys = set(plan["end"]["ever_keys"])
+            self.era_first_days = {
+                era: (
+                    math.floor((self.planet_started_minute + age) / 1440) + 1
+                )
+                for era, age in plan["end"]["era_ages"].items()
+            }
+            self.all_maxed_minute = (
+                None
+                if plan["end"]["all_maxed_age"] is None
+                else self.planet_started_minute
+                + plan["end"]["all_maxed_age"]
+            )
+            midnight = math.floor(finish / 1440) * 1440
+            self.last_helper_report = (
+                {
+                    "minute": midnight,
+                    "levels": 0,
+                    "spent": 0,
+                    "items": [],
+                }
+                if midnight >= self.planet_started_minute
+                else None
+            )
+        else:
+            self.clear_local_planet()
+        self.last_batch_summary["planets"] += count
+        self.auto_purchase_core()
+
+    def advance_voyages(self, end_minute: float) -> None:
+        boundaries = 0
+        max_boundaries = sum(
+            spec.max_level for spec in CORE_SPECS.values()
+        ) + 8
+        while self.minute < end_minute:
+            boundaries += 1
+            if boundaries > max_boundaries:
+                raise ValueError("permanent event budget exceeded")
+            if self.planet_complete:
+                if (
+                    not self.auto_depart
+                    or self.resets == 0
+                    or self.galaxy_complete()
+                ):
+                    self.sync_voyage_clock(end_minute)
+                    return
+                self.depart_planet()
+            plan = self.voyage_plan()
+            remaining = end_minute - self.minute
+            age = self.minute - self.planet_started_minute
+            if age == 0 and plan["initial_age"] == 0:
+                count = math.floor(remaining / plan["duration"])
+                count = min(
+                    count,
+                    int(PRESTIGE_CONFIG["galaxyTargetPlanets"])
+                    - self.completed_planets,
+                )
+                if not self.auto_depart:
+                    count = min(count, 1)
+                if count > 0:
+                    count = self.planets_until_core_purchase(count)
+                    self.settle_voyages(plan, count)
+                    continue
+            end_age = min(
+                float(plan["duration"]),
+                end_minute - self.planet_started_minute,
+            )
+            self.apply_voyage_sample(plan, end_age)
+            if end_age >= plan["duration"]:
+                self.depth = self.target_depth
+                self.finish_planet()
+                self.last_batch_summary["planets"] += 1
+                self.auto_purchase_core()
+                if self.auto_depart and not self.galaxy_complete():
+                    self.depart_planet()
+            else:
+                self.sync_voyage_clock(end_minute)
+                return
+
+    def mine_block(
+        self,
+        minutes: int | float = SETTLEMENT_MINUTES,
+    ) -> list[str]:
         end_minute = self.minute + minutes
         if (
-            type(minutes) is not int
+            isinstance(minutes, bool)
+            or not isinstance(minutes, (int, float))
+            or not math.isfinite(minutes)
             or minutes <= 0
-            or minutes % SETTLEMENT_MINUTES
-            or minutes > MAX_SAFE_INTEGER
-            or type(end_minute) is not int
-            or not -MAX_SAFE_INTEGER <= end_minute <= MAX_SAFE_INTEGER
+            or end_minute > MAX_SAFE_INTEGER
+            or end_minute <= self.minute
+            or (
+                self.resets < 3
+                and (
+                    type(minutes) is not int
+                    or minutes % SETTLEMENT_MINUTES
+                    or type(end_minute) is not int
+                )
+            )
         ):
-            raise ValueError("mine_block must use settlement-sized minutes")
+            raise ValueError(
+                "mine_block must use settlement-sized minutes "
+                "before full automation"
+            )
         auto: list[str] = []
         self.last_block_events = []
-        for _ in range(minutes // SETTLEMENT_MINUTES):
+        self.last_batch_summary = {"planets": 0, "compiled": 0, "events": 0}
+        while self.minute < end_minute:
+            if self.resets >= 3:
+                self.advance_voyages(end_minute)
+                break
             if not self.planet_complete:
                 noise = (
                     1.0
@@ -699,7 +1072,8 @@ class SimulationState:
                     self.depth = self.target_depth
             self.minute += SETTLEMENT_MINUTES
             self.start_new_day()
-            self.finish_planet()
+            if self.finish_planet():
+                self.auto_purchase_core()
             if self.resets > 0:
                 before = dict(self.levels)
                 bought = self.auto_purchase()
@@ -730,20 +1104,27 @@ class SimulationState:
                     "minute": self.minute, "source": "helper", **item
                 } for item in report["items"])
                 self._next_helper_minute += int(RULES["helperIntervalMinutes"])
-            if self.planet_complete and self.resets > 0 and self.auto_depart:
+            if (
+                self.planet_complete
+                and self.resets > 0
+                and self.auto_depart
+                and not self.galaxy_complete()
+            ):
                 self.depart_planet()
         return auto
 
     def start_new_day(self) -> None:
-        new_day = self.minute // 1440 + 1
+        new_day = math.floor(self.minute / 1440) + 1
         if self.day != new_day:
             self.day = new_day
             self.daily_manual_levels = 0
             self.daily_helper_levels = 0
 
     def summary(self) -> str:
+        minute_of_day = math.floor(self.minute % 1440)
         return (
-            f"D{self.day} {self.minute % 1440 // 60:02d}:{self.minute % 60:02d} | "
+            f"D{self.day} {minute_of_day // 60:02d}:"
+            f"{minute_of_day % 60:02d} | "
             f"深度 {self.depth:,.0f} | 矿币 {self.credits:,.0f} | "
             f"今日手动 {self.daily_manual_levels} 级 | 自动科技 {len(self.auto_unlocked)}"
         )
@@ -800,21 +1181,23 @@ def purchase_cores_for_route(
         return []
     if route not in {"balanced", "speed"}:
         raise ValueError(f"unknown core route {route}")
-    allowed = (
-        {"core_drill", "galactic_drive"}
+    allowed_kinds = (
+        {"global_linear", "global_speed", "speed_strength"}
         if route == "speed"
-        else set(CORE_SPECS)
+        else None
     )
     order = {key: index for index, key in enumerate(CORE_SPECS)}
     bought: list[str] = []
     while True:
         affordable = [
-            key for key in CORE_SPECS
+            key
+            for key in CORE_SPECS
             if (
-                key in allowed
-                and state.core_available(key)
-                and state.core_cost(key) <= state.cores
+                allowed_kinds is None
+                or CORE_SPECS[key].effect_kind in allowed_kinds
             )
+            and state.core_available(key)
+            and state.core_cost(key) <= state.cores
         ]
         if not affordable:
             break

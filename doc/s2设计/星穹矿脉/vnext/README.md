@@ -1,6 +1,6 @@
 ﻿# S2 vNext：星穹矿脉模拟实验室
 
-这里是 S2 独立实验区，暂不接 NoneBot 或数据库。当前是 schema v3 转生版，内容版本 `prestige-1`，可试玩首星通关、核心强化和连续换星，并接续十天及旧三十天助手版存档。
+这里是 S2 独立实验区，暂不接 NoneBot 或数据库。当前是 schema v3 转生版，内容版本 `prestige-2`，可试玩首星通关、核心强化、连续换星和百万星球终局，并接续十天、旧三十天及 `prestige-1` 存档。
 
 ## 运行
 
@@ -30,7 +30,7 @@ node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_p
 - 一次命令可购买多项多级；网页先显示清单，确认后建设。
 - 首星共同完成科技的 3 个调试等级后，本星自动化。每次换星门槛减 1，最低为 0；科技等级、调试与自动线全部清空，须重新付费建设。
 - 笨助手默认开启，每个游戏日 00:00 购买便宜的未自动化等级，支付矿币、不留预算；关闭后恢复不补班。
-- 首星自动采购每小时最多一级，保护当前最便宜的 3 个调试等级预算。转生后每十分钟采购，预算随永久速度提高；零调试门槛从零级自动购买，但仍检查矿币、深度、时代与前置科技。
+- 首星自动采购每小时最多一级，保护当前最便宜的 3 个调试等级预算。第二、三颗星球每十分钟采购，预算随永久速度提高；第四颗起资金与前置满足即连续采购。零调试门槛从零级自动购买，仍检查矿币、深度、时代与前置科技。
 - 每日 3-6 级只是软参考，不设每日上限；等级数、命令数、查看次数分开审计。
 - D10 每日一次和全托管画像均应进入电气时代，前三十天经济保留。
 - 原始、工业、电气、计算机、未来时代依次换代。D11-D20 延伸电气与计算机设备，D21-D30 建设未来矿场；共 43 项活动科技，`reserve` 不进入试玩建设列表。
@@ -38,9 +38,9 @@ node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_p
 - 批量预览显示矿币收益、挖矿深度提升，回放可选 10/20/30 天；后期大数使用科学计数显示。
 - 科技说明解释实际开采作用，用 `**专有名词**` 安全加粗属性与科技引用；不解析 HTML。同类倍率相加与速度逐级复乘分别说明，不把内部加成误写成总收益百分比。
 - 首星以未来时代收尾，固定深度目标 `2.4e19`。全部 333 级升满后仍挖约五天，抵达深度才通关；不是满级通关或固定倒计时。
-- 首次启程立即使基础产速翻倍。六项核心科技分别强化速度设备、收入设备、深度设备、综合设备、自动线联动、全局产速；购买永久科技不会免费赠送本地等级。
-- 首星完成后停产等待手动启程；之后可自动换星，也可关闭。核心只在挖穿时奖励一次，奖励为 `1 + floor(已转生次数/5)`，不会自动花费。
-- 前 20 次转生逐次翻倍，之后继续平方增长。现版只验收前期转生闭环，未实现银河批量结算、大数与终局。
+- 转生不再赠送产速。首颗核心可购买行星开采引擎，总倍率 ×1 → ×2；下一级花 3 核心变成 ×3。七项科技共同强化全局产速、速度/收入/深度设备、综合设备与自动线联动；购买永久科技不会免费赠送本地等级。
+- 首星完成后停产等待手动启程；之后可自动换星，也可关闭。核心只在挖穿时奖励一次，奖励为 `1 + floor(已转生次数/5)`。核心托管默认关闭，可显式选择均衡或速度路线。
+- 第四颗星起连续采购、期望生产；相同永久研究复用航程，买核心科技时从真实边界重算。百万星球完成后停产，未实现超出双精度的大数与正式主游戏奖励。
 
 ## 当前验证
 
@@ -56,6 +56,18 @@ node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_p
 
 独立测试必须禁用 pytest 插件自动加载，否则 nonebug 会要求正式机器人环境；保留插件 `pytest.ini` 的 `support.pytest_plugin`，不要用空 `addopts` 覆盖，否则测试收集会导入正式 NoneBot 插件。说明测试检查安全渲染、引用名称、数值口径和作用域；转生测试覆盖奖励、清空、自动化、存档、多星步进等价与双端对照。既有早期暴击率封顶造成的末级收益饱和暂保留，避免改动已认可的前十天。
 
-转生实验见 `PRESTIGE_PLAYTEST.md`：五 seed 下，每日一次首星约 39.4-40.3 个完整日、助手路线约 43.9 日挖穿，满级后的真实采矿约五日。核心均衡路线第 12 星约为 90 分钟，但十分钟粒度不能用于推断百万星球终局。
+首星历史实验见 `PRESTIGE_PLAYTEST.md`：五 seed 下，每日一次首星约 39.4-40.3 个完整日、助手路线约 43.9 日挖穿，满级后的真实采矿约五日。该报告的转生免费倍率和后续航程数据已被替代，以 `GALAXY_PLAYTEST.md` 为当前版本验收报告。
+
+新增连续航程验收（从项目根目录运行）：
+
+```powershell
+node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_voyage.test.mjs
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
+.venv\Scripts\python.exe -m pytest zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_voyage.py -q -p no:cacheprovider
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile daily --route balanced
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile absent --route balanced
+```
+
+回放从零开始，首星完成后在每日 20:00 确认首次启程并启用核心托管；`absent` 不进行手动本地建设，仍需要这一次人为启程授权。完全不花核心可用 `--route off` 对照。
 
 现行要求见 `DESIGN_INTENT.md`。`THIRTY_DAYS_PLAYTEST.md`、`THIRTY_DAYS_TRACE.md`、`READABLE_TECH_PLAYTEST.md`、`HELPER_PLAYTEST.md` 和 `HELPER_TEN_DAYS_TRACE.md` 保留历史基线；`GAME_DESIGN_VNEXT.md`、`FIRST_TEN_DAYS_TRACE.md`、`NEXT_THREAD_HANDOFF.md` 是更早方案，不作为现行验收标准。
