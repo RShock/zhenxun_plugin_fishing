@@ -36,12 +36,12 @@ def manually_unlock(state: SimulationState, key: str) -> None:
         assert ok, reason
 
 
-def test_v3_uses_one_shared_currency_and_thirty_day_era_regions() -> None:
+def test_v3_uses_local_and_prestige_currencies_with_existing_era_regions() -> None:
     assert GAME_DATA["schemaVersion"] == 3
     assert GAME_DATA["gameVersion"] == "s2-vnext-v3-helper-1"
-    assert GAME_DATA["contentVersion"] == "thirty-day-eras-1"
+    assert GAME_DATA["contentVersion"] == "prestige-1"
     assert GAME_DATA["playtestDays"] == 30
-    assert [item["key"] for item in GAME_DATA["resources"]] == ["credits"]
+    assert [item["key"] for item in GAME_DATA["resources"]] == ["credits", "cores"]
     assert len(GAME_DATA["multiplierRegions"]) == 17
     assert sum(item["status"] == "active" for item in GAME_DATA["multiplierRegions"]) == 15
     assert sum(item["status"] != "active" for item in GAME_DATA["multiplierRegions"]) == 2
@@ -466,12 +466,3 @@ def test_web_opportunity_matrix_matches_python() -> None:
         )
         web = json.loads(completed.stdout)
         assert [item["manualLevels"] for item in web["snapshots"]] == counts
-
-@pytest.mark.skip(reason="v3 仅签收 D1-D10；首次爆星窗口尚未实现")
-def test_historical_d30_rebirth_window() -> None:
-    pass
-
-
-@pytest.mark.skip(reason="v3 尚未实现长期科技覆盖验收")
-def test_historical_d45_node_coverage() -> None:
-    pass

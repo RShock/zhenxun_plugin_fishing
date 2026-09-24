@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-readable-tech-1">
+  <link rel="stylesheet" href="./style.css?v=3-prestige-1">
 </head>
 <body>
   <main class="shell">
     <header class="masthead">
       <div><p class="eyebrow">S2 / STARVAULT MINE</p><h1>星穹矿脉</h1></div>
-      <div class="station-id"><span>首星勘探站</span><strong id="timeValue">D1 00:00</strong><small id="seedValue">seed 42</small></div>
+      <div class="station-id"><span id="stationPlanet">第 1 颗星球</span><strong id="timeValue">D1 00:00</strong><small id="seedValue">seed 42</small></div>
     </header>
     <p id="saveNotice" class="notice" role="status"></p>
     <section class="status-grid" aria-label="矿区状态">
@@ -32,6 +32,49 @@
         <div class="discovery-meta"><span id="nextProgressText"></span><span id="nextEta"></span></div>
       </div>
     </section>
+    <section class="prestige-section" aria-labelledby="planetTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">VOYAGE / 行星航程</p><h2 id="planetTitle">第 1 颗星球</h2></div>
+        <div class="prestige-balance"><span>可用星球核心</span><strong id="coresValue">0</strong></div>
+      </div>
+      <div class="planet-summary">
+        <div class="planet-progress-panel">
+          <div class="planet-progress-heading"><strong id="planetState">开采进行中</strong><span id="planetElapsed">本星球 0分钟</span></div>
+          <progress id="planetProgress" max="1" value="0" aria-label="当前星球挖掘进度"></progress>
+          <div class="discovery-meta"><span id="planetProgressText"></span><span id="allMaxedStatus"></span></div>
+        </div>
+        <div class="prestige-stats" aria-label="轮回统计">
+          <div><span>已完成</span><strong id="completedValue">0</strong><small>颗星球</small></div>
+          <div><span>已离开</span><strong id="resetsValue">0</strong><small>次航程</small></div>
+          <div><span>永久速度</span><strong id="prestigeSpeed">×1</strong><small>基础轮回速度</small></div>
+          <div><span>调试门槛</span><strong id="prestigeThreshold">3级</strong><small>当前动态值</small></div>
+        </div>
+      </div>
+      <p id="prestigeLockedReward" class="prestige-locked-reward">挖穿后获得星球核心，解锁永久科技</p>
+      <div id="completionAnnouncement" class="completion-announcement" role="status" aria-live="polite" hidden></div>
+      <div id="departurePanel" class="departure-panel" hidden>
+        <div>
+          <h3>前往下一颗星球</h3>
+          <p id="departureDescription"></p>
+        </div>
+        <div class="departure-actions">
+          <label class="switch"><input id="autoDepartToggle" type="checkbox" checked><span>后续自动启程</span></label>
+          <small id="autoDepartHint"></small>
+          <button id="departButton" class="primary" hidden>启程前往下一颗星球</button>
+        </div>
+      </div>
+      <div id="prestigeContent" class="prestige-content" hidden>
+        <div class="core-shop-wrap">
+          <div class="subsection-heading"><div><p class="eyebrow">PERMANENT TECH / 永久科技</p><h2>星球核心技术</h2></div><span id="permanentSummary">购买只会手动进行</span></div>
+          <div id="coreShop" class="core-shop"></div>
+        </div>
+        <aside class="planet-history-wrap" aria-labelledby="historyTitle">
+          <div class="subsection-heading"><h2 id="historyTitle">最近航程</h2></div>
+          <p id="historyEmpty" class="empty">尚未挖穿星球。</p>
+          <ol id="planetHistory" class="planet-history"></ol>
+        </aside>
+      </div>
+    </section>
     <section class="shift-section">
       <div class="section-heading"><h2>夜班笨助手</h2><label class="switch"><input id="helperToggle" type="checkbox" checked><span>自动值班</span></label></div>
       <div class="shift-grid">
@@ -41,7 +84,7 @@
       </div>
     </section>
     <section class="control-section">
-      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">首星 · 三十天试玩</span></div>
+      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">10分钟结算 · 行星轮回</span></div>
       <div class="control-row">
         <button data-advance="60">推进1小时</button>
         <button data-advance="1200">推进20小时</button>
@@ -60,7 +103,7 @@
       <div class="view-tabs" role="tablist" aria-label="科技分类">
         <button role="tab" id="tab-construction" data-view="construction" aria-selected="true" aria-controls="techTree">待建设 <span id="constructionCount">0</span></button>
         <button role="tab" id="tab-automated" data-view="automated" aria-selected="false" aria-controls="techTree">已自动化 <span id="automatedCount">0</span></button>
-        <button role="tab" id="tab-frontier" data-view="frontier" aria-selected="false" aria-controls="techTree">待发现 <span id="frontierCount">0</span></button>
+        <button role="tab" id="tab-frontier" data-view="frontier" aria-selected="false" aria-controls="techTree">前沿科技 <span id="frontierCount">0</span></button>
       </div>
       <div id="techTree" class="tech-tree" role="tabpanel" aria-labelledby="tab-construction"></div>
     </section>
@@ -80,13 +123,16 @@
         <div id="multiplierList" class="multiplier-list"></div>
       </div>
     </details>
-    <footer>星穹矿脉 / 三十天原型 · 首星阶段</footer>
+    <footer>星穹矿脉 / 行星轮回试玩</footer>
   </main>
   <template id="techTemplate">
     <article class="tech-card">
       <div class="tech-top"><span class="region"></span><span class="level-chip"></span></div>
-      <h3></h3><p class="description"></p>
-      <div class="manual-progress" aria-label="装备调试进度"><i></i><i></i><i></i></div>
+      <h3></h3>
+      <p class="description-label" hidden>基础效果（未计永久强化）</p>
+      <p class="description"></p>
+      <p class="tech-strength"></p>
+      <div class="manual-progress" aria-label="装备调试进度"></div>
       <div class="tech-meta"><span class="progress-label"></span><b class="cost"></b></div>
       <div class="tech-actions"><button class="upgrade-button">升级1级</button><button class="commission-button">完成调试</button></div>
       <small class="lock-reason"></small>
@@ -101,6 +147,6 @@
     <h2>重置测试进度？</h2><p>当前助手版进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-readable-tech-1"></script>
+  <script type="module" src="./app.js?v=3-prestige-1"></script>
 </body>
 </html>

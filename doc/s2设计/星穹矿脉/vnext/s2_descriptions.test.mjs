@@ -11,6 +11,7 @@ const terms = new Set([
   "矿币收益", "挖矿深度", "自动线",
   ...data.multiplierRegions.map((region) => region.name),
   ...active.map((spec) => spec.name),
+  ...data.prestige.upgrades.map((spec) => spec.name),
 ]);
 
 test("description parser preserves prose and recognizes only complete single-line bold spans", () => {
@@ -88,6 +89,15 @@ test("ordinary additive upgrades state the region increment, not a total product
   }
 });
 
+test("permanent research references the same named concepts as local equipment", () => {
+  for (const spec of data.prestige.upgrades) {
+    for (const part of descriptionParts(spec.description)) {
+      if (part.strong) assert.ok(terms.has(part.text), `${spec.key}: unknown term ${part.text}`);
+      else assert.ok(!part.text.includes("**"), `${spec.key}: malformed markup`);
+    }
+  }
+});
+
 test("income-only and depth-only descriptions agree with actual upgrade effects", () => {
   for (const spec of active) {
     const scope = regions[spec.region].scope;
@@ -119,10 +129,14 @@ test("synergy descriptions name their real dependencies and do not promise faste
     if (["resonance", "shift_relay"].includes(spec.effectKind)) {
       assert.ok(spec.description.includes("**自动线**"), spec.key);
       assert.ok(spec.description.includes("全部**矿币收益**"), spec.key);
+      assert.ok(regions[spec.region].note.includes("在本星完成调试且已实际建成"), spec.key);
+      assert.doesNotMatch(spec.description, /三次调试/, spec.key);
     }
     if (spec.effectKind === "momentum") {
-      assert.ok(spec.description.includes("00:00"), spec.key);
-      assert.ok(spec.description.includes("04:00"), spec.key);
+      assert.ok(spec.description.includes("抵达本星球"), spec.key);
+      assert.ok(spec.description.includes("每 24 游戏小时"), spec.key);
+      assert.ok(spec.description.includes("前 4 小时"), spec.key);
+      assert.doesNotMatch(spec.description, /00:00|04:00/, spec.key);
       assert.ok(spec.description.includes("不需要手动维持"), spec.key);
     }
   }

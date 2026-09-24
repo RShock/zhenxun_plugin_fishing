@@ -24,8 +24,34 @@
     "resources": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 1,
+      "maxItems": 2,
       "items": { "type": "object", "required": ["key", "name", "icon", "color", "use"] }
+    },
+    "prestige": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planetTargetDepth", "speedDoublingCap", "rewardStep", "historyLimit", "upgrades"],
+      "properties": {
+        "planetTargetDepth": { "type": "number", "exclusiveMinimum": 0 },
+        "speedDoublingCap": { "type": "integer", "minimum": 1, "maximum": 40 },
+        "rewardStep": { "type": "integer", "minimum": 1 },
+        "historyLimit": { "type": "integer", "minimum": 1 },
+        "upgrades": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["key", "name", "description", "unlockResets", "baseCost", "costGrowth", "maxLevel", "effectKind", "effectPerLevel"],
+            "properties": {
+              "key": { "type": "string" }, "name": { "type": "string" }, "description": { "type": "string" },
+              "unlockResets": { "type": "integer", "minimum": 1 },
+              "baseCost": { "type": "integer", "minimum": 1 }, "costGrowth": { "type": "integer", "minimum": 1 },
+              "maxLevel": { "type": "integer", "minimum": 1, "maximum": 20 },
+              "effectKind": { "enum": ["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed"] },
+              "effectPerLevel": { "type": "number", "exclusiveMinimum": 0 }
+            }
+          }
+        }
+      }
     },
     "eras": {
       "type": "array",

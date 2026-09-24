@@ -12,7 +12,29 @@ export function validateGameData(data) {
   required.forEach((key) => { if (!(key in data.rules)) throw new Error(`Missing rule: ${key}`); });
   if (data.rules.randomAlgorithm !== "python-mt19937-v1") throw new Error("Unsupported random algorithm");
   if (!(Number(data.strategy?.opportunityCheckIntervalMinutes) > 0)) throw new Error("Missing opportunity check interval");
-  if (data.resources.length !== 1 || data.resources[0].key !== "credits") throw new Error("v3 requires credits as the only resource");
+  const resources = data.prestige ? ["credits", "cores"] : ["credits"];
+  if (JSON.stringify(data.resources.map((item) => item.key)) !== JSON.stringify(resources)) throw new Error("Invalid resource contract");
+  if (data.contentVersion === "prestige-1" && !data.prestige) throw new Error("Missing prestige rules");
+  if (data.prestige) {
+    const p = data.prestige;
+    if (!Number.isFinite(p.planetTargetDepth) || p.planetTargetDepth <= 0
+      || !Number.isInteger(p.speedDoublingCap) || p.speedDoublingCap < 1 || p.speedDoublingCap > 40
+      || !Number.isInteger(p.rewardStep) || p.rewardStep < 1
+      || !Number.isInteger(p.historyLimit) || p.historyLimit < 1
+      || !Array.isArray(p.upgrades) || !p.upgrades.length) throw new Error("Invalid prestige rules");
+    const kinds = new Set(["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed"]);
+    const keys = new Set();
+    for (const spec of p.upgrades) {
+      if (typeof spec.key !== "string" || keys.has(spec.key) || !kinds.has(spec.effectKind)
+        || !Number.isInteger(spec.unlockResets) || spec.unlockResets < 1
+        || !Number.isInteger(spec.maxLevel) || spec.maxLevel < 1 || spec.maxLevel > 20
+        || !Number.isSafeInteger(spec.baseCost) || spec.baseCost < 1
+        || !Number.isSafeInteger(spec.costGrowth) || spec.costGrowth < 1
+        || !Number.isFinite(spec.effectPerLevel) || spec.effectPerLevel <= 0
+        || !Number.isSafeInteger(spec.baseCost * spec.costGrowth ** (spec.maxLevel - 1))) throw new Error("Invalid core technology");
+      keys.add(spec.key);
+    }
+  }
   if (data.rules.helperIntervalMinutes !== 1440) throw new Error("Helper must use the daily clock");
   if (!Number.isInteger(data.rules.batchCommandMaxLevels) || data.rules.batchCommandMaxLevels <= 0) throw new Error("Invalid batch size");
   const eras = new Set(data.eras.map((item) => item.key));
@@ -134,6 +156,7 @@ export class S2Engine {
     this.specs = Object.fromEntries(data.upgrades.map((item) => [item.key, item]));
     this.localKeys = data.upgrades.map((item) => item.key);
     this.priority = data.strategy.priority.filter((key) => this.specs[key]);
+    this.coreSpecs = Object.fromEntries((data.prestige?.upgrades || []).map((item) => [item.key, item]));
     this.rng = new PythonRandom(options.seed ?? 42);
     this.state = this.newState(options.seed ?? 42);
     this.lastBlockEvents = [];
@@ -145,7 +168,7 @@ export class S2Engine {
       schemaVersion: this.data.schemaVersion, gameVersion: this.data.gameVersion,
       contentVersion: this.data.contentVersion, seed: Number(seed),
       day: 1, minute: 0, depth: 0, credits: 0,
-      targetDepth: Number(this.rules.developmentTargetDepth),
+      targetDepth: Number(this.data.prestige?.planetTargetDepth ?? this.rules.developmentTargetDepth),
       levels: objectOf(this.localKeys), manualLevels: objectOf(this.localKeys),
       autoUnlocked: [], everKeys: [], dailyManualLevels: 0, maxDailyManualLevels: 0,
       totalManualLevels: 0, totalAutoLevels: 0, eraFirstDays: {}, autoCursor: 0,
@@ -153,6 +176,9 @@ export class S2Engine {
       helperEnabled: true, nextHelperMinute: Number(this.rules.helperIntervalMinutes),
       totalHelperLevels: 0, dailyHelperLevels: 0, totalManualCommands: 0,
       lastHelperReport: null,
+      resets: 0, completedPlanets: 0, cores: 0, coreLevels: objectOf(Object.keys(this.coreSpecs)),
+      planetComplete: false, planetStartedMinute: 0, allMaxedMinute: null,
+      autoDepart: true, planetHistory: [],
     };
   }
 
@@ -161,6 +187,19 @@ export class S2Engine {
     const saved = structuredClone(payload);
     if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
     const state = saved.state;
+    const prestigeFields = ["resets", "completedPlanets", "cores", "coreLevels", "planetComplete",
+      "planetStartedMinute", "allMaxedMinute", "autoDepart", "planetHistory"];
+    const legacy = !state.contentVersion || state.contentVersion === "thirty-day-eras-1";
+    if (legacy && prestigeFields.every((key) => !Object.hasOwn(state, key))) {
+      const defaults = this.newState(state.seed);
+      for (const key of prestigeFields) state[key] = defaults[key];
+      state.targetDepth = defaults.targetDepth;
+    } else if (prestigeFields.some((key) => !Object.hasOwn(state, key))) throw new Error("转生存档字段损坏");
+    else if (!legacy && state.contentVersion && state.contentVersion !== this.data.contentVersion) throw new Error("不支持此内容版本");
+    if (legacy && state.resets === 0 && state.completedPlanets === 0) {
+      state.targetDepth = this.newState(state.seed).targetDepth;
+      if (state.coreLevels && Object.keys(state.coreLevels).length === 0) state.coreLevels = objectOf(Object.keys(this.coreSpecs));
+    }
     const counters = ["day", "minute", "dailyManualLevels", "maxDailyManualLevels", "totalManualLevels",
       "totalAutoLevels", "autoCursor", "totalHelperLevels", "dailyHelperLevels", "totalManualCommands"];
     const invalid = () => { throw new Error("存档字段损坏"); };
@@ -169,6 +208,38 @@ export class S2Engine {
       || ["depth", "credits", "targetDepth"].some((key) => !Number.isFinite(state[key]) || state[key] < 0)
       || state.minute % this.rules.settlementMinutes || state.day !== Math.floor(state.minute / 1440) + 1
       || typeof state.helperEnabled !== "boolean" || !state.eraFirstDays || typeof state.eraFirstDays !== "object") invalid();
+    if (["resets", "completedPlanets", "cores", "planetStartedMinute"].some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
+      || typeof state.planetComplete !== "boolean" || typeof state.autoDepart !== "boolean"
+      || state.completedPlanets !== state.resets + Number(state.planetComplete)
+      || state.planetStartedMinute > state.minute || state.planetStartedMinute % this.rules.settlementMinutes
+      || state.targetDepth !== Number(this.data.prestige?.planetTargetDepth ?? this.rules.developmentTargetDepth)
+      || (state.planetComplete && state.depth !== state.targetDepth)
+      || (state.allMaxedMinute !== null && (!Number.isSafeInteger(state.allMaxedMinute)
+        || state.allMaxedMinute < state.planetStartedMinute || state.allMaxedMinute > state.minute))
+      || !state.coreLevels || typeof state.coreLevels !== "object" || Array.isArray(state.coreLevels)
+      || Object.keys(state.coreLevels).length !== Object.keys(this.coreSpecs).length) invalid();
+    let spent = 0;
+    for (const [key, spec] of Object.entries(this.coreSpecs)) {
+      const level = state.coreLevels[key];
+      if (!Number.isInteger(level) || level < 0 || level > spec.maxLevel
+        || (level > 0 && state.completedPlanets < spec.unlockResets)) invalid();
+      for (let i = 0; i < level; i += 1) spent += spec.baseCost * spec.costGrowth ** i;
+    }
+    const rewardStep = this.data.prestige?.rewardStep || 1;
+    const q = Math.floor(state.completedPlanets / rewardStep); const r = state.completedPlanets % rewardStep;
+    const earned = state.completedPlanets + rewardStep * q * (q - 1) / 2 + q * r;
+    if (!Number.isSafeInteger(earned) || state.cores + spent !== earned
+      || !Array.isArray(state.planetHistory)
+      || state.planetHistory.length !== Math.min(state.completedPlanets, this.data.prestige?.historyLimit || 20)
+      || state.planetHistory.some((item, index, history) => !item
+        || item.planet !== state.completedPlanets - history.length + index + 1
+        || !Number.isSafeInteger(item.minutes) || item.minutes <= 0
+        || !Number.isSafeInteger(item.completedMinute) || item.completedMinute > state.minute
+        || item.completedMinute < item.minutes
+        || (index > 0 && item.completedMinute < history[index - 1].completedMinute + item.minutes)
+        || item.reward !== 1 + Math.floor((item.planet - 1) / rewardStep)
+        || (item.allMaxedMinute !== null && (!Number.isSafeInteger(item.allMaxedMinute)
+          || item.allMaxedMinute < item.completedMinute - item.minutes || item.allMaxedMinute > item.completedMinute)))) invalid();
     for (const [key, interval] of [["nextAutoMinute", this.rules.autoPurchaseIntervalMinutes], ["nextHelperMinute", this.rules.helperIntervalMinutes]]) {
       if (!Number.isSafeInteger(state[key]) || state[key] !== (Math.floor(state.minute / interval) + 1) * interval) invalid();
     }
@@ -187,14 +258,18 @@ export class S2Engine {
       if (!Number.isInteger(state.levels[key]) || state.levels[key] < 0
         || state.levels[key] > this.specs[key].maxLevel
         || !Number.isInteger(state.manualLevels[key]) || state.manualLevels[key] < 0
-        || state.manualLevels[key] > this.specs[key].manualTarget) invalid();
+        || state.manualLevels[key] > Math.max(0, this.specs[key].manualTarget - state.resets)) invalid();
     }
     for (const field of ["autoUnlocked", "everKeys"]) {
       if (!Array.isArray(state[field]) || state[field].some((key) => !Object.hasOwn(this.specs, key))
         || new Set(state[field]).size !== state[field].length) invalid();
     }
-    if (this.localKeys.some((key) => state.manualLevels[key] > state.levels[key]
-      || state.autoUnlocked.includes(key) !== (state.manualLevels[key] === this.specs[key].manualTarget))) invalid();
+    if (this.localKeys.some((key) => {
+      const target = Math.max(0, this.specs[key].manualTarget - state.resets);
+      const automated = this.specs[key].status === "active" && (target === 0
+        ? state.levels[key] > 0 : state.manualLevels[key] === target);
+      return state.manualLevels[key] > state.levels[key] || state.autoUnlocked.includes(key) !== automated;
+    })) invalid();
     const report = state.lastHelperReport;
     if (report !== null && (!report || !Array.isArray(report.items)
       || !Number.isInteger(report.minute) || report.minute < 0 || report.minute > state.minute
@@ -206,6 +281,65 @@ export class S2Engine {
     this.state = state;
   }
   level(key) { return Number(this.state.levels[key] || 0); }
+  manualTarget(key) { return Math.max(0, this.specs[key].manualTarget - this.state.resets); }
+  coreEffect(kind) {
+    return Object.values(this.coreSpecs).reduce((sum, spec) =>
+      sum + (spec.effectKind === kind ? spec.effectPerLevel * this.state.coreLevels[spec.key] : 0), 0);
+  }
+  prestigeSpeed() {
+    const cap = this.data.prestige?.speedDoublingCap ?? 20;
+    return 2 ** Math.min(this.state.resets, cap) * (1 + Math.max(0, this.state.resets - cap)) ** 2
+      * 2 ** this.coreEffect("global_speed");
+  }
+  coreCost(key) {
+    const spec = this.coreSpecs[key];
+    return spec ? spec.baseCost * spec.costGrowth ** this.state.coreLevels[key] : Infinity;
+  }
+  coreAvailable(key) {
+    const spec = this.coreSpecs[key];
+    return Boolean(spec && this.state.completedPlanets >= spec.unlockResets && this.state.coreLevels[key] < spec.maxLevel);
+  }
+  purchaseCore(key) {
+    if (!this.coreAvailable(key)) return { ok: false, reason: "locked" };
+    const cost = this.coreCost(key);
+    if (this.state.cores < cost) return { ok: false, reason: "cores" };
+    this.state.cores -= cost; this.state.coreLevels[key] += 1;
+    return { ok: true, key, cost, level: this.state.coreLevels[key] };
+  }
+  setAutoDepart(enabled) {
+    if (typeof enabled !== "boolean") throw new Error("Auto departure setting must be boolean");
+    this.state.autoDepart = enabled;
+  }
+  allLocalMaxed() {
+    return this.localKeys.every((key) => this.specs[key].status !== "active" || this.level(key) === this.specs[key].maxLevel);
+  }
+  finishPlanet() {
+    const s = this.state;
+    if (!this.data.prestige || s.planetComplete || s.depth < s.targetDepth) return false;
+    const reward = 1 + Math.floor(s.resets / this.data.prestige.rewardStep);
+    s.depth = s.targetDepth; s.planetComplete = true; s.completedPlanets += 1; s.cores += reward;
+    s.planetHistory.push({ planet: s.completedPlanets, minutes: s.minute - s.planetStartedMinute,
+      completedMinute: s.minute, reward, allMaxedMinute: s.allMaxedMinute });
+    s.planetHistory = s.planetHistory.slice(-this.data.prestige.historyLimit);
+    return true;
+  }
+  departPlanet() {
+    const s = this.state;
+    if (!s.planetComplete) return { ok: false, reason: "unfinished" };
+    s.resets += 1; s.planetComplete = false; s.depth = 0; s.credits = 0;
+    s.levels = objectOf(this.localKeys); s.manualLevels = objectOf(this.localKeys);
+    s.autoUnlocked = []; s.everKeys = []; s.eraFirstDays = {}; s.autoCursor = 0;
+    s.lastHelperReport = null; s.planetStartedMinute = s.minute; s.allMaxedMinute = null;
+    return { ok: true };
+  }
+  effectStrength(kind) {
+    if (kind === "speed_compound") return 1 + this.coreEffect("speed_strength");
+    if (kind === "crit_chance") return 1;
+    let strength = 1 + this.coreEffect("equipment_strength");
+    if (kind === "income" || kind === "shift_relay") strength *= 1 + this.coreEffect("income_strength");
+    if (kind === "extra_depth" || kind === "penetration") strength *= 1 + this.coreEffect("depth_strength");
+    return strength;
+  }
   costFor(key, level = this.level(key)) {
     const spec = this.specs[key]; return Number(spec.baseCost) * Number(spec.costGrowth) ** level;
   }
@@ -219,13 +353,13 @@ export class S2Engine {
     return this.state.depth >= Number(definition.unlockDepth) && this.eraAutomationCount(previous) >= Number(definition.previousEraAutomations);
   }
   currentEra() {
-    return [...this.eraSequence].reverse().find((era) => this.eraUnlocked(era)) || this.eraSequence[0];
+    return [...this.eraSequence].reverse().find((era) => this.eraByKey[era].status !== "reserve" && this.eraUnlocked(era)) || this.eraSequence[0];
   }
   available(key, automatic = false) {
     const spec = this.specs[key];
-    if (!spec || this.level(key) >= spec.maxLevel || spec.status !== "active") return false;
-    if (automatic && !this.state.autoUnlocked.includes(key)) return false;
-    if (!automatic && this.state.manualLevels[key] >= spec.manualTarget) return false;
+    if (!spec || this.state.planetComplete || this.level(key) >= spec.maxLevel || spec.status !== "active") return false;
+    if (automatic && this.manualTarget(key) > 0 && !this.state.autoUnlocked.includes(key)) return false;
+    if (!automatic && this.state.manualLevels[key] >= this.manualTarget(key)) return false;
     return this.eraUnlocked(spec.era) && this.state.depth >= Number(spec.unlockDepth)
       && spec.prerequisites.every((required) => this.level(required) >= 1);
   }
@@ -234,7 +368,7 @@ export class S2Engine {
     const costs = [];
     this.manualCandidates().forEach((key) => {
       const spec = this.specs[key];
-      const remaining = spec.manualTarget - this.state.manualLevels[key];
+      const remaining = this.manualTarget(key) - this.state.manualLevels[key];
       for (let offset = 0; offset < remaining; offset += 1) costs.push(this.costFor(key, this.level(key) + offset));
     });
     costs.sort((a, b) => a - b);
@@ -261,11 +395,16 @@ export class S2Engine {
         this.state.dailyManualLevels += 1; this.state.totalManualLevels += 1;
         this.state.maxDailyManualLevels = Math.max(this.state.maxDailyManualLevels, this.state.dailyManualLevels);
       }
-      if (this.state.manualLevels[key] === this.specs[key].manualTarget) {
+      if (this.state.manualLevels[key] === this.manualTarget(key)) {
         if (!this.state.autoUnlocked.includes(key)) this.state.autoUnlocked.push(key);
         if (!(this.specs[key].era in this.state.eraFirstDays)) this.state.eraFirstDays[this.specs[key].era] = this.state.day;
       }
     }
+    if (automatic && this.manualTarget(key) === 0 && !this.state.autoUnlocked.includes(key)) {
+      this.state.autoUnlocked.push(key);
+      if (!(this.specs[key].era in this.state.eraFirstDays)) this.state.eraFirstDays[this.specs[key].era] = this.state.day;
+    }
+    if (this.state.allMaxedMinute === null && this.allLocalMaxed()) this.state.allMaxedMinute = this.state.minute;
     return { ok: true, key, cost, level: this.level(key), automatic, source: automatic ? "auto" : helper ? "helper" : "manual" };
   }
   upgradeCommand(orders, automatic = false) {
@@ -309,7 +448,7 @@ export class S2Engine {
     this.localKeys.forEach((key) => {
       const level = this.level(key); if (!level) return;
       const kind = this.specs[key].effectKind;
-      totals[kind] = (totals[kind] || 0) + Number(this.specs[key].effectPerLevel) * level;
+      totals[kind] = (totals[kind] || 0) + Number(this.specs[key].effectPerLevel) * level * this.effectStrength(kind);
     });
     return totals;
   }
@@ -318,7 +457,7 @@ export class S2Engine {
     let speed = 1;
     this.localKeys.forEach((key) => {
       const level = this.level(key); const spec = this.specs[key];
-      if (level && spec.effectKind === "speed_compound") speed *= (1 + Number(spec.effectPerLevel)) ** level;
+      if (level && spec.effectKind === "speed_compound") speed *= (1 + Number(spec.effectPerLevel) * this.effectStrength(spec.effectKind)) ** level;
     });
     const parallel = 1 + (e.parallel || 0); const cats = 1 + (e.cats || 0);
     const sharpness = 1 + (e.sharpness || 0); const fragility = 1 + (e.fragility || 0);
@@ -327,8 +466,9 @@ export class S2Engine {
     const critical = 1 + critChance * critDamage;
     const catLevels = this.localKeys.reduce((sum, key) => sum + (this.specs[key].effectKind === "cats" ? this.level(key) : 0), 0);
     const coordination = 1 + (e.coordination || 0) * catLevels;
-    const teamwork = 1 + (e.teamwork || 0) * Math.sqrt(Math.max(0, this.state.minute / 1440));
-    const momentum = 1 + (e.momentum || 0) * Math.min(1, (this.state.minute % 1440) / 240);
+    const localMinute = this.state.minute - this.state.planetStartedMinute;
+    const teamwork = 1 + (e.teamwork || 0) * Math.sqrt(Math.max(0, localMinute / 1440));
+    const momentum = 1 + (e.momentum || 0) * Math.min(1, (localMinute % 1440) / 240);
     const autoCount = this.state.autoUnlocked.length;
     const resonance = 1 + (e.resonance || 0) * autoCount;
     const shiftRelay = 1 + (e.shift_relay || 0) * autoCount;
@@ -336,18 +476,34 @@ export class S2Engine {
     return {
       speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth,
       critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay,
-      penetration,
+      penetration, prestige: this.prestigeSpeed(), stellar_relay: 1 + this.coreEffect("line_synergy") * autoCount,
     };
   }
   incomeMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "prestige", "stellar_relay"].reduce((product, key) => product * f[key], 1);
   }
   depthMultiplier() {
     const f = this.multiplierBreakdown();
-    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration"].reduce((product, key) => product * f[key], 1);
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "prestige", "stellar_relay"].reduce((product, key) => product * f[key], 1);
   }
   autoPurchase() {
+    if (this.state.resets > 0) {
+      const bought = [];
+      const budget = Math.min(this.localKeys.reduce((sum, key) => sum + this.specs[key].maxLevel, 0),
+        Math.ceil(this.prestigeSpeed() * this.rules.autoPurchaseBudget));
+      // Re-scan after each paid purchase so level-zero automation can unlock its real prerequisites.
+      for (let i = 0; i < budget; i += 1) {
+        const candidates = this.localKeys.filter((key) => this.available(key, true))
+          .sort((a, b) => this.costFor(a) - this.costFor(b) || a.localeCompare(b));
+        const key = candidates.find((key) => this.state.credits - this.costFor(key) + 1e-9 >= this.reserveCost());
+        if (!key) break;
+        const result = this.purchase(key, true);
+        if (!result.ok) break;
+        bought.push(result);
+      }
+      return bought;
+    }
     const active = [...this.state.autoUnlocked].sort(); if (!active.length) return [];
     const budget = Math.min(Number(this.rules.autoPurchaseBudget), active.length);
     const start = this.state.autoCursor % active.length;
@@ -362,17 +518,29 @@ export class S2Engine {
   }
   mineBlock(minutes = Number(this.rules.settlementMinutes), deterministic = false) {
     const step = Number(this.rules.settlementMinutes);
-    if (!Number.isFinite(minutes) || minutes <= 0 || minutes % step) throw new Error("mineBlock must use settlement-sized minutes");
+    if (!Number.isSafeInteger(minutes) || minutes <= 0 || minutes % step
+      || !Number.isSafeInteger(this.state.minute + minutes)) throw new Error("mineBlock must use settlement-sized minutes");
     const bought = [];
     this.lastBlockEvents = [];
     for (let elapsed = 0; elapsed < minutes; elapsed += step) {
-      const noise = deterministic ? 1 : clamp(this.rng.gauss(1, Number(this.rules.randomSigma)), 0.85, 1.15);
-      this.state.credits += Number(this.rules.baseCreditsPerMinute) * this.incomeMultiplier() * step * noise;
-      this.state.depth += Number(this.rules.baseDepthPerMinute) * this.depthMultiplier() * step * noise;
+      if (!this.state.planetComplete) {
+        const noise = deterministic ? 1 : clamp(this.rng.gauss(1, Number(this.rules.randomSigma)), 0.85, 1.15);
+        const depthRate = Number(this.rules.baseDepthPerMinute) * this.depthMultiplier() * noise;
+        const miningMinutes = this.data.prestige ? Math.max(0, Math.min(step, (this.state.targetDepth - this.state.depth) / depthRate)) : step;
+        this.state.credits += Number(this.rules.baseCreditsPerMinute) * this.incomeMultiplier() * miningMinutes * noise;
+        this.state.depth += depthRate * miningMinutes;
+        if (this.data.prestige && miningMinutes < step) this.state.depth = this.state.targetDepth;
+      }
       this.state.minute += step;
       this.startNewDay();
-      while (this.state.minute >= this.state.nextAutoMinute) {
+      this.finishPlanet();
+      if (this.state.resets > 0) {
         const purchases = this.autoPurchase();
+        bought.push(...purchases);
+        this.lastBlockEvents.push(...purchases.map((item) => ({ ...item, minute: this.state.minute })));
+      }
+      while (this.state.minute >= this.state.nextAutoMinute) {
+        const purchases = this.state.resets === 0 ? this.autoPurchase() : [];
         bought.push(...purchases);
         this.lastBlockEvents.push(...purchases.map((item) => ({ ...item, minute: this.state.minute })));
         this.state.nextAutoMinute += Number(this.rules.autoPurchaseIntervalMinutes);
@@ -381,6 +549,7 @@ export class S2Engine {
         this.lastBlockEvents.push(...this.helperPurchase().map((item) => ({ ...item, minute: this.state.minute })));
         this.state.nextHelperMinute += Number(this.rules.helperIntervalMinutes);
       }
+      if (this.state.planetComplete && this.state.resets > 0 && this.state.autoDepart) this.departPlanet();
     }
     return bought;
   }

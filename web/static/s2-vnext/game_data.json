@@ -2,7 +2,7 @@
   "$schema": "./game_data.schema.json",
   "schemaVersion": 3,
   "gameVersion": "s2-vnext-v3-helper-1",
-  "contentVersion": "thirty-day-eras-1",
+  "contentVersion": "prestige-1",
   "playtestDays": 30,
   "rules": {
     "settlementMinutes": 10,
@@ -22,6 +22,56 @@
     "manualBurstWarningLevels": 30,
     "batchCommandMaxLevels": 100
   },
+  "prestige": {
+    "planetTargetDepth": 2.4e19,
+    "speedDoublingCap": 20,
+    "rewardStep": 5,
+    "historyLimit": 20,
+    "upgrades": [
+      {
+        "key": "core_drill",
+        "name": "行星核心钻头",
+        "description": "永久强化每代钻头。每级使所有**挖矿速度**科技的单级强度增加基础值的18%；从手工矿镐到未来设备都能受益，重新购买设备后生效。",
+        "unlockResets": 1, "baseCost": 1, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "speed_strength", "effectPerLevel": 0.18
+      },
+      {
+        "key": "core_refining",
+        "name": "核心精炼工艺",
+        "description": "每级使**额外收入**和**班次接力**类设备的单级强度增加基础值的50%，提高**矿币收益**。不直接增加**挖矿深度**，但可以更早买齐设备。",
+        "unlockResets": 1, "baseCost": 2, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "income_strength", "effectPerLevel": 0.5
+      },
+      {
+        "key": "core_depth",
+        "name": "地核穿透材料",
+        "description": "每级使**额外深度**和**过量穿透**类设备的单级强度增加基础值的50%，提高**挖矿深度**。不增加**矿币收益**，适合缩短设备满级后的挖掘时间。",
+        "unlockResets": 1, "baseCost": 2, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "depth_strength", "effectPerLevel": 0.5
+      },
+      {
+        "key": "stellar_forge",
+        "name": "恒星系装备铸造",
+        "description": "每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的20%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。",
+        "unlockResets": 3, "baseCost": 3, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "equipment_strength", "effectPerLevel": 0.2
+      },
+      {
+        "key": "stellar_relay",
+        "name": "恒星系联合勘探",
+        "description": "每级让当前星球每条已建成的**自动线**贡献1.5%的加成；各条线的贡献相加，再同时提升**矿币收益**和**挖矿深度**。换星后需重建设备，才能重新获得这些加成。",
+        "unlockResets": 5, "baseCost": 5, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "line_synergy", "effectPerLevel": 0.015
+      },
+      {
+        "key": "galactic_drive",
+        "name": "银河远航引擎",
+        "description": "每级令**矿币收益**和**挖矿深度**同时翻倍。即使新星球还没有任何设备也会生效；本地科技仍然需要从零购买。",
+        "unlockResets": 10, "baseCost": 10, "costGrowth": 2, "maxLevel": 8,
+        "effectKind": "global_speed", "effectPerLevel": 1
+      }
+    ]
+  },
   "resources": [
     {
       "key": "credits",
@@ -29,6 +79,13 @@
       "icon": "◆",
       "color": "#f4b942",
       "use": "唯一的本地科技货币，由全部采矿收入直接结算"
+    },
+    {
+      "key": "cores",
+      "name": "星球核心",
+      "icon": "◎",
+      "color": "#57c6a5",
+      "use": "挖穿星球结算一次，用于永久科技；换星不清空"
     }
   ],
   "eras": [
@@ -182,9 +239,9 @@
       "key": "momentum",
       "name": "钻进动量",
       "scope": "both",
-      "formula": "当日连续作业逐步升至上限",
+      "formula": "抵达本星后每24小时一轮，前4小时逐步升至上限",
       "status": "active",
-      "note": "随游戏内时间蓄能，每日 00:00 归零、04:00 达到满额，不需要手动维持；同时影响矿币收益和挖矿深度。"
+      "note": "从抵达本星球起，每 24 游戏小时重新蓄能，每轮前 4 小时达到满额，不需要手动维持；同时影响矿币收益和挖矿深度。"
     },
     {
       "key": "resonance",
@@ -192,7 +249,7 @@
       "scope": "both",
       "formula": "1 + 自动化科技数×等级",
       "status": "active",
-      "note": "每项完成三次调试的科技算一条自动线；自动线越多，对矿币收益和挖矿深度的加成越高。"
+      "note": "每项在本星完成调试且已实际建成的科技算一条自动线；自动线越多，对矿币收益和挖矿深度的加成越高。"
     },
     {
       "key": "penetration",
@@ -208,7 +265,7 @@
       "scope": "income",
       "formula": "1 + 已自动科技数×等级",
       "status": "active",
-      "note": "每项完成三次调试的科技算一条自动线；自动线越多，对全部矿币收益的加成越高，不影响挖矿深度。"
+      "note": "每项在本星完成调试且已实际建成的科技算一条自动线；自动线越多，对全部矿币收益的加成越高，不影响挖矿深度。"
     },
     {
       "key": "lens",
@@ -421,7 +478,7 @@
       "name": "三班接力",
       "era": "industrial",
       "region": "shift_relay",
-      "description": "减少换班时的矿石损耗，提高**班次接力**。每项完成三次调试的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**的加成越高，不影响**挖矿深度**。",
+      "description": "减少换班时的矿石损耗，提高**班次接力**。每项在本星完成调试且已实际建成的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**的加成越高，不影响**挖矿深度**。",
       "effectKind": "shift_relay",
       "effectPerLevel": 0.018,
       "maxLevel": 7,
@@ -439,7 +496,7 @@
       "name": "钻进动量",
       "era": "industrial",
       "region": "momentum",
-      "description": "钻机随游戏内时间蓄能，逐渐增加**矿币收益**和**挖矿深度**。**钻进动量**每天 00:00 归零、04:00 达到满额，不需要手动维持。升级会提高满额时的加成。",
+      "description": "钻机随游戏内时间蓄能，逐渐增加**矿币收益**和**挖矿深度**。从抵达本星球起，**钻进动量**每 24 游戏小时重新蓄能，每轮前 4 小时达到满额，不需要手动维持。升级会提高满额时的加成。",
       "effectKind": "momentum",
       "effectPerLevel": 0.08,
       "maxLevel": 7,
@@ -547,7 +604,7 @@
       "name": "矿网共振",
       "era": "electrical",
       "region": "resonance",
-      "description": "让自动设备配合运转，提高**科技共振**。每项完成三次调试的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**和**挖矿深度**的加成越高。",
+      "description": "让自动设备配合运转，提高**科技共振**。每项在本星完成调试且已实际建成的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**和**挖矿深度**的加成越高。",
       "effectKind": "resonance",
       "effectPerLevel": 0.012,
       "maxLevel": 7,
@@ -836,7 +893,7 @@
       "name": "蓄能飞轮",
       "era": "electrical",
       "region": "momentum",
-      "description": "储存钻机动能，增强**钻进动量**，同时增加**矿币收益**和**挖矿深度**。每天 00:00 重新蓄能，04:00 满额；每级使满额倍率 +0.30，与同类设备相加，不需要手动维持。",
+      "description": "储存钻机动能，增强**钻进动量**，同时增加**矿币收益**和**挖矿深度**。从抵达本星球起，每 24 游戏小时重新蓄能，每轮前 4 小时达到满额；每级使满额倍率 +0.30，与同类设备相加，不需要手动维持。",
       "effectKind": "momentum",
       "effectPerLevel": 0.3,
       "maxLevel": 8,
