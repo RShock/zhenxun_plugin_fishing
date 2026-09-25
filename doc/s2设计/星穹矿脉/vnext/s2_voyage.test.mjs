@@ -47,15 +47,17 @@ function plan(e) {
 
 test("no free prestige speed; one core buys total x2 and next level costs three cores for total x3", () => {
   const e = fixture();
+  const spec = data.prestige.upgrades.find((item) => item.key === "planet_drive");
+  const eff = Number(spec.effectPerLevel);
   assert.equal(e.prestigeSpeed(), 1);
   assert.equal(e.purchaseCore("planet_drive").ok, true);
-  assert.equal(e.prestigeSpeed(), 2);
+  assert.equal(e.prestigeSpeed(), 1 + eff);
   assert.equal(e.purchaseCore("planet_drive").ok, false);
   e.state.cores += 1;
   assert.equal(e.purchaseCore("planet_drive").ok, true);
-  assert.equal(e.prestigeSpeed(), 3);
+  assert.equal(e.prestigeSpeed(), 1 + eff * 2);
   e.state.resets = 1000;
-  assert.equal(e.prestigeSpeed(), 3);
+  assert.equal(e.prestigeSpeed(), 1 + eff * 2);
 });
 
 test("factored local-age integral agrees with independent midpoint quadrature across midnight", () => {

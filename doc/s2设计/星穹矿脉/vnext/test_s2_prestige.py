@@ -317,17 +317,19 @@ def test_resets_grant_no_free_speed_and_planet_drive_is_paid_x2_x3() -> None:
     state.resets = state.completed_planets = 1000
     assert state.prestige_speed() == 1
 
+    spec = CORE_SPECS["planet_drive"]
+    eff = float(spec.effect_per_level)
     state.cores = 1
     assert state.purchase_core("planet_drive") == (True, "")
-    assert state.prestige_speed() == 2
+    assert state.prestige_speed() == pytest.approx(1 + eff)
     assert state.core_cost("planet_drive") == 3
     assert state.purchase_core("planet_drive") == (False, "cores")
 
     state.cores = 3
     assert state.purchase_core("planet_drive") == (True, "")
-    assert state.prestige_speed() == 3
+    assert state.prestige_speed() == pytest.approx(1 + eff * 2)
     state.resets = 1_000_000
-    assert state.prestige_speed() == 3
+    assert state.prestige_speed() == pytest.approx(1 + eff * 2)
 
 
 def core_key(effect_kind: str) -> str:
