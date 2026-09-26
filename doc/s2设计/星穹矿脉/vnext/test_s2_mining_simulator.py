@@ -48,7 +48,7 @@ def test_v3_uses_local_and_prestige_currencies_with_existing_era_regions() -> No
     regions = {item["key"]: item for item in GAME_DATA["multiplierRegions"]}
     active = [item for item in GAME_DATA["upgrades"] if item["status"] == "active"]
     removed = {"pressure", "network", "heat", "diversity", "cascade", "precision", "compression", "lens"}
-    assert len(active) == 43
+    assert len(active) == 44
     assert not ({item["effectKind"] for item in active} & removed)
     assert all(regions[item["region"]]["status"] == "active" for item in active)
     assert regions["opening_burst"]["status"] != "active"

@@ -24,7 +24,7 @@
   },
   "prestige": {
     "planetTargetDepth": 2.4e+19,
-    "galaxyTargetPlanets": 2361000,
+    "galaxyTargetPlanets": 3799000,
     "openingBurstSeconds": 1,
     "legacyCorePrices": {
       "planet_drive": [
@@ -388,9 +388,9 @@
       "name": "手工矿镐",
       "era": "foundation",
       "region": "speed",
-      "description": "更顺手的矿镐让开挖更快。每级让当前的**挖矿速度**提高 18%，**矿币收益**和**挖矿深度**也一起提高 18%。",
+      "description": "更顺手的矿镐让开挖更快。每级让当前的**挖矿速度**提高 26%，**矿币收益**和**挖矿深度**也一起提高 26%。",
       "effectKind": "speed_compound",
-      "effectPerLevel": 0.18,
+      "effectPerLevel": 0.26,
       "maxLevel": 9,
       "baseCost": 300,
       "costGrowth": 1.92,
@@ -719,6 +719,24 @@
       "unlockDepth": 26000000000,
       "prerequisites": [
         "plasma_edge"
+      ],
+      "manualTarget": 3,
+      "status": "active"
+    },
+    {
+      "key": "pulse_booster",
+      "name": "脉冲增压舱",
+      "era": "electrical",
+      "region": "parallel",
+      "description": "周期性增压输送，提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +0.85，与**电动矿车**等同类设备的加成相加。",
+      "effectKind": "parallel",
+      "effectPerLevel": 0.85,
+      "maxLevel": 7,
+      "baseCost": 1200000000,
+      "costGrowth": 1.58,
+      "unlockDepth": 60000000000,
+      "prerequisites": [
+        "grid_resonance"
       ],
       "manualTarget": 3,
       "status": "active"
@@ -1334,6 +1352,7 @@
       "plasma_edge",
       "overpenetration",
       "grid_resonance",
+      "pulse_booster",
       "seismic_echo",
       "induction_ledger",
       "capacitor_bank",

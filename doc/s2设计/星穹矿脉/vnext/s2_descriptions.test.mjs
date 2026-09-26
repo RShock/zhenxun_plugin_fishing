@@ -55,7 +55,7 @@ test("renderer creates only text and strong nodes, never interpreting HTML", () 
 });
 
 test("all active descriptions explain both outcomes and reference real named concepts", () => {
-  assert.equal(active.length, 43);
+  assert.equal(active.length, 44);
   for (const spec of active) {
     assert.ok(spec.description.includes("**矿币收益**"), spec.key);
     assert.ok(spec.description.includes("**挖矿深度**"), spec.key);

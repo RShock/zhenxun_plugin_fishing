@@ -40,6 +40,19 @@ const duration = (minutes) => {
   return parts.join("") || "0秒";
 };
 const notice = (text) => { $("#actionNotice").textContent = text; };
+const showToast = (text) => {
+  let el = document.getElementById("graduationToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "graduationToast";
+    el.style.cssText = "position:fixed;right:16px;bottom:16px;max-width:360px;background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.3);font-size:14px;line-height:1.4;z-index:9999;transform:translateY(20px);opacity:0;transition:all .3s ease;pointer-events:none;";
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.style.transform = "translateY(0)"; el.style.opacity = "1";
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.transform="translateY(20px)"; el.style.opacity="0"; }, 3200);
+};
 const activeSpecs = () => data.upgrades.filter((spec) => spec.status === "active");
 const manualTarget = (key) => Math.max(0, Number(engine.manualTarget(key)));
 const currentPlanet = () => Number(engine.state.resets || 0) + 1;
@@ -177,6 +190,11 @@ function renderHelper() {
   $("#helperNext").textContent = s.planetComplete ? "等待下一颗星球" : s.helperEnabled ? clock(s.nextHelperMinute) : "已暂停值班";
   $("#helperCountdown").textContent = s.planetComplete ? "本星球生产与采购均已停止" : s.helperEnabled ? `还有${duration(s.nextHelperMinute - s.minute)} · 低价优先` : "装备自动采购继续运行";
   $("#helperResult").textContent = report ? `建设 ${report.levels} 级` : "等待第一班";
+  if (report && report.levels > 0) {
+    $("#helperResult").style.background = "#fff3cd"; $("#helperResult").style.padding = "2px 6px"; $("#helperResult").style.borderRadius = "6px";
+    setTimeout(()=>{ $("#helperResult").style.background = ""; }, 1800);
+    if (report.levels >= 1) showToast(`夜班助手已为你完成 ${report.levels} 级建设（${report.items.map(i=>engine.specs[i.key].name).join("、")}），省下一次手动操作。`);
+  }
   $("#helperSpent").textContent = report ? `${clock(report.minute)} · 花费 ${formatNumber(report.spent)} 矿币` : "每日00:00采购";
   const root = $("#helperItems"); root.replaceChildren();
   const items = new Map();
@@ -228,11 +246,17 @@ function renderNext() {
   $("#nextEta").textContent = target > current ? `按当前产速约${duration((target - current) / rate)}` : "已满足数值条件";
 }
 function buy(orders) {
+  const beforeUnlocked = new Set(engine.state.autoUnlocked);
   const result = engine.upgradeCommand(orders);
   if (result.ok) {
     save(); render();
     const spent = result.purchases.reduce((sum, item) => sum + item.cost, 0);
     notice(`完成 ${result.purchases.length} 级建设 · 花费 ${formatNumber(spent)} 矿币${result.reason ? " · 余下工程暂未满足条件" : ""}`);
+    const newly = engine.state.autoUnlocked.filter(k=>!beforeUnlocked.has(k));
+    if (newly.length) {
+      const names = newly.map(k=>engine.specs[k].name).join("、");
+      showToast(`🎉 ${names} 已完成全部调试，正式移交自动线！后续无需手动。`);
+    }
   } else notice("当前条件不足，未扣除矿币。");
 }
 function renderTechTree() {
@@ -525,7 +549,17 @@ function renderPrestige() {
   $("#departButton").hidden = !s.planetComplete || engine.galaxyComplete();
   $("#departButton").disabled = !preview || engine.galaxyComplete();
   if (preview) {
-    renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与命令数**。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。`);
+    // 计算启程前后单星预估秒数对比
+    let beforeSec = null, afterSec = null;
+    try {
+      const beforePlan = engine.voyagePlan();
+      beforeSec = beforePlan.duration * 60;
+      const copyAfter = new S2Engine(data, { state: engine.snapshot() });
+      copyAfter.departPlanet();
+      afterSec = copyAfter.voyagePlan().duration * 60;
+    } catch {}
+    const secLine = (beforeSec && afterSec) ? ` 本星预估 ${duration(beforeSec/60)} → 下星 ${duration(afterSec/60)}（提速 ${Math.round((1-afterSec/beforeSec)*100)}%）。` : "";
+    renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与命令数**。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。${secLine}`);
   } else {
     renderDescription($("#departureDescription"), engine.galaxyComplete()
       ? `本银河的 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技和全部累计统计**完整保留。`
