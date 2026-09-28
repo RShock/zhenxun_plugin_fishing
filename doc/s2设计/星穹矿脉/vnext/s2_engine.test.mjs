@@ -71,7 +71,7 @@ test("disabled shifts leave reports but are never backfilled and consume no extr
   disabled.setHelperEnabled(false);
   enabled.mineBlock(2880); disabled.mineBlock(2880);
   assert.deepEqual(enabled.rng.snapshot(), disabled.rng.snapshot());
-  assert.deepEqual(disabled.state.lastHelperReport, { minute: 2880, levels: 0, spent: 0, items: [] });
+  assert.deepEqual(disabled.state.lastHelperReport, { minute: 2880, levels: 0, spent: 0, items: [], reason: "本班值班已暂停，没有采购。" });
   disabled.setHelperEnabled(true);
   disabled.mineBlock(10);
   assert.equal(disabled.state.totalHelperLevels, 0);

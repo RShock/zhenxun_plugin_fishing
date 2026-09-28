@@ -1,4 +1,4 @@
-import { compileVoyage, sampleVoyage, earnedCores } from "./voyage.js?v=3-prestige-3";
+import { compileVoyage, sampleVoyage, earnedCores } from "./voyage.js?v=3-prestige-5";
 
 const UINT32_RANGE = 4294967296;
 const TWO_PI = Math.PI * 2;
@@ -148,6 +148,12 @@ export class PythonRandom {
 }
 
 function objectOf(keys, value = 0) { return Object.fromEntries(keys.map((key) => [key, value])); }
+// structuredClone 在旧浏览器（如 Safari < 15.4）与部分嵌入式 WebView 中不存在；
+// 存档与预览模拟都依赖深拷贝，这里提供 JSON 兜底，避免存档静默失败。
+function deepClone(value) {
+  if (typeof structuredClone === "function") return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
 function clamp(value, low, high) { return Math.max(low, Math.min(high, value)); }
 
 export class S2Engine {
@@ -188,9 +194,9 @@ export class S2Engine {
     };
   }
 
-  snapshot() { return { state: structuredClone(this.state), rng: this.rng.snapshot() }; }
+  snapshot() { return { state: deepClone(this.state), rng: this.rng.snapshot() }; }
   restore(payload) {
-    const saved = structuredClone(payload);
+    const saved = deepClone(payload);
     if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
     const state = saved.state;
     const prestigeFields = ["resets", "completedPlanets", "cores", "coreLevels", "planetComplete",
@@ -508,8 +514,19 @@ export class S2Engine {
       if (!result.ok) break;
       purchases.push(result);
     }
+    let reason = "";
+    if (!purchases.length) {
+      if (!this.state.helperEnabled) reason = "本班值班已暂停，没有采购。";
+      else if (!this.manualCandidates().length) {
+        reason = "没有满足条件的设备（深度 / 时代 / 前置未解锁，或本代已满级）。";
+      } else {
+        const cheapest = this.manualCandidates().sort((a, b) => this.costFor(a) - this.costFor(b))[0];
+        const gap = this.costFor(cheapest) - this.state.credits;
+        reason = `矿币不足：最便宜的「${this.specs[cheapest].name}」还差 ${gap > 0 ? gap : 0} 矿币。`;
+      }
+    }
     this.state.lastHelperReport = {
-      minute: this.state.minute, levels: purchases.length,
+      minute: this.state.minute, levels: purchases.length, reason,
       spent: purchases.reduce((sum, item) => sum + item.cost, 0),
       items: purchases.map(({ key, level, cost }) => ({ key, level, cost })),
     };
@@ -600,7 +617,7 @@ export class S2Engine {
     if (fresh && this._canonicalVoyage?.key === key) plan = this._canonicalVoyage.plan;
     else {
       const scratch = new S2Engine(this.data);
-      scratch.state = structuredClone(s);
+      scratch.state = deepClone(s);
       scratch.state.minute = s.minute - s.planetStartedMinute;
       scratch.state.planetStartedMinute = 0;
       scratch.state.allMaxedMinute = s.allMaxedMinute === null ? null : s.allMaxedMinute - s.planetStartedMinute;
@@ -618,7 +635,7 @@ export class S2Engine {
     s.nextAutoMinute = (Math.floor(minute / this.rules.autoPurchaseIntervalMinutes) + 1) * this.rules.autoPurchaseIntervalMinutes;
     const lastMidnight = Math.floor(minute / 1440) * 1440;
     if (lastMidnight >= s.nextHelperMinute && lastMidnight >= s.planetStartedMinute) {
-      s.lastHelperReport = { minute: lastMidnight, levels: 0, spent: 0, items: [] };
+      s.lastHelperReport = { minute: lastMidnight, levels: 0, spent: 0, items: [], reason: "" };
     }
     s.nextHelperMinute = lastMidnight + 1440;
   }
@@ -693,7 +710,7 @@ export class S2Engine {
       s.allMaxedMinute = plan.end.allMaxedAge === null ? null : s.planetStartedMinute + plan.end.allMaxedAge;
       const midnight = Math.floor(finish / 1440) * 1440;
       s.lastHelperReport = midnight >= s.planetStartedMinute
-        ? { minute: midnight, levels: 0, spent: 0, items: [] } : null;
+        ? { minute: midnight, levels: 0, spent: 0, items: [], reason: "" } : null;
     } else this.clearLocalPlanet();
     this.lastBatchSummary.planets += count;
     this.autoPurchaseCore();

@@ -230,3 +230,8 @@ footer { padding: 23px 0 35px; color: var(--muted); font-size: 11px; }
   .multiplier-list { grid-template-columns: 1fr 1fr; }
   .audit-summary { grid-template-columns: 1fr; }
 }
+
+/* —— QQ 场景优化：下次看点 / 核心闲置提示 —— */
+.next-checkin { margin-top: 8px; font-size: 12px; color: var(--muted); background: #f4f6f8; padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--muted); line-height: 1.6; }
+.core-idle-hint { margin-top: 10px; font-size: 12px; color: #8a6d1f; background: #fdf6e3; padding: 9px 11px; border-radius: 6px; border-left: 3px solid #e0b94f; line-height: 1.7; overflow-wrap: anywhere; }
+.core-idle-hint strong { color: #6d5414; }

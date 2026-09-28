@@ -92,3 +92,6 @@ web/static/_lab/xqkm/*_test.*
 
 # Local S3 game-design drafts
 doc/s3/
+
+# Node
+node_modules/
