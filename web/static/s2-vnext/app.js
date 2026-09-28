@@ -10,7 +10,7 @@ const coefficient = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 6 })
 const $ = (selector) => document.querySelector(selector);
 const formatNumber = (value) => Math.abs(value) >= 1e15 ? value.toExponential(2) : Math.abs(value) >= 1e7 ? compact.format(value) : number.format(value);
 const formatMultiplier = (value) => `×${formatNumber(value)}`;
-let data; let engine; let timer = null; let view = "construction"; let pendingOrders = []; let saveBlocked = false;
+let data; let engine; let timer = null; let view = "construction"; let pendingOrders = []; let saveBlocked = false; let showAllPrestige = false;
 const eraName = (key) => data.eras.find((item) => item.key === key)?.name || key;
 const clock = (minute) => {
   const totalSeconds = Math.max(0, Math.round(Number(minute) * 60));
@@ -102,7 +102,10 @@ function advance(minutes) {
   const before = {
     credits: engine.state.credits, depth: engine.state.depth, auto: engine.state.totalAutoLevels,
     helper: engine.state.totalHelperLevels, completed: engine.state.completedPlanets, resets: engine.state.resets,
+    helperReports: (engine.state.planetHistory?.length || 0), // placeholder for parity check
   };
+  const beforeHelperReport = engine.state.lastHelperReport ? {...engine.state.lastHelperReport, items:[...engine.state.lastHelperReport.items]} : null;
+  const beforeHelperLevels = engine.state.totalHelperLevels;
   try {
     engine.mineBlock(minutes);
     save(); render();
@@ -115,6 +118,7 @@ function advance(minutes) {
   }
   const completed = engine.state.completedPlanets - before.completed;
   const departed = engine.state.resets - before.resets;
+  const helperDelta = engine.state.totalHelperLevels - beforeHelperLevels;
   const parts = [`已过${duration(minutes)}`];
   if (completed > 0) parts.push(`挖穿 ${completed} 颗星球`);
   if (departed > 0) parts.push(`自动启程 ${departed} 次`);
@@ -125,7 +129,21 @@ function advance(minutes) {
   } else {
     parts.push(`现为第 ${currentPlanet()} 颗星球`);
   }
-  parts.push(`助手建设 ${engine.state.totalHelperLevels - before.helper} 级`);
+  // 助手触发强提示（完美步进校验：所有推进都按 10分钟 settlement 逐段结算，30天一次 vs 30次一天完全一致，已用引擎自测校验）
+  if (helperDelta > 0) {
+    const report = engine.state.lastHelperReport;
+    const names = report ? report.items.map(i=>engine.specs[i.key].name).join("、") : "";
+    parts.push(`助手触发 +${helperDelta}级${names?`（${names}）`:""}`);
+    // 助手已在 renderHelper 里 toast，这里再补一条更醒目的 notice 已足够
+  } else {
+    // 计算距离下次助手还有多久，方便测试
+    const toHelper = engine.state.nextHelperMinute - engine.state.minute;
+    if (!engine.state.planetComplete && engine.state.helperEnabled && toHelper > 0 && toHelper <= 4320) {
+      parts.push(`距助手下班 ${duration(toHelper)}`);
+    } else if (helperDelta===0 && beforeHelperReport && engine.state.lastHelperReport && engine.state.lastHelperReport.levels===0 && engine.state.lastHelperReport.minute===engine.state.minute) {
+      parts.push(`助手本班无可买（矿币/深度不足）`);
+    }
+  }
   parts.push(`自动采购 ${engine.state.totalAutoLevels - before.auto} 级`);
   if (engine.galaxyComplete()) parts.push("银河开采完成，生产已永久停止");
   else if (engine.state.planetComplete && departed === 0) parts.push("生产已停止，请手动启程");
@@ -158,6 +176,64 @@ function lockedReason(key) {
   if (engine.state.credits < engine.costFor(key)) return `还差 ${formatNumber(engine.costFor(key) - engine.state.credits)} 矿币`;
   return "";
 }
+function nextUpgradeEstimate() {
+  if (engine.state.planetComplete || engine.galaxyComplete()) return null;
+  const active = activeSpecs().filter(spec => !engine.state.autoUnlocked.includes(spec.key) && engine.level(spec.key) < spec.maxLevel);
+  // 优先考虑已解锁（available）的，其次是前沿
+  let best = null;
+  let bestMinutes = Infinity;
+  const incomeRate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier();
+  const depthRate = data.rules.baseDepthPerMinute * engine.depthMultiplier();
+  for (const spec of active) {
+    const target = manualTarget(spec.key);
+    if (target === 0) continue;
+    // 未满足时代/前置的需要先满足深度，这里先跳过，只算可触达的 nearby（否则提示太远）
+    const eraOk = engine.eraUnlocked(spec.era);
+    const prereqOk = spec.prerequisites.every(k => engine.level(k) >= 1);
+    if (!eraOk || !prereqOk) continue;
+    // 需要的深度和费用
+    const needDepth = Math.max(spec.unlockDepth, engine.eraByKey[spec.era].unlockDepth);
+    const depthWait = needDepth > engine.state.depth ? (needDepth - engine.state.depth) / Math.max(1e-9, depthRate) : 0;
+    const cost = engine.costFor(spec.key);
+    const creditWait = cost > engine.state.credits ? (cost - engine.state.credits) / Math.max(1e-9, incomeRate) : 0;
+    // 深度和金钱可以并行积累，实际等待是 max，但为了“少交互”提示，我们用 creditWait 为主，depthWait 为辅
+    // 如果 depthWait 很大，说明还在挖深度阶段，不算“下一个可升级”
+    const wait = Math.max(depthWait, creditWait);
+    // 只关心未来 3 天内可达的，否则不算“下一个”
+    if (wait < bestMinutes && wait < 4320) {
+      bestMinutes = wait;
+      best = { key: spec.key, name: spec.name, wait, cost, depthWait, creditWait };
+    }
+  }
+  if (!best) {
+    // 兜底：找所有可 construction 的最便宜一个
+    const cands = engine.manualCandidates().sort((a,b)=>engine.costFor(a)-engine.costFor(b));
+    if (cands.length) {
+      const k = cands[0];
+      const cost = engine.costFor(k);
+      const wait = Math.max(0, (cost - engine.state.credits) / Math.max(1e-9, incomeRate));
+      return { key: k, name: engine.specs[k].name, wait, cost, depthWait:0, creditWait: wait };
+    }
+    return null;
+  }
+  return best;
+}
+function renderNextUpgradeBanner(container) {
+  const eta = nextUpgradeEstimate();
+  if (!eta) {
+    container.hidden = true;
+    container.textContent = "";
+    return;
+  }
+  container.hidden = false;
+  if (eta.wait < 0.5) {
+    container.innerHTML = `✅ 下一项 <strong>${eta.name}</strong> 已可升级（${formatNumber(eta.cost)} 矿币）— 点绿色卡片立即开工`;
+  } else {
+    const waitText = duration(eta.wait);
+    const clockText = clock(engine.state.minute + eta.wait);
+    container.innerHTML = `⏳ 下一项 <strong>${eta.name}</strong> 预计 <strong>${waitText}后</strong> 可升级（${clockText}，还差 ${formatNumber(Math.max(0, eta.cost - engine.state.credits))} 矿币）— 先去挖矿或推进时间`;
+  }
+}
 function renderStatus() {
   const s = engine.state;
   $("#timeValue").textContent = clock(s.minute); $("#seedValue").textContent = `seed ${s.seed}`;
@@ -170,7 +246,8 @@ function renderStatus() {
   $("#eraValue").textContent = eraName(engine.currentEra());
   $("#automationValue").textContent = `${s.autoUnlocked.length} 条自动线`;
   $("#totalBuiltValue").textContent = s.totalManualLevels + s.totalHelperLevels + s.totalAutoLevels;
-  $("#purchaseCounts").textContent = `手动 ${s.totalManualLevels} · 助手 ${s.totalHelperLevels} · 自动 ${s.totalAutoLevels}`;
+  $("#purchaseCounts").textContent = `手动 ${s.totalManualLevels} · 助手 ${s.totalHelperLevels} · 自动 ${s.totalAutoLevels} · 操作 ${s.totalManualCommands}次`;
+  $("#purchaseCounts").title = "操作 = 你点‘升级1级/完成调试/批量建设’的总次数（批量一次算1次），用于复盘节奏；与‘级数’不同";
   $("#sceneEra").textContent = eraName(engine.currentEra());
   $("#sceneStatus").textContent = engine.galaxyComplete()
     ? "银河开采完成 · 永久停产"
@@ -244,6 +321,14 @@ function renderNext() {
   $("#nextProgress").value = target ? Math.min(1, current / target) : 1;
   $("#nextProgressText").textContent = `${unit} ${formatNumber(current)} / ${formatNumber(target)}`;
   $("#nextEta").textContent = target > current ? `按当前产速约${duration((target - current) / rate)}` : "已满足数值条件";
+  let banner = document.getElementById("nextEtaBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "nextEtaBanner";
+    banner.className = "next-eta-banner";
+    $("#nextReason").after(banner);
+  }
+  renderNextUpgradeBanner(banner);
 }
 function buy(orders) {
   const beforeUnlocked = new Set(engine.state.autoUnlocked);
@@ -251,11 +336,22 @@ function buy(orders) {
   if (result.ok) {
     save(); render();
     const spent = result.purchases.reduce((sum, item) => sum + item.cost, 0);
-    notice(`完成 ${result.purchases.length} 级建设 · 花费 ${formatNumber(spent)} 矿币${result.reason ? " · 余下工程暂未满足条件" : ""}`);
+    const eta = nextUpgradeEstimate();
+    let etaText = "";
+    if (eta) {
+      if (eta.wait < 0.5) etaText = ` · 下一项「${eta.name}」已可升级`;
+      else etaText = ` · 下一项「${eta.name}」约${duration(eta.wait)}后可升（${clock(engine.state.minute + eta.wait)}）`;
+    }
+    notice(`完成 ${result.purchases.length} 级建设 · 花费 ${formatNumber(spent)} 矿币${result.reason ? " · 余下工程暂未满足条件" : ""}${etaText}`);
     const newly = engine.state.autoUnlocked.filter(k=>!beforeUnlocked.has(k));
     if (newly.length) {
       const names = newly.map(k=>engine.specs[k].name).join("、");
       showToast(`🎉 ${names} 已完成全部调试，正式移交自动线！后续无需手动。`);
+      // 毕业 toast 后，再提示下一次
+      if (eta && eta.wait >= 0.5) setTimeout(()=> showToast(`⏳ 下一项「${eta.name}」预计 ${duration(eta.wait)}后可升级（${clock(engine.state.minute + eta.wait)}）`), 1800);
+    } else if (eta) {
+      if (eta.wait >= 0.5) showToast(`⏳ 已升级，下一次「${eta.name}」预计 ${duration(eta.wait)}后可升级（${clock(engine.state.minute + eta.wait)}）`);
+      else if (eta.wait < 30) showToast(`✅ 已升级，「${eta.name}」已可继续升级`);
     }
   } else notice("当前条件不足，未扣除矿币。");
 }
@@ -285,7 +381,39 @@ function renderTechTree() {
       const commissioned = engine.state.manualLevels[spec.key]; const auto = engine.state.autoUnlocked.includes(spec.key);
       const target = manualTarget(spec.key);
       card.classList.toggle("automated", auto); card.classList.toggle("locked", view === "frontier");
-      card.querySelector("h3").textContent = spec.name;
+      // 新增：可升/不可升配色（测试用）
+      const _reasonPreview = lockedReason(spec.key);
+      const canUpgrade = !_reasonPreview;
+      card.classList.toggle("can-upgrade", canUpgrade && view === "construction" && !auto);
+      card.classList.toggle("cannot-upgrade", !canUpgrade && view === "construction" && !auto);
+      const h3 = card.querySelector("h3");
+      h3.textContent = spec.name;
+      // 已有 eta badge 清理
+      const oldBadge = h3.querySelector(".eta-badge");
+      if (oldBadge) oldBadge.remove();
+      if (view === "construction" && !auto) {
+        const badge = document.createElement("span");
+        badge.className = "eta-badge";
+        if (canUpgrade) {
+          badge.textContent = "可升级";
+          badge.style.background = "#126650";
+        } else {
+          // 计算该项的等待时间，仅当是“钱不够”时显示倒计时
+          if (_reasonPreview.startsWith("还差")) {
+            const cost = engine.costFor(spec.key);
+            const incomeRate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier();
+            const wait = Math.max(0, (cost - engine.state.credits) / Math.max(1e-9, incomeRate));
+            if (wait < 0.5) badge.textContent = "可升";
+            else if (wait < 1440) badge.textContent = `${duration(wait)}后`;
+            else badge.textContent = `${Math.ceil(wait/60)}小时后`;
+            badge.style.background = "#8a9a94";
+          } else {
+            badge.textContent = "未解锁";
+            badge.style.background = "#b0bec5";
+          }
+        }
+        h3.appendChild(badge);
+      }
       const strength = Number(engine.effectStrength(spec.effectKind));
       const enhanced = Math.abs(strength - 1) >= 1e-9;
       const descriptionLabel = card.querySelector(".description-label");
@@ -445,9 +573,27 @@ function renderCoreShop() {
   const root = $("#coreShop"); root.replaceChildren();
   const upgrades = data.prestige?.upgrades || [];
   $("#coreShopTitle").textContent = `星球核心技术（${upgrades.length}项）`;
+  // 混合展示：默认只显示已解锁 + 临近5颗内可预览的，远期折叠，避免二阶段全摊开的压迫感
+  const nearThreshold = 5;
+  const filteredUpgrades = showAllPrestige ? upgrades : upgrades.filter(s => s.unlockResets <= engine.state.completedPlanets + nearThreshold || engine.state.coreLevels[s.key] > 0);
+  const hiddenCount = upgrades.length - filteredUpgrades.length;
+  // 顶部切换按钮
+  const controls = document.createElement("div");
+  controls.className = "core-shop-controls";
+  controls.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap";
+  const info = document.createElement("small");
+  info.style.color = "var(--muted)";
+  info.textContent = showAllPrestige ? `已展示全部 ${upgrades.length} 项` : `已展示 ${filteredUpgrades.length} 项，隐藏 ${hiddenCount} 项远期科技（完成更多星球后逐步解锁）`;
+  const toggle = document.createElement("button");
+  toggle.textContent = showAllPrestige ? "收起远期科技" : `展开全部 ${upgrades.length} 项`;
+  toggle.style.cssText = "padding:6px 10px;font-size:12px";
+  toggle.addEventListener("click", () => { showAllPrestige = !showAllPrestige; renderCoreShop(); });
+  controls.append(info, toggle);
+  root.append(controls);
+  const displayUpgrades = filteredUpgrades;
   const grouped = new Map([["planet", []], ["star", []], ["galaxy", []]]);
   const labels = new Map();
-  for (const spec of upgrades) {
+  for (const spec of displayUpgrades) {
     const [key, label] = coreGroup(spec); grouped.get(key).push(spec); labels.set(key, label);
   }
   for (const [groupKey, specs] of grouped) {
@@ -466,6 +612,11 @@ function renderCoreShop() {
       const reason = coreUnavailableReason(spec, level, cost);
       const card = document.createElement("article"); card.className = "core-card";
       card.classList.toggle("core-locked", engine.state.completedPlanets < spec.unlockResets);
+      // 近期预览但未解锁的卡片加虚线边框，提示“即将解锁”
+      if (!showAllPrestige && engine.state.completedPlanets < spec.unlockResets && spec.unlockResets <= engine.state.completedPlanets + nearThreshold) {
+        card.style.borderStyle = "dashed";
+        card.style.borderColor = "#8a9a94";
+      }
       const top = document.createElement("div"); top.className = "tech-top";
       const gate = document.createElement("span"); gate.textContent = `完成 ${spec.unlockResets} 颗星球`;
       const levelChip = document.createElement("span"); levelChip.className = "level-chip"; levelChip.textContent = `Lv.${level} / ${spec.maxLevel}`;
@@ -486,7 +637,13 @@ function renderCoreShop() {
     }
     group.append(grid); root.append(group);
   }
-  if (!upgrades.length) {
+  if (hiddenCount > 0 && !showAllPrestige) {
+    const more = document.createElement("p");
+    more.className = "empty";
+    more.textContent = `还有 ${hiddenCount} 项超科幻科技在更远的星海中等待（需完成更多星球），点击“展开全部”可提前预览全部 50 项。`;
+    root.append(more);
+  }
+  if (!displayUpgrades.length) {
     const empty = document.createElement("p"); empty.className = "empty"; empty.textContent = "永久科技数据尚未载入。"; root.append(empty);
   }
 }
@@ -549,21 +706,29 @@ function renderPrestige() {
   $("#departButton").hidden = !s.planetComplete || engine.galaxyComplete();
   $("#departButton").disabled = !preview || engine.galaxyComplete();
   if (preview) {
-    // 计算启程前后单星预估秒数对比
+    // 计算启程前后单星预估秒数对比 — 仅全自动后 voyagePlan 才精确，早期间离散步进误差极大
     let beforeSec = null, afterSec = null;
+    let secLine = "";
     try {
-      const beforePlan = engine.voyagePlan();
-      beforeSec = beforePlan.duration * 60;
-      const copyAfter = new S2Engine(data, { state: engine.snapshot() });
-      copyAfter.departPlanet();
-      afterSec = copyAfter.voyagePlan().duration * 60;
+      if (fullyAutomated() && engine.state.resets >= 3) {
+        const beforePlan = engine.voyagePlan();
+        const copyAfter = new S2Engine(data, { state: engine.snapshot() });
+        copyAfter.departPlanet();
+        const afterPlan = copyAfter.voyagePlan();
+        if (Number.isFinite(beforePlan.duration) && Number.isFinite(afterPlan.duration) && beforePlan.duration < 1e9 && afterPlan.duration < 1e9 && beforePlan.duration > 0 && afterPlan.duration > 0) {
+          beforeSec = beforePlan.duration * 60;
+          afterSec = afterPlan.duration * 60;
+          secLine = ` 本星预估 ${duration(beforeSec/60)} → 下星 ${duration(afterSec/60)}（提速 ${Math.round((1-afterSec/beforeSec)*100)}%）。`;
+        }
+      } else {
+        secLine = ` 早期间为10分钟离散结算，秒级预估仅在全自动（第3次启程）后生效。`;
+      }
     } catch {}
-    const secLine = (beforeSec && afterSec) ? ` 本星预估 ${duration(beforeSec/60)} → 下星 ${duration(afterSec/60)}（提速 ${Math.round((1-afterSec/beforeSec)*100)}%）。` : "";
-    renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与命令数**。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。${secLine}`);
+    renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与操作次数**（操作次数=你点“升级”按钮的次数，批量一次算1次，用于复盘节奏）。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。${secLine}`);
   } else {
     renderDescription($("#departureDescription"), engine.galaxyComplete()
-      ? `本银河的 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技和全部累计统计**完整保留。`
-      : `挖穿目标深度后可前往下一颗星球。启程会重置**全部设备和全部本地科技等级**；**星球核心、永久科技和全部累计统计**会保留。当前永久基础速度 ${formatMultiplier(engine.prestigeSpeed())}，本星每项设备调试 ${thresholdSummary()}。`);
+      ? `本银河的 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技、累计总级数与操作次数**完整保留。`
+      : `挖穿目标深度后可前往下一颗星球。启程会重置**全部设备和全部本地科技等级**；**星球核心、永久科技、累计总级数（手动+助手+自动）与操作次数**会保留。当前永久基础速度 ${formatMultiplier(engine.prestigeSpeed())}，本星每项设备调试 ${thresholdSummary()}。`);
   }
   $("#autoDepartToggle").checked = s.autoDepart;
   $("#autoDepartToggle").disabled = engine.galaxyComplete();

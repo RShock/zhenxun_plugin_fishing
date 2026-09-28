@@ -1,0 +1,2286 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星穹矿脉 · 日班与夜班（预览版 prestige-3）</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f1f3f2; --paper: #ffffff; --text: #202a28; --muted: #60706b;
+  --line: #d7dfdc; --green: #126650; --gold: #996611; --red: #a53840;
+  font-family: "Microsoft YaHei", system-ui, sans-serif; font-size: 14px;
+}
+* { box-sizing: border-box; letter-spacing: 0; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+button, input, select { font: inherit; }
+button { background: var(--paper); color: var(--text); border: 1px solid #bac9c3; border-radius: 5px; padding: 10px 15px; cursor: pointer; min-height: 40px; }
+button:hover:not(:disabled) { border-color: var(--green); background: #eaf4ef; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primary { background: var(--green); color: #fff; border-color: var(--green); }
+button.primary:hover:not(:disabled) { background: #0c503e; }
+button.danger-ghost { color: var(--red); }
+:focus-visible { outline: 3px solid #c08b2e; outline-offset: 3px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 30px; font-weight: 750; }
+h2 { font-size: 19px; } h3 { font-size: 16px; }
+small { font-size: 12px; line-height: 1.6; }
+.shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 0 24px; border-bottom: 2px solid var(--text); }
+.eyebrow { color: var(--green); font-size: 11px; font-weight: 700; margin-bottom: 7px; }
+.station-id { display: grid; grid-template-columns: auto auto; gap: 5px 18px; align-items: center; text-align: right; }
+.station-id span { font-size: 12px; color: var(--muted); }
+.station-id strong { font-size: 21px; font-variant-numeric: tabular-nums; }
+.station-id small { grid-column: 2; color: var(--muted); }
+.notice { padding: 10px 0; color: var(--gold); font-size: 12px; }
+.notice:empty { display: none; }
+.status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); padding: 20px 0; gap: 20px; }
+.metric { min-width: 0; border-right: 1px solid var(--line); padding-right: 16px; }
+.metric:last-child { border: 0; }
+.metric > span, .field-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+.metric strong { display: block; font-size: 23px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metric small { display: block; color: var(--muted); margin-top: 5px; }
+.mine-overview { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 218px; border-bottom: 1px solid var(--line); }
+.mine-scene { position: relative; align-self: stretch; background: #263530; min-width: 0; overflow: hidden; }
+.mine-scene img { width: 100%; height: 100%; min-height: 218px; object-fit: cover; display: block; }
+.scene-caption { position: absolute; top: 16px; left: 18px; right: 18px; display: flex; justify-content: space-between; color: #f3f5ec; font-size: 12px; gap: 14px; }
+.scene-caption b { color: #b8dcbe; font-weight: 400; }
+.next-discovery { padding: 27px 30px; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.next-discovery h2 { font-size: 22px; margin-bottom: 12px; }
+.next-discovery > p:not(.eyebrow) { color: var(--muted); line-height: 1.7; min-height: 24px; }
+progress { appearance: none; width: 100%; height: 6px; border: 0; background: #d7dfdc; margin: 19px 0 11px; }
+progress::-webkit-progress-bar { background: #d7dfdc; }
+progress::-webkit-progress-value { background: var(--green); }
+progress::-moz-progress-bar { background: var(--green); }
+.discovery-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); }
+.prestige-section, .shift-section, .control-section, .construction-section { border-bottom: 1px solid var(--line); padding: 24px 0; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 19px; }
+.prestige-balance { display: flex; align-items: baseline; gap: 9px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.prestige-balance strong { color: var(--gold); font-size: 24px; font-variant-numeric: tabular-nums; }
+.planet-summary { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .75fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.planet-progress-panel { padding: 22px 24px 22px 0; min-width: 0; }
+.planet-progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+.planet-progress-heading strong { font-size: 17px; }
+.planet-progress-heading span { color: var(--muted); font-size: 12px; }
+.planet-progress-panel progress { margin-bottom: 10px; }
+.prestige-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-left: 1px solid var(--line); }
+.prestige-stats > div { padding: 16px 18px; min-width: 0; }
+.prestige-stats > div:nth-child(odd) { border-right: 1px solid var(--line); }
+.prestige-stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+.prestige-stats span, .prestige-stats small { display: block; color: var(--muted); font-size: 11px; }
+.prestige-stats strong { display: block; margin: 5px 0 3px; font-size: 19px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.prestige-locked-reward { margin: 0; padding-top: 13px; color: var(--muted); font-size: 12px; }
+.galaxy-goal-note { padding-top: 13px; color: var(--muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.galaxy-goal-note strong { color: var(--text); }
+.completion-announcement { border-left: 3px solid var(--green); background: #e8f2ed; color: var(--green); margin-top: 16px; padding: 13px 15px; font-size: 13px; line-height: 1.7; }
+.departure-panel { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 28px; align-items: center; padding: 21px 0; border-bottom: 1px solid var(--line); }
+.departure-panel h3 { margin-bottom: 8px; }
+.departure-panel p { color: var(--muted); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+.departure-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.departure-actions small { color: var(--muted); text-align: right; }
+.departure-actions button { width: 100%; }
+.prestige-content { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 28px; padding-top: 23px; }
+.subsection-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 15px; margin-bottom: 15px; }
+.subsection-heading > span { color: var(--muted); font-size: 11px; }
+.core-auto-control { display: grid; grid-template-columns: auto 130px minmax(0, 1fr); align-items: center; gap: 10px; margin: 0 0 16px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.core-auto-control label { font-size: 12px; font-weight: 700; }
+.core-auto-control select { width: 100%; max-width: none; }
+.core-auto-control small { color: var(--muted); overflow-wrap: anywhere; }
+.core-group + .core-group { margin-top: 22px; }
+.core-group-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.core-group-heading h3 { font-size: 14px; }
+.core-group-heading span { color: var(--muted); font-size: 11px; }
+.core-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.core-card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 16px; min-width: 0; display: flex; flex-direction: column; }
+.core-card h3 { margin-bottom: 7px; }
+.core-card .description { min-height: 0; }
+.core-card.core-locked { background: #f7f8f7; }
+.permanent-note { color: var(--green); font-size: 11px; margin-top: 10px; }
+.permanent-note strong { color: var(--green); }
+.core-stage { color: var(--muted); font-size: 11px; line-height: 1.65; margin-top: 7px; overflow-wrap: anywhere; }
+.core-stage strong { color: var(--text); }
+.core-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-top: 14px; }
+.core-actions small { color: var(--muted); overflow-wrap: anywhere; }
+.core-actions button { padding: 8px 10px; font-size: 12px; white-space: nowrap; }
+.planet-history-wrap { border-left: 1px solid var(--line); padding-left: 24px; min-width: 0; }
+.planet-history-wrap .empty { padding: 8px 0; }
+.planet-history { list-style: none; padding: 0; margin: 0; }
+.planet-history li { padding: 11px 0; border-bottom: 1px solid var(--line); }
+.planet-history span, .planet-history small { display: block; }
+.planet-history span { font-size: 13px; font-weight: 600; }
+.planet-history small { color: var(--muted); margin-top: 3px; }
+.switch { display: inline-flex; align-items: center; gap: 9px; color: var(--green); cursor: pointer; white-space: nowrap; }
+.switch input { width: 18px; height: 18px; margin: 0; accent-color: var(--green); }
+.shift-grid { display: grid; grid-template-columns: 180px 200px minmax(0, 1fr); gap: 25px; }
+.shift-grid strong { display: block; font-size: 17px; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.shift-grid small { display: block; color: var(--muted); }
+.shift-items { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px 18px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.shift-items span { white-space: nowrap; }
+.subtle { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.control-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.action-notice { margin-top: 12px; color: var(--green); font-size: 12px; min-height: 22px; line-height: 1.8; overflow-wrap: anywhere; }
+.view-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
+.view-tabs button { border: 0; border-bottom: 3px solid transparent; background: none; border-radius: 0; padding: 10px 0 12px; color: var(--muted); }
+.view-tabs button[aria-selected="true"] { color: var(--green); border-bottom-color: var(--green); font-weight: 700; }
+.view-tabs span { margin-left: 5px; font-variant-numeric: tabular-nums; }
+.era-group + .era-group { margin-top: 25px; }
+.era-group > header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.era-group > header small { color: var(--muted); }
+.tech-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tech-card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 18px; min-width: 0; display: flex; flex-direction: column; }
+.tech-card.can-upgrade { border-color: #1a8a5f; border-width: 2px; background: #f3fcf7; box-shadow: 0 2px 8px rgba(18,102,80,0.08); }
+.tech-card.cannot-upgrade { opacity: 0.92; background: #f7f8f7; }
+.tech-card.can-upgrade .upgrade-button { background: var(--green); color: #fff; border-color: var(--green); }
+.tech-card.can-upgrade .upgrade-button:hover:not(:disabled) { background: #0c503e; }
+.tech-card.cannot-upgrade .upgrade-button { background: #eef2f0; color: var(--muted); border-color: #d7dfdc; }
+.tech-card.can-upgrade .lock-reason { color: var(--green); font-weight: 600; }
+.eta-badge { display:inline-block; background:#126650; color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle; }
+.next-eta-banner { margin-top:10px; font-size:12px; color: var(--green); background:#e8f2ed; padding:8px 10px; border-radius:6px; border-left:3px solid var(--green); line-height:1.6; }
+.next-eta-banner strong { color: var(--green); }
+.tech-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.level-chip { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tech-card h3 { margin-bottom: 9px; }
+.description-label { margin-bottom: 3px; color: var(--gold); font-size: 11px; font-weight: 700; }
+.description { font-size: 13px; color: var(--muted); line-height: 1.8; min-height: 44px; overflow-wrap: anywhere; }
+.description strong, .tech-strength strong, .lock-reason strong, #nextReason strong, #planSummary strong, #departureDescription strong, .completion-announcement strong, #permanentSummary strong { color: var(--text); font-weight: 700; }
+.tech-strength { margin-top: 8px; color: var(--green); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.manual-progress { display: grid; grid-template-columns: repeat(var(--manual-steps, 3), minmax(0, 1fr)); gap: 4px; margin: 15px 0 9px; }
+.manual-progress i { background: #e1e7e3; height: 4px; }
+.manual-progress i.filled { background: #c2943a; }
+.automated .manual-progress i.filled { background: var(--green); }
+.tech-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+.cost { color: var(--text); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tech-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: auto; }
+.tech-actions button { padding: 8px; font-size: 12px; }
+.lock-reason { color: var(--muted); margin-top: 10px; min-height: 20px; }
+.automated .tech-actions, .locked .tech-actions { display: none; }
+.automated { border-left: 3px solid var(--green); }
+.empty { padding: 25px 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.engineering { border-bottom: 1px solid var(--line); }
+.engineering > summary { padding: 22px 0; cursor: pointer; font-weight: 600; }
+.engineering-inner { padding: 0 0 24px; }
+.settings { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.settings label { display: flex; align-items: center; gap: 8px; }
+input[type="number"], select { background: white; border: 1px solid #bac9c3; border-radius: 4px; padding: 9px; max-width: 150px; }
+.audit-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 15px 0; gap: 16px; }
+.audit-summary article { border-left: 2px solid var(--line); padding-left: 15px; min-width: 0; overflow-wrap: anywhere; }
+.audit-summary span, .audit-summary small { display: block; color: var(--muted); font-size: 12px; }
+.audit-summary strong { display: block; font-size: 22px; padding: 6px 0; }
+.audit-summary article:first-child strong { font-size: 16px; line-height: 1.7; }
+.table-wrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+th:first-child { text-align: left; }
+thead { background: #e5ebe7; color: var(--muted); }
+.multiplier-heading { margin: 24px 0 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.multiplier-heading span { color: var(--muted); font-size: 12px; }
+.multiplier-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; }
+.multiplier-list > div { display: flex; justify-content: space-between; font-size: 12px; gap: 12px; padding: 7px 0; }
+.multiplier-list b { color: var(--green); }
+dialog { border: 1px solid var(--line); border-radius: 8px; padding: 24px; width: min(500px, calc(100% - 32px)); max-height: 85dvh; color: var(--text); }
+dialog::backdrop { background: #16241fcc; }
+dialog p { font-size: 13px; color: var(--muted); line-height: 1.8; margin: 16px 0; }
+dialog ul { padding-left: 22px; line-height: 2.1; font-size: 13px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+footer { padding: 23px 0 35px; color: var(--muted); font-size: 11px; }
+.fatal { white-space: pre-wrap; overflow-wrap: anywhere; padding: 30px; color: var(--red); }
+@media (max-width: 850px) {
+  .tech-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planet-summary { grid-template-columns: minmax(0, 1fr) 330px; }
+  .prestige-content { grid-template-columns: 1fr; }
+  .planet-history-wrap { border-left: 0; border-top: 1px solid var(--line); padding: 22px 0 0; }
+  .shift-grid { grid-template-columns: 1fr 1fr; }
+  .shift-items { grid-column: 1 / -1; }
+  .mine-overview { grid-template-columns: 1fr 1fr; }
+  .next-discovery { padding: 23px; }
+  .metric strong { font-size: 20px; }
+}
+@media (max-width: 580px) {
+  .shell { width: calc(100% - 28px); }
+  .masthead { padding: 20px 0; gap: 14px; align-items: flex-start; }
+  h1 { font-size: 26px; }
+  .station-id { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .station-id strong { font-size: 17px; }
+  .eyebrow { font-size: 10px; }
+  .status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; padding: 18px 0; }
+  .metric:nth-child(2) { border-right: 0; }
+  .metric strong { font-size: 20px; }
+  .mine-overview { grid-template-columns: 1fr; }
+  .mine-scene { height: 155px; }
+  .mine-scene img { min-height: 155px; }
+  .next-discovery { padding: 22px 0; }
+  .next-discovery h2 { font-size: 20px; }
+  .planet-summary { grid-template-columns: 1fr; }
+  .planet-progress-panel { padding-right: 0; }
+  .prestige-stats { border-left: 0; border-top: 1px solid var(--line); }
+  .departure-panel { grid-template-columns: 1fr; gap: 14px; }
+  .departure-actions { align-items: stretch; }
+  .departure-actions small { text-align: left; }
+  .core-shop-wrap > .subsection-heading { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .core-shop-wrap > .subsection-heading > span { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .core-auto-control { grid-template-columns: 1fr 1fr; }
+  .core-auto-control small { grid-column: 1 / -1; }
+  .core-grid { grid-template-columns: 1fr; }
+  .core-actions { grid-template-columns: 1fr; }
+  .core-actions button { width: 100%; }
+  .shift-grid { gap: 14px; }
+  .shift-grid strong { font-size: 16px; }
+  .section-heading { gap: 12px; }
+  .section-heading h2 { font-size: 17px; }
+  .control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .control-row button:last-child { grid-column: 1 / -1; }
+  .view-tabs { gap: 20px; }
+  .view-tabs button { font-size: 12px; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .description { min-height: 0; }
+  .multiplier-list { grid-template-columns: 1fr 1fr; }
+  .audit-summary { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div><p class="eyebrow">S2 / STARVAULT MINE — 预览版</p><h1>星穹矿脉</h1></div>
+      <div class="station-id"><span id="stationPlanet">第 1 颗星球</span><strong id="timeValue">D1 00:00</strong><small id="seedValue">seed 42</small></div>
+    </header>
+    <p id="saveNotice" class="notice" role="status"></p>
+    <section class="status-grid" aria-label="矿区状态">
+      <article class="metric"><span>矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
+      <article class="metric"><span>挖矿深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
+      <article class="metric"><span>当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
+      <article class="metric"><span>累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
+    </section>
+    <section class="mine-overview">
+      <div class="mine-scene">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MDAiIGhlaWdodD0iMjYwIiB2aWV3Qm94PSIwIDAgNzAwIDI2MCI+CiAgPHJlY3Qgd2lkdGg9IjcwMCIgaGVpZ2h0PSIyNjAiIGZpbGw9IiMyNjM1MzAiLz4KICA8cGF0aCBkPSJNMCA5MCAxMTAgODUgMjIwIDk4IDM0MCA4NiA0NTAgOTMgNTU1IDc4IDcwMCA4NVYyNjBIMFoiIGZpbGw9IiM1NDY1NWIiLz4KICA8cGF0aCBkPSJtMCAxNDEgMTQ1LTkgMTQ4IDE0IDE1My0xMyAxMjkgMTMgMTI1LTEwdjEyNEgwWiIgZmlsbD0iIzc5ODI3MiIvPgogIDxwYXRoIGQ9Im0wIDE5NyAxNTAgMTAgMTc3LTE1IDE1OCAxMyAyMTUtMTZ2NzFIMFoiIGZpbGw9IiNhMGEyOGMiLz4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNiYmMzYWEiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iLjUiPgogICAgPHBhdGggZD0ibTQ4IDEwOSA0NCA5IDY1LTdtMjcyIDEgNTctOCA5OCAxMW0tMzUwIDQ4IDQxLTcgNjcgMTJtMTY3IDMgNDEtOCAxMTEgNSIvPgogICAgPHBhdGggZD0ibTQwIDIyOSA4OS04IDQ4IDltMjYzLTMgMzcgMTAgOTUtN20tMS0xMzMgNDAtNSA1NiAxMCIvPgogIDwvZz4KICA8cGF0aCBkPSJNMzI0IDgzdjEzNWg2NVY4M1oiIGZpbGw9IiMyNjM1MzAiLz4KICA8cGF0aCBkPSJNMzM2IDgydjEyNm00MS0xMjZ2MTI2IiBzdHJva2U9IiNjN2NlYzAiIHN0cm9rZS13aWR0aD0iNCIvPgogIDxnIHN0cm9rZT0iI2M3Y2VjMCIgc3Ryb2tlLXdpZHRoPSIyIj48cGF0aCBkPSJNMzM2IDEwMWg0MW0tNDEgMTloNDFtLTQxIDE5aDQxbS00MSAxOWg0MW0tNDEgMTloNDFtLTQxIDE5aDQxIi8+PC9nPgogIDxwYXRoIGQ9Im0zMjYgOTAgMTQtNTBoMzNsMTYgNTBtLTU5LTE2aDU0bS00OS0xOWg0M20tMzgtMTUgMzcgMzRtLTQtMzQtMzggMzQiIHN0cm9rZT0iI2U3YzU3MyIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIi8+CiAgPHJlY3QgeD0iMzA4IiB5PSI4NiIgd2lkdGg9Ijk3IiBoZWlnaHQ9IjgiIGZpbGw9IiNkZWRlYzUiLz4KICA8cmVjdCB4PSIyMTAiIHk9IjY1IiB3aWR0aD0iNzkiIGhlaWdodD0iMjQiIGZpbGw9IiNiYWM2YjEiLz4KICA8cmVjdCB4PSIyMTgiIHk9IjcxIiB3aWR0aD0iMjAiIGhlaWdodD0iOCIgZmlsbD0iIzQ5NjM1MSIvPgogIDxyZWN0IHg9IjI0NyIgeT0iNzEiIHdpZHRoPSIzMiIgaGVpZ2h0PSI4IiBmaWxsPSIjNDk2MzUxIi8+CiAgPHBhdGggZD0iTTI4OSA4M2gyMG05NiA1aDkyIiBzdHJva2U9IiNkZWNmYTIiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxwYXRoIGQ9Ik00NDEgNjZoNjJsMTQgMTdoLTc2WiIgZmlsbD0iIzg1YWM5MyIvPgogIDxjaXJjbGUgY3g9IjQ1NSIgY3k9Ijg4IiByPSI2IiBmaWxsPSIjMjAyZTI4Ii8+PGNpcmNsZSBjeD0iNDk4IiBjeT0iODgiIHI9IjYiIGZpbGw9IiMyMDJlMjgiLz4KICA8cmVjdCB4PSIzNDQiIHk9IjE3OSIgd2lkdGg9IjI1IiBoZWlnaHQ9IjIxIiByeD0iMiIgZmlsbD0iI2U3YzU3MyIvPgogIDxwYXRoIGQ9Im0zMzkgMjAyIDE3IDE1IDE4LTE1IiBmaWxsPSIjZTdjNTczIi8+CiAgPHBhdGggZD0ibTM1MyAyMjMtOCA5bTE0LTggNCAxMG04LTEyIDEwIDgiIHN0cm9rZT0iI2U3YzU3MyIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGcgZmlsbD0iI2M5ZGNkMSI+PHJlY3QgeD0iMzEiIHk9IjUzIiB3aWR0aD0iMyIgaGVpZ2h0PSIzIi8+PHJlY3QgeD0iNjIwIiB5PSI1MSIgd2lkdGg9IjMiIGhlaWdodD0iMyIvPjxyZWN0IHg9IjU2NiIgeT0iMjciIHdpZHRoPSIyIiBoZWlnaHQ9IjIiLz48L2c+Cjwvc3ZnPgo=" alt="首星矿井剖面" width="700" height="260">
+        <div class="scene-caption"><span id="sceneEra">原始时代</span><b id="sceneStatus">采矿作业中</b></div>
+      </div>
+      <div class="next-discovery">
+        <p class="eyebrow">NEXT / 下一项工程</p>
+        <h2 id="nextName">手工矿镐</h2>
+        <p id="nextReason"></p>
+        <progress id="nextProgress" max="1" value="0" aria-label="下一项工程进度"></progress>
+        <div class="discovery-meta"><span id="nextProgressText"></span><span id="nextEta"></span></div>
+      </div>
+    </section>
+    <section class="prestige-section" aria-labelledby="planetTitle">
+      <div class="section-heading">
+        <div><p class="eyebrow">VOYAGE / 行星航程</p><h2 id="planetTitle">第 1 颗星球</h2></div>
+        <div class="prestige-balance"><span>可用星球核心</span><strong id="coresValue">0</strong></div>
+      </div>
+      <div class="planet-summary">
+        <div class="planet-progress-panel">
+          <div class="planet-progress-heading"><strong id="planetState">开采进行中</strong><span id="planetElapsed">本星球 0分钟</span></div>
+          <progress id="planetProgress" max="1" value="0" aria-label="当前星球挖掘进度"></progress>
+          <div class="discovery-meta"><span id="planetProgressText"></span><span id="allMaxedStatus"></span></div>
+        </div>
+        <div class="prestige-stats" aria-label="轮回统计">
+          <div><span>已完成</span><strong id="completedValue">0</strong><small>颗星球</small></div>
+          <div><span>已离开</span><strong id="resetsValue">0</strong><small>次航程</small></div>
+          <div><span>永久科技倍率</span><strong id="prestigeSpeed">×1</strong><small>不含转生次数</small></div>
+          <div><span>调试门槛</span><strong id="prestigeThreshold">3级</strong><small>当前动态值</small></div>
+        </div>
+      </div>
+      <p id="galaxyGoalNote" class="galaxy-goal-note"></p>
+      <p id="prestigeLockedReward" class="prestige-locked-reward">挖穿后获得星球核心，解锁永久科技</p>
+      <div id="completionAnnouncement" class="completion-announcement" role="status" aria-live="polite" hidden></div>
+      <div id="departurePanel" class="departure-panel" hidden>
+        <div>
+          <h3>前往下一颗星球</h3>
+          <p id="departureDescription"></p>
+        </div>
+        <div class="departure-actions">
+          <label class="switch"><input id="autoDepartToggle" type="checkbox" checked><span>后续自动启程</span></label>
+          <small id="autoDepartHint"></small>
+          <button id="departButton" class="primary" hidden>启程前往下一颗星球</button>
+        </div>
+      </div>
+      <div id="prestigeContent" class="prestige-content" hidden>
+        <div class="core-shop-wrap">
+          <div class="subsection-heading"><div><p class="eyebrow">PERMANENT TECH / 永久科技</p><h2 id="coreShopTitle">星球核心技术</h2></div><span id="permanentSummary">永久科技倍率 ×1</span></div>
+          <div class="core-auto-control">
+            <label for="coreAutoRoute">核心托管</label>
+            <select id="coreAutoRoute">
+              <option value="off">关闭</option>
+              <option value="balanced">均衡低价</option>
+              <option value="speed">速度优先</option>
+              <option value="rebuild">重建优先</option>
+              <option value="burst">爆发优先</option>
+            </select>
+            <small id="coreAutoRouteHint">关闭时所有永久科技保持手动购买；旧存档不会自动开启。</small>
+          </div>
+          <div id="coreShop" class="core-shop"></div>
+        </div>
+        <aside class="planet-history-wrap" aria-labelledby="historyTitle">
+          <div class="subsection-heading"><h2 id="historyTitle">最近航程</h2></div>
+          <p id="historyEmpty" class="empty">尚未挖穿星球。</p>
+          <ol id="planetHistory" class="planet-history"></ol>
+        </aside>
+      </div>
+    </section>
+    <section class="shift-section">
+      <div class="section-heading"><h2>夜班笨助手</h2><label class="switch"><input id="helperToggle" type="checkbox" checked><span>自动值班</span></label></div>
+      <div class="shift-grid">
+        <div><span class="field-label">下一次采购</span><strong id="helperNext">D2 00:00</strong><small id="helperCountdown"></small></div>
+        <div><span class="field-label">最近一班</span><strong id="helperResult">等待第一班</strong><small id="helperSpent"></small></div>
+        <div id="helperItems" class="shift-items"></div>
+      </div>
+    </section>
+    <section class="control-section">
+      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">全自动后连续事件采购 · 行星轮回</span></div>
+      <div class="control-row">
+        <button data-advance="0.016666666666666666" data-continuous="true">推进1秒</button>
+        <button data-advance="60">推进1小时</button>
+        <button data-advance="1200">推进20小时</button>
+        <button data-advance="1440" class="primary">推进1天</button>
+        <button data-advance="4320">推进3天</button>
+        <button data-advance="43200">推进30天</button>
+        <button id="toggleButton">连续挖矿</button>
+        <button id="resetButton" class="danger-ghost">重置测试进度</button>
+      </div>
+      <p id="actionNotice" class="action-notice" role="status" aria-live="polite">矿井已就绪。</p>
+      <p class="subtle" style="margin-top:6px">所有推进均按 10分钟 逐段结算（完美步进）：1次30天 = 30次1天 = 720次1小时；助手仅在每日00:00触发，推进中会显示“助手触发 +N级 / 距助手下班”</p>
+    </section>
+    <section class="construction-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">WORKSHOP / 装备建设</p><h2>今天的工程</h2></div>
+        <button id="planButton" class="primary">批量建设</button>
+      </div>
+      <div class="view-tabs" role="tablist" aria-label="科技分类">
+        <button role="tab" id="tab-construction" data-view="construction" aria-selected="true" aria-controls="techTree">待建设 <span id="constructionCount">0</span></button>
+        <button role="tab" id="tab-automated" data-view="automated" aria-selected="false" aria-controls="techTree">已自动化 <span id="automatedCount">0</span></button>
+        <button role="tab" id="tab-frontier" data-view="frontier" aria-selected="false" aria-controls="techTree">前沿科技 <span id="frontierCount">0</span></button>
+      </div>
+      <div id="techTree" class="tech-tree" role="tabpanel" aria-labelledby="tab-construction"></div>
+    </section>
+    <details class="engineering">
+      <summary>工程数据与回放</summary>
+      <div class="engineering-inner">
+        <div class="settings">
+          <label>路线 <select id="routeSelect"><option value="balanced">均衡建设</option><option value="cheapest">最低价格</option><option value="depth">深度优先</option><option value="income">收入优先</option></select></label>
+          <label>时段 <select id="replayDays"><option value="10">前十天</option><option value="20">前二十天</option><option value="30" selected>前三十天</option></select></label>
+          <button id="replayButton">运行回放</button>
+          <label>Seed <input id="seedInput" type="number" value="42" step="1"></label>
+        </div>
+        <p class="subtle">独立新局回放 / seed 42 / 与当前存档分开</p>
+        <div id="auditSummary" class="audit-summary"></div>
+        <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th id="replayDepthHeading">D30 深度</th><th id="replayEraHeading">D30 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
+        <div class="multiplier-heading"><h3>产能乘数</h3><span>矿币收益 <b id="incomeMultiplier"></b> / 挖矿深度 <b id="depthMultiplier"></b></span></div>
+        <div id="multiplierList" class="multiplier-list"></div>
+      </div>
+    </details>
+    <footer>星穹矿脉 / 行星轮回试玩 — 预览版 prestige-3 手工26%·脉冲增压 / 构建时间 2026-09-26</footer>
+  </main>
+  <template id="techTemplate">
+    <article class="tech-card">
+      <div class="tech-top"><span class="region"></span><span class="level-chip"></span></div>
+      <h3></h3>
+      <p class="description-label" hidden>基础效果（未计永久强化）</p>
+      <p class="description"></p>
+      <p class="tech-strength"></p>
+      <div class="manual-progress" aria-label="装备调试进度"></div>
+      <div class="tech-meta"><span class="progress-label"></span><b class="cost"></b></div>
+      <div class="tech-actions"><button class="upgrade-button">升级1级</button><button class="commission-button">完成调试</button></div>
+      <small class="lock-reason"></small>
+    </article>
+  </template>
+  <dialog id="planDialog">
+    <form method="dialog"><div class="section-heading"><h2>本轮建设清单</h2><button value="cancel" aria-label="关闭建设清单">取消</button></div></form>
+    <p id="planSummary"></p><ul id="planItems"></ul>
+    <div class="dialog-actions"><button id="confirmPlan" class="primary">确认建设</button></div>
+  </dialog>
+  <dialog id="resetDialog">
+    <h2>重置测试进度？</h2><p>当前行星轮回进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
+    <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
+  </dialog>
+<script>
+const GAME_DATA = {"$schema": "./game_data.schema.json", "schemaVersion": 3, "gameVersion": "s2-vnext-v3-helper-1", "contentVersion": "prestige-3", "playtestDays": 30, "rules": {"settlementMinutes": 10, "baseCreditsPerMinute": 8, "baseDepthPerMinute": 25, "manualAutomationThreshold": 3, "autoPurchaseIntervalMinutes": 60, "autoReserveManualLevels": 3, "randomAlgorithm": "python-mt19937-v1", "randomSigma": 0.025, "dailyUpgradeAuditMin": 3, "dailyUpgradeAuditMax": 6, "developmentTargetDepth": 1.38e+21, "autoPurchaseBudget": 1, "helperIntervalMinutes": 1440, "baseCriticalDamage": 1, "manualBurstWarningLevels": 30, "batchCommandMaxLevels": 100}, "prestige": {"planetTargetDepth": 2.4e+19, "galaxyTargetPlanets": 6493000, "openingBurstSeconds": 1, "legacyCorePrices": {"planet_drive": [1, 3, 8], "core_drill": [1, 2, 8], "core_refining": [2, 2, 8], "core_depth": [2, 2, 8], "stellar_forge": [3, 2, 8], "stellar_relay": [5, 2, 8], "galactic_drive": [10, 2, 20]}, "rewardStep": 5, "historyLimit": 20, "upgrades": [{"key": "planet_drive", "name": "行星开采引擎", "description": "直接提高**矿币收益**和**挖矿深度**。总倍率从×1依次升到×2.3、×3.6……，不是每级翻倍；×2.3升到×3.6时，当前产能增加56%。换星保留，空矿井也生效。", "unlockResets": 1, "baseCost": 1, "costGrowth": 3, "maxLevel": 8, "effectKind": "global_linear", "effectPerLevel": 1.3}, {"key": "core_drill", "name": "行星核心钻头", "description": "永久强化每代钻头。每级使所有**挖矿速度**科技的单级强度增加基础值的30%；从手工矿镐到未来设备都能受益，重新购买设备后生效。", "unlockResets": 1, "baseCost": 1, "costGrowth": 4, "maxLevel": 8, "effectKind": "speed_strength", "effectPerLevel": 0.3}, {"key": "core_refining", "name": "核心精炼工艺", "description": "每级使**额外收入**和**班次接力**类设备的单级强度增加基础值的50%，提高**矿币收益**。不直接增加**挖矿深度**，但可以更早买齐设备。", "unlockResets": 1, "baseCost": 2, "costGrowth": 3, "maxLevel": 8, "effectKind": "income_strength", "effectPerLevel": 0.5}, {"key": "core_depth", "name": "地核穿透材料", "description": "每级使**额外深度**和**过量穿透**类设备的单级强度增加基础值的50%，提高**挖矿深度**。不增加**矿币收益**，适合缩短设备满级后的挖掘时间。", "unlockResets": 1, "baseCost": 2, "costGrowth": 4, "maxLevel": 8, "effectKind": "depth_strength", "effectPerLevel": 0.5}, {"key": "stellar_forge", "name": "恒星系装备铸造", "description": "每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的20%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。", "unlockResets": 3, "baseCost": 3, "costGrowth": 6, "maxLevel": 8, "effectKind": "equipment_strength", "effectPerLevel": 0.2}, {"key": "stellar_relay", "name": "恒星系联合勘探", "description": "每级让当前星球每条已建成的**自动线**贡献1.5%的加成；各条线的贡献相加，再同时提升**矿币收益**和**挖矿深度**。换星后需重建设备，才能重新获得这些加成。", "unlockResets": 5, "baseCost": 4, "costGrowth": 8, "maxLevel": 8, "effectKind": "line_synergy", "effectPerLevel": 0.015}, {"key": "galactic_drive", "name": "银河远航引擎", "description": "每级令**矿币收益**和**挖矿深度**同时乘以约1.189；每4级合计翻倍。空矿井也生效，但本地科技仍需从零付费建设。", "unlockResets": 10, "baseCost": 10, "costGrowth": 3, "maxLevel": 20, "effectKind": "global_speed", "effectPerLevel": 0.25}, {"key": "stellar_procurement", "name": "星际标准化建设", "description": "永久降低全部本地设备的**矿币价格**。第L级将原价除以(1+0.25L)，8级时只需原价的三分之一；不降低**星球核心**价格，不改变**挖矿深度**和科技前置要求。适合反复重建设备。", "unlockResets": 3, "baseCost": 5, "costGrowth": 3, "maxLevel": 8, "effectKind": "local_discount", "effectPerLevel": 0.25}, {"key": "planetary_exhaustion", "name": "行星解体工程", "description": "本星全部本地科技满级后，额外提高**挖矿深度**。1/2/3级为×2/×3/×4；不增加**矿币收益**。换星后暂时失效，设备重新满级才恢复。这是前中期缩短最后挖掘时间的低价科技，后期重建占比提高后作用减小。", "unlockResets": 3, "baseCost": 2, "costGrowth": 3, "maxLevel": 3, "effectKind": "completion_depth", "effectPerLevel": 1}, {"key": "big_bang", "name": "大爆发", "description": "每次抵达新星球后的前1秒，**矿币收益**和**挖矿深度**同时获得爆发倍率：1/2/3级为×34/×67/×100。过期恢复正常，购买不会重启这一秒；长航程收益有限，短航程可让整颗星球都处于爆发期。", "unlockResets": 1000, "baseCost": 100000, "costGrowth": 10, "maxLevel": 3, "effectKind": "opening_burst", "effectPerLevel": 33}, {"key": "quantum_entanglement", "name": "宏量子纠缠", "description": "挖穿一颗星球时，宏观纠缠让另外的星球同步共振。每级使当次挖穿额外结算 0.2 颗星球 的核心与进度（多颗星球同时爆炸），换星保留。", "unlockResets": 2, "baseCost": 2, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.01}, {"key": "entangled_echo", "name": "纠缠回声", "description": "纠缠态的回声让已挖穿的星球仍在虚空中产出。每级使**矿币收益**与**挖矿深度**在星球挖穿后仍保留 12% 的余烬加成（可叠加）。", "unlockResets": 4, "baseCost": 3, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.006}, {"key": "many_worlds_mining", "name": "多世界分矿", "description": "在平行世界同时开矿。每级使**并行开采效率**类本地科技的基础强度 +18%（与多世界分支数相关）。", "unlockResets": 6, "baseCost": 5, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.009}, {"key": "math_weapon", "name": "数学武器·真理律令", "description": "用数学规律直接改写开采公式。每级使全部本地科技的基础效果 +15%（包括速度、收入、深度等所有乘区），重新购买后生效。", "unlockResets": 8, "baseCost": 8, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.0075}, {"key": "riemann_engine", "name": "黎曼引擎", "description": "以黎曼猜想的零点分布优化钻探路径。每级使**挖矿速度**科技单级强度 +22%。", "unlockResets": 12, "baseCost": 12, "costGrowth": 3, "maxLevel": 8, "effectKind": "speed_strength", "effectPerLevel": 0.011}, {"key": "godel_shield", "name": "哥德尔护盾", "description": "不完备性护盾让矿渣悖论自指。每级使**额外深度**类科技强度 +25%。", "unlockResets": 15, "baseCost": 15, "costGrowth": 3, "maxLevel": 5, "effectKind": "depth_strength", "effectPerLevel": 0.01}, {"key": "turing_tape", "name": "图灵缎带", "description": "无限纸带上的矿工永不停歇。每级使**班次接力**与**科技共振**的“自动线”计数 +1 虚拟加成（不建也算）。", "unlockResets": 18, "baseCost": 10, "costGrowth": 4, "maxLevel": 8, "effectKind": "line_synergy", "effectPerLevel": 0.002}, {"key": "blackhole_furnace", "name": "黑洞奇点熔炉", "description": "用黑洞吞噬矿渣，只提升**挖矿深度**不提升收益。每级使**额外深度**与**过量穿透**强度 +30%，**矿币收益**不变。", "unlockResets": 3, "baseCost": 4, "costGrowth": 3, "maxLevel": 5, "effectKind": "depth_strength", "effectPerLevel": 0.012}, {"key": "hawking_radiation", "name": "霍金辐射阱", "description": "黑洞蒸发辐射回收能量。每级使**额外收入**强度 +28%。", "unlockResets": 7, "baseCost": 6, "costGrowth": 3, "maxLevel": 5, "effectKind": "income_strength", "effectPerLevel": 0.0112}, {"key": "event_horizon", "name": "视界编织", "description": "在视界表面编织采矿网络。每级使**并行开采效率** +0.35。", "unlockResets": 10, "baseCost": 7, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.0175}, {"key": "singularity_heart", "name": "奇点之心", "description": "每级令矿币与深度同时 ×1.15（黑洞质量增长）。", "unlockResets": 20, "baseCost": 20, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.0075}, {"key": "string_resonance", "name": "弦海共鸣", "description": "宇宙弦振动与矿脉共鸣。每级使**科技共振**效果 +0.015（每条自动线额外加成）。", "unlockResets": 5, "baseCost": 5, "costGrowth": 4, "maxLevel": 8, "effectKind": "line_synergy", "effectPerLevel": 0.002}, {"key": "dimensional_fold", "name": "维度折叠引擎", "description": "折叠空间让钻头同时出现在多个深度。每级使矿币与深度 ×1.2（维度折叠）。", "unlockResets": 9, "baseCost": 9, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_speed", "effectPerLevel": 0.0156}, {"key": "causality_editor", "name": "因果律编辑器", "description": "先写结果再补过程。每级使**暴击率**上限 +2%（突破65%限制，最高75%）。", "unlockResets": 14, "baseCost": 13, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.004}, {"key": "dyson_cone", "name": "戴森光锥阵列", "description": "用恒星能量聚焦钻探。每级使**矿币收益**与深度同时 +18%（恒星能）。", "unlockResets": 11, "baseCost": 11, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.009}, {"key": "antimatter_tide", "name": "反物质潮汐", "description": "正反物质湮灭冲击岩层。每级使**矿石脆弱度**强度 +20%。", "unlockResets": 16, "baseCost": 14, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.01}, {"key": "time_sand", "name": "时砂回溯", "description": "让矿渣回溯到未开采状态再采一次。每级使**额外收入** +35%。", "unlockResets": 13, "baseCost": 12, "costGrowth": 3, "maxLevel": 5, "effectKind": "income_strength", "effectPerLevel": 0.014}, {"key": "imaginary_route", "name": "虚数航道", "description": "在虚数空间开辟航道。每级使**过量穿透** +0.15（不耗暴击）。", "unlockResets": 17, "baseCost": 16, "costGrowth": 3, "maxLevel": 5, "effectKind": "depth_strength", "effectPerLevel": 0.006}, {"key": "gaia_network", "name": "盖亚共生网络", "description": "星球意识协助采矿。每级使**猫矿工产能**与协同强度 +16%。", "unlockResets": 19, "baseCost": 18, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.008}, {"key": "stardust_alchemy", "name": "星尘炼金", "description": "将星尘直接炼成矿币。每级使**额外收入** +40%（炼金）。", "unlockResets": 22, "baseCost": 22, "costGrowth": 3, "maxLevel": 5, "effectKind": "income_strength", "effectPerLevel": 0.016}, {"key": "void_echo", "name": "虚空回声", "description": "虚空中的回声放大每次敲击。每级使**暴击伤害** +0.4。", "unlockResets": 24, "baseCost": 25, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.006}, {"key": "maxwell_sorter", "name": "麦克斯韦妖分拣", "description": "妖精分拣让矿渣自动归类。每级使本地成本再 ÷1.18（与标准化叠加）。", "unlockResets": 6, "baseCost": 8, "costGrowth": 4, "maxLevel": 8, "effectKind": "local_discount", "effectPerLevel": 0.0216}, {"key": "klein_storage", "name": "克莱因瓶仓储", "description": "用拓扑结构无限储存。每级使**矿币收益** +14%（无视体积）。", "unlockResets": 25, "baseCost": 28, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.007}, {"key": "landau_damping", "name": "朗道阻尼场", "description": "阻尼场让钻头永不磨损。每级使**矿镐锐利度**强度 +22%。", "unlockResets": 26, "baseCost": 30, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.011}, {"key": "xuanhuan_jade", "name": "玄圃玉京", "description": "仙家玉京的灵气滋养矿脉。每级使**齐心协力**成长 +0.02（时间根号更快）。", "unlockResets": 28, "baseCost": 32, "costGrowth": 3, "maxLevel": 8, "effectKind": "line_synergy", "effectPerLevel": 0.002}, {"key": "kunlun_xu", "name": "昆仑墟", "description": "万山之祖的压力让钻头更深。每级使**额外深度** +45%。", "unlockResets": 30, "baseCost": 35, "costGrowth": 3, "maxLevel": 5, "effectKind": "depth_strength", "effectPerLevel": 0.018}, {"key": "chaos_ledger", "name": "混沌账本", "description": "混沌中仍能精确记账。每级使**额外收入** +30%（混沌亦有序）。", "unlockResets": 32, "baseCost": 38, "costGrowth": 3, "maxLevel": 5, "effectKind": "income_strength", "effectPerLevel": 0.012}, {"key": "photon_sail", "name": "光帆牵引", "description": "用光压牵引矿石。每级使并行效率 +0.40。", "unlockResets": 35, "baseCost": 40, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.02}, {"key": "neutrino_drift", "name": "中微子漂流", "description": "中微子无视岩层直达深处。每级使**挖矿深度** +18%（穿透）。", "unlockResets": 40, "baseCost": 45, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.009}, {"key": "vacuum_decay", "name": "真空衰变", "description": "触发局部真空衰变，能量爆发。每级使新星首秒 +40（叠加大爆发）。", "unlockResets": 100, "baseCost": 160, "costGrowth": 4, "maxLevel": 3, "effectKind": "opening_burst", "effectPerLevel": 2.0}, {"key": "eternal_city", "name": "永恒城", "description": "建成永不重置的城。每级使本地科技满级后深度 +1.2（与解体工程叠加）。", "unlockResets": 45, "baseCost": 50, "costGrowth": 3, "maxLevel": 3, "effectKind": "completion_depth", "effectPerLevel": 0.12}, {"key": "ouroboros", "name": "衔尾蛇", "description": "蛇衔其尾，循环不息。每级使**钻进动量**满额 +0.18。", "unlockResets": 50, "baseCost": 110, "costGrowth": 3, "maxLevel": 5, "effectKind": "equipment_strength", "effectPerLevel": 0.0045}, {"key": "akasha_record", "name": "阿卡夏记录", "description": "读取宇宙档案馆的开采记录。每级使全局速度 ×1.12（记录即现实）。", "unlockResets": 60, "baseCost": 120, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_speed", "effectPerLevel": 0.0096}, {"key": "world_tree", "name": "世界树根系", "description": "世界树根系穿透所有星球。每级使本地成本 ÷1.22。", "unlockResets": 70, "baseCost": 140, "costGrowth": 3, "maxLevel": 8, "effectKind": "local_discount", "effectPerLevel": 0.0264}, {"key": "quantum_budget", "name": "量子预算", "description": "预算处于叠加态，花一份钱办两份事。每级使所有永久科技效果再 +4%（全局）。", "unlockResets": 80, "baseCost": 160, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_linear", "effectPerLevel": 0.002}, {"key": "paradox_engine", "name": "悖论引擎", "description": "用悖论驱动钻头。每级使全局速度 ×1.18。", "unlockResets": 90, "baseCost": 180, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_speed", "effectPerLevel": 0.0144}, {"key": "mythic_forge", "name": "神话熔炉", "description": "神话时代的余烬重燃。每级使**额外深度** +38%。", "unlockResets": 120, "baseCost": 240, "costGrowth": 3, "maxLevel": 5, "effectKind": "depth_strength", "effectPerLevel": 0.0152}, {"key": "chrono_crown", "name": "时冕", "description": "戴上时间王冠。每级使首秒爆发 +33（与大爆发叠加）。", "unlockResets": 150, "baseCost": 300, "costGrowth": 4, "maxLevel": 3, "effectKind": "opening_burst", "effectPerLevel": 1.65}, {"key": "prism_core", "name": "棱镜核心", "description": "棱镜折射让一束光变成七束。每级使**额外收入** +33%。", "unlockResets": 200, "baseCost": 400, "costGrowth": 3, "maxLevel": 5, "effectKind": "income_strength", "effectPerLevel": 0.0132}, {"key": "omega_point", "name": "欧米伽奇点", "description": "一切技术在此收束。每级使矿币与深度同时 ×1.25（终极收束）。", "unlockResets": 300, "baseCost": 600, "costGrowth": 3, "maxLevel": 5, "effectKind": "global_speed", "effectPerLevel": 0.0192}]}, "resources": [{"key": "credits", "name": "矿币", "icon": "◆", "color": "#f4b942", "use": "唯一的本地科技货币，由全部采矿收入直接结算"}, {"key": "cores", "name": "星球核心", "icon": "◎", "color": "#57c6a5", "use": "挖穿星球结算一次，用于永久科技；换星不清空"}], "eras": [{"key": "foundation", "name": "原始时代", "short": "原始", "unlockDepth": 0, "previousEraAutomations": 0, "status": "d1-d3"}, {"key": "industrial", "name": "工业时代", "short": "工业", "unlockDepth": 1500000, "previousEraAutomations": 4, "status": "d4-d7"}, {"key": "electrical", "name": "电气时代", "short": "电气", "unlockDepth": 140000000, "previousEraAutomations": 4, "status": "d8-d14"}, {"key": "modern", "name": "计算机时代", "short": "计算机", "unlockDepth": 668000000000, "previousEraAutomations": 5, "status": "d15-d21"}, {"key": "future", "name": "未来时代", "short": "未来", "unlockDepth": 488000000000000, "previousEraAutomations": 5, "status": "d22-d30"}, {"key": "planetary", "name": "行星工程", "short": "行星", "unlockDepth": 1.38e+21, "previousEraAutomations": 5, "status": "reserve"}], "multiplierRegions": [{"key": "speed", "name": "挖矿速度", "scope": "both", "formula": "各代设备的 (1 + 单级强度)^等级 连乘", "status": "active", "note": "唯一一个单科技按级复乘的区域"}, {"key": "parallel", "name": "并行开采效率", "scope": "both", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "同时在更多矿道开挖，增加矿币收益和挖矿深度；同类设备的加成相加。"}, {"key": "cats", "name": "猫矿工产能", "scope": "both", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "矿工及其设备的开采能力，同时增加矿币收益和挖矿深度；相关科技的累计等级还会增强猫群协同。"}, {"key": "extra_depth", "name": "额外深度", "scope": "depth", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "挖矿时额外增加挖矿深度，不影响矿币收益；同类设备的加成相加。"}, {"key": "crit_chance", "name": "暴击率", "scope": "both", "formula": "期望暴击乘数", "status": "active", "note": "上限 65%"}, {"key": "crit_damage", "name": "暴击伤害", "scope": "both", "formula": "期望暴击乘数", "status": "active", "note": "与暴击率共同形成一层"}, {"key": "income", "name": "额外收入", "scope": "income", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "从相同的开采过程获得更多矿币，不影响挖矿深度；同类设备的加成相加。"}, {"key": "coordination", "name": "猫群协同", "scope": "both", "formula": "1 + 猫数量层×协同等级", "status": "active", "note": "猫矿工产能类科技的累计等级越高，协同带来的矿币收益和挖矿深度加成越高。"}, {"key": "fragility", "name": "矿石脆弱度", "scope": "both", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "独立于工具锐利度"}, {"key": "sharpness", "name": "矿镐锐利度", "scope": "both", "formula": "1 + 各代设备的 单级强度×等级 之和", "status": "active", "note": "工具乘区"}, {"key": "teamwork", "name": "齐心协力", "scope": "both", "formula": "1 + 本轮累计天数根号项×等级", "status": "active", "note": "随本轮累计时间缓慢上升"}, {"key": "opening_burst", "name": "一鼓作气", "scope": "both", "formula": "开局限时巨额乘数", "status": "late-reserve", "note": "挖穿首颗星球后才考虑启用"}, {"key": "momentum", "name": "钻进动量", "scope": "both", "formula": "抵达本星后每24小时一轮，前4小时逐步升至上限", "status": "active", "note": "从抵达本星球起，每 24 游戏小时重新蓄能，每轮前 4 小时达到满额，不需要手动维持；同时影响矿币收益和挖矿深度。"}, {"key": "resonance", "name": "科技共振", "scope": "both", "formula": "1 + 自动化科技数×等级", "status": "active", "note": "每项在本星完成调试且已实际建成的科技算一条自动线；自动线越多，对矿币收益和挖矿深度的加成越高。"}, {"key": "penetration", "name": "过量穿透", "scope": "depth", "formula": "1 + 暴击层×等级", "status": "active", "note": "根据暴击率和暴击伤害额外增加挖矿深度，不额外增加矿币收益，也不会消耗原有暴击收益。"}, {"key": "shift_relay", "name": "班次接力", "scope": "income", "formula": "1 + 已自动科技数×等级", "status": "active", "note": "每项在本星完成调试且已实际建成的科技算一条自动线；自动线越多，对全部矿币收益的加成越高，不影响挖矿深度。"}, {"key": "lens", "name": "引力透镜", "scope": "depth", "formula": "待行星阶段设计", "status": "reserve", "note": "仅保留行星科技占位，当前活动不启用。"}], "upgrades": [{"key": "rotary_pick", "name": "手工矿镐", "era": "foundation", "region": "speed", "description": "更顺手的矿镐让开挖更快。每级让当前的**挖矿速度**提高 26%，**矿币收益**和**挖矿深度**也一起提高 26%。", "effectKind": "speed_compound", "effectPerLevel": 0.26, "maxLevel": 9, "baseCost": 300, "costGrowth": 1.92, "unlockDepth": 0, "prerequisites": [], "manualTarget": 3, "status": "active"}, {"key": "split_tunnel", "name": "分岔矿道", "era": "foundation", "region": "parallel", "description": "开出多条矿道，同时在更多地方挖矿。提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +0.22，同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 0.22, "maxLevel": 8, "baseCost": 760, "costGrowth": 1.88, "unlockDepth": 2000, "prerequisites": ["rotary_pick"], "manualTarget": 3, "status": "active"}, {"key": "cat_crew", "name": "猫矿工小队", "era": "foundation", "region": "cats", "description": "招募并训练矿工，提高**猫矿工产能**，同时增加**矿币收益**和**挖矿深度**。每级使该产能倍率 +0.20，同类设备的加成相加；累计等级还会增强**猫群协同**。", "effectKind": "cats", "effectPerLevel": 0.2, "maxLevel": 8, "baseCost": 4000, "costGrowth": 1.82, "unlockDepth": 180000, "prerequisites": ["rotary_pick"], "manualTarget": 3, "status": "active"}, {"key": "honed_edge", "name": "精磨镐刃", "era": "foundation", "region": "sharpness", "description": "磨利镐刃，让岩石更容易被凿开。提高**矿镐锐利度**，同时增加**矿币收益**和**挖矿深度**。每级使锐利度倍率 +0.17，同类设备的加成相加。", "effectKind": "sharpness", "effectPerLevel": 0.17, "maxLevel": 7, "baseCost": 9000, "costGrowth": 1.8, "unlockDepth": 280000, "prerequisites": ["split_tunnel"], "manualTarget": 3, "status": "active"}, {"key": "ore_ledger", "name": "矿石账本", "era": "foundation", "region": "income", "description": "减少漏记的矿石收入，增加挖矿获得的**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +0.25，同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 0.25, "maxLevel": 7, "baseCost": 18000, "costGrowth": 1.78, "unlockDepth": 520000, "prerequisites": ["cat_crew"], "manualTarget": 3, "status": "active"}, {"key": "fault_mapping", "name": "裂隙测绘", "era": "foundation", "region": "fragility", "description": "找到岩石裂缝，从更容易凿开的地方下手。提高**矿石脆弱度**，同时增加**矿币收益**和**挖矿深度**。每级使脆弱度倍率 +0.16，同类设备的加成相加。", "effectKind": "fragility", "effectPerLevel": 0.16, "maxLevel": 7, "baseCost": 36000, "costGrowth": 1.76, "unlockDepth": 700000, "prerequisites": ["honed_edge"], "manualTarget": 3, "status": "active"}, {"key": "deep_marker", "name": "深层标尺", "era": "foundation", "region": "extra_depth", "description": "沿标记好的路线向深处钻进，挖矿时额外增加**挖矿深度**；该项研究不会增加**矿币收益**。每级使**额外深度**倍率 +0.26，同类设备的加成相加。", "effectKind": "extra_depth", "effectPerLevel": 0.26, "maxLevel": 7, "baseCost": 72000, "costGrowth": 1.74, "unlockDepth": 1400000, "prerequisites": ["ore_ledger"], "manualTarget": 3, "status": "active"}, {"key": "steam_array", "name": "蒸汽钻列", "era": "industrial", "region": "parallel", "description": "多台蒸汽钻机同时开挖，提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +0.28，与**分岔矿道**等同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 0.28, "maxLevel": 8, "baseCost": 70000, "costGrowth": 1.7, "unlockDepth": 1500000, "prerequisites": ["fault_mapping"], "manualTarget": 3, "status": "active"}, {"key": "crew_whistle", "name": "猫班汽笛", "era": "industrial", "region": "coordination", "description": "用汽笛协调矿工，提高**猫群协同**。所有**猫矿工产能**类科技的累计等级越高，本项对**矿币收益**和**挖矿深度**的加成就越大；升级本项也会增强这份加成。", "effectKind": "coordination", "effectPerLevel": 0.055, "maxLevel": 8, "baseCost": 180000, "costGrowth": 1.68, "unlockDepth": 5000000, "prerequisites": ["cat_crew"], "manualTarget": 3, "status": "active"}, {"key": "impact_hammer", "name": "冲击锤头", "era": "industrial", "region": "crit_chance", "description": "更容易打出强力一击。每级使**暴击率**增加 4 个百分点，总上限为 65%。暴击会提高**矿币收益**和**挖矿深度**，提高多少还取决于**暴击伤害**。", "effectKind": "crit_chance", "effectPerLevel": 0.04, "maxLevel": 8, "baseCost": 350000, "costGrowth": 1.67, "unlockDepth": 7000000, "prerequisites": ["steam_array"], "manualTarget": 3, "status": "active"}, {"key": "blast_charge", "name": "定向爆破", "era": "industrial", "region": "crit_damage", "description": "集中炸药威力，让暴击挖得更多、更深。每级使**暴击伤害**倍率 +0.35，增加**矿币收益**和**挖矿深度**的暴击加成；**暴击率**越高，收益越明显。", "effectKind": "crit_damage", "effectPerLevel": 0.35, "maxLevel": 8, "baseCost": 700000, "costGrowth": 1.66, "unlockDepth": 22000000, "prerequisites": ["impact_hammer"], "manualTarget": 3, "status": "active"}, {"key": "relay_shift", "name": "三班接力", "era": "industrial", "region": "shift_relay", "description": "减少换班时的矿石损耗，提高**班次接力**。每项在本星完成调试且已实际建成的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**的加成越高，不影响**挖矿深度**。", "effectKind": "shift_relay", "effectPerLevel": 0.018, "maxLevel": 7, "baseCost": 1200000, "costGrowth": 1.65, "unlockDepth": 35000000, "prerequisites": ["crew_whistle"], "manualTarget": 3, "status": "active"}, {"key": "drill_momentum", "name": "钻进动量", "era": "industrial", "region": "momentum", "description": "钻机随游戏内时间蓄能，逐渐增加**矿币收益**和**挖矿深度**。从抵达本星球起，**钻进动量**每 24 游戏小时重新蓄能，每轮前 4 小时达到满额，不需要手动维持。升级会提高满额时的加成。", "effectKind": "momentum", "effectPerLevel": 0.08, "maxLevel": 7, "baseCost": 2200000, "costGrowth": 1.64, "unlockDepth": 60000000, "prerequisites": ["blast_charge"], "manualTarget": 3, "status": "active"}, {"key": "union_rhythm", "name": "齐心协力", "era": "industrial", "region": "teamwork", "description": "矿工逐渐熟悉彼此，提高**齐心协力**。从本轮开局算起，游戏内经过的时间越长，**矿币收益**和**挖矿深度**加成越高，但增长逐渐放缓；不要求连续上线。", "effectKind": "teamwork", "effectPerLevel": 0.045, "maxLevel": 7, "baseCost": 4000000, "costGrowth": 1.63, "unlockDepth": 150000000, "prerequisites": ["relay_shift"], "manualTarget": 3, "status": "active"}, {"key": "arc_pick", "name": "电弧矿镐", "era": "electrical", "region": "speed", "description": "电力驱动矿镐更快挥动。每级让当前的**挖矿速度**提高 15%，**矿币收益**和**挖矿深度**也一起提高 15%；**手工矿镐**已有的加成仍然保留。", "effectKind": "speed_compound", "effectPerLevel": 0.15, "maxLevel": 9, "baseCost": 7000000, "costGrowth": 1.62, "unlockDepth": 140000000, "prerequisites": ["drill_momentum"], "manualTarget": 3, "status": "active"}, {"key": "weakpoint_scope", "name": "弱点示波器", "era": "electrical", "region": "crit_chance", "description": "找准下镐的位置，提高强力一击的机会。每级使**暴击率**增加 5 个百分点，与**冲击锤头**合计上限为 65%。提高**矿币收益**和**挖矿深度**中的暴击加成，达到上限后不再增加。", "effectKind": "crit_chance", "effectPerLevel": 0.05, "maxLevel": 8, "baseCost": 12000000, "costGrowth": 1.61, "unlockDepth": 600000000, "prerequisites": ["arc_pick"], "manualTarget": 3, "status": "active"}, {"key": "plasma_edge", "name": "电热镐刃", "era": "electrical", "region": "sharpness", "description": "加热镐刃，让切削更轻松。提高**矿镐锐利度**，同时增加**矿币收益**和**挖矿深度**。每级使锐利度倍率 +0.23，与**精磨镐刃**等同类设备的加成相加。", "effectKind": "sharpness", "effectPerLevel": 0.23, "maxLevel": 8, "baseCost": 20000000, "costGrowth": 1.6, "unlockDepth": 3000000000, "prerequisites": ["arc_pick"], "manualTarget": 3, "status": "active"}, {"key": "overpenetration", "name": "过量穿透", "era": "electrical", "region": "penetration", "description": "让暴击的冲击力继续向深处传递，额外增加**挖矿深度**。**暴击率**与**暴击伤害**越高，本项加成越大；不增加**矿币收益**，也不会消耗原有的暴击收益。", "effectKind": "penetration", "effectPerLevel": 0.12, "maxLevel": 7, "baseCost": 35000000, "costGrowth": 1.59, "unlockDepth": 12000000000, "prerequisites": ["weakpoint_scope"], "manualTarget": 3, "status": "active"}, {"key": "grid_resonance", "name": "矿网共振", "era": "electrical", "region": "resonance", "description": "让自动设备配合运转，提高**科技共振**。每项在本星完成调试且已实际建成的科技都算一条**自动线**；**自动线**越多，本项对全部**矿币收益**和**挖矿深度**的加成越高。", "effectKind": "resonance", "effectPerLevel": 0.012, "maxLevel": 7, "baseCost": 448000000, "costGrowth": 1.58, "unlockDepth": 26000000000, "prerequisites": ["plasma_edge"], "manualTarget": 3, "status": "active"}, {"key": "pulse_booster", "name": "脉冲增压舱", "era": "electrical", "region": "parallel", "description": "周期性增压输送，提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +0.85，与**电动矿车**等同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 0.85, "maxLevel": 7, "baseCost": 1200000000, "costGrowth": 1.58, "unlockDepth": 60000000000, "prerequisites": ["grid_resonance"], "manualTarget": 3, "status": "active"}, {"key": "induction_ledger", "name": "感应结算器", "era": "electrical", "region": "income", "description": "自动清点挖出的矿石，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +0.32，与**矿石账本**等同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 0.32, "maxLevel": 7, "baseCost": 2540000000, "costGrowth": 1.57, "unlockDepth": 112000000000, "prerequisites": ["grid_resonance"], "manualTarget": 3, "status": "active"}, {"key": "pressure_converter", "name": "数控钻台", "era": "modern", "region": "speed", "description": "电脑控制钻进路线，让钻头少走弯路。每级让当前的**挖矿速度**提高 28%，**矿币收益**和**挖矿深度**也一起提高 28%；旧矿镐的加成仍然保留。", "effectKind": "speed_compound", "effectPerLevel": 0.28, "maxLevel": 8, "baseCost": 37500000000, "costGrowth": 1.61, "unlockDepth": 668000000000, "prerequisites": ["overpenetration"], "manualTarget": 3, "status": "active"}, {"key": "mesh_topology", "name": "深井运输带", "era": "modern", "region": "parallel", "description": "持续运走矿石，让更多矿道能同时开挖。提高**并行开采效率**，同时增加**矿币收益**和**挖矿深度**。每级使该效率倍率 +1.20，与**电动矿车**等同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 1.2, "maxLevel": 8, "baseCost": 74200000000, "costGrowth": 1.6, "unlockDepth": 1430000000000, "prerequisites": ["pressure_converter"], "manualTarget": 3, "status": "active"}, {"key": "thermal_recovery", "name": "地质扫描器", "era": "modern", "region": "fragility", "description": "扫描岩层，找出更容易破碎的位置。提高**矿石脆弱度**，同时增加**矿币收益**和**挖矿深度**。每级使脆弱度倍率 +0.55，与**裂隙测绘**等同类设备的加成相加。", "effectKind": "fragility", "effectPerLevel": 0.55, "maxLevel": 7, "baseCost": 669000000000, "costGrowth": 1.59, "unlockDepth": 3880000000000, "prerequisites": ["mesh_topology"], "manualTarget": 3, "status": "active"}, {"key": "craft_diversity", "name": "智能分选机", "era": "modern", "region": "income", "description": "从碎石里自动识别细小矿物，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +1.10，同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 1.1, "maxLevel": 7, "baseCost": 2550000000000, "costGrowth": 1.58, "unlockDepth": 17600000000000, "prerequisites": ["thermal_recovery"], "manualTarget": 3, "status": "active"}, {"key": "cascade_bus", "name": "自动换班协议", "era": "modern", "region": "shift_relay", "description": "让无人设备有序换班，提高**班次接力**。已完成调试的**自动线**越多，本项对全部**矿币收益**的加成越高；不增加**挖矿深度**，也不会加快自动采购。", "effectKind": "shift_relay", "effectPerLevel": 0.024, "maxLevel": 7, "baseCost": 18500000000000, "costGrowth": 1.57, "unlockDepth": 65000000000000, "prerequisites": ["craft_diversity"], "manualTarget": 3, "status": "active"}, {"key": "precision_matrix", "name": "量子钻头", "era": "future", "region": "speed", "description": "量子钻头进一步加快钻进。每级让当前的**挖矿速度**提高 35%，**矿币收益**和**挖矿深度**也一起提高 35%；**数控钻台**已有的加成仍然保留。", "effectKind": "speed_compound", "effectPerLevel": 0.35, "maxLevel": 8, "baseCost": 193000000000000, "costGrowth": 1.56, "unlockDepth": 488000000000000, "prerequisites": ["cascade_bus"], "manualTarget": 3, "status": "active"}, {"key": "distance_fold", "name": "多层矿井", "era": "future", "region": "parallel", "description": "在不同深度同时开挖，提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +2.80，同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 2.8, "maxLevel": 8, "baseCost": 486000000000000, "costGrowth": 1.55, "unlockDepth": 1160000000000000, "prerequisites": ["precision_matrix"], "manualTarget": 3, "status": "active"}, {"key": "gravity_lens", "name": "星门运输", "era": "future", "region": "extra_depth", "description": "通过星门把钻机送到更深的矿层，挖矿时额外增加**挖矿深度**；不会增加**矿币收益**。每级使**额外深度**倍率 +1.20，同类设备的加成相加。", "effectKind": "extra_depth", "effectPerLevel": 1.2, "maxLevel": 8, "baseCost": 2260000000000000, "costGrowth": 1.54, "unlockDepth": 2880000000000000, "prerequisites": ["distance_fold"], "manualTarget": 3, "status": "active"}, {"key": "singularity_crew", "name": "无人机矿群", "era": "future", "region": "cats", "description": "矿工操纵无人机共同开采，提高**猫矿工产能**，同时增加**矿币收益**和**挖矿深度**。每级使该产能倍率 +0.65，与**猫矿工小队**相加；累计等级也会增强**猫群协同**。", "effectKind": "cats", "effectPerLevel": 0.65, "maxLevel": 8, "baseCost": 9580000000000000, "costGrowth": 1.53, "unlockDepth": 11200000000000000, "prerequisites": ["gravity_lens"], "manualTarget": 3, "status": "active"}, {"key": "quantum_fault", "name": "材料重构", "era": "future", "region": "sharpness", "description": "重构钻头材料，提高**矿镐锐利度**，让岩石更容易被切开，同时增加**矿币收益**和**挖矿深度**。每级使锐利度倍率 +1.40，同类设备的加成相加。", "effectKind": "sharpness", "effectPerLevel": 1.4, "maxLevel": 8, "baseCost": 33500000000000000, "costGrowth": 1.52, "unlockDepth": 47600000000000000, "prerequisites": ["singularity_crew"], "manualTarget": 3, "status": "active"}, {"key": "opening_salvo", "name": "一鼓作气", "era": "planetary", "region": "opening_burst", "description": "每颗星球开局获得限时巨额加速", "effectKind": "opening_burst", "effectPerLevel": 2, "maxLevel": 6, "baseCost": 1000000000, "costGrowth": 1.6, "unlockDepth": 1000000000000000, "prerequisites": ["quantum_fault"], "manualTarget": 3, "status": "late-reserve"}, {"key": "planetary_lens", "name": "行星透镜阵", "era": "planetary", "region": "lens", "description": "引力透镜的行星时代延伸", "effectKind": "lens", "effectPerLevel": 0.14, "maxLevel": 8, "baseCost": 1800000000, "costGrowth": 1.58, "unlockDepth": 2000000000000000, "prerequisites": ["opening_salvo"], "manualTarget": 3, "status": "reserve"}, {"key": "planetary_parallel", "name": "多星并行钻井", "era": "planetary", "region": "parallel", "description": "把同时矿脉扩展到多星球", "effectKind": "parallel", "effectPerLevel": 0.42, "maxLevel": 8, "baseCost": 3000000000, "costGrowth": 1.56, "unlockDepth": 4000000000000000, "prerequisites": ["planetary_lens"], "manualTarget": 3, "status": "reserve"}, {"key": "seismic_echo", "name": "电动矿车", "era": "electrical", "region": "parallel", "description": "更快清走矿石，让更多矿道保持开挖。提高**并行开采效率**，同时增加**矿币收益**和**挖矿深度**。每级使该效率倍率 +0.65，与**蒸汽钻列**等同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 0.65, "maxLevel": 8, "baseCost": 440000000, "costGrowth": 1.6, "unlockDepth": 26000000000, "prerequisites": ["overpenetration"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "capacitor_bank", "name": "蓄能飞轮", "era": "electrical", "region": "momentum", "description": "储存钻机动能，增强**钻进动量**，同时增加**矿币收益**和**挖矿深度**。从抵达本星球起，每 24 游戏小时重新蓄能，每轮前 4 小时达到满额；每级使满额倍率 +0.30，与同类设备相加，不需要手动维持。", "effectKind": "momentum", "effectPerLevel": 0.3, "maxLevel": 8, "baseCost": 2480000000, "costGrowth": 1.6, "unlockDepth": 112000000000, "prerequisites": ["grid_resonance"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "sorting_optics", "name": "电磁分选机", "era": "electrical", "region": "income", "description": "用电磁设备从碎石中分离更多矿物，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +0.55，同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 0.55, "maxLevel": 8, "baseCost": 20500000000, "costGrowth": 1.6, "unlockDepth": 330000000000, "prerequisites": ["induction_ledger"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "ceramic_bearings", "name": "精密刀具", "era": "modern", "region": "sharpness", "description": "精密加工新一代镐刃，提高**矿镐锐利度**，同时增加**矿币收益**和**挖矿深度**。每级使锐利度倍率 +0.65，与**电热镐刃**等同类设备的加成相加。", "effectKind": "sharpness", "effectPerLevel": 0.65, "maxLevel": 8, "baseCost": 73000000000, "costGrowth": 1.62, "unlockDepth": 1430000000000, "prerequisites": ["pressure_converter"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "support_lattice", "name": "液压支护网", "era": "modern", "region": "parallel", "description": "加固并重新打开旧矿道，提高**并行开采效率**，让**矿币收益**和**挖矿深度**一起增加。每级使该效率倍率 +1.80，同类设备的加成相加。", "effectKind": "parallel", "effectPerLevel": 1.8, "maxLevel": 8, "baseCost": 2510000000000, "costGrowth": 1.6, "unlockDepth": 17600000000000, "prerequisites": ["mesh_topology"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "closed_loop_cooling", "name": "矿渣回收站", "era": "modern", "region": "income", "description": "从已经分选过的矿渣中再次提炼，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +1.80，与**智能分选机**等同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 1.8, "maxLevel": 8, "baseCost": 18100000000000, "costGrowth": 1.6, "unlockDepth": 136000000000000, "prerequisites": ["thermal_recovery"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "autonomous_survey", "name": "自主地质探针", "era": "modern", "region": "fragility", "description": "探针深入未知岩层，寻找容易凿开的裂缝。提高**矿石脆弱度**，同时增加**矿币收益**和**挖矿深度**。每级使脆弱度倍率 +0.90，与**地质扫描器**等同类设备的加成相加。", "effectKind": "fragility", "effectPerLevel": 0.9, "maxLevel": 8, "baseCost": 18100000000000, "costGrowth": 1.6, "unlockDepth": 136000000000000, "prerequisites": ["craft_diversity"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "pressure_accumulator", "name": "深压钻头", "era": "modern", "region": "extra_depth", "description": "耐压钻头继续钻入坚硬的深层岩石，挖矿时额外增加**挖矿深度**；不会增加**矿币收益**。每级使**额外深度**倍率 +0.70，同类设备的加成相加。", "effectKind": "extra_depth", "effectPerLevel": 0.7, "maxLevel": 8, "baseCost": 118000000000000, "costGrowth": 1.6, "unlockDepth": 248000000000000, "prerequisites": ["cascade_bus"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "phase_anchor", "name": "预测调度", "era": "future", "region": "income", "description": "提前安排设备，减少矿石在开采和运输中的损失，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +3.00，同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 3, "maxLevel": 8, "baseCost": 340000000000000, "costGrowth": 1.62, "unlockDepth": 1160000000000000, "prerequisites": ["precision_matrix"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "vacuum_bus", "name": "全自动矿场", "era": "future", "region": "shift_relay", "description": "让整座矿场自行排班，进一步提高**班次接力**。已完成调试的**自动线**越多，本项对全部**矿币收益**的加成越高；不增加**挖矿深度**，也不会加快自动采购。", "effectKind": "shift_relay", "effectPerLevel": 0.04, "maxLevel": 8, "baseCost": 66100000000000000, "costGrowth": 1.65, "unlockDepth": 152000000000000000, "prerequisites": ["gravity_lens"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "quantum_sorter", "name": "量子分选仓", "era": "future", "region": "income", "description": "逐粒分拣以往难以回收的微小矿屑，增加**矿币收益**；不会增加**挖矿深度**。每级使**额外收入**倍率 +5.00，同类设备的加成相加。", "effectKind": "income", "effectPerLevel": 5, "maxLevel": 8, "baseCost": 160000000000000000, "costGrowth": 1.62, "unlockDepth": 347000000000000000, "prerequisites": ["quantum_fault"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "tidal_bore", "name": "行星钻头", "era": "future", "region": "extra_depth", "description": "借助行星潮汐推动钻头，挖矿时额外增加**挖矿深度**；不会增加**矿币收益**。每级使**额外深度**倍率 +2.20，同类设备的加成相加。", "effectKind": "extra_depth", "effectPerLevel": 2.2, "maxLevel": 8, "baseCost": 275000000000000000, "costGrowth": 1.62, "unlockDepth": 643000000000000000, "prerequisites": ["gravity_lens"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}, {"key": "stellar_sync", "name": "量子调度", "era": "future", "region": "resonance", "description": "协调所有自动设备的节拍，提高**科技共振**。已完成调试的**自动线**越多，本项对全部**矿币收益**和**挖矿深度**的加成越高；不会改变助手班次或自动采购间隔。", "effectKind": "resonance", "effectPerLevel": 0.035, "maxLevel": 8, "baseCost": 352000000000000000, "costGrowth": 1.65, "unlockDepth": 1070000000000000000, "prerequisites": ["tidal_bore", "vacuum_bus"], "manualTarget": 3, "status": "active", "addedIn": "thirty-day"}], "strategy": {"mode": "daily-helper-v3", "profiles": {"daily": {"name": "每日一次 / 20:00", "checkMinutes": [1200]}, "absent": {"name": "全程托管 / 不操作", "checkMinutes": []}, "active": {"name": "高频 / 每日47次", "checkMinutes": [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600, 630, 660, 690, 720, 750, 780, 810, 840, 870, 900, 930, 960, 990, 1020, 1050, 1080, 1110, 1140, 1170, 1200, 1230, 1260, 1290, 1320, 1350, 1380, 1410]}, "regular": {"name": "多次 / 每日9次", "checkMinutes": [60, 180, 360, 540, 720, 900, 1080, 1260, 1410]}, "low": {"name": "多次 / 每日5次", "checkMinutes": [120, 480, 840, 1200, 1410]}}, "priority": ["rotary_pick", "split_tunnel", "cat_crew", "honed_edge", "ore_ledger", "fault_mapping", "deep_marker", "steam_array", "crew_whistle", "impact_hammer", "blast_charge", "relay_shift", "drill_momentum", "union_rhythm", "arc_pick", "weakpoint_scope", "plasma_edge", "overpenetration", "grid_resonance", "pulse_booster", "seismic_echo", "induction_ledger", "capacitor_bank", "sorting_optics", "pressure_converter", "mesh_topology", "ceramic_bearings", "thermal_recovery", "craft_diversity", "support_lattice", "cascade_bus", "closed_loop_cooling", "autonomous_survey", "pressure_accumulator", "precision_matrix", "distance_fold", "phase_anchor", "gravity_lens", "singularity_crew", "quantum_fault", "vacuum_bus", "quantum_sorter", "tidal_bore", "stellar_sync"], "routeVariants": ["balanced", "cheapest", "depth", "income"], "opportunityCheckIntervalMinutes": 10}};
+
+// === description.js ===
+function descriptionParts(text) {
+  return text.split(/(\*\*[^*\r\n]+\*\*)/g).map((part, index) => ({
+    strong: index % 2 === 1,
+    text: index % 2 === 1 ? part.slice(2, -2) : part,
+  })).filter((part) => part.text.length > 0);
+}
+
+function renderDescription(element, text) {
+  const document = element.ownerDocument;
+  element.replaceChildren(...descriptionParts(text).map((part) => {
+    if (!part.strong) return document.createTextNode(part.text);
+    const strong = document.createElement("strong");
+    strong.textContent = part.text;
+    return strong;
+  }));
+}
+
+
+// === voyage.js ===
+// Integrate the existing local-age effects between actual purchase/unlock events.
+// Factored root differences avoid cancellation when a late voyage lasts seconds.
+function miningWork(start, end, teamwork, momentum) {
+  if (end <= start) return 0;
+  let t = start; let total = 0; let pieces = 0;
+  const a = teamwork / Math.sqrt(1440);
+  while (t < end) {
+    if (++pieces > 8192) throw new Error("Voyage age integration exceeded its bounded horizon");
+    const day = Math.floor(t / 1440) * 1440;
+    const ramp = t - day < 240;
+    const stop = Math.min(end, day + (ramp ? 240 : 1440));
+    const h = stop - t;
+    const root = Math.sqrt(t);
+    const delta = h / (Math.sqrt(stop) + root);
+    const rootIntegral = 2 * root * root * delta + 2 * root * delta ** 2 + 2 / 3 * delta ** 3;
+    const base = h + a * rootIntegral;
+    if (ramp) {
+      const weightedRoot = 2 * root ** 3 * delta ** 2 + 10 / 3 * root ** 2 * delta ** 3
+        + 2 * root * delta ** 4 + 2 / 5 * delta ** 5;
+      total += (1 + momentum * (t - day) / 240) * base
+        + momentum / 240 * (h * h / 2 + a * weightedRoot);
+    } else total += (1 + momentum) * base;
+    t = stop;
+  }
+  return total;
+}
+
+function timeForWork(start, work, teamwork, momentum) {
+  if (!(work > 0) || !Number.isFinite(work)) throw new Error("Invalid voyage event distance");
+  if (!teamwork && !momentum) return start + work;
+  let lo = start;
+  let hi = start + work / (1 + teamwork * Math.sqrt(start / 1440));
+  if (!(hi > start)) throw new Error("Voyage event below clock precision");
+  for (let i = 0; i < 52; i += 1) {
+    const mid = lo + (hi - lo) / 2;
+    if (miningWork(start, mid, teamwork, momentum) < work) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+
+function earnedCores(planets, step) {
+  const q = Math.floor(planets / step); const r = planets % step;
+  return planets + step * q * (q - 1) / 2 + q * r;
+}
+
+function localSnapshot(engine, eraAges) {
+  const s = engine.state;
+  return {
+    age: s.minute, depth: s.depth, credits: s.credits,
+    levels: { ...s.levels }, manualLevels: { ...s.manualLevels },
+    autoUnlocked: [...s.autoUnlocked], everKeys: [...s.everKeys],
+    eraAges: { ...eraAges }, allMaxedAge: s.allMaxedMinute,
+    built: Object.values(s.levels).reduce((sum, level) => sum + level, 0),
+  };
+}
+
+// The scratch engine has no global clock or core purchases. The caller splits at
+// permanent-research boundaries and settles global history/rewards separately.
+function compileVoyage(engine) {
+  const s = engine.state;
+  const initialAge = s.minute;
+  const eraAges = {};
+  const segments = [];
+  const events = [];
+  const maxEvents = engine.localKeys.reduce((n, key) => n + engine.specs[key].maxLevel * 2, 0)
+    + engine.localKeys.length + 10;
+  for (let i = 0; i < maxEvents; i += 1) {
+    if (s.depth >= s.targetDepth) {
+      return { initialAge, segments, events, end: localSnapshot(engine, eraAges), duration: s.minute };
+    }
+    const previousEras = new Set(Object.keys(s.eraFirstDays));
+    const purchases = engine.autoPurchase();
+    for (const era of Object.keys(s.eraFirstDays)) {
+      if (!previousEras.has(era)) eraAges[era] = s.minute;
+    }
+    for (const item of purchases) events.push({ ...item, age: s.minute });
+    const f = engine.multiplierBreakdown();
+    const e = engine.effectLevels();
+    const income = engine.rules.baseCreditsPerMinute * engine.incomeMultiplier() / f.teamwork / f.momentum;
+    const depth = engine.rules.baseDepthPerMinute * engine.depthMultiplier() / f.teamwork / f.momentum;
+    const teamwork = e.teamwork || 0; const momentum = e.momentum || 0;
+    let work = (s.targetDepth - s.depth) / depth;
+    let boundary = { kind: "depth", value: s.targetDepth };
+    for (const key of engine.localKeys) {
+      const spec = engine.specs[key];
+      if (spec.status !== "active" || engine.level(key) >= spec.maxLevel
+        || !spec.prerequisites.every((required) => engine.level(required) >= 1)) continue;
+      const era = engine.eraByKey[spec.era];
+      const previous = engine.eraSequence[engine.eraSequence.indexOf(spec.era) - 1];
+      if (previous && engine.eraAutomationCount(previous) < era.previousEraAutomations) continue;
+      const neededDepth = Math.max(spec.unlockDepth, era.unlockDepth);
+      const isDepth = s.depth < neededDepth;
+      const value = isDepth ? neededDepth : engine.costFor(key);
+      const distance = isDepth ? (value - s.depth) / depth : (value - s.credits) / income;
+      if (distance > 0 && distance < work) {
+        work = distance; boundary = { kind: isDepth ? "depth" : "credits", value };
+      }
+    }
+    let nextAge = timeForWork(s.minute, work, teamwork, momentum);
+    const burstEnd = engine.data.prestige.openingBurstSeconds / 60;
+    if (engine.coreEffect("opening_burst") > 0 && s.minute < burstEnd && nextAge > burstEnd) {
+      nextAge = burstEnd;
+      work = miningWork(s.minute, nextAge, teamwork, momentum);
+      boundary = null;
+    }
+    if (!Number.isFinite(nextAge) || nextAge <= s.minute) throw new Error("Non-progressing voyage event");
+    segments.push({ ...localSnapshot(engine, eraAges), endAge: nextAge, income, depthRate: depth, teamwork, momentum });
+    s.credits += income * work;
+    s.depth = Math.min(s.targetDepth, s.depth + depth * work);
+    if (boundary) s[boundary.kind] = Math.max(s[boundary.kind], boundary.value);
+    s.minute = nextAge;
+    s.day = Math.floor(s.minute / 1440) + 1;
+  }
+  throw new Error("Voyage exceeded the finite local upgrade event budget");
+}
+
+function sampleVoyage(plan, age) {
+  if (age >= plan.duration) return plan.end;
+  let lo = 0; let hi = plan.segments.length;
+  while (lo + 1 < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (plan.segments[mid].age <= age) lo = mid; else hi = mid;
+  }
+  const segment = plan.segments[lo];
+  const work = miningWork(segment.age, age, segment.teamwork, segment.momentum);
+  return { ...segment, age, credits: segment.credits + segment.income * work,
+    depth: segment.depth + segment.depthRate * work };
+}
+
+
+// === engine.js ===
+
+const UINT32_RANGE = 4294967296;
+const TWO_PI = Math.PI * 2;
+const IMPLEMENTED_EFFECT_KINDS = new Set([
+  "speed_compound", "parallel", "cats", "sharpness", "income", "fragility",
+  "extra_depth", "coordination", "crit_chance", "crit_damage", "shift_relay",
+  "momentum", "teamwork", "penetration", "resonance",
+]);
+
+function validateGameData(data) {
+  if (!data || data.schemaVersion !== 3) throw new Error(`Unsupported S2 schema: ${data?.schemaVersion}`);
+  const required = ["settlementMinutes", "baseCreditsPerMinute", "baseDepthPerMinute", "manualAutomationThreshold", "autoPurchaseIntervalMinutes", "autoPurchaseBudget", "autoReserveManualLevels", "randomAlgorithm", "randomSigma", "dailyUpgradeAuditMin", "dailyUpgradeAuditMax", "developmentTargetDepth", "helperIntervalMinutes", "baseCriticalDamage", "manualBurstWarningLevels", "batchCommandMaxLevels"];
+  required.forEach((key) => { if (!(key in data.rules)) throw new Error(`Missing rule: ${key}`); });
+  if (data.rules.randomAlgorithm !== "python-mt19937-v1") throw new Error("Unsupported random algorithm");
+  if (!(Number(data.strategy?.opportunityCheckIntervalMinutes) > 0)) throw new Error("Missing opportunity check interval");
+  const resources = data.prestige ? ["credits", "cores"] : ["credits"];
+  if (JSON.stringify(data.resources.map((item) => item.key)) !== JSON.stringify(resources)) throw new Error("Invalid resource contract");
+  if (data.contentVersion?.startsWith("prestige-") && !data.prestige) throw new Error("Missing prestige rules");
+  if (data.prestige) {
+    const p = data.prestige;
+    if (!Number.isFinite(p.planetTargetDepth) || p.planetTargetDepth <= 0
+      || (["prestige-2", "prestige-3"].includes(data.contentVersion) && (!Number.isSafeInteger(p.galaxyTargetPlanets)
+        || p.galaxyTargetPlanets < 1 || !Number.isSafeInteger(earnedCores(p.galaxyTargetPlanets, p.rewardStep))))
+      || !Number.isInteger(p.rewardStep) || p.rewardStep < 1
+      || !Number.isInteger(p.historyLimit) || p.historyLimit < 1
+      || !Array.isArray(p.upgrades) || !p.upgrades.length) throw new Error("Invalid prestige rules");
+    if (data.contentVersion === "prestige-3" && (p.openingBurstSeconds !== 1 || !p.legacyCorePrices)) throw new Error("Missing interstellar rules");
+    const kinds = new Set(["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed", "global_linear", "local_discount", "completion_depth", "opening_burst"]);
+    const keys = new Set();
+    for (const spec of p.upgrades) {
+      if (typeof spec.key !== "string" || keys.has(spec.key) || !kinds.has(spec.effectKind)
+        || !Number.isInteger(spec.unlockResets) || spec.unlockResets < 1
+        || !Number.isInteger(spec.maxLevel) || spec.maxLevel < 1 || spec.maxLevel > 20
+        || !Number.isSafeInteger(spec.baseCost) || spec.baseCost < 1
+        || !Number.isSafeInteger(spec.costGrowth) || spec.costGrowth < 1
+        || !Number.isFinite(spec.effectPerLevel) || spec.effectPerLevel <= 0
+        || !Number.isSafeInteger(spec.baseCost * spec.costGrowth ** (spec.maxLevel - 1))) throw new Error("Invalid core technology");
+      keys.add(spec.key);
+    }
+  }
+  if (data.rules.helperIntervalMinutes !== 1440) throw new Error("Helper must use the daily clock");
+  if (!Number.isInteger(data.rules.batchCommandMaxLevels) || data.rules.batchCommandMaxLevels <= 0) throw new Error("Invalid batch size");
+  const eras = new Set(data.eras.map((item) => item.key));
+  const regions = new Set(data.multiplierRegions.map((item) => item.key));
+  const keys = new Set();
+  data.upgrades.forEach((item) => {
+    if (keys.has(item.key)) throw new Error(`Duplicate upgrade ${item.key}`);
+    keys.add(item.key);
+    if (!eras.has(item.era) || !regions.has(item.region)) throw new Error(`Invalid era/region for ${item.key}`);
+    if (item.manualTarget !== data.rules.manualAutomationThreshold) throw new Error(`Invalid manual target for ${item.key}`);
+    if (item.status === "active" && !IMPLEMENTED_EFFECT_KINDS.has(item.effectKind)) {
+      throw new Error(`Unsupported active effect ${item.effectKind} for ${item.key}`);
+    }
+  });
+  data.upgrades.forEach((item) => item.prerequisites.forEach((key) => {
+    if (!keys.has(key)) throw new Error(`Unknown prerequisite ${key}`);
+  }));
+  return data;
+}
+
+async function loadGameData(url = "./game_data.json") {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Unable to load S2 game data: ${response.status}`);
+  return validateGameData(await response.json());
+}
+
+class PythonRandom {
+  constructor(seed = 42, snapshot = null) {
+    this.mt = new Uint32Array(624);
+    this.index = 624;
+    this.gaussNext = null;
+    if (snapshot) this.restore(snapshot); else this.seed(seed);
+  }
+  seed(seedValue) {
+    let value;
+    try { value = BigInt(seedValue); } catch { value = 42n; }
+    if (value < 0n) value = -value;
+    const key = [];
+    do { key.push(Number(value & 0xffffffffn)); value >>= 32n; } while (value > 0n);
+    this.initByArray(key);
+    this.gaussNext = null;
+  }
+  initGenRand(seed) {
+    this.mt[0] = seed >>> 0;
+    for (let index = 1; index < 624; index += 1) {
+      const previous = this.mt[index - 1];
+      this.mt[index] = (Math.imul(1812433253, previous ^ (previous >>> 30)) + index) >>> 0;
+    }
+    this.index = 624;
+  }
+  initByArray(key) {
+    this.initGenRand(19650218);
+    let i = 1; let j = 0; let count = Math.max(624, key.length);
+    for (; count > 0; count -= 1) {
+      const previous = this.mt[i - 1];
+      this.mt[i] = ((this.mt[i] ^ Math.imul(previous ^ (previous >>> 30), 1664525)) + key[j] + j) >>> 0;
+      i += 1; j += 1;
+      if (i >= 624) { this.mt[0] = this.mt[623]; i = 1; }
+      if (j >= key.length) j = 0;
+    }
+    for (count = 623; count > 0; count -= 1) {
+      const previous = this.mt[i - 1];
+      this.mt[i] = ((this.mt[i] ^ Math.imul(previous ^ (previous >>> 30), 1566083941)) - i) >>> 0;
+      i += 1;
+      if (i >= 624) { this.mt[0] = this.mt[623]; i = 1; }
+    }
+    this.mt[0] = 0x80000000;
+    this.index = 624;
+  }
+  nextUint32() {
+    if (this.index >= 624) {
+      for (let index = 0; index < 624; index += 1) {
+        const y = (this.mt[index] & 0x80000000) | (this.mt[(index + 1) % 624] & 0x7fffffff);
+        let value = this.mt[(index + 397) % 624] ^ (y >>> 1);
+        if (y & 1) value ^= 0x9908b0df;
+        this.mt[index] = value >>> 0;
+      }
+      this.index = 0;
+    }
+    let y = this.mt[this.index]; this.index += 1;
+    y ^= y >>> 11; y ^= (y << 7) & 0x9d2c5680; y ^= (y << 15) & 0xefc60000; y ^= y >>> 18;
+    return y >>> 0;
+  }
+  random() {
+    const a = this.nextUint32() >>> 5; const b = this.nextUint32() >>> 6;
+    return (a * 67108864 + b) / 9007199254740992;
+  }
+  gauss(mu = 0, sigma = 1) {
+    let value = this.gaussNext; this.gaussNext = null;
+    if (value === null) {
+      const angle = this.random() * TWO_PI;
+      const radius = Math.sqrt(-2 * Math.log(1 - this.random()));
+      value = Math.cos(angle) * radius;
+      this.gaussNext = Math.sin(angle) * radius;
+    }
+    return mu + value * sigma;
+  }
+  snapshot() { return { mt: Array.from(this.mt), index: this.index, gaussNext: this.gaussNext }; }
+  restore(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.mt) || snapshot.mt.length !== 624
+      || snapshot.mt.some((value) => !Number.isInteger(value) || value < 0 || value >= UINT32_RANGE)
+      || !Number.isInteger(snapshot.index) || snapshot.index < 0 || snapshot.index > 624
+      || (snapshot.gaussNext !== null && !Number.isFinite(snapshot.gaussNext))) throw new Error("Invalid RNG snapshot");
+    this.mt.set(snapshot.mt.map((value) => value >>> 0));
+    this.index = Number(snapshot.index); this.gaussNext = snapshot.gaussNext ?? null;
+  }
+}
+
+function objectOf(keys, value = 0) { return Object.fromEntries(keys.map((key) => [key, value])); }
+function clamp(value, low, high) { return Math.max(low, Math.min(high, value)); }
+
+class S2Engine {
+  constructor(data, options = {}) {
+    this.data = validateGameData(data);
+    this.rules = data.rules;
+    this.eras = data.eras;
+    this.eraByKey = Object.fromEntries(data.eras.map((item) => [item.key, item]));
+    this.eraSequence = data.eras.map((item) => item.key);
+    this.specs = Object.fromEntries(data.upgrades.map((item) => [item.key, item]));
+    this.localKeys = data.upgrades.map((item) => item.key);
+    this.priority = data.strategy.priority.filter((key) => this.specs[key]);
+    this.coreSpecs = Object.fromEntries((data.prestige?.upgrades || []).map((item) => [item.key, item]));
+    this.rng = new PythonRandom(options.seed ?? 42);
+    this.state = this.newState(options.seed ?? 42);
+    this.lastBlockEvents = [];
+    this.lastBatchSummary = { planets: 0, compiled: 0, events: 0 };
+    if (options.state) this.restore(options.state);
+  }
+
+  newState(seed = 42) {
+    return {
+      schemaVersion: this.data.schemaVersion, gameVersion: this.data.gameVersion,
+      contentVersion: this.data.contentVersion, seed: Number(seed),
+      day: 1, minute: 0, depth: 0, credits: 0,
+      targetDepth: Number(this.data.prestige?.planetTargetDepth ?? this.rules.developmentTargetDepth),
+      levels: objectOf(this.localKeys), manualLevels: objectOf(this.localKeys),
+      autoUnlocked: [], everKeys: [], dailyManualLevels: 0, maxDailyManualLevels: 0,
+      totalManualLevels: 0, totalAutoLevels: 0, eraFirstDays: {}, autoCursor: 0,
+      nextAutoMinute: Number(this.rules.autoPurchaseIntervalMinutes),
+      helperEnabled: true, nextHelperMinute: Number(this.rules.helperIntervalMinutes),
+      totalHelperLevels: 0, dailyHelperLevels: 0, totalManualCommands: 0,
+      lastHelperReport: null,
+      resets: 0, completedPlanets: 0, cores: 0, coreLevels: objectOf(Object.keys(this.coreSpecs)),
+      planetComplete: false, planetStartedMinute: 0, allMaxedMinute: null,
+      autoDepart: true, planetHistory: [], coreAutoRoute: "off",
+      legacyCoreLevels: objectOf(Object.keys(this.coreSpecs)),
+    };
+  }
+
+  snapshot() { return { state: structuredClone(this.state), rng: this.rng.snapshot() }; }
+  restore(payload) {
+    const saved = structuredClone(payload);
+    if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
+    const state = saved.state;
+    const prestigeFields = ["resets", "completedPlanets", "cores", "coreLevels", "planetComplete",
+      "planetStartedMinute", "allMaxedMinute", "autoDepart", "planetHistory"];
+    const legacy = !state.contentVersion || state.contentVersion === "thirty-day-eras-1";
+    if (legacy && prestigeFields.every((key) => !Object.hasOwn(state, key))) {
+      const defaults = this.newState(state.seed);
+      for (const key of prestigeFields) state[key] = defaults[key];
+      state.targetDepth = defaults.targetDepth;
+    } else if (prestigeFields.some((key) => !Object.hasOwn(state, key))) throw new Error("转生存档字段损坏");
+    else if (!legacy && state.contentVersion && !["prestige-1", "prestige-2", this.data.contentVersion].includes(state.contentVersion)) throw new Error("不支持此内容版本");
+    if (state.contentVersion !== this.data.contentVersion) {
+      state.coreAutoRoute = "off";
+      if (!legacy && state.coreLevels && !Object.hasOwn(state.coreLevels, "planet_drive")
+        && state.contentVersion === "prestige-1" && this.coreSpecs.planet_drive) state.coreLevels.planet_drive = 0;
+      state.legacyCoreLevels = objectOf(Object.keys(this.coreSpecs));
+      if (!legacy && state.coreLevels) {
+        for (const key of Object.keys(this.data.prestige.legacyCorePrices)) {
+          if (!Object.hasOwn(state.coreLevels, key)) throw new Error("旧版永久科技字段损坏");
+          state.legacyCoreLevels[key] = state.coreLevels[key];
+        }
+        for (const key of Object.keys(this.coreSpecs)) {
+          if (!Object.hasOwn(this.data.prestige.legacyCorePrices, key)) {
+            if (Object.hasOwn(state.coreLevels, key) && state.coreLevels[key] !== 0) throw new Error("旧版含未发布科技");
+            state.coreLevels[key] = 0;
+          }
+        }
+      }
+    }
+    if (legacy && state.resets === 0 && state.completedPlanets === 0) {
+      state.targetDepth = this.newState(state.seed).targetDepth;
+      if (state.coreLevels && Object.keys(state.coreLevels).length === 0) state.coreLevels = objectOf(Object.keys(this.coreSpecs));
+    }
+    const counters = ["day", "dailyManualLevels", "maxDailyManualLevels", "totalManualLevels",
+      "totalAutoLevels", "autoCursor", "totalHelperLevels", "dailyHelperLevels", "totalManualCommands"];
+    const invalid = () => { throw new Error("存档字段损坏"); };
+    if (counters.some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
+      || !Number.isSafeInteger(state.seed)
+      || ["depth", "credits", "targetDepth"].some((key) => !Number.isFinite(state[key]) || state[key] < 0)
+      || !Number.isFinite(state.minute) || state.minute < 0 || state.minute > Number.MAX_SAFE_INTEGER
+      || (state.resets < 3 && state.minute % this.rules.settlementMinutes)
+      || state.day !== Math.floor(state.minute / 1440) + 1
+      || typeof state.helperEnabled !== "boolean" || !state.eraFirstDays || typeof state.eraFirstDays !== "object") invalid();
+    if (["resets", "completedPlanets", "cores"].some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
+      || typeof state.planetComplete !== "boolean" || typeof state.autoDepart !== "boolean"
+      || !["off", "balanced", "speed", "rebuild", "burst"].includes(state.coreAutoRoute)
+      || state.completedPlanets > (this.data.prestige?.galaxyTargetPlanets ?? 1000000)
+      || state.completedPlanets !== state.resets + Number(state.planetComplete)
+      || !Number.isFinite(state.planetStartedMinute) || state.planetStartedMinute < 0
+      || state.planetStartedMinute > state.minute
+      || state.targetDepth !== Number(this.data.prestige?.planetTargetDepth ?? this.rules.developmentTargetDepth)
+      || (state.planetComplete && state.depth !== state.targetDepth)
+      || (state.allMaxedMinute !== null && (!Number.isFinite(state.allMaxedMinute)
+        || state.allMaxedMinute < state.planetStartedMinute || state.allMaxedMinute > state.minute))
+      || !state.coreLevels || typeof state.coreLevels !== "object" || Array.isArray(state.coreLevels)
+      || Object.keys(state.coreLevels).length !== Object.keys(this.coreSpecs).length
+      || !state.legacyCoreLevels || typeof state.legacyCoreLevels !== "object"
+      || Array.isArray(state.legacyCoreLevels)
+      || Object.keys(state.legacyCoreLevels).length !== Object.keys(this.coreSpecs).length) invalid();
+    let spent = 0;
+    for (const [key, spec] of Object.entries(this.coreSpecs)) {
+      const level = state.coreLevels[key];
+      if (!Number.isInteger(level) || level < 0 || level > spec.maxLevel
+        || (level > 0 && state.completedPlanets < spec.unlockResets)) invalid();
+      const oldLevel = state.legacyCoreLevels[key];
+      const oldPrice = this.data.prestige?.legacyCorePrices?.[key];
+      if (!Number.isInteger(oldLevel) || oldLevel < 0 || oldLevel > level
+        || oldLevel > (oldPrice?.[2] || 0)) invalid();
+      for (let i = 0; i < level; i += 1) spent += i < oldLevel
+        ? oldPrice[0] * oldPrice[1] ** i : spec.baseCost * spec.costGrowth ** i;
+    }
+    const rewardStep = this.data.prestige?.rewardStep || 1;
+    const q = Math.floor(state.completedPlanets / rewardStep); const r = state.completedPlanets % rewardStep;
+    const earned = state.completedPlanets + rewardStep * q * (q - 1) / 2 + q * r;
+    if (!Number.isSafeInteger(earned) || state.cores + spent !== earned
+      || !Array.isArray(state.planetHistory)
+      || state.planetHistory.length !== Math.min(state.completedPlanets, this.data.prestige?.historyLimit || 20)
+      || state.planetHistory.some((item, index, history) => !item
+        || item.planet !== state.completedPlanets - history.length + index + 1
+        || !Number.isFinite(item.minutes) || item.minutes <= 0
+        || !Number.isFinite(item.completedMinute) || item.completedMinute > state.minute + 1e-7
+        || item.completedMinute + 1e-7 < item.minutes
+        || (index > 0 && item.completedMinute + 1e-7 < history[index - 1].completedMinute + item.minutes)
+        || item.reward !== 1 + Math.floor((item.planet - 1) / rewardStep)
+        || (item.allMaxedMinute !== null && (!Number.isFinite(item.allMaxedMinute)
+          || item.allMaxedMinute + 1e-7 < item.completedMinute - item.minutes || item.allMaxedMinute > item.completedMinute + 1e-7)))) invalid();
+    for (const [key, interval] of [["nextAutoMinute", this.rules.autoPurchaseIntervalMinutes], ["nextHelperMinute", this.rules.helperIntervalMinutes]]) {
+      if (!Number.isSafeInteger(state[key]) || state[key] !== (Math.floor(state.minute / interval) + 1) * interval) invalid();
+    }
+    if (!state.levels || typeof state.levels !== "object"
+      || !state.manualLevels || typeof state.manualLevels !== "object") invalid();
+    const isFirstTenDaySave = !Object.hasOwn(state, "contentVersion");
+    for (const key of this.localKeys) {
+      const hasLevel = Object.hasOwn(state.levels, key);
+      const hasManualLevel = Object.hasOwn(state.manualLevels, key);
+      if (hasLevel !== hasManualLevel) invalid();
+      if (!hasLevel) {
+        if (!isFirstTenDaySave || this.specs[key].addedIn !== "thirty-day") invalid();
+        state.levels[key] = 0;
+        state.manualLevels[key] = 0;
+      }
+      if (!Number.isInteger(state.levels[key]) || state.levels[key] < 0
+        || state.levels[key] > this.specs[key].maxLevel
+        || !Number.isInteger(state.manualLevels[key]) || state.manualLevels[key] < 0
+        || state.manualLevels[key] > Math.max(0, this.specs[key].manualTarget - state.resets)) invalid();
+    }
+    for (const field of ["autoUnlocked", "everKeys"]) {
+      if (!Array.isArray(state[field]) || state[field].some((key) => !Object.hasOwn(this.specs, key))
+        || new Set(state[field]).size !== state[field].length) invalid();
+    }
+    if (this.localKeys.some((key) => {
+      const target = Math.max(0, this.specs[key].manualTarget - state.resets);
+      const automated = this.specs[key].status === "active" && (target === 0
+        ? state.levels[key] > 0 : state.manualLevels[key] === target);
+      return state.manualLevels[key] > state.levels[key] || state.autoUnlocked.includes(key) !== automated;
+    })) invalid();
+    const report = state.lastHelperReport;
+    if (report !== null && (!report || !Array.isArray(report.items)
+      || !Number.isInteger(report.minute) || report.minute < 0 || report.minute > state.minute
+      || report.levels !== report.items.length || !Number.isFinite(report.spent) || report.spent < 0
+      || report.items.some((item) => !item || !Object.hasOwn(this.specs, item.key)
+        || !Number.isInteger(item.level) || item.level <= 0 || !Number.isFinite(item.cost) || item.cost < 0))) invalid();
+    state.contentVersion = this.data.contentVersion;
+    this.rng.restore(saved.rng);
+    this.state = state;
+    this._voyage = null; this._canonicalVoyage = null;
+  }
+  level(key) { return Number(this.state.levels[key] || 0); }
+  manualTarget(key) { return Math.max(0, this.specs[key].manualTarget - this.state.resets); }
+  coreEffect(kind) {
+    return Object.values(this.coreSpecs).reduce((sum, spec) =>
+      sum + (spec.effectKind === kind ? spec.effectPerLevel * this.state.coreLevels[spec.key] : 0), 0);
+  }
+  prestigeSpeed() {
+    return (1 + this.coreEffect("global_linear")) * 2 ** this.coreEffect("global_speed");
+  }
+  coreCost(key) {
+    const spec = this.coreSpecs[key];
+    return spec ? spec.baseCost * spec.costGrowth ** this.state.coreLevels[key] : Infinity;
+  }
+  coreAvailable(key) {
+    const spec = this.coreSpecs[key];
+    return Boolean(spec && this.state.completedPlanets >= spec.unlockResets && this.state.coreLevels[key] < spec.maxLevel);
+  }
+  purchaseCore(key) {
+    if (!this.coreAvailable(key)) return { ok: false, reason: "locked" };
+    const cost = this.coreCost(key);
+    if (this.state.cores < cost) return { ok: false, reason: "cores" };
+    this.state.cores -= cost; this.state.coreLevels[key] += 1;
+    this._voyage = null;
+    return { ok: true, key, cost, level: this.state.coreLevels[key] };
+  }
+  coreRouteSpecs() {
+    return Object.values(this.coreSpecs).filter((spec) => this.state.coreAutoRoute !== "off");
+  }
+  coreRouteScore(spec) {
+    const preferences = {
+      speed: ["global_linear", "global_speed", "speed_strength"],
+      rebuild: ["income_strength", "local_discount", "equipment_strength"],
+      burst: ["opening_burst", "global_speed", "completion_depth"],
+    };
+    return this.coreCost(spec.key) / (this.state.completedPlanets >= 10
+      && preferences[this.state.coreAutoRoute]?.includes(spec.effectKind) ? 4 : 1);
+  }
+  autoPurchaseCore() {
+    const purchases = [];
+    for (;;) {
+      const spec = this.coreRouteSpecs().filter((item) => this.coreAvailable(item.key))
+        .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+      if (!spec || this.coreCost(spec.key) > this.state.cores) return purchases;
+      purchases.push(this.purchaseCore(spec.key));
+    }
+  }
+  setCoreAutoRoute(route) {
+    if (!["off", "balanced", "speed", "rebuild", "burst"].includes(route)) throw new Error("Invalid core automation route");
+    this.state.coreAutoRoute = route;
+    return this.autoPurchaseCore();
+  }
+  galaxyComplete() { return this.state.completedPlanets >= (this.data.prestige?.galaxyTargetPlanets ?? 1000000); }
+  setAutoDepart(enabled) {
+    if (typeof enabled !== "boolean") throw new Error("Auto departure setting must be boolean");
+    this.state.autoDepart = enabled;
+  }
+  allLocalMaxed() {
+    return this.localKeys.every((key) => this.specs[key].status !== "active" || this.level(key) === this.specs[key].maxLevel);
+  }
+  finishPlanet() {
+    const s = this.state;
+    if (!this.data.prestige || s.planetComplete || s.depth < s.targetDepth) return false;
+    const reward = 1 + Math.floor(s.resets / this.data.prestige.rewardStep);
+    s.depth = s.targetDepth; s.planetComplete = true; s.completedPlanets += 1; s.cores += reward;
+    s.planetHistory.push({ planet: s.completedPlanets, minutes: s.minute - s.planetStartedMinute,
+      completedMinute: s.minute, reward, allMaxedMinute: s.allMaxedMinute });
+    s.planetHistory = s.planetHistory.slice(-this.data.prestige.historyLimit);
+    return true;
+  }
+  departPlanet() {
+    const s = this.state;
+    if (this.galaxyComplete()) return { ok: false, reason: "galaxy" };
+    if (!s.planetComplete) return { ok: false, reason: "unfinished" };
+    s.resets += 1; s.planetComplete = false;
+    this.clearLocalPlanet();
+    return { ok: true };
+  }
+  clearLocalPlanet() {
+    const s = this.state;
+    s.depth = 0; s.credits = 0;
+    s.levels = objectOf(this.localKeys); s.manualLevels = objectOf(this.localKeys);
+    s.autoUnlocked = []; s.everKeys = []; s.eraFirstDays = {}; s.autoCursor = 0;
+    s.lastHelperReport = null; s.planetStartedMinute = s.minute; s.allMaxedMinute = null;
+    this._voyage = null;
+  }
+  effectStrength(kind) {
+    if (kind === "speed_compound") return 1 + this.coreEffect("speed_strength");
+    if (kind === "crit_chance") return 1;
+    let strength = 1 + this.coreEffect("equipment_strength");
+    if (kind === "income" || kind === "shift_relay") strength *= 1 + this.coreEffect("income_strength");
+    if (kind === "extra_depth" || kind === "penetration") strength *= 1 + this.coreEffect("depth_strength");
+    return strength;
+  }
+  costFor(key, level = this.level(key)) {
+    const spec = this.specs[key]; return Number(spec.baseCost) * Number(spec.costGrowth) ** level / (1 + this.coreEffect("local_discount"));
+  }
+  eraAutomationCount(era) {
+    return this.state.autoUnlocked.filter((key) => this.specs[key].era === era).length;
+  }
+  eraUnlocked(era) {
+    if (era === this.eraSequence[0]) return true;
+    const definition = this.eraByKey[era];
+    const previous = this.eraSequence[this.eraSequence.indexOf(era) - 1];
+    return this.state.depth >= Number(definition.unlockDepth) && this.eraAutomationCount(previous) >= Number(definition.previousEraAutomations);
+  }
+  currentEra() {
+    return [...this.eraSequence].reverse().find((era) => this.eraByKey[era].status !== "reserve" && this.eraUnlocked(era)) || this.eraSequence[0];
+  }
+  available(key, automatic = false) {
+    const spec = this.specs[key];
+    if (!spec || this.state.planetComplete || this.level(key) >= spec.maxLevel || spec.status !== "active") return false;
+    if (automatic && this.manualTarget(key) > 0 && !this.state.autoUnlocked.includes(key)) return false;
+    if (!automatic && this.state.manualLevels[key] >= this.manualTarget(key)) return false;
+    return this.eraUnlocked(spec.era) && this.state.depth >= Number(spec.unlockDepth)
+      && spec.prerequisites.every((required) => this.level(required) >= 1);
+  }
+  manualCandidates() { return this.localKeys.filter((key) => this.available(key)); }
+  reserveCost() {
+    const costs = [];
+    this.manualCandidates().forEach((key) => {
+      const spec = this.specs[key];
+      const remaining = this.manualTarget(key) - this.state.manualLevels[key];
+      for (let offset = 0; offset < remaining; offset += 1) costs.push(this.costFor(key, this.level(key) + offset));
+    });
+    costs.sort((a, b) => a - b);
+    const count = Number(this.rules.autoReserveManualLevels);
+    if (!costs.length) return 0;
+    while (costs.length < count) costs.push(costs[costs.length - 1]);
+    return costs.slice(0, count).reduce((sum, value) => sum + value, 0);
+  }
+  purchase(key, automatic = false, helper = false) {
+    if (automatic && helper) return { ok: false, reason: "source" };
+    if (!this.available(key, automatic)) return { ok: false, reason: "locked" };
+    const cost = this.costFor(key);
+    if (this.state.credits + 1e-9 < cost) return { ok: false, reason: "credits" };
+    if (automatic && this.state.credits - cost + 1e-9 < this.reserveCost()) return { ok: false, reason: "reserve" };
+    this.state.credits = Math.max(0, this.state.credits - cost); this.state.levels[key] += 1;
+    this._voyage = null;
+    if (!this.state.everKeys.includes(key)) this.state.everKeys.push(key);
+    if (automatic) this.state.totalAutoLevels += 1;
+    else {
+      // Legacy field: commissioning levels, shared by the player and helper.
+      this.state.manualLevels[key] += 1;
+      if (helper) {
+        this.state.dailyHelperLevels += 1; this.state.totalHelperLevels += 1;
+      } else {
+        this.state.dailyManualLevels += 1; this.state.totalManualLevels += 1;
+        this.state.maxDailyManualLevels = Math.max(this.state.maxDailyManualLevels, this.state.dailyManualLevels);
+      }
+      if (this.state.manualLevels[key] === this.manualTarget(key)) {
+        if (!this.state.autoUnlocked.includes(key)) this.state.autoUnlocked.push(key);
+        if (!(this.specs[key].era in this.state.eraFirstDays)) this.state.eraFirstDays[this.specs[key].era] = this.state.day;
+      }
+    }
+    if (automatic && this.manualTarget(key) === 0 && !this.state.autoUnlocked.includes(key)) {
+      this.state.autoUnlocked.push(key);
+      if (!(this.specs[key].era in this.state.eraFirstDays)) this.state.eraFirstDays[this.specs[key].era] = this.state.day;
+    }
+    if (this.state.allMaxedMinute === null && this.allLocalMaxed()) this.state.allMaxedMinute = this.state.minute;
+    return { ok: true, key, cost, level: this.level(key), automatic, source: automatic ? "auto" : helper ? "helper" : "manual" };
+  }
+  upgradeCommand(orders, automatic = false) {
+    if (!Array.isArray(orders) || !orders.length || orders.some((order) =>
+      !Array.isArray(order) || order.length !== 2 || typeof order[0] !== "string" || !Object.hasOwn(this.specs, order[0])
+      || !Number.isInteger(order[1]) || order[1] <= 0)
+      || orders.reduce((sum, [, count]) => sum + count, 0) > this.rules.batchCommandMaxLevels) {
+      return { ok: false, reason: "invalid", purchases: [] };
+    }
+    const purchases = []; let reason = "";
+    outer: for (const [key, count] of orders) {
+      for (let i = 0; i < count; i += 1) {
+        const result = this.purchase(key, automatic);
+        if (!result.ok) { reason = result.reason; break outer; }
+        purchases.push(result);
+      }
+    }
+    if (purchases.length && !automatic) this.state.totalManualCommands += 1;
+    return { ...purchases.at(-1), ok: purchases.length > 0, reason, purchases };
+  }
+  setHelperEnabled(enabled) {
+    if (typeof enabled !== "boolean") throw new Error("Helper setting must be boolean");
+    this.state.helperEnabled = enabled;
+  }
+  helperPurchase() {
+    const purchases = [];
+    for (let key = this.state.helperEnabled ? this.chooseUpgrade("cheapest") : null; key; key = this.chooseUpgrade("cheapest")) {
+      const result = this.purchase(key, false, true);
+      if (!result.ok) break;
+      purchases.push(result);
+    }
+    this.state.lastHelperReport = {
+      minute: this.state.minute, levels: purchases.length,
+      spent: purchases.reduce((sum, item) => sum + item.cost, 0),
+      items: purchases.map(({ key, level, cost }) => ({ key, level, cost })),
+    };
+    return purchases;
+  }
+  effectLevels() {
+    const totals = {};
+    this.localKeys.forEach((key) => {
+      const level = this.level(key); if (!level) return;
+      const kind = this.specs[key].effectKind;
+      totals[kind] = (totals[kind] || 0) + Number(this.specs[key].effectPerLevel) * level * this.effectStrength(kind);
+    });
+    return totals;
+  }
+  multiplierBreakdown() {
+    const e = this.effectLevels();
+    let speed = 1;
+    this.localKeys.forEach((key) => {
+      const level = this.level(key); const spec = this.specs[key];
+      if (level && spec.effectKind === "speed_compound") speed *= (1 + Number(spec.effectPerLevel) * this.effectStrength(spec.effectKind)) ** level;
+    });
+    const parallel = 1 + (e.parallel || 0); const cats = 1 + (e.cats || 0);
+    const sharpness = 1 + (e.sharpness || 0); const fragility = 1 + (e.fragility || 0);
+    const income = 1 + (e.income || 0); const extraDepth = 1 + (e.extra_depth || 0);
+    const critChance = Math.min(0.65, e.crit_chance || 0); const critDamage = Number(this.rules.baseCriticalDamage) + (e.crit_damage || 0);
+    const critical = 1 + critChance * critDamage;
+    const catLevels = this.localKeys.reduce((sum, key) => sum + (this.specs[key].effectKind === "cats" ? this.level(key) : 0), 0);
+    const coordination = 1 + (e.coordination || 0) * catLevels;
+    const localMinute = this.state.minute - this.state.planetStartedMinute;
+    const teamwork = 1 + (e.teamwork || 0) * Math.sqrt(Math.max(0, localMinute / 1440));
+    const momentum = 1 + (e.momentum || 0) * Math.min(1, (localMinute % 1440) / 240);
+    const autoCount = this.state.autoUnlocked.length;
+    const resonance = 1 + (e.resonance || 0) * autoCount;
+    const shiftRelay = 1 + (e.shift_relay || 0) * autoCount;
+    const penetration = 1 + (e.penetration || 0) * Math.max(0, critical - 1);
+    return {
+      speed, parallel, cats, sharpness, fragility, income, extra_depth: extraDepth,
+      critical, coordination, teamwork, momentum, resonance, shift_relay: shiftRelay,
+      penetration, prestige: this.prestigeSpeed(), stellar_relay: 1 + this.coreEffect("line_synergy") * autoCount,
+      opening_burst: localMinute < (this.data.prestige?.openingBurstSeconds || 1) / 60 ? 1 + this.coreEffect("opening_burst") : 1,
+      completion_depth: this.allLocalMaxed() ? 1 + this.coreEffect("completion_depth") : 1,
+    };
+  }
+  incomeMultiplier() {
+    const f = this.multiplierBreakdown();
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "income", "shift_relay", "prestige", "stellar_relay", "opening_burst"].reduce((product, key) => product * f[key], 1);
+  }
+  depthMultiplier() {
+    const f = this.multiplierBreakdown();
+    return ["speed", "parallel", "cats", "sharpness", "fragility", "critical", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration", "prestige", "stellar_relay", "opening_burst", "completion_depth"].reduce((product, key) => product * f[key], 1);
+  }
+  autoPurchase() {
+    if (this.state.resets > 0) {
+      const bought = [];
+      const maximum = this.localKeys.reduce((sum, key) => sum + this.specs[key].maxLevel, 0);
+      const budget = this.state.resets >= 3 ? maximum : Math.min(maximum,
+        Math.ceil(this.prestigeSpeed() * this.rules.autoPurchaseBudget));
+      // Re-scan after each paid purchase so level-zero automation can unlock its real prerequisites.
+      for (let i = 0; i < budget; i += 1) {
+        const candidates = this.localKeys.filter((key) => this.available(key, true))
+          .sort((a, b) => this.costFor(a) - this.costFor(b) || a.localeCompare(b));
+        const key = candidates.find((key) => this.state.credits - this.costFor(key) + 1e-9 >= this.reserveCost());
+        if (!key) break;
+        const result = this.purchase(key, true);
+        if (!result.ok) break;
+        bought.push(result);
+      }
+      return bought;
+    }
+    const active = [...this.state.autoUnlocked].sort(); if (!active.length) return [];
+    const budget = Math.min(Number(this.rules.autoPurchaseBudget), active.length);
+    const start = this.state.autoCursor % active.length;
+    const ordered = active.slice(start).concat(active.slice(0, start));
+    this.state.autoCursor = (start + budget) % active.length;
+    const bought = [];
+    for (const key of ordered) {
+      if (bought.length >= budget) break;
+      const result = this.purchase(key, true); if (result.ok) bought.push(result);
+    }
+    return bought;
+  }
+  voyagePlan() {
+    const s = this.state;
+    const key = JSON.stringify([s.coreLevels, s.targetDepth]);
+    if (this._voyage?.key === key) return this._voyage.plan;
+    const fresh = s.depth === 0 && s.credits === 0 && this.localKeys.every((k) => !s.levels[k]);
+    let plan;
+    if (fresh && this._canonicalVoyage?.key === key) plan = this._canonicalVoyage.plan;
+    else {
+      const scratch = new S2Engine(this.data);
+      scratch.state = structuredClone(s);
+      scratch.state.minute = s.minute - s.planetStartedMinute;
+      scratch.state.planetStartedMinute = 0;
+      scratch.state.allMaxedMinute = s.allMaxedMinute === null ? null : s.allMaxedMinute - s.planetStartedMinute;
+      plan = compileVoyage(scratch);
+      this.lastBatchSummary.compiled += 1;
+      this.lastBatchSummary.events += plan.events.length;
+      if (fresh) this._canonicalVoyage = { key, plan };
+    }
+    this._voyage = { key, plan };
+    return plan;
+  }
+  syncVoyageClock(minute) {
+    const s = this.state;
+    s.minute = minute; this.startNewDay();
+    s.nextAutoMinute = (Math.floor(minute / this.rules.autoPurchaseIntervalMinutes) + 1) * this.rules.autoPurchaseIntervalMinutes;
+    const lastMidnight = Math.floor(minute / 1440) * 1440;
+    if (lastMidnight >= s.nextHelperMinute && lastMidnight >= s.planetStartedMinute) {
+      s.lastHelperReport = { minute: lastMidnight, levels: 0, spent: 0, items: [] };
+    }
+    s.nextHelperMinute = lastMidnight + 1440;
+  }
+  applyVoyageSample(plan, age) {
+    const s = this.state; const sample = sampleVoyage(plan, age);
+    const beforeLevels = s.levels;
+    const before = this.localKeys.reduce((n, key) => n + s.levels[key], 0);
+    const previousAge = s.minute - s.planetStartedMinute;
+    s.totalAutoLevels += sample.built - before;
+    s.depth = Math.min(s.targetDepth, sample.depth); s.credits = sample.credits;
+    s.levels = { ...sample.levels }; s.manualLevels = { ...sample.manualLevels };
+    s.autoUnlocked = [...sample.autoUnlocked]; s.everKeys = [...sample.everKeys];
+    for (const [era, time] of Object.entries(sample.eraAges)) s.eraFirstDays[era] = Math.floor((s.planetStartedMinute + time) / 1440) + 1;
+    s.allMaxedMinute = sample.allMaxedAge === null ? null : s.planetStartedMinute + sample.allMaxedAge;
+    // Detailed events are only retained for the partial voyage, never expanded
+    // for a batch. Lifetime counts and the batch summary remain exact.
+    for (const event of plan.events) {
+      if (event.age >= previousAge && event.age <= age && event.level > beforeLevels[event.key]) {
+        if (this.lastBlockEvents.length < 1024) this.lastBlockEvents.push({ ...event, minute: s.planetStartedMinute + event.age });
+      }
+    }
+    this.syncVoyageClock(s.planetStartedMinute + age);
+  }
+  planetsUntilCorePurchase(limit) {
+    const s = this.state;
+    const specs = this.coreRouteSpecs().filter((spec) => s.coreLevels[spec.key] < spec.maxLevel);
+    if (!specs.length) return limit;
+    // An unlock may change the savings target. Never binary-search across it.
+    for (const spec of specs) {
+      if (spec.unlockResets > s.completedPlanets) limit = Math.min(limit, spec.unlockResets - s.completedPlanets);
+    }
+    const target = specs.filter((spec) => this.coreAvailable(spec.key))
+      .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+    if (!target) return limit;
+    const step = this.data.prestige.rewardStep;
+    const earned = earnedCores(s.completedPlanets, step);
+    const canBuy = (count) => s.cores + earnedCores(s.completedPlanets + count, step) - earned >= this.coreCost(target.key);
+    if (!canBuy(limit)) return limit;
+    let lo = 1; let hi = limit;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (canBuy(mid)) hi = mid; else lo = mid + 1;
+    }
+    return lo;
+  }
+  settleVoyages(plan, count) {
+    const s = this.state; const first = s.completedPlanets; const start = s.minute;
+    const step = this.data.prestige.rewardStep;
+    const finish = start + plan.duration * count;
+    const finalPlanet = first + count;
+    s.cores += earnedCores(finalPlanet, step) - earnedCores(first, step);
+    s.totalAutoLevels += count * plan.end.built;
+    const history = s.planetHistory;
+    for (let i = Math.max(1, count - this.data.prestige.historyLimit + 1); i <= count; i += 1) {
+      history.push({ planet: first + i, minutes: plan.duration, completedMinute: start + i * plan.duration,
+        reward: 1 + Math.floor((first + i - 1) / step),
+        allMaxedMinute: plan.end.allMaxedAge === null ? null : start + (i - 1) * plan.duration + plan.end.allMaxedAge });
+    }
+    s.planetHistory = history.slice(-this.data.prestige.historyLimit);
+    s.completedPlanets = finalPlanet;
+    this.syncVoyageClock(finish);
+    const parked = !s.autoDepart || this.galaxyComplete();
+    s.resets = finalPlanet - Number(parked);
+    s.planetComplete = parked;
+    if (parked) {
+      s.planetStartedMinute = start + (count - 1) * plan.duration;
+      s.levels = { ...plan.end.levels }; s.manualLevels = { ...plan.end.manualLevels };
+      s.depth = s.targetDepth; s.credits = plan.end.credits;
+      s.autoUnlocked = [...plan.end.autoUnlocked]; s.everKeys = [...plan.end.everKeys];
+      s.eraFirstDays = Object.fromEntries(Object.entries(plan.end.eraAges)
+        .map(([era, age]) => [era, Math.floor((s.planetStartedMinute + age) / 1440) + 1]));
+      s.allMaxedMinute = plan.end.allMaxedAge === null ? null : s.planetStartedMinute + plan.end.allMaxedAge;
+      const midnight = Math.floor(finish / 1440) * 1440;
+      s.lastHelperReport = midnight >= s.planetStartedMinute
+        ? { minute: midnight, levels: 0, spent: 0, items: [] } : null;
+    } else this.clearLocalPlanet();
+    this.lastBatchSummary.planets += count;
+    this.autoPurchaseCore();
+  }
+  advanceVoyages(endMinute) {
+    const s = this.state;
+    let boundaries = 0;
+    const maxBoundaries = Object.values(this.coreSpecs).reduce((n, spec) => n + spec.maxLevel + 2, 0) + 8;
+    while (s.minute < endMinute) {
+      if (++boundaries > maxBoundaries) throw new Error("Permanent event budget exceeded");
+      if (s.planetComplete) {
+        if (!s.autoDepart || s.resets === 0 || this.galaxyComplete()) {
+          this.syncVoyageClock(endMinute); return;
+        }
+        this.departPlanet();
+      }
+      const plan = this.voyagePlan();
+      const remaining = endMinute - s.minute;
+      const age = s.minute - s.planetStartedMinute;
+      if (age === 0 && plan.initialAge === 0) {
+        let count = Math.floor(remaining / plan.duration);
+        count = Math.min(count, this.data.prestige.galaxyTargetPlanets - s.completedPlanets);
+        if (!s.autoDepart) count = Math.min(count, 1);
+        if (count > 0) {
+          count = this.planetsUntilCorePurchase(count);
+          this.settleVoyages(plan, count);
+          continue;
+        }
+      }
+      const endAge = Math.min(plan.duration, endMinute - s.planetStartedMinute);
+      this.applyVoyageSample(plan, endAge);
+      if (endAge >= plan.duration) {
+        s.depth = s.targetDepth;
+        this.finishPlanet();
+        this.lastBatchSummary.planets += 1;
+        this.autoPurchaseCore();
+        if (s.autoDepart && !this.galaxyComplete()) this.departPlanet();
+      } else {
+        this.syncVoyageClock(endMinute);
+        return;
+      }
+    }
+  }
+  mineBlock(minutes = Number(this.rules.settlementMinutes), deterministic = false) {
+    const step = Number(this.rules.settlementMinutes);
+    const endMinute = this.state.minute + minutes;
+    if (!Number.isFinite(minutes) || minutes <= 0 || endMinute > Number.MAX_SAFE_INTEGER
+      || endMinute <= this.state.minute
+      || (this.state.resets < 3 && (!Number.isSafeInteger(minutes) || minutes % step
+        || !Number.isSafeInteger(endMinute)))) throw new Error("mineBlock must use settlement-sized minutes before full automation");
+    const bought = [];
+    this.lastBlockEvents = [];
+    this.lastBatchSummary = { planets: 0, compiled: 0, events: 0 };
+    while (this.state.minute < endMinute) {
+      if (this.state.resets >= 3) { this.advanceVoyages(endMinute); break; }
+      if (!this.state.planetComplete) {
+        const noise = deterministic ? 1 : clamp(this.rng.gauss(1, Number(this.rules.randomSigma)), 0.85, 1.15);
+        const depthRate = Number(this.rules.baseDepthPerMinute) * this.depthMultiplier() * noise;
+        const miningMinutes = this.data.prestige ? Math.max(0, Math.min(step, (this.state.targetDepth - this.state.depth) / depthRate)) : step;
+        this.state.credits += Number(this.rules.baseCreditsPerMinute) * this.incomeMultiplier() * miningMinutes * noise;
+        this.state.depth += depthRate * miningMinutes;
+        if (this.data.prestige && miningMinutes < step) this.state.depth = this.state.targetDepth;
+      }
+      this.state.minute += step;
+      this.startNewDay();
+      if (this.finishPlanet()) this.autoPurchaseCore();
+      if (this.state.resets > 0) {
+        const purchases = this.autoPurchase();
+        bought.push(...purchases);
+        this.lastBlockEvents.push(...purchases.map((item) => ({ ...item, minute: this.state.minute })));
+      }
+      while (this.state.minute >= this.state.nextAutoMinute) {
+        const purchases = this.state.resets === 0 ? this.autoPurchase() : [];
+        bought.push(...purchases);
+        this.lastBlockEvents.push(...purchases.map((item) => ({ ...item, minute: this.state.minute })));
+        this.state.nextAutoMinute += Number(this.rules.autoPurchaseIntervalMinutes);
+      }
+      while (this.state.minute >= this.state.nextHelperMinute) {
+        this.lastBlockEvents.push(...this.helperPurchase().map((item) => ({ ...item, minute: this.state.minute })));
+        this.state.nextHelperMinute += Number(this.rules.helperIntervalMinutes);
+      }
+      if (this.state.planetComplete && this.state.resets > 0 && this.state.autoDepart && !this.galaxyComplete()) this.departPlanet();
+    }
+    return bought;
+  }
+  startNewDay() {
+    const day = Math.floor(this.state.minute / 1440) + 1;
+    if (day !== this.state.day) {
+      this.state.day = day; this.state.dailyManualLevels = 0; this.state.dailyHelperLevels = 0;
+    }
+  }
+  chooseUpgrade(route = "balanced") {
+    let affordable = this.manualCandidates().filter((key) => this.costFor(key) <= this.state.credits + 1e-9);
+    if (!affordable.length) return null;
+    const priority = Object.fromEntries(this.priority.map((key, index) => [key, index]));
+    if (route === "cheapest") return affordable.sort((a, b) => this.costFor(a) - this.costFor(b) || (priority[a] ?? 999) - (priority[b] ?? 999))[0];
+    if (route === "depth" || route === "income") {
+      const depthKinds = new Set(["speed_compound", "parallel", "cats", "sharpness", "fragility", "crit_chance", "crit_damage", "coordination", "teamwork", "momentum", "resonance", "extra_depth", "penetration"]);
+      const incomeKinds = new Set([...depthKinds].filter((key) => !["extra_depth", "penetration"].includes(key)).concat(["income", "shift_relay"]));
+      const preferred = route === "depth" ? depthKinds : incomeKinds;
+      const matching = affordable.filter((key) => preferred.has(this.specs[key].effectKind));
+      if (matching.length) affordable = matching;
+    }
+    const started = affordable.filter((key) => this.state.manualLevels[key] > 0);
+    const pool = started.length ? started : affordable;
+    return pool.sort((a, b) => (priority[a] ?? 999) - (priority[b] ?? 999) || this.costFor(a) - this.costFor(b))[0];
+  }
+  strategyStep(route = "balanced") {
+    const key = this.chooseUpgrade(route); if (!key) return null;
+    const result = this.upgradeCommand([[key, 1]]); return result.ok ? result : null;
+  }
+  strategyVisit(route = "balanced") {
+    const purchases = [];
+    for (let item = this.strategyStep(route); item; item = this.strategyStep(route)) purchases.push(item);
+    return purchases;
+  }
+}
+
+function runReplay(data, options = {}) {
+  const days = options.days ?? 10; const seed = options.seed ?? 42;
+  const profileKey = options.profile ?? "daily"; const route = options.route ?? "balanced";
+  const profile = profileKey === "opportunity"
+    ? { checkMinutes: Array.from({ length: 1440 / Number(data.strategy.opportunityCheckIntervalMinutes) }, (_, index) => (index + 1) * Number(data.strategy.opportunityCheckIntervalMinutes)) }
+    : data.strategy.profiles[profileKey];
+  if (!profile) throw new Error(`Unknown profile ${profileKey}`);
+  const checks = new Set(profile.checkMinutes.map(Number));
+  const engine = new S2Engine(data, { seed }); const snapshots = []; const events = [];
+  for (let day = 1; day <= days; day += 1) {
+    if (day > 1) engine.startNewDay();
+    const autoBefore = engine.state.totalAutoLevels;
+    const manualBefore = engine.state.totalManualLevels; const helperBefore = engine.state.totalHelperLevels;
+    const commandsBefore = engine.state.totalManualCommands; let visits = 0;
+    for (let minute = Number(data.rules.settlementMinutes); minute <= 1440; minute += Number(data.rules.settlementMinutes)) {
+      engine.mineBlock();
+      engine.lastBlockEvents.forEach((item) => events.push({ day, minute, source: item.source, key: item.key, level: item.level, cost: item.cost }));
+      if (checks.has(minute)) {
+        visits += 1;
+        engine.strategyVisit(route).forEach((item) => events.push({ day, minute, source: "manual", key: item.key, level: item.level, cost: item.cost }));
+      }
+    }
+    snapshots.push({
+      day, depth: engine.state.depth, credits: engine.state.credits,
+      manualLevels: engine.state.totalManualLevels - manualBefore,
+      helperLevels: engine.state.totalHelperLevels - helperBefore,
+      manualCommands: engine.state.totalManualCommands - commandsBefore, visits,
+      autoLevels: engine.state.totalAutoLevels - autoBefore,
+      autoTechnologies: engine.state.autoUnlocked.length,
+      nodesReached: engine.state.everKeys.length,
+      currentEra: engine.currentEra(), incomeMultiplier: engine.incomeMultiplier(),
+      depthMultiplier: engine.depthMultiplier(), multipliers: engine.multiplierBreakdown(),
+    });
+  }
+  return { engine, snapshots, events };
+}
+
+
+// === app.js ===
+
+const sandbox = new URLSearchParams(location.search).get("sandbox") === "1";
+const STORAGE_KEY = `s2-vnext-save-v3-helper${sandbox ? "-sandbox-thirty" : ""}`;
+const number = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 });
+const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 2 });
+const percent = new Intl.NumberFormat("zh-CN", { style: "percent", maximumFractionDigits: 2 });
+const coefficient = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 6 });
+const $ = (selector) => document.querySelector(selector);
+const formatNumber = (value) => Math.abs(value) >= 1e15 ? value.toExponential(2) : Math.abs(value) >= 1e7 ? compact.format(value) : number.format(value);
+const formatMultiplier = (value) => `×${formatNumber(value)}`;
+let data; let engine; let timer = null; let view = "construction"; let pendingOrders = []; let saveBlocked = false; let showAllPrestige = false;
+const eraName = (key) => data.eras.find((item) => item.key === key)?.name || key;
+const clock = (minute) => {
+  const totalSeconds = Math.max(0, Math.round(Number(minute) * 60));
+  const day = Math.floor(totalSeconds / 86400) + 1;
+  const inDay = totalSeconds % 86400;
+  const hours = Math.floor(inDay / 3600);
+  const minutes = Math.floor(inDay % 3600 / 60);
+  const seconds = inDay % 60;
+  return `D${day} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}${seconds ? `:${String(seconds).padStart(2, "0")}` : ""}`;
+};
+const duration = (minutes) => {
+  const value = Math.max(0, Number(minutes) || 0);
+  if (value < 1) {
+    const seconds = Math.round(value * 6000) / 100;
+    return seconds < 0.01 ? "不足0.01秒" : `${number.format(seconds)}秒`;
+  }
+  const totalSeconds = Math.max(1, Math.round(value * 60));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor(totalSeconds % 86400 / 3600);
+  const mins = Math.floor(totalSeconds % 3600 / 60);
+  const seconds = totalSeconds % 60;
+  const parts = [];
+  if (days) parts.push(`${days}天`);
+  if (hours) parts.push(`${hours}小时`);
+  if (mins && parts.length < 2) parts.push(`${mins}分钟`);
+  if (seconds && !days && parts.length < 2) parts.push(`${seconds}秒`);
+  return parts.join("") || "0秒";
+};
+const notice = (text) => { $("#actionNotice").textContent = text; };
+const showToast = (text) => {
+  let el = document.getElementById("graduationToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "graduationToast";
+    el.style.cssText = "position:fixed;right:16px;bottom:16px;max-width:360px;background:#1a1a2e;color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.3);font-size:14px;line-height:1.4;z-index:9999;transform:translateY(20px);opacity:0;transition:all .3s ease;pointer-events:none;";
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.style.transform = "translateY(0)"; el.style.opacity = "1";
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.transform="translateY(20px)"; el.style.opacity="0"; }, 3200);
+};
+const activeSpecs = () => data.upgrades.filter((spec) => spec.status === "active");
+const manualTarget = (key) => Math.max(0, Number(engine.manualTarget(key)));
+const currentPlanet = () => Number(engine.state.resets || 0) + 1;
+const fullyAutomated = (source = engine) => Number(source.state.resets || 0) >= 3;
+
+function loadSaved(seed) {
+  let raw;
+  try { raw = localStorage.getItem(STORAGE_KEY); }
+  catch {
+    $("#saveNotice").textContent = "浏览器存储不可用，本次进度无法保存。";
+    return new S2Engine(data, { seed });
+  }
+  if (raw) {
+    try {
+      const payload = JSON.parse(raw);
+      const restored = new S2Engine(data, { seed, state: payload });
+      if (payload.state.contentVersion !== data.contentVersion) {
+        try {
+          localStorage.setItem(`${STORAGE_KEY}-before-${data.contentVersion}`, raw);
+          $("#saveNotice").textContent = "已接续行星轮回版，旧进度已备份；现有矿井与累计统计已由新版迁移规则接续。";
+        } catch {
+          saveBlocked = true;
+          $("#saveNotice").textContent = "旧进度可继续试玩，但备份失败，暂不覆盖原存档。";
+        }
+      }
+      return restored;
+    }
+    catch (error) {
+      try {
+        localStorage.setItem(`${STORAGE_KEY}-backup-${Date.now()}`, raw);
+        $("#saveNotice").textContent = `存档无法载入，已保留备份并新开矿井：${error.message}`;
+      } catch {
+        saveBlocked = true;
+        $("#saveNotice").textContent = "存档无法载入且备份失败。原存档保留，本次临时进度不覆盖它。";
+      }
+    }
+  }
+  return new S2Engine(data, { seed });
+}
+function save() {
+  if (saveBlocked) return;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(engine.snapshot())); }
+  catch { $("#saveNotice").textContent = "浏览器存储不可用，本次进度未保存。"; }
+}
+function stop() { clearInterval(timer); timer = null; }
+function advance(minutes) {
+  const before = {
+    credits: engine.state.credits, depth: engine.state.depth, auto: engine.state.totalAutoLevels,
+    helper: engine.state.totalHelperLevels, completed: engine.state.completedPlanets, resets: engine.state.resets,
+    helperReports: (engine.state.planetHistory?.length || 0), // placeholder for parity check
+  };
+  const beforeHelperReport = engine.state.lastHelperReport ? {...engine.state.lastHelperReport, items:[...engine.state.lastHelperReport.items]} : null;
+  const beforeHelperLevels = engine.state.totalHelperLevels;
+  try {
+    engine.mineBlock(minutes);
+    save(); render();
+  } catch (error) {
+    stop();
+    save();
+    render();
+    notice(`推进失败，进度已保留：${error.message}`);
+    return;
+  }
+  const completed = engine.state.completedPlanets - before.completed;
+  const departed = engine.state.resets - before.resets;
+  const helperDelta = engine.state.totalHelperLevels - beforeHelperLevels;
+  const parts = [`已过${duration(minutes)}`];
+  if (completed > 0) parts.push(`挖穿 ${completed} 颗星球`);
+  if (departed > 0) parts.push(`自动启程 ${departed} 次`);
+  if (departed === 0) {
+    parts.push(`深度 +${formatNumber(Math.max(0, engine.state.depth - before.depth))}`);
+    const creditDelta = engine.state.credits - before.credits;
+    parts.push(`矿币净变动 ${creditDelta >= 0 ? "+" : ""}${formatNumber(creditDelta)}`);
+  } else {
+    parts.push(`现为第 ${currentPlanet()} 颗星球`);
+  }
+  // 助手触发强提示（完美步进校验：所有推进都按 10分钟 settlement 逐段结算，30天一次 vs 30次一天完全一致，已用引擎自测校验）
+  if (helperDelta > 0) {
+    const report = engine.state.lastHelperReport;
+    const names = report ? report.items.map(i=>engine.specs[i.key].name).join("、") : "";
+    parts.push(`助手触发 +${helperDelta}级${names?`（${names}）`:""}`);
+    // 助手已在 renderHelper 里 toast，这里再补一条更醒目的 notice 已足够
+  } else {
+    // 计算距离下次助手还有多久，方便测试
+    const toHelper = engine.state.nextHelperMinute - engine.state.minute;
+    if (!engine.state.planetComplete && engine.state.helperEnabled && toHelper > 0 && toHelper <= 4320) {
+      parts.push(`距助手下班 ${duration(toHelper)}`);
+    } else if (helperDelta===0 && beforeHelperReport && engine.state.lastHelperReport && engine.state.lastHelperReport.levels===0 && engine.state.lastHelperReport.minute===engine.state.minute) {
+      parts.push(`助手本班无可买（矿币/深度不足）`);
+    }
+  }
+  parts.push(`自动采购 ${engine.state.totalAutoLevels - before.auto} 级`);
+  if (engine.galaxyComplete()) parts.push("银河开采完成，生产已永久停止");
+  else if (engine.state.planetComplete && departed === 0) parts.push("生产已停止，请手动启程");
+  notice(parts.join(" · "));
+}
+function lockedReason(key) {
+  const spec = engine.specs[key];
+  const target = manualTarget(key);
+  if (engine.galaxyComplete()) return "银河开采已经完成";
+  if (engine.state.planetComplete) return "当前星球已挖穿，离开后可继续建设";
+  if (spec.status !== "active") return "尚未开放";
+  if (engine.level(key) >= spec.maxLevel) return "本代设备已满级";
+  if (engine.state.autoUnlocked.includes(key)) {
+    return fullyAutomated() ? "资金与前置条件满足时立即连续采购" : engine.state.resets > 0 ? "随推进结算自动采购" : "每小时参与自动采购";
+  }
+  if (!engine.eraUnlocked(spec.era)) {
+    const era = engine.eraByKey[spec.era];
+    const previous = engine.eraSequence[engine.eraSequence.indexOf(spec.era) - 1];
+    return `${era.name}：深度 ${formatNumber(era.unlockDepth)}，${eraName(previous)}自动线 ${engine.eraAutomationCount(previous)}/${era.previousEraAutomations}`;
+  }
+  if (engine.state.depth < spec.unlockDepth) return `深度 ${formatNumber(engine.state.depth)} / ${formatNumber(spec.unlockDepth)}`;
+  const missing = spec.prerequisites.filter((key) => engine.level(key) < 1);
+  if (missing.length) return `前置工程：${missing.map((key) => `**${engine.specs[key].name}**`).join("、")}`;
+  if (target === 0 && engine.available(key, true)) {
+    const cost = engine.costFor(key);
+    return engine.state.credits >= cost
+      ? "已解锁；推进后立即尝试首次付费，成功后加入自动线"
+      : `已解锁；首次自动采购还差 ${formatNumber(cost - engine.state.credits)} 矿币`;
+  }
+  if (engine.state.credits < engine.costFor(key)) return `还差 ${formatNumber(engine.costFor(key) - engine.state.credits)} 矿币`;
+  return "";
+}
+function nextUpgradeEstimate() {
+  if (engine.state.planetComplete || engine.galaxyComplete()) return null;
+  const active = activeSpecs().filter(spec => !engine.state.autoUnlocked.includes(spec.key) && engine.level(spec.key) < spec.maxLevel);
+  // 优先考虑已解锁（available）的，其次是前沿
+  let best = null;
+  let bestMinutes = Infinity;
+  const incomeRate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier();
+  const depthRate = data.rules.baseDepthPerMinute * engine.depthMultiplier();
+  for (const spec of active) {
+    const target = manualTarget(spec.key);
+    if (target === 0) continue;
+    // 未满足时代/前置的需要先满足深度，这里先跳过，只算可触达的 nearby（否则提示太远）
+    const eraOk = engine.eraUnlocked(spec.era);
+    const prereqOk = spec.prerequisites.every(k => engine.level(k) >= 1);
+    if (!eraOk || !prereqOk) continue;
+    // 需要的深度和费用
+    const needDepth = Math.max(spec.unlockDepth, engine.eraByKey[spec.era].unlockDepth);
+    const depthWait = needDepth > engine.state.depth ? (needDepth - engine.state.depth) / Math.max(1e-9, depthRate) : 0;
+    const cost = engine.costFor(spec.key);
+    const creditWait = cost > engine.state.credits ? (cost - engine.state.credits) / Math.max(1e-9, incomeRate) : 0;
+    // 深度和金钱可以并行积累，实际等待是 max，但为了“少交互”提示，我们用 creditWait 为主，depthWait 为辅
+    // 如果 depthWait 很大，说明还在挖深度阶段，不算“下一个可升级”
+    const wait = Math.max(depthWait, creditWait);
+    // 只关心未来 3 天内可达的，否则不算“下一个”
+    if (wait < bestMinutes && wait < 4320) {
+      bestMinutes = wait;
+      best = { key: spec.key, name: spec.name, wait, cost, depthWait, creditWait };
+    }
+  }
+  if (!best) {
+    // 兜底：找所有可 construction 的最便宜一个
+    const cands = engine.manualCandidates().sort((a,b)=>engine.costFor(a)-engine.costFor(b));
+    if (cands.length) {
+      const k = cands[0];
+      const cost = engine.costFor(k);
+      const wait = Math.max(0, (cost - engine.state.credits) / Math.max(1e-9, incomeRate));
+      return { key: k, name: engine.specs[k].name, wait, cost, depthWait:0, creditWait: wait };
+    }
+    return null;
+  }
+  return best;
+}
+function renderNextUpgradeBanner(container) {
+  const eta = nextUpgradeEstimate();
+  if (!eta) {
+    container.hidden = true;
+    container.textContent = "";
+    return;
+  }
+  container.hidden = false;
+  if (eta.wait < 0.5) {
+    container.innerHTML = `✅ 下一项 <strong>${eta.name}</strong> 已可升级（${formatNumber(eta.cost)} 矿币）— 点绿色卡片立即开工`;
+  } else {
+    const waitText = duration(eta.wait);
+    const clockText = clock(engine.state.minute + eta.wait);
+    container.innerHTML = `⏳ 下一项 <strong>${eta.name}</strong> 预计 <strong>${waitText}后</strong> 可升级（${clockText}，还差 ${formatNumber(Math.max(0, eta.cost - engine.state.credits))} 矿币）— 先去挖矿或推进时间`;
+  }
+}
+function renderStatus() {
+  const s = engine.state;
+  $("#timeValue").textContent = clock(s.minute); $("#seedValue").textContent = `seed ${s.seed}`;
+  $("#stationPlanet").textContent = `第 ${currentPlanet()} 颗星球`;
+  $("#creditsValue").textContent = formatNumber(s.credits); $("#depthValue").textContent = formatNumber(s.depth);
+  $("#incomeRate").textContent = engine.galaxyComplete()
+    ? "银河开采完成，生产已永久停止"
+    : s.planetComplete ? "生产已停止，等待离开星球" : `矿币收益 +${formatNumber(data.rules.baseCreditsPerMinute * engine.incomeMultiplier())} / 分钟`;
+  $("#depthRate").textContent = s.planetComplete ? "深度停止增长" : `+${formatNumber(data.rules.baseDepthPerMinute * engine.depthMultiplier())} / 分钟`;
+  $("#eraValue").textContent = eraName(engine.currentEra());
+  $("#automationValue").textContent = `${s.autoUnlocked.length} 条自动线`;
+  $("#totalBuiltValue").textContent = s.totalManualLevels + s.totalHelperLevels + s.totalAutoLevels;
+  $("#purchaseCounts").textContent = `手动 ${s.totalManualLevels} · 助手 ${s.totalHelperLevels} · 自动 ${s.totalAutoLevels} · 操作 ${s.totalManualCommands}次`;
+  $("#purchaseCounts").title = "操作 = 你点‘升级1级/完成调试/批量建设’的总次数（批量一次算1次），用于复盘节奏；与‘级数’不同";
+  $("#sceneEra").textContent = eraName(engine.currentEra());
+  $("#sceneStatus").textContent = engine.galaxyComplete()
+    ? "银河开采完成 · 永久停产"
+    : s.planetComplete ? "星球已挖穿 · 全部生产停止" : `${s.autoUnlocked.length} 条自动线运转中`;
+  if ((s.planetComplete || engine.galaxyComplete()) && timer) stop();
+  $("#toggleButton").textContent = timer ? "暂停推进" : "连续挖矿";
+  $("#toggleButton").disabled = s.planetComplete || engine.galaxyComplete();
+  document.querySelectorAll("[data-advance]").forEach((button) => {
+    const requiresContinuous = button.dataset.continuous === "true";
+    button.disabled = s.planetComplete || engine.galaxyComplete() || (requiresContinuous && !fullyAutomated());
+  });
+  $("#planButton").disabled = s.planetComplete || engine.galaxyComplete() || !engine.chooseUpgrade("balanced");
+}
+function renderHelper() {
+  const s = engine.state; const report = s.lastHelperReport;
+  $("#helperToggle").checked = s.helperEnabled;
+  $("#helperNext").textContent = s.planetComplete ? "等待下一颗星球" : s.helperEnabled ? clock(s.nextHelperMinute) : "已暂停值班";
+  $("#helperCountdown").textContent = s.planetComplete ? "本星球生产与采购均已停止" : s.helperEnabled ? `还有${duration(s.nextHelperMinute - s.minute)} · 低价优先` : "装备自动采购继续运行";
+  $("#helperResult").textContent = report ? `建设 ${report.levels} 级` : "等待第一班";
+  if (report && report.levels > 0) {
+    $("#helperResult").style.background = "#fff3cd"; $("#helperResult").style.padding = "2px 6px"; $("#helperResult").style.borderRadius = "6px";
+    setTimeout(()=>{ $("#helperResult").style.background = ""; }, 1800);
+    if (report.levels >= 1) showToast(`夜班助手已为你完成 ${report.levels} 级建设（${report.items.map(i=>engine.specs[i.key].name).join("、")}），省下一次手动操作。`);
+  }
+  $("#helperSpent").textContent = report ? `${clock(report.minute)} · 花费 ${formatNumber(report.spent)} 矿币` : "每日00:00采购";
+  const root = $("#helperItems"); root.replaceChildren();
+  const items = new Map();
+  for (const item of report?.items || []) items.set(item.key, (items.get(item.key) || 0) + 1);
+  for (const [key, levels] of items) {
+    const span = document.createElement("span"); span.textContent = `${engine.specs[key].name} +${levels}`; root.append(span);
+  }
+  if (!items.size) root.textContent = report ? "本班没有新增建设。" : "值班记录尚为空。";
+}
+function renderNext() {
+  if (engine.state.planetComplete) {
+    $("#nextName").textContent = engine.galaxyComplete()
+      ? `${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球开采完成`
+      : `第 ${currentPlanet()} 颗星球已挖穿`;
+    renderDescription($("#nextReason"), engine.galaxyComplete()
+      ? "**银河开采目标**已经完成，生产与启程均已永久停止。"
+      : "星球核心奖励已结算，本星球不再生产。请在**行星航程**中确认重置内容并启程。");
+    $("#nextProgress").value = 1;
+    $("#nextProgressText").textContent = `目标深度 ${formatNumber(data.prestige.planetTargetDepth)}`;
+    $("#nextEta").textContent = engine.galaxyComplete() ? "银河开采完成" : "等待离开";
+    return;
+  }
+  const candidates = engine.manualCandidates().sort((a, b) => engine.costFor(a) - engine.costFor(b));
+  const next = candidates[0] || activeSpecs().filter((spec) => !engine.state.autoUnlocked.includes(spec.key))
+    .sort((a, b) => a.unlockDepth - b.unlockDepth)[0]?.key;
+  if (!next) {
+    const remaining = activeSpecs()
+      .reduce((sum, spec) => sum + Math.max(0, spec.maxLevel - engine.level(spec.key)), 0);
+    $("#nextName").textContent = remaining ? "本段工程已全部自动化" : "本段设备已全部满级";
+    $("#nextReason").textContent = remaining
+      ? "矿井继续生产，自动采购会在矿币足够时升级设备。"
+      : "全部设备已满级，矿井继续向本星球目标深度推进。";
+    $("#nextProgress").value = 1;
+    $("#nextProgressText").textContent = remaining ? `还剩 ${remaining} 级自动升级` : "现有科技已全部升满";
+    $("#nextEta").textContent = "";
+    return;
+  }
+  const spec = engine.specs[next]; let current; let target; let rate; let unit;
+  $("#nextName").textContent = spec.name; renderDescription($("#nextReason"), lockedReason(next) || "矿币充足，可以开工");
+  if (engine.available(next) || (manualTarget(next) === 0 && engine.available(next, true))) {
+    current = engine.state.credits; target = engine.costFor(next);
+    rate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier(); unit = "矿币";
+  } else {
+    current = engine.state.depth; target = Math.max(spec.unlockDepth, engine.eraByKey[spec.era].unlockDepth);
+    rate = data.rules.baseDepthPerMinute * engine.depthMultiplier(); unit = "挖矿深度";
+  }
+  $("#nextProgress").value = target ? Math.min(1, current / target) : 1;
+  $("#nextProgressText").textContent = `${unit} ${formatNumber(current)} / ${formatNumber(target)}`;
+  $("#nextEta").textContent = target > current ? `按当前产速约${duration((target - current) / rate)}` : "已满足数值条件";
+  let banner = document.getElementById("nextEtaBanner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "nextEtaBanner";
+    banner.className = "next-eta-banner";
+    $("#nextReason").after(banner);
+  }
+  renderNextUpgradeBanner(banner);
+}
+function buy(orders) {
+  const beforeUnlocked = new Set(engine.state.autoUnlocked);
+  const result = engine.upgradeCommand(orders);
+  if (result.ok) {
+    save(); render();
+    const spent = result.purchases.reduce((sum, item) => sum + item.cost, 0);
+    const eta = nextUpgradeEstimate();
+    let etaText = "";
+    if (eta) {
+      if (eta.wait < 0.5) etaText = ` · 下一项「${eta.name}」已可升级`;
+      else etaText = ` · 下一项「${eta.name}」约${duration(eta.wait)}后可升（${clock(engine.state.minute + eta.wait)}）`;
+    }
+    notice(`完成 ${result.purchases.length} 级建设 · 花费 ${formatNumber(spent)} 矿币${result.reason ? " · 余下工程暂未满足条件" : ""}${etaText}`);
+    const newly = engine.state.autoUnlocked.filter(k=>!beforeUnlocked.has(k));
+    if (newly.length) {
+      const names = newly.map(k=>engine.specs[k].name).join("、");
+      showToast(`🎉 ${names} 已完成全部调试，正式移交自动线！后续无需手动。`);
+      // 毕业 toast 后，再提示下一次
+      if (eta && eta.wait >= 0.5) setTimeout(()=> showToast(`⏳ 下一项「${eta.name}」预计 ${duration(eta.wait)}后可升级（${clock(engine.state.minute + eta.wait)}）`), 1800);
+    } else if (eta) {
+      if (eta.wait >= 0.5) showToast(`⏳ 已升级，下一次「${eta.name}」预计 ${duration(eta.wait)}后可升级（${clock(engine.state.minute + eta.wait)}）`);
+      else if (eta.wait < 30) showToast(`✅ 已升级，「${eta.name}」已可继续升级`);
+    }
+  } else notice("当前条件不足，未扣除矿币。");
+}
+function renderTechTree() {
+  const active = activeSpecs();
+  const groups = {
+    construction: active.filter((spec) => !engine.state.autoUnlocked.includes(spec.key) && manualTarget(spec.key) > 0 && engine.available(spec.key)),
+    automated: active.filter((spec) => engine.state.autoUnlocked.includes(spec.key)),
+    frontier: active.filter((spec) => !engine.state.autoUnlocked.includes(spec.key)
+      && !(manualTarget(spec.key) > 0 && engine.available(spec.key))),
+  };
+  for (const [key, specs] of Object.entries(groups)) $(`#${key}Count`).textContent = specs.length;
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.setAttribute("aria-selected", String(button.dataset.view === view));
+    button.tabIndex = button.dataset.view === view ? 0 : -1;
+  });
+  const root = $("#techTree"); root.replaceChildren(); root.setAttribute("aria-labelledby", `tab-${view}`);
+  for (const era of data.eras) {
+    const specs = groups[view].filter((spec) => spec.era === era.key);
+    if (!specs.length) continue;
+    const group = document.createElement("section"); group.className = "era-group";
+    const header = document.createElement("header"); const title = document.createElement("h3");
+    title.textContent = era.name; header.append(title); group.append(header);
+    const grid = document.createElement("div"); grid.className = "tech-grid";
+    for (const spec of specs) {
+      const card = $("#techTemplate").content.firstElementChild.cloneNode(true);
+      const commissioned = engine.state.manualLevels[spec.key]; const auto = engine.state.autoUnlocked.includes(spec.key);
+      const target = manualTarget(spec.key);
+      card.classList.toggle("automated", auto); card.classList.toggle("locked", view === "frontier");
+      // 新增：可升/不可升配色（测试用）
+      const _reasonPreview = lockedReason(spec.key);
+      const canUpgrade = !_reasonPreview;
+      card.classList.toggle("can-upgrade", canUpgrade && view === "construction" && !auto);
+      card.classList.toggle("cannot-upgrade", !canUpgrade && view === "construction" && !auto);
+      const h3 = card.querySelector("h3");
+      h3.textContent = spec.name;
+      // 已有 eta badge 清理
+      const oldBadge = h3.querySelector(".eta-badge");
+      if (oldBadge) oldBadge.remove();
+      if (view === "construction" && !auto) {
+        const badge = document.createElement("span");
+        badge.className = "eta-badge";
+        if (canUpgrade) {
+          badge.textContent = "可升级";
+          badge.style.background = "#126650";
+        } else {
+          // 计算该项的等待时间，仅当是“钱不够”时显示倒计时
+          if (_reasonPreview.startsWith("还差")) {
+            const cost = engine.costFor(spec.key);
+            const incomeRate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier();
+            const wait = Math.max(0, (cost - engine.state.credits) / Math.max(1e-9, incomeRate));
+            if (wait < 0.5) badge.textContent = "可升";
+            else if (wait < 1440) badge.textContent = `${duration(wait)}后`;
+            else badge.textContent = `${Math.ceil(wait/60)}小时后`;
+            badge.style.background = "#8a9a94";
+          } else {
+            badge.textContent = "未解锁";
+            badge.style.background = "#b0bec5";
+          }
+        }
+        h3.appendChild(badge);
+      }
+      const strength = Number(engine.effectStrength(spec.effectKind));
+      const enhanced = Math.abs(strength - 1) >= 1e-9;
+      const descriptionLabel = card.querySelector(".description-label");
+      descriptionLabel.hidden = !enhanced;
+      renderDescription(card.querySelector(".description"), spec.description);
+      const strengthLine = card.querySelector(".tech-strength");
+      strengthLine.hidden = !enhanced;
+      if (enhanced) {
+        const baseCoefficient = Number(spec.effectPerLevel);
+        const coefficientFormat = spec.effectKind === "speed_compound" ? percent : coefficient;
+        renderDescription(strengthLine, `永久强化后：**单级系数 ${coefficientFormat.format(baseCoefficient)} → ${coefficientFormat.format(baseCoefficient * strength)}**（已计入实际效果）`);
+      }
+      card.querySelector(".level-chip").textContent = `Lv.${engine.level(spec.key)} / ${spec.maxLevel}`;
+      card.querySelector(".region").textContent = data.multiplierRegions.find((item) => item.key === spec.region)?.name || spec.region;
+      card.querySelector(".cost").textContent = engine.level(spec.key) >= spec.maxLevel ? "已满级" : `${formatNumber(engine.costFor(spec.key))} 矿币`;
+      card.querySelector(".progress-label").textContent = auto ? "已自动化" : target === 0 ? "重复星球自动建设" : `调试 ${commissioned} / ${target}`;
+      const progress = card.querySelector(".manual-progress");
+      progress.replaceChildren();
+      progress.hidden = target === 0;
+      progress.style.setProperty("--manual-steps", Math.max(1, target));
+      for (let index = 0; index < target; index += 1) {
+        const dot = document.createElement("i"); dot.classList.toggle("filled", index < commissioned); progress.append(dot);
+      }
+      const reason = lockedReason(spec.key);
+      const upgrade = card.querySelector(".upgrade-button"); upgrade.disabled = Boolean(reason);
+      upgrade.addEventListener("click", () => buy([[spec.key, 1]]));
+      const complete = card.querySelector(".commission-button"); const remaining = Math.max(0, target - commissioned);
+      const fullCost = Array.from({ length: remaining }, (_, i) => engine.costFor(spec.key, engine.level(spec.key) + i)).reduce((sum, cost) => sum + cost, 0);
+      complete.disabled = remaining === 0 || Boolean(reason) || engine.state.credits < fullCost;
+      complete.title = `剩余 ${remaining} 级，共 ${formatNumber(fullCost)} 矿币`;
+      complete.addEventListener("click", () => buy([[spec.key, remaining]]));
+      renderDescription(card.querySelector(".lock-reason"), reason || `再建设 ${remaining} 级后自动采购`);
+      grid.append(card);
+    }
+    group.append(grid); root.append(group);
+  }
+  if (!root.children.length) {
+    const p = document.createElement("p"); p.className = "empty";
+    if (engine.state.planetComplete) {
+      p.textContent = "当前星球已挖穿，生产与采购均已停止；启程后可在下一颗星球重新建设。";
+    } else {
+      p.textContent = view === "construction"
+        ? groups.frontier.length ? "当前装备已交给自动生产线。矿井正在接近下一项工程。" : "本段工程均已自动化，矿井继续生产。"
+        : view === "automated" ? "尚无自动生产线。" : "当前阶段的工程均已发现。";
+    }
+    root.append(p);
+  }
+}
+function renderMultipliers() {
+  const root = $("#multiplierList"); root.replaceChildren();
+  Object.entries(engine.multiplierBreakdown()).filter(([, value]) => value > 1.000001).forEach(([key, value]) => {
+    const region = data.multiplierRegions.find((item) => item.key === key || item.key === key.replace("_", ""));
+    const row = document.createElement("div"); const label = document.createElement("span"); const count = document.createElement("b");
+    const prestigeNames = {
+      prestige: "永久科技倍率",
+      stellar_relay: "联合勘探",
+      opening_burst: "新星首秒大爆发",
+      completion_depth: "全科技满级深度",
+    };
+    label.textContent = key === "critical" ? "暴击期望" : prestigeNames[key] || region?.name || key; count.textContent = formatMultiplier(value); row.append(label, count); root.append(row);
+  });
+  const discount = engine.coreEffect("local_discount");
+  if (discount > 0) {
+    const row = document.createElement("div"); const label = document.createElement("span"); const count = document.createElement("b");
+    label.textContent = "本地设备成本";
+    count.textContent = `${formatMultiplier(1 / (1 + discount))} 原价`;
+    row.append(label, count); root.append(row);
+  }
+  $("#incomeMultiplier").textContent = formatMultiplier(engine.incomeMultiplier());
+  $("#depthMultiplier").textContent = formatMultiplier(engine.depthMultiplier());
+}
+function thresholdSummary(source = engine) {
+  const targets = activeSpecs().map((spec) => Math.max(0, Number(source.manualTarget(spec.key))));
+  const low = Math.min(...targets); const high = Math.max(...targets);
+  if (high === 0) return "0级（全自动）";
+  return low === high ? `${high}级` : `${low}–${high}级`;
+}
+function departurePreview() {
+  if (!engine.state.planetComplete || engine.galaxyComplete()) return null;
+  const copy = new S2Engine(data, { state: engine.snapshot() });
+  const result = copy.departPlanet();
+  return result.ok ? { speed: copy.prestigeSpeed(), threshold: thresholdSummary(copy) } : null;
+}
+function coreGroup(spec) {
+  if (Number(spec.unlockResets) <= 1) return ["planet", "行星技术"];
+  if (Number(spec.unlockResets) <= 5) return ["star", "恒星系技术"];
+  return ["galaxy", "银河技术"];
+}
+const coreStage = {
+  planet_drive: "适合阶段：**全航程**，尤其是新星空矿井与早期重建。",
+  core_drill: "适合阶段：**每颗星球的设备重建期**，速度科技等级逐步增多后更明显。",
+  core_refining: "适合阶段：**前中期攒矿币与重复建设**；它不直接增加深度。",
+  core_depth: "适合阶段：**设备成型后的冲深期**；它不直接增加矿币。",
+  stellar_forge: "适合阶段：**本地科技种类与等级较多后**，不强化速度和暴击率。",
+  stellar_relay: "适合阶段：**自动线逐步建成后**；新星开始时需重新建设自动线。",
+  galactic_drive: "适合阶段：**全航程与跨星推进**，每4级合计翻倍。",
+  stellar_procurement: "适合阶段：**每颗新星的重建期**，只降低本地设备矿币成本。",
+  planetary_exhaustion: "适合阶段：**前中期全部本地科技满级后的冲深**；后期重建时间占主导，整段航程收益会减弱。",
+  big_bang: "适合阶段：**极短的后期航程**；只覆盖抵达新星后的首1秒。",
+};
+function coreEffectSummary(spec, level) {
+  const nextLevel = Math.min(spec.maxLevel, level + 1);
+  const current = coreEffectAtLevel(spec, level);
+  if (level >= spec.maxLevel) return `当前：**${current}** · 已满级`;
+  return `当前：**${current}** · 下级：**${coreEffectAtLevel(spec, nextLevel)}**`;
+}
+function coreEffectAtLevel(spec, level) {
+  const amount = Number(spec.effectPerLevel) * level;
+  switch (spec.effectKind) {
+    case "global_linear":
+      return `矿币与深度 ${formatMultiplier(1 + amount)}`;
+    case "global_speed":
+      return `矿币与深度 ${formatMultiplier(2 ** amount)}`;
+    case "speed_strength":
+      return `速度科技单级强度 +${percent.format(amount)}`;
+    case "income_strength":
+      return `收入类单级强度 +${percent.format(amount)}`;
+    case "depth_strength":
+      return `深度类单级强度 +${percent.format(amount)}`;
+    case "equipment_strength":
+      return `适用本地科技单级强度 +${percent.format(amount)}`;
+    case "line_synergy":
+      return `每条自动线 +${percent.format(amount)}`;
+    case "local_discount":
+      return `本地成本 ÷${number.format(1 + amount)}（${percent.format(1 / (1 + amount))} 原价）`;
+    case "completion_depth":
+      return level ? `全满级后深度 ${formatMultiplier(1 + amount)}` : "全满级后深度效果未启用";
+    case "opening_burst":
+      return level ? `新星首1秒 ${formatMultiplier(1 + amount)}` : "新星首1秒效果未启用";
+    default:
+      return level ? `效果强度 ${number.format(amount)}` : "效果未启用";
+  }
+}
+function coreUnavailableReason(spec, level, cost) {
+  if (level >= spec.maxLevel) return "已满级";
+  if (engine.state.completedPlanets < spec.unlockResets) return `完成 ${spec.unlockResets} 颗星球后解锁`;
+  if (engine.state.cores < cost) return `还差 ${formatNumber(cost - engine.state.cores)} 星球核心`;
+  return "";
+}
+function coreGroupRequirement(specs) {
+  const gates = specs.map((spec) => Number(spec.unlockResets));
+  const low = Math.min(...gates); const high = Math.max(...gates);
+  return low === high ? `完成 ${low} 颗星球` : `完成 ${low}–${high} 颗星球`;
+}
+function buyCore(key) {
+  const result = engine.purchaseCore(key);
+  if (!result.ok) {
+    const reasons = { locked: "永久科技尚未解锁。", cores: "星球核心不足，未进行购买。", max: "这项永久科技已满级。" };
+    notice(reasons[result.reason] || "当前无法购买这项永久科技。");
+    renderPrestige();
+    return;
+  }
+  save(); render();
+  notice(`永久科技升级至 Lv.${result.level} · 消耗 ${formatNumber(result.cost)} 星球核心`);
+}
+function renderCoreShop() {
+  const root = $("#coreShop"); root.replaceChildren();
+  const upgrades = data.prestige?.upgrades || [];
+  $("#coreShopTitle").textContent = `星球核心技术（${upgrades.length}项）`;
+  // 混合展示：默认只显示已解锁 + 临近5颗内可预览的，远期折叠，避免二阶段全摊开的压迫感
+  const nearThreshold = 5;
+  const filteredUpgrades = showAllPrestige ? upgrades : upgrades.filter(s => s.unlockResets <= engine.state.completedPlanets + nearThreshold || engine.state.coreLevels[s.key] > 0);
+  const hiddenCount = upgrades.length - filteredUpgrades.length;
+  // 顶部切换按钮
+  const controls = document.createElement("div");
+  controls.className = "core-shop-controls";
+  controls.style.cssText = "display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap";
+  const info = document.createElement("small");
+  info.style.color = "var(--muted)";
+  info.textContent = showAllPrestige ? `已展示全部 ${upgrades.length} 项` : `已展示 ${filteredUpgrades.length} 项，隐藏 ${hiddenCount} 项远期科技（完成更多星球后逐步解锁）`;
+  const toggle = document.createElement("button");
+  toggle.textContent = showAllPrestige ? "收起远期科技" : `展开全部 ${upgrades.length} 项`;
+  toggle.style.cssText = "padding:6px 10px;font-size:12px";
+  toggle.addEventListener("click", () => { showAllPrestige = !showAllPrestige; renderCoreShop(); });
+  controls.append(info, toggle);
+  root.append(controls);
+  const displayUpgrades = filteredUpgrades;
+  const grouped = new Map([["planet", []], ["star", []], ["galaxy", []]]);
+  const labels = new Map();
+  for (const spec of displayUpgrades) {
+    const [key, label] = coreGroup(spec); grouped.get(key).push(spec); labels.set(key, label);
+  }
+  for (const [groupKey, specs] of grouped) {
+    if (!specs.length) continue;
+    const group = document.createElement("section"); group.className = "core-group";
+    const heading = document.createElement("div"); heading.className = "core-group-heading";
+    const title = document.createElement("h3"); title.textContent = labels.get(groupKey);
+    const unlock = document.createElement("span");
+    unlock.textContent = coreGroupRequirement(specs);
+    heading.append(title, unlock); group.append(heading);
+    const grid = document.createElement("div"); grid.className = "core-grid";
+    for (const spec of specs) {
+      const level = Number(engine.state.coreLevels?.[spec.key] || 0);
+      const cost = Number(engine.coreCost(spec.key));
+      const available = Boolean(engine.coreAvailable(spec.key));
+      const reason = coreUnavailableReason(spec, level, cost);
+      const card = document.createElement("article"); card.className = "core-card";
+      card.classList.toggle("core-locked", engine.state.completedPlanets < spec.unlockResets);
+      // 近期预览但未解锁的卡片加虚线边框，提示“即将解锁”
+      if (!showAllPrestige && engine.state.completedPlanets < spec.unlockResets && spec.unlockResets <= engine.state.completedPlanets + nearThreshold) {
+        card.style.borderStyle = "dashed";
+        card.style.borderColor = "#8a9a94";
+      }
+      const top = document.createElement("div"); top.className = "tech-top";
+      const gate = document.createElement("span"); gate.textContent = `完成 ${spec.unlockResets} 颗星球`;
+      const levelChip = document.createElement("span"); levelChip.className = "level-chip"; levelChip.textContent = `Lv.${level} / ${spec.maxLevel}`;
+      top.append(gate, levelChip);
+      const name = document.createElement("h3"); name.textContent = spec.name;
+      const description = document.createElement("p"); description.className = "description";
+      renderDescription(description, spec.description);
+      const permanent = document.createElement("p"); permanent.className = "permanent-note";
+      renderDescription(permanent, coreEffectSummary(spec, level));
+      const stage = document.createElement("p"); stage.className = "core-stage";
+      renderDescription(stage, coreStage[spec.key] || "适合阶段：按当前航程需求选择。");
+      const actions = document.createElement("div"); actions.className = "core-actions";
+      const status = document.createElement("small"); status.textContent = reason || `可用星球核心 ${formatNumber(engine.state.cores)}`;
+      const button = document.createElement("button"); button.className = "primary";
+      button.textContent = level >= spec.maxLevel ? "已满级" : `购买 · ${formatNumber(cost)} 星球核心`;
+      button.disabled = !available || engine.state.cores < cost; button.addEventListener("click", () => buyCore(spec.key));
+      actions.append(status, button); card.append(top, name, description, permanent, stage, actions); grid.append(card);
+    }
+    group.append(grid); root.append(group);
+  }
+  if (hiddenCount > 0 && !showAllPrestige) {
+    const more = document.createElement("p");
+    more.className = "empty";
+    more.textContent = `还有 ${hiddenCount} 项超科幻科技在更远的星海中等待（需完成更多星球），点击“展开全部”可提前预览全部 50 项。`;
+    root.append(more);
+  }
+  if (!displayUpgrades.length) {
+    const empty = document.createElement("p"); empty.className = "empty"; empty.textContent = "永久科技数据尚未载入。"; root.append(empty);
+  }
+}
+function renderHistory() {
+  const root = $("#planetHistory"); root.replaceChildren();
+  const history = [...(engine.state.planetHistory || [])].reverse().slice(0, 6);
+  for (const item of history) {
+    const row = document.createElement("li");
+    const main = document.createElement("span"); main.textContent = `第 ${item.planet} 颗 · ${duration(item.minutes)}`;
+    const details = document.createElement("small");
+    const parts = [`+${formatNumber(item.reward)} 星球核心`];
+    if (item.allMaxedMinute !== null) {
+      parts.push(`全满级后冲刺 ${duration(Number(item.completedMinute) - Number(item.allMaxedMinute))}`);
+    }
+    details.textContent = parts.join(" · "); row.append(main, details); root.append(row);
+  }
+  $("#historyEmpty").hidden = history.length > 0;
+}
+function renderPrestige() {
+  const s = engine.state;
+  const target = Number(data.prestige.planetTargetDepth);
+  const completed = s.planetComplete
+    ? [...(s.planetHistory || [])].reverse().find((item) => item.planet === currentPlanet())
+    : null;
+  const elapsed = completed ? Number(completed.minutes) : Math.max(0, s.minute - s.planetStartedMinute);
+  const progress = target > 0 ? Math.min(1, s.depth / target) : 0;
+  $("#planetTitle").textContent = `第 ${currentPlanet()} 颗星球`;
+  $("#planetState").textContent = engine.galaxyComplete()
+    ? "银河目标完成 · 永久停产"
+    : s.planetComplete ? "已挖穿 · 等待启程" : "开采进行中";
+  $("#planetProgress").value = progress;
+  $("#planetProgressText").textContent = `深度 ${formatNumber(Math.min(s.depth, target))} / ${formatNumber(target)}`;
+  $("#planetElapsed").textContent = `本星球 ${duration(elapsed)}`;
+  $("#coresValue").textContent = formatNumber(s.cores);
+  $("#resetsValue").textContent = formatNumber(s.resets);
+  $("#completedValue").textContent = formatNumber(s.completedPlanets);
+  $("#prestigeSpeed").textContent = formatMultiplier(engine.prestigeSpeed());
+  $("#prestigeThreshold").textContent = thresholdSummary();
+  renderDescription($("#galaxyGoalNote"), `试玩终点为 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**，按本轮科技终点后约5天采矿标定；这是可继续调整的试玩目标，**不是倒计时**。`);
+  const prestigeUnlocked = s.completedPlanets > 0;
+  $("#prestigeLockedReward").hidden = prestigeUnlocked;
+  $("#departurePanel").hidden = !prestigeUnlocked;
+  $("#prestigeContent").hidden = !prestigeUnlocked;
+  const stellarRelay = Number(engine.multiplierBreakdown().stellar_relay || 1);
+  renderDescription($("#permanentSummary"), `**永久科技倍率** ${formatMultiplier(engine.prestigeSpeed())} · **联合勘探** ${formatMultiplier(stellarRelay)}`);
+  const allMaxed = s.allMaxedMinute === null ? null : Math.max(0, Number(s.allMaxedMinute) - Number(s.planetStartedMinute));
+  $("#allMaxedStatus").textContent = allMaxed === null
+    ? engine.allLocalMaxed() ? "设备已满级，旧进度未记录满级时刻" : "设备尚未全部满级"
+    : `全部满级于本轮 ${duration(allMaxed)}`;
+
+  const announcement = $("#completionAnnouncement");
+  announcement.hidden = !s.planetComplete;
+  if (s.planetComplete) {
+    renderDescription(announcement, engine.galaxyComplete()
+      ? `第 **${formatNumber(data.prestige.galaxyTargetPlanets)}** 颗星球已经挖穿，银河开采正式完结。生产与启程均已永久停止。`
+      : `第 ${currentPlanet()} 颗星球已经挖穿，${completed ? `**${formatNumber(completed.reward)} 星球核心**已发放一次` : "**星球核心奖励**已发放一次"}。本星球生产已停止。`);
+  }
+
+  const preview = departurePreview();
+  $("#departButton").hidden = !s.planetComplete || engine.galaxyComplete();
+  $("#departButton").disabled = !preview || engine.galaxyComplete();
+  if (preview) {
+    // 计算启程前后单星预估秒数对比 — 仅全自动后 voyagePlan 才精确，早期间离散步进误差极大
+    let beforeSec = null, afterSec = null;
+    let secLine = "";
+    try {
+      if (fullyAutomated() && engine.state.resets >= 3) {
+        const beforePlan = engine.voyagePlan();
+        const copyAfter = new S2Engine(data, { state: engine.snapshot() });
+        copyAfter.departPlanet();
+        const afterPlan = copyAfter.voyagePlan();
+        if (Number.isFinite(beforePlan.duration) && Number.isFinite(afterPlan.duration) && beforePlan.duration < 1e9 && afterPlan.duration < 1e9 && beforePlan.duration > 0 && afterPlan.duration > 0) {
+          beforeSec = beforePlan.duration * 60;
+          afterSec = afterPlan.duration * 60;
+          secLine = ` 本星预估 ${duration(beforeSec/60)} → 下星 ${duration(afterSec/60)}（提速 ${Math.round((1-afterSec/beforeSec)*100)}%）。`;
+        }
+      } else {
+        secLine = ` 早期间为10分钟离散结算，秒级预估仅在全自动（第3次启程）后生效。`;
+      }
+    } catch {}
+    renderDescription($("#departureDescription"), `启程会重置**矿币、深度、全部设备和全部本地科技等级**；保留**星球核心、永久科技、累计建设等级与操作次数**（操作次数=你点“升级”按钮的次数，批量一次算1次，用于复盘节奏）。下一颗星球基础开采速度 ${formatMultiplier(preview.speed)}，每项设备调试 ${preview.threshold} 后进入自动线。${secLine}`);
+  } else {
+    renderDescription($("#departureDescription"), engine.galaxyComplete()
+      ? `本银河的 **${formatNumber(data.prestige.galaxyTargetPlanets)} 颗星球**已全部开采完成，生产与启程均已永久停止；**星球核心、永久科技、累计总级数与操作次数**完整保留。`
+      : `挖穿目标深度后可前往下一颗星球。启程会重置**全部设备和全部本地科技等级**；**星球核心、永久科技、累计总级数（手动+助手+自动）与操作次数**会保留。当前永久基础速度 ${formatMultiplier(engine.prestigeSpeed())}，本星每项设备调试 ${thresholdSummary()}。`);
+  }
+  $("#autoDepartToggle").checked = s.autoDepart;
+  $("#autoDepartToggle").disabled = engine.galaxyComplete();
+  $("#autoDepartHint").textContent = s.resets > 0
+    ? engine.galaxyComplete() ? "银河目标已经完成，自动启程不再生效。"
+      : s.autoDepart ? "后续星球完成时自动启程；核心按托管路线处理。" : "后续星球完成后会停下，等待手动启程。"
+    : "首次离开必须手动确认；此设置从下一颗星球起生效。";
+  $("#coreAutoRoute").value = s.coreAutoRoute || "off";
+  const managedTargetRule = "从已解锁、未满级科技中选择目标；核心不足时固定目标存钱等待，不会改买别项。";
+  const preferenceUnlocked = s.completedPlanets >= 10;
+  const earlyRouteRule = `完成第10颗星球前，所有托管路线都先购买价格最低的科技；之后按所选路线安排研究。`;
+  const routeHints = {
+    off: "关闭：所有永久科技保持手动购买；旧存档不会自动开启。",
+    balanced: `${preferenceUnlocked ? "均衡低价：始终按实际价格计分。" : earlyRouteRule}${managedTargetRule}`,
+    speed: `${preferenceUnlocked ? "速度优先：全局倍率、银河速度和速度强化按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用速度偏好。`}${managedTargetRule}`,
+    rebuild: `${preferenceUnlocked ? "重建优先：收入、建设折扣和通用设备强化按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用重建偏好。`}${managedTargetRule}`,
+    burst: `${preferenceUnlocked ? "爆发优先：大爆发、银河速度和满级冲深按价格÷4计分，其余按原价。" : `${earlyRouteRule}完成第10颗后启用爆发偏好。`}${managedTargetRule}`,
+  };
+  $("#coreAutoRouteHint").textContent = routeHints[s.coreAutoRoute] || routeHints.off;
+  renderCoreShop(); renderHistory();
+}
+function previewPlan() {
+  stop(); renderStatus();
+  const copy = new S2Engine(data, { state: engine.snapshot() });
+  pendingOrders = [];
+  while (pendingOrders.length < data.rules.batchCommandMaxLevels) {
+    const key = copy.chooseUpgrade($("#routeSelect").value);
+    if (!key) break;
+    copy.upgradeCommand([[key, 1]]); pendingOrders.push([key, 1]);
+  }
+  const spent = engine.state.credits - copy.state.credits; const items = new Map();
+  for (const [key] of pendingOrders) items.set(key, (items.get(key) || 0) + 1);
+  $("#planItems").replaceChildren();
+  for (const [key, count] of items) {
+    const li = document.createElement("li"); li.textContent = `${engine.specs[key].name} +${count} 级`; $("#planItems").append(li);
+  }
+  const incomeGain = (copy.incomeMultiplier() / engine.incomeMultiplier() - 1) * 100;
+  const depthGain = (copy.depthMultiplier() / engine.depthMultiplier() - 1) * 100;
+  renderDescription($("#planSummary"), `${pendingOrders.length} 级工程，共 ${formatNumber(spent)} 矿币；剩余 ${formatNumber(copy.state.credits)} 矿币。当前产能：**矿币收益** +${number.format(incomeGain)}%，**挖矿深度** +${number.format(depthGain)}%。`);
+  $("#confirmPlan").disabled = !pendingOrders.length; $("#planDialog").showModal();
+}
+function renderAudit() {
+  const days = Number($("#replayDays").value);
+  const profiles = ["daily", "absent", "active"].map((key) => [key, runReplay(data, { days, profile: key, route: $("#routeSelect").value })]);
+  $("#replayDepthHeading").textContent = `D${days} 深度`;
+  $("#replayEraHeading").textContent = `D${days} 时代`;
+  const rows = $("#profileRows"); rows.replaceChildren();
+  for (const [key, replay] of profiles) {
+    const s = replay.engine.state; const tr = document.createElement("tr");
+    const values = [data.strategy.profiles[key].name, s.totalManualLevels, s.totalHelperLevels, s.totalAutoLevels, replay.snapshots.reduce((sum, day) => sum + day.visits, 0), formatNumber(s.depth), eraName(replay.engine.currentEra())];
+    values.forEach((value, index) => { const cell = document.createElement(index ? "td" : "th"); cell.textContent = value; tr.append(cell); }); rows.append(tr);
+  }
+  const daily = profiles[0][1]; const active = profiles[2][1]; const max = Math.max(...active.snapshots.map((day) => day.manualLevels));
+  $("#auditSummary").replaceChildren();
+  [
+    ["每日一次 / 手动", daily.snapshots.map((day) => day.manualLevels).join(" · "), `D1 至 D${days}`],
+    [`全程托管 / D${days}`, eraName(profiles[1][1].engine.currentEra()), "没有手动购买"],
+    ["高频 / 单日最多", `${max} 级`, max > data.rules.manualBurstWarningLevels ? "操作量偏高，需复核" : "本路线未触发操作量预警"],
+  ].forEach(([label, value, caption]) => {
+    const card = document.createElement("article");
+    for (const [tag, text] of [["span", label], ["strong", value], ["small", caption]]) {
+      const child = document.createElement(tag); child.textContent = text; card.append(child);
+    }
+    $("#auditSummary").append(card);
+  });
+}
+function render() { renderStatus(); renderHelper(); renderNext(); renderPrestige(); renderTechTree(); renderMultipliers(); }
+function reset() {
+  const seed = Number($("#seedInput").value);
+  if (!Number.isSafeInteger(seed)) { notice("Seed 必须是安全范围内的整数。"); return; }
+  try {
+    const current = localStorage.getItem(STORAGE_KEY);
+    if (current) localStorage.setItem(`${STORAGE_KEY}-before-reset-${Date.now()}`, current);
+  } catch {
+    $("#saveNotice").textContent = "重置前备份失败，已取消重置以保护当前进度。";
+    return;
+  }
+  stop(); engine = new S2Engine(data, { seed });
+  saveBlocked = false; view = "construction"; save(); render(); notice("新矿井已就绪，笨助手将于次日00:00开始采购。");
+}
+async function boot() {
+  data = await loadGameData(); engine = loadSaved(Number($("#seedInput").value));
+  if (sandbox) $("#saveNotice").textContent = ["独立验收矿井", $("#saveNotice").textContent].filter(Boolean).join(" · ");
+  document.querySelectorAll("[data-advance]").forEach((button) => button.addEventListener("click", () => advance(Number(button.dataset.advance))));
+  $("#toggleButton").addEventListener("click", () => {
+    if (timer) stop(); else timer = setInterval(() => advance(10), 550);
+    renderStatus();
+  });
+  $("#helperToggle").addEventListener("change", (event) => {
+    engine.setHelperEnabled(event.target.checked); save(); renderHelper();
+    notice(engine.state.helperEnabled ? "夜班值班已恢复，将在下一个00:00采购。" : "夜班值班已暂停，已建成的自动线继续生产。");
+  });
+  $("#autoDepartToggle").addEventListener("change", (event) => {
+    engine.setAutoDepart(event.target.checked); save(); renderPrestige();
+    const corePurchaseMode = engine.state.coreAutoRoute === "off"
+      ? "永久科技仍保持手动购买"
+      : "星球核心将按托管路线自动购买永久科技";
+    notice(event.target.checked
+      ? engine.state.resets > 0 ? `后续星球将自动启程，${corePurchaseMode}。` : "自动启程已预设；首次离开仍需手动确认。"
+      : "自动启程已关闭，星球完成后会等待手动确认。");
+  });
+  $("#coreAutoRoute").addEventListener("change", (event) => {
+    try {
+      const purchases = engine.setCoreAutoRoute(event.target.value);
+      save(); render();
+      const spent = purchases.reduce((sum, item) => sum + item.cost, 0);
+      notice(purchases.length
+        ? `核心托管已切换，立即购买 ${purchases.length} 级永久科技 · 消耗 ${formatNumber(spent)} 星球核心`
+        : `核心托管已切换为${event.target.options[event.target.selectedIndex].text}`);
+    } catch (error) {
+      renderPrestige();
+      notice(`核心托管设置失败：${error.message}`);
+    }
+  });
+  $("#departButton").addEventListener("click", () => {
+    const result = engine.departPlanet();
+    if (!result.ok) {
+      notice(result.reason === "unfinished"
+        ? "当前星球尚未达到目标深度。"
+        : result.reason === "galaxy" ? "银河目标已经完成，不能再次启程。" : "现在还不能前往下一颗星球。");
+      render();
+      return;
+    }
+    stop(); view = "construction"; save(); render();
+    notice(`已启程前往第 ${currentPlanet()} 颗星球 · 本地建设已重置，星球核心与永久科技完整保留`);
+  });
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.addEventListener("click", () => { view = button.dataset.view; renderTechTree(); });
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...document.querySelectorAll("[data-view]")];
+      const next = tabs[(tabs.indexOf(button) + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      next.click(); next.focus();
+    });
+  });
+  $("#planButton").addEventListener("click", previewPlan);
+  $("#confirmPlan").addEventListener("click", () => { buy(pendingOrders); pendingOrders = []; $("#planDialog").close(); });
+  $("#resetButton").addEventListener("click", () => { stop(); renderStatus(); $("#resetDialog").showModal(); });
+  $("#confirmReset").addEventListener("click", () => { reset(); $("#resetDialog").close(); });
+  $("#replayButton").addEventListener("click", renderAudit);
+  render(); renderAudit(); save();
+}
+boot().catch((error) => {
+  const message = document.createElement("pre"); message.className = "fatal";
+  message.textContent = `矿井启动失败\n${error.message}`; document.body.replaceChildren(message);
+});
+
+
+</script>
+</body>
+</html>
