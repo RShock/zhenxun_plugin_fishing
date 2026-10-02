@@ -1,0 +1,53 @@
+{
+  "note": "前三十天（教学期）经济学基线。seed=42，五种画像各跑 30 天；由 s2_prestige.test.mjs 的第一条用例对账。重录前请确认教学期的改动是有意为之。",
+  "recorded": "2026-10-02",
+  "seed": 42,
+  "days": 30,
+  "profiles": {
+    "daily": {
+      "credits": 119270300690347200000,
+      "depth": 24000000000000000000,
+      "events": 340,
+      "eventsHash": "9892df3066a76592b162da9ec68a8d3a0be8fc1387dae2d094204ebb2c5891e9",
+      "completedPlanets": 1,
+      "cores": 0,
+      "rngHash": "09a2c18f62314e104bdccee59c3083927e26432b21af063dfa3c40e4810bd242"
+    },
+    "absent": {
+      "credits": 119698009388695680000,
+      "depth": 24000000000000000000,
+      "events": 340,
+      "eventsHash": "9f3b73f320b660e1973fbab1f18420c5bb11efa106c54c95ecf140b773ec1296",
+      "completedPlanets": 1,
+      "cores": 0,
+      "rngHash": "04690fc87ab4c442b660dd797ff1fc79ddafa1c263305f7a463cf438a761b6f1"
+    },
+    "active": {
+      "credits": 119532525461814100000,
+      "depth": 24000000000000000000,
+      "events": 340,
+      "eventsHash": "bd3e99d727180c0f862bd84b16ac824ac545f946fa47caeff47fed04a59849d5",
+      "completedPlanets": 1,
+      "cores": 0,
+      "rngHash": "8ee2b7a030a6747fbcef33a5deaba3f1992748b1b0458b553cc65b89bd313188"
+    },
+    "regular": {
+      "credits": 119759784079944700000,
+      "depth": 24000000000000000000,
+      "events": 340,
+      "eventsHash": "cf1b4a78fc05b41a20f6ac37df133865ca311b9a472657e3129b49dd9f7220ab",
+      "completedPlanets": 1,
+      "cores": 0,
+      "rngHash": "bf2c8447e90cee71795f58c63adcfc560afbe7e1a8303b55d7c7bc7e3278fa26"
+    },
+    "low": {
+      "credits": 118215039176267740000,
+      "depth": 24000000000000000000,
+      "events": 340,
+      "eventsHash": "42abbc83ba2c411eaf6f8aa5f325783033a2c7c8377757901c5679a963e56582",
+      "completedPlanets": 1,
+      "cores": 0,
+      "rngHash": "500a983c7960808558a5e471993dc48c000ca7a55d96dc3ad57f0be6555c92d8"
+    }
+  }
+}

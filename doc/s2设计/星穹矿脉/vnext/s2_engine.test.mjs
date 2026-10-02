@@ -106,11 +106,14 @@ test("ten daily batch previews do not mutate saves and reproduce the single-leve
     counts.push(result.purchases.length);
     engine.mineBlock(240);
   }
-  assert.deepEqual(counts, [6, 2, 3, 3, 3, 3, 3, 3, 5, 3]);
+  // 教学期前十天的"每天一条批量指令买了几级"：2026-10-02 二阶段重构后重新录制
+  // （上一版 [6,2,3,3,3,3,3,3,5,3] 是一阶段压缩之前的数字，已随 D39→D28 的提速作废）。
+  // 关键不是具体数字，而是：每天只有一条指令（下面的 totalManualCommands），一次买完。
+  assert.deepEqual(counts, [6, 3, 3, 4, 10, 7, 3, 3, 6, 6]);
   assert.equal(engine.state.totalManualCommands, 10);
   const replay = runReplay(data).engine;
   const actual = engine.snapshot(); const expected = replay.snapshot();
   expected.state.totalManualCommands = 10;
   assert.deepEqual(actual, expected);
-  assert.deepEqual([engine.state.totalManualLevels, engine.state.totalHelperLevels, engine.state.totalAutoLevels], [34, 17, 79]);
+  assert.deepEqual([engine.state.totalManualLevels, engine.state.totalHelperLevels, engine.state.totalAutoLevels], [51, 20, 97]);
 });

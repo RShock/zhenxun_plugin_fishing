@@ -20,12 +20,30 @@ export function validateGameData(data) {
   if (data.prestige) {
     const p = data.prestige;
     if (!Number.isFinite(p.planetTargetDepth) || p.planetTargetDepth <= 0
-      || (["prestige-2", "prestige-3"].includes(data.contentVersion) && (!Number.isSafeInteger(p.galaxyTargetPlanets)
+      || (["prestige-2", "prestige-3", "sector-1"].includes(data.contentVersion) && (!Number.isSafeInteger(p.galaxyTargetPlanets)
         || p.galaxyTargetPlanets < 1 || !Number.isSafeInteger(earnedCores(p.galaxyTargetPlanets, p.rewardStep))))
       || !Number.isInteger(p.rewardStep) || p.rewardStep < 1
       || !Number.isInteger(p.historyLimit) || p.historyLimit < 1
       || !Array.isArray(p.upgrades) || !p.upgrades.length) throw new Error("Invalid prestige rules");
-    if (data.contentVersion === "prestige-3" && (p.openingBurstSeconds !== 1 || !p.legacyCorePrices)) throw new Error("Missing interstellar rules");
+    if (data.contentVersion === "sector-1" && (p.openingBurstSeconds !== 1
+      || !Number.isInteger(p.coreCommissionLevels) || p.coreCommissionLevels < 1)) throw new Error("Missing interstellar rules");
+    if (p.sectors) {
+      if (!Array.isArray(p.sectors) || !p.sectors.length) throw new Error("Invalid galaxy sectors");
+      let previous = 0;
+      const techKeys = new Set(p.upgrades.map((spec) => spec.key));
+      for (const sector of p.sectors) {
+        if (typeof sector.key !== "string" || typeof sector.name !== "string"
+          || !Number.isSafeInteger(sector.targetPlanets) || sector.targetPlanets <= previous
+          || !Number.isSafeInteger(sector.rewardCores) || sector.rewardCores < 0
+          || !Number.isInteger(sector.rewardTechLevels) || sector.rewardTechLevels < 0
+          || (sector.rewardTechLevels > 0 && !techKeys.has(sector.rewardTechKey))) throw new Error(`Invalid sector ${sector.key}`);
+        previous = sector.targetPlanets;
+      }
+      // 最后一个星区的目标以 galaxyTargetPlanets 为准（见 S2Engine.sectors）；
+      // 其余星区必须严格递增且都在银河目标之内。
+      const beforeFinal = p.sectors.length > 1 ? p.sectors[p.sectors.length - 2].targetPlanets : 0;
+      if (beforeFinal >= p.galaxyTargetPlanets) throw new Error("Sectors must fit inside the galaxy target");
+    }
     const kinds = new Set(["speed_strength", "income_strength", "depth_strength", "equipment_strength", "line_synergy", "global_speed", "global_linear", "local_discount", "completion_depth", "opening_burst"]);
     const keys = new Set();
     for (const spec of p.upgrades) {
@@ -167,6 +185,8 @@ export class S2Engine {
     this.localKeys = data.upgrades.map((item) => item.key);
     this.priority = data.strategy.priority.filter((key) => this.specs[key]);
     this.coreSpecs = Object.fromEntries((data.prestige?.upgrades || []).map((item) => [item.key, item]));
+    // 永久科技与本地设备同一条规则：亲手买够这么多级，之后交给自动线
+    this.coreCommissionLevels = Number(data.prestige?.coreCommissionLevels ?? 3);
     this.rng = new PythonRandom(options.seed ?? 42);
     this.state = this.newState(options.seed ?? 42);
     this.lastBlockEvents = [];
@@ -178,7 +198,7 @@ export class S2Engine {
     return {
       schemaVersion: this.data.schemaVersion, gameVersion: this.data.gameVersion,
       contentVersion: this.data.contentVersion, seed: Number(seed),
-      day: 1, minute: 0, depth: 0, credits: 0,
+      day: 1, minute: 0, depth: 0, credits: Number(this.rules.startingCredits || 0),
       targetDepth: Number(this.data.prestige?.planetTargetDepth ?? this.rules.developmentTargetDepth),
       levels: objectOf(this.localKeys), manualLevels: objectOf(this.localKeys),
       autoUnlocked: [], everKeys: [], dailyManualLevels: 0, maxDailyManualLevels: 0,
@@ -189,50 +209,26 @@ export class S2Engine {
       lastHelperReport: null,
       resets: 0, completedPlanets: 0, cores: 0, coreLevels: objectOf(Object.keys(this.coreSpecs)),
       planetComplete: false, planetStartedMinute: 0, allMaxedMinute: null,
-      autoDepart: true, planetHistory: [], coreAutoRoute: "off",
-      legacyCoreLevels: objectOf(Object.keys(this.coreSpecs)),
+      autoDepart: true, planetHistory: [],
+      coreManualLevels: objectOf(Object.keys(this.coreSpecs)), coreAutoUnlocked: [],
+      coreHelperEnabled: true,
     };
   }
 
   snapshot() { return { state: deepClone(this.state), rng: this.rng.snapshot() }; }
   restore(payload) {
     const saved = deepClone(payload);
-    if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion) throw new Error("旧版存档与助手版不兼容");
+    // 二阶段改制后不再兼容旧内容版本的存档：demo 没有真实玩家存档需要迁移。
+    if (!saved || saved.state?.schemaVersion !== 3 || saved.state.gameVersion !== this.data.gameVersion
+      || saved.state.contentVersion !== this.data.contentVersion) throw new Error("旧版存档与当前版本不兼容");
     const state = saved.state;
-    const prestigeFields = ["resets", "completedPlanets", "cores", "coreLevels", "planetComplete",
-      "planetStartedMinute", "allMaxedMinute", "autoDepart", "planetHistory"];
-    const legacy = !state.contentVersion || state.contentVersion === "thirty-day-eras-1";
-    if (legacy && prestigeFields.every((key) => !Object.hasOwn(state, key))) {
-      const defaults = this.newState(state.seed);
-      for (const key of prestigeFields) state[key] = defaults[key];
-      state.targetDepth = defaults.targetDepth;
-    } else if (prestigeFields.some((key) => !Object.hasOwn(state, key))) throw new Error("转生存档字段损坏");
-    else if (!legacy && state.contentVersion && !["prestige-1", "prestige-2", this.data.contentVersion].includes(state.contentVersion)) throw new Error("不支持此内容版本");
-    if (state.contentVersion !== this.data.contentVersion) {
-      state.coreAutoRoute = "off";
-      if (!legacy && state.coreLevels && !Object.hasOwn(state.coreLevels, "planet_drive")
-        && state.contentVersion === "prestige-1" && this.coreSpecs.planet_drive) state.coreLevels.planet_drive = 0;
-      state.legacyCoreLevels = objectOf(Object.keys(this.coreSpecs));
-      if (!legacy && state.coreLevels) {
-        for (const key of Object.keys(this.data.prestige.legacyCorePrices)) {
-          if (!Object.hasOwn(state.coreLevels, key)) throw new Error("旧版永久科技字段损坏");
-          state.legacyCoreLevels[key] = state.coreLevels[key];
-        }
-        for (const key of Object.keys(this.coreSpecs)) {
-          if (!Object.hasOwn(this.data.prestige.legacyCorePrices, key)) {
-            if (Object.hasOwn(state.coreLevels, key) && state.coreLevels[key] !== 0) throw new Error("旧版含未发布科技");
-            state.coreLevels[key] = 0;
-          }
-        }
-      }
-    }
-    if (legacy && state.resets === 0 && state.completedPlanets === 0) {
-      state.targetDepth = this.newState(state.seed).targetDepth;
-      if (state.coreLevels && Object.keys(state.coreLevels).length === 0) state.coreLevels = objectOf(Object.keys(this.coreSpecs));
-    }
+    const invalid = () => { throw new Error("存档字段损坏"); };
+    const prestigeFields = ["resets", "completedPlanets", "cores", "coreLevels", "coreManualLevels",
+      "coreAutoUnlocked", "coreHelperEnabled", "planetComplete", "planetStartedMinute", "allMaxedMinute",
+      "autoDepart", "planetHistory"];
+    if (prestigeFields.some((key) => !Object.hasOwn(state, key))) invalid();
     const counters = ["day", "dailyManualLevels", "maxDailyManualLevels", "totalManualLevels",
       "totalAutoLevels", "autoCursor", "totalHelperLevels", "dailyHelperLevels", "totalManualCommands"];
-    const invalid = () => { throw new Error("存档字段损坏"); };
     if (counters.some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
       || !Number.isSafeInteger(state.seed)
       || ["depth", "credits", "targetDepth"].some((key) => !Number.isFinite(state[key]) || state[key] < 0)
@@ -242,7 +238,7 @@ export class S2Engine {
       || typeof state.helperEnabled !== "boolean" || !state.eraFirstDays || typeof state.eraFirstDays !== "object") invalid();
     if (["resets", "completedPlanets", "cores"].some((key) => !Number.isSafeInteger(state[key]) || state[key] < 0)
       || typeof state.planetComplete !== "boolean" || typeof state.autoDepart !== "boolean"
-      || !["off", "balanced", "speed", "rebuild", "burst"].includes(state.coreAutoRoute)
+      || typeof state.coreHelperEnabled !== "boolean"
       || state.completedPlanets > (this.data.prestige?.galaxyTargetPlanets ?? 1000000)
       || state.completedPlanets !== state.resets + Number(state.planetComplete)
       || !Number.isFinite(state.planetStartedMinute) || state.planetStartedMinute < 0
@@ -253,25 +249,29 @@ export class S2Engine {
         || state.allMaxedMinute < state.planetStartedMinute || state.allMaxedMinute > state.minute))
       || !state.coreLevels || typeof state.coreLevels !== "object" || Array.isArray(state.coreLevels)
       || Object.keys(state.coreLevels).length !== Object.keys(this.coreSpecs).length
-      || !state.legacyCoreLevels || typeof state.legacyCoreLevels !== "object"
-      || Array.isArray(state.legacyCoreLevels)
-      || Object.keys(state.legacyCoreLevels).length !== Object.keys(this.coreSpecs).length) invalid();
+      || !state.coreManualLevels || typeof state.coreManualLevels !== "object" || Array.isArray(state.coreManualLevels)
+      || Object.keys(state.coreManualLevels).length !== Object.keys(this.coreSpecs).length
+      || !Array.isArray(state.coreAutoUnlocked)
+      || new Set(state.coreAutoUnlocked).size !== state.coreAutoUnlocked.length
+      || state.coreAutoUnlocked.some((key) => !Object.hasOwn(this.coreSpecs, key))) invalid();
     let spent = 0;
+    const commission = this.coreCommissionLevels;
     for (const [key, spec] of Object.entries(this.coreSpecs)) {
       const level = state.coreLevels[key];
+      const hand = state.coreManualLevels[key];
       if (!Number.isInteger(level) || level < 0 || level > spec.maxLevel
-        || (level > 0 && state.completedPlanets < spec.unlockResets)) invalid();
-      const oldLevel = state.legacyCoreLevels[key];
-      const oldPrice = this.data.prestige?.legacyCorePrices?.[key];
-      if (!Number.isInteger(oldLevel) || oldLevel < 0 || oldLevel > level
-        || oldLevel > (oldPrice?.[2] || 0)) invalid();
-      for (let i = 0; i < level; i += 1) spent += i < oldLevel
-        ? oldPrice[0] * oldPrice[1] ** i : spec.baseCost * spec.costGrowth ** i;
+        || (level > 0 && state.completedPlanets < spec.unlockResets)
+        || !Number.isInteger(hand) || hand < 0 || hand > Math.min(commission, level)
+        // 亲手满 commission 级 = 已转自动，两者必须一致
+        || state.coreAutoUnlocked.includes(key) !== (hand >= commission)
+        // 没转自动的科技不可能有超过 commission 级（自动线还没接手）
+        || (hand < commission && level > hand)) invalid();
+      for (let i = 0; i < level; i += 1) spent += spec.baseCost * spec.costGrowth ** i;
     }
     const rewardStep = this.data.prestige?.rewardStep || 1;
     const q = Math.floor(state.completedPlanets / rewardStep); const r = state.completedPlanets % rewardStep;
     const earned = state.completedPlanets + rewardStep * q * (q - 1) / 2 + q * r;
-    if (!Number.isSafeInteger(earned) || state.cores + spent !== earned
+    if (!Number.isSafeInteger(earned) || state.cores + spent !== earned + this.sectorBonusCores(state.completedPlanets)
       || !Array.isArray(state.planetHistory)
       || state.planetHistory.length !== Math.min(state.completedPlanets, this.data.prestige?.historyLimit || 20)
       || state.planetHistory.some((item, index, history) => !item
@@ -288,16 +288,8 @@ export class S2Engine {
     }
     if (!state.levels || typeof state.levels !== "object"
       || !state.manualLevels || typeof state.manualLevels !== "object") invalid();
-    const isFirstTenDaySave = !Object.hasOwn(state, "contentVersion");
     for (const key of this.localKeys) {
-      const hasLevel = Object.hasOwn(state.levels, key);
-      const hasManualLevel = Object.hasOwn(state.manualLevels, key);
-      if (hasLevel !== hasManualLevel) invalid();
-      if (!hasLevel) {
-        if (!isFirstTenDaySave || this.specs[key].addedIn !== "thirty-day") invalid();
-        state.levels[key] = 0;
-        state.manualLevels[key] = 0;
-      }
+      if (!Object.hasOwn(state.levels, key) || !Object.hasOwn(state.manualLevels, key)) invalid();
       if (!Number.isInteger(state.levels[key]) || state.levels[key] < 0
         || state.levels[key] > this.specs[key].maxLevel
         || !Number.isInteger(state.manualLevels[key]) || state.manualLevels[key] < 0
@@ -319,7 +311,6 @@ export class S2Engine {
       || report.levels !== report.items.length || !Number.isFinite(report.spent) || report.spent < 0
       || report.items.some((item) => !item || !Object.hasOwn(this.specs, item.key)
         || !Number.isInteger(item.level) || item.level <= 0 || !Number.isFinite(item.cost) || item.cost < 0))) invalid();
-    state.contentVersion = this.data.contentVersion;
     this.rng.restore(saved.rng);
     this.state = state;
     this._voyage = null; this._canonicalVoyage = null;
@@ -337,45 +328,112 @@ export class S2Engine {
     const spec = this.coreSpecs[key];
     return spec ? spec.baseCost * spec.costGrowth ** this.state.coreLevels[key] : Infinity;
   }
-  coreAvailable(key) {
+  // 这项科技还要亲手买几级才会转自动
+  coreManualTarget(key) { return Math.max(0, this.coreCommissionLevels - (this.state.coreManualLevels[key] || 0)); }
+  coreCommissioned(key) { return this.state.coreAutoUnlocked.includes(key); }
+  // automatic=true 表示走自动线：只认已转自动的科技；手动渠道则只认还没转自动的
+  coreAvailable(key, automatic = false) {
     const spec = this.coreSpecs[key];
-    return Boolean(spec && this.state.completedPlanets >= spec.unlockResets && this.state.coreLevels[key] < spec.maxLevel);
+    if (!spec || this.state.completedPlanets < spec.unlockResets || this.state.coreLevels[key] >= spec.maxLevel) return false;
+    return automatic ? this.coreCommissioned(key) : !this.coreCommissioned(key);
   }
-  purchaseCore(key) {
-    if (!this.coreAvailable(key)) return { ok: false, reason: "locked" };
+  purchaseCore(key, options = {}) {
+    const { automatic = false, helper = false, grant = false } = typeof options === "object" ? options : {};
+    const spec = this.coreSpecs[key];
+    if (!spec) return { ok: false, reason: "locked" };
+    const unlocked = this.state.completedPlanets >= spec.unlockResets && this.state.coreLevels[key] < spec.maxLevel;
+    if (!unlocked || (!grant && !this.coreAvailable(key, automatic))) return { ok: false, reason: "locked" };
     const cost = this.coreCost(key);
     if (this.state.cores < cost) return { ok: false, reason: "cores" };
     this.state.cores -= cost; this.state.coreLevels[key] += 1;
+    let commissioned = false;
+    if (!automatic && this.state.coreManualLevels[key] < this.coreCommissionLevels) {
+      this.state.coreManualLevels[key] += 1;
+      if (this.state.coreManualLevels[key] >= this.coreCommissionLevels && !this.coreCommissioned(key)) {
+        this.state.coreAutoUnlocked.push(key); commissioned = true;
+      }
+    }
     this._voyage = null;
-    return { ok: true, key, cost, level: this.state.coreLevels[key] };
+    return { ok: true, key, cost, level: this.state.coreLevels[key], commissioned,
+      source: automatic ? "auto" : grant ? "sector" : helper ? "helper" : "manual" };
   }
-  coreRouteSpecs() {
-    return Object.values(this.coreSpecs).filter((spec) => this.state.coreAutoRoute !== "off");
-  }
-  coreRouteScore(spec) {
-    const preferences = {
-      speed: ["global_linear", "global_speed", "speed_strength"],
-      rebuild: ["income_strength", "local_discount", "equipment_strength"],
-      burst: ["opening_burst", "global_speed", "completion_depth"],
-    };
-    return this.coreCost(spec.key) / (this.state.completedPlanets >= 10
-      && preferences[this.state.coreAutoRoute]?.includes(spec.effectKind) ? 4 : 1);
+  // 自动线能碰的科技：已转自动的；若「核心夜班助手」开着，没转自动的也由它笨买（最便宜优先）
+  coreAutoCandidates() {
+    return Object.values(this.coreSpecs).filter((spec) => this.coreAvailable(spec.key, true)
+      || (this.state.coreHelperEnabled && this.coreAvailable(spec.key, false)));
   }
   autoPurchaseCore() {
     const purchases = [];
     for (;;) {
-      const spec = this.coreRouteSpecs().filter((item) => this.coreAvailable(item.key))
-        .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+      const spec = this.coreAutoCandidates()
+        .sort((a, b) => this.coreCost(a.key) - this.coreCost(b.key) || a.key.localeCompare(b.key))[0];
       if (!spec || this.coreCost(spec.key) > this.state.cores) return purchases;
-      purchases.push(this.purchaseCore(spec.key));
+      const automatic = this.coreCommissioned(spec.key);
+      const result = this.purchaseCore(spec.key, { automatic, helper: !automatic });
+      if (!result.ok) return purchases;
+      purchases.push(result);
     }
   }
-  setCoreAutoRoute(route) {
-    if (!["off", "balanced", "speed", "rebuild", "burst"].includes(route)) throw new Error("Invalid core automation route");
-    this.state.coreAutoRoute = route;
+  setCoreHelperEnabled(enabled) {
+    if (typeof enabled !== "boolean") throw new Error("Core helper setting must be boolean");
+    this.state.coreHelperEnabled = enabled;
     return this.autoPurchaseCore();
   }
   galaxyComplete() { return this.state.completedPlanets >= (this.data.prestige?.galaxyTargetPlanets ?? 1000000); }
+  // 最后一个星区始终等于银河目标，避免数据里写两份、标定工具改了一处就对不上。
+  sectors() {
+    const list = this.data.prestige?.sectors || [];
+    if (!list.length) return list;
+    const goal = Number(this.data.prestige?.galaxyTargetPlanets ?? 0);
+    if (this._sectorCache?.goal !== goal) {
+      this._sectorCache = { goal, resolved: list.map((sector, index) =>
+        index === list.length - 1 ? { ...sector, targetPlanets: goal } : sector) };
+    }
+    return this._sectorCache.resolved;
+  }
+  sectorBonusCores(completed = this.state.completedPlanets) {
+    return this.sectors().reduce((sum, sec) => sum + (completed >= sec.targetPlanets ? Number(sec.rewardCores || 0) : 0), 0);
+  }
+  clearedSectors(completed = this.state.completedPlanets) {
+    return this.sectors().filter((sec) => completed >= sec.targetPlanets).length;
+  }
+  sectorProgress() {
+    const list = this.sectors();
+    if (!list.length) return null;
+    const done = this.state.completedPlanets;
+    const index = Math.min(this.clearedSectors(), list.length - 1);
+    const sector = list[index];
+    const from = index === 0 ? 0 : list[index - 1].targetPlanets;
+    const span = Math.max(1, sector.targetPlanets - from);
+    return { index, sector, from, target: sector.targetPlanets, done, total: list.length,
+             ratio: clamp((done - from) / span, 0, 1), cleared: this.clearedSectors() };
+  }
+  // 跨越星区分界时结算：先发奖励核心，再用正规购买流程装配本星区的标志科技，
+  // 这样「核心产出 - 核心花费」的存档对账恒等式依然成立。
+  grantSectorRewards(before) {
+    const granted = [];
+    for (const sec of this.sectors()) {
+      if (sec.targetPlanets <= before || sec.targetPlanets > this.state.completedPlanets) continue;
+      this.state.cores += Number(sec.rewardCores || 0);
+      let tech = null;
+      for (let i = 0; i < Number(sec.rewardTechLevels || 0); i += 1) {
+        const result = this.purchaseCore(sec.rewardTechKey, { grant: true });
+        if (!result.ok) break;
+        tech = { key: sec.rewardTechKey, level: result.level };
+      }
+      granted.push({ sector: sec, cores: Number(sec.rewardCores || 0), tech });
+      this._voyage = null;
+    }
+    if (granted.length) this.pendingSectorRewards = (this.pendingSectorRewards || []).concat(granted);
+    return granted;
+  }
+  takeSectorRewards() { const list = this.pendingSectorRewards || []; this.pendingSectorRewards = []; return list; }
+  // 已解锁（可见）的永久科技数量，供界面播报「发现新科技」
+  unlockedCoreKeys(completed = this.state.completedPlanets) {
+    return Object.values(this.coreSpecs).filter((spec) => completed >= spec.unlockResets).map((spec) => spec.key);
+  }
+  manualDepartureQuota() { return Number(this.rules.manualDepartures ?? 0); }
+  autoDepartReady() { return this.state.autoDepart && this.state.resets >= this.manualDepartureQuota(); }
   setAutoDepart(enabled) {
     if (typeof enabled !== "boolean") throw new Error("Auto departure setting must be boolean");
     this.state.autoDepart = enabled;
@@ -391,6 +449,7 @@ export class S2Engine {
     s.planetHistory.push({ planet: s.completedPlanets, minutes: s.minute - s.planetStartedMinute,
       completedMinute: s.minute, reward, allMaxedMinute: s.allMaxedMinute });
     s.planetHistory = s.planetHistory.slice(-this.data.prestige.historyLimit);
+    this.grantSectorRewards(s.completedPlanets - 1);
     return true;
   }
   departPlanet() {
@@ -661,14 +720,17 @@ export class S2Engine {
   }
   planetsUntilCorePurchase(limit) {
     const s = this.state;
-    const specs = this.coreRouteSpecs().filter((spec) => s.coreLevels[spec.key] < spec.maxLevel);
+    const specs = Object.values(this.coreSpecs).filter((spec) => s.coreLevels[spec.key] < spec.maxLevel);
     if (!specs.length) return limit;
     // An unlock may change the savings target. Never binary-search across it.
     for (const spec of specs) {
       if (spec.unlockResets > s.completedPlanets) limit = Math.min(limit, spec.unlockResets - s.completedPlanets);
     }
-    const target = specs.filter((spec) => this.coreAvailable(spec.key))
-      .sort((a, b) => this.coreRouteScore(a) - this.coreRouteScore(b))[0];
+    for (const sec of this.sectors()) {
+      if (sec.targetPlanets > s.completedPlanets) limit = Math.min(limit, sec.targetPlanets - s.completedPlanets);
+    }
+    const target = this.coreAutoCandidates()
+      .sort((a, b) => this.coreCost(a.key) - this.coreCost(b.key) || a.key.localeCompare(b.key))[0];
     if (!target) return limit;
     const step = this.data.prestige.rewardStep;
     const earned = earnedCores(s.completedPlanets, step);
@@ -696,8 +758,9 @@ export class S2Engine {
     }
     s.planetHistory = history.slice(-this.data.prestige.historyLimit);
     s.completedPlanets = finalPlanet;
+    this.grantSectorRewards(first);
     this.syncVoyageClock(finish);
-    const parked = !s.autoDepart || this.galaxyComplete();
+    const parked = !this.autoDepartReady() || this.galaxyComplete();
     s.resets = finalPlanet - Number(parked);
     s.planetComplete = parked;
     if (parked) {
@@ -722,7 +785,7 @@ export class S2Engine {
     while (s.minute < endMinute) {
       if (++boundaries > maxBoundaries) throw new Error("Permanent event budget exceeded");
       if (s.planetComplete) {
-        if (!s.autoDepart || s.resets === 0 || this.galaxyComplete()) {
+        if (!this.autoDepartReady() || this.galaxyComplete()) {
           this.syncVoyageClock(endMinute); return;
         }
         this.departPlanet();
@@ -733,7 +796,7 @@ export class S2Engine {
       if (age === 0 && plan.initialAge === 0) {
         let count = Math.floor(remaining / plan.duration);
         count = Math.min(count, this.data.prestige.galaxyTargetPlanets - s.completedPlanets);
-        if (!s.autoDepart) count = Math.min(count, 1);
+        if (!this.autoDepartReady()) count = Math.min(count, 1);
         if (count > 0) {
           count = this.planetsUntilCorePurchase(count);
           this.settleVoyages(plan, count);
@@ -747,7 +810,7 @@ export class S2Engine {
         this.finishPlanet();
         this.lastBatchSummary.planets += 1;
         this.autoPurchaseCore();
-        if (s.autoDepart && !this.galaxyComplete()) this.departPlanet();
+        if (this.autoDepartReady() && !this.galaxyComplete()) this.departPlanet();
       } else {
         this.syncVoyageClock(endMinute);
         return;
@@ -792,7 +855,7 @@ export class S2Engine {
         this.lastBlockEvents.push(...this.helperPurchase().map((item) => ({ ...item, minute: this.state.minute })));
         this.state.nextHelperMinute += Number(this.rules.helperIntervalMinutes);
       }
-      if (this.state.planetComplete && this.state.resets > 0 && this.state.autoDepart && !this.galaxyComplete()) this.departPlanet();
+      if (this.state.planetComplete && this.autoDepartReady() && !this.galaxyComplete()) this.departPlanet();
     }
     return bought;
   }
@@ -838,6 +901,8 @@ export function runReplay(data, options = {}) {
   if (!profile) throw new Error(`Unknown profile ${profileKey}`);
   const checks = new Set(profile.checkMinutes.map(Number));
   const engine = new S2Engine(data, { seed }); const snapshots = []; const events = [];
+  // 永久科技的夜班助手默认开着；回放可以显式关掉，用来观察"玩家自己不买核心科技"的走势
+  if (options.coreHelper === false) engine.setCoreHelperEnabled(false);
   for (let day = 1; day <= days; day += 1) {
     if (day > 1) engine.startNewDay();
     const autoBefore = engine.state.totalAutoLevels;

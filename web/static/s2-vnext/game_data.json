@@ -2,7 +2,7 @@
   "$schema": "./game_data.schema.json",
   "schemaVersion": 3,
   "gameVersion": "s2-vnext-v3-helper-1",
-  "contentVersion": "prestige-3",
+  "contentVersion": "sector-1",
   "playtestDays": 30,
   "rules": {
     "settlementMinutes": 10,
@@ -20,49 +20,15 @@
     "helperIntervalMinutes": 1440,
     "baseCriticalDamage": 1,
     "manualBurstWarningLevels": 30,
-    "batchCommandMaxLevels": 100
+    "batchCommandMaxLevels": 100,
+    "startingCredits": 300,
+    "manualDepartures": 5
   },
   "prestige": {
     "planetTargetDepth": 2.4e+19,
-    "galaxyTargetPlanets": 6493000,
+    "galaxyTargetPlanets": 27282000,
     "openingBurstSeconds": 1,
-    "legacyCorePrices": {
-      "planet_drive": [
-        1,
-        3,
-        8
-      ],
-      "core_drill": [
-        1,
-        2,
-        8
-      ],
-      "core_refining": [
-        2,
-        2,
-        8
-      ],
-      "core_depth": [
-        2,
-        2,
-        8
-      ],
-      "stellar_forge": [
-        3,
-        2,
-        8
-      ],
-      "stellar_relay": [
-        5,
-        2,
-        8
-      ],
-      "galactic_drive": [
-        10,
-        2,
-        20
-      ]
-    },
+    "coreCommissionLevels": 3,
     "rewardStep": 5,
     "historyLimit": 20,
     "upgrades": [
@@ -111,48 +77,15 @@
         "effectPerLevel": 0.5
       },
       {
-        "key": "stellar_forge",
-        "name": "恒星系装备铸造",
-        "description": "每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的20%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。",
-        "unlockResets": 3,
-        "baseCost": 3,
-        "costGrowth": 6,
-        "maxLevel": 8,
-        "effectKind": "equipment_strength",
-        "effectPerLevel": 0.2
-      },
-      {
-        "key": "stellar_relay",
-        "name": "恒星系联合勘探",
-        "description": "每级让当前星球每条已建成的**自动线**贡献1.5%的加成；各条线的贡献相加，再同时提升**矿币收益**和**挖矿深度**。换星后需重建设备，才能重新获得这些加成。",
-        "unlockResets": 5,
-        "baseCost": 4,
-        "costGrowth": 8,
-        "maxLevel": 8,
-        "effectKind": "line_synergy",
-        "effectPerLevel": 0.015
-      },
-      {
-        "key": "galactic_drive",
-        "name": "银河远航引擎",
-        "description": "每级令**矿币收益**和**挖矿深度**同时乘以约1.189；每4级合计翻倍。空矿井也生效，但本地科技仍需从零付费建设。",
-        "unlockResets": 10,
-        "baseCost": 10,
+        "key": "quantum_entanglement",
+        "name": "宏量子纠缠",
+        "description": "挖穿一颗星球时，宏观纠缠让另外的星球同步共振。每级使当次挖穿额外结算 0.2 颗星球 的核心与进度（多颗星球同时爆炸），换星保留。",
+        "unlockResets": 2,
+        "baseCost": 2,
         "costGrowth": 3,
-        "maxLevel": 20,
-        "effectKind": "global_speed",
-        "effectPerLevel": 0.25
-      },
-      {
-        "key": "stellar_procurement",
-        "name": "星际标准化建设",
-        "description": "永久降低全部本地设备的**矿币价格**。第L级将原价除以(1+0.25L)，8级时只需原价的三分之一；不降低**星球核心**价格，不改变**挖矿深度**和科技前置要求。适合反复重建设备。",
-        "unlockResets": 3,
-        "baseCost": 5,
-        "costGrowth": 3,
-        "maxLevel": 8,
-        "effectKind": "local_discount",
-        "effectPerLevel": 0.25
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.01
       },
       {
         "key": "planetary_exhaustion",
@@ -166,92 +99,15 @@
         "effectPerLevel": 1
       },
       {
-        "key": "big_bang",
-        "name": "大爆发",
-        "description": "每次抵达新星球后的前1秒，**矿币收益**和**挖矿深度**同时获得爆发倍率：1/2/3级为×34/×67/×100。过期恢复正常，购买不会重启这一秒；长航程收益有限，短航程可让整颗星球都处于爆发期。",
-        "unlockResets": 1000,
-        "baseCost": 100000,
-        "costGrowth": 10,
-        "maxLevel": 3,
-        "effectKind": "opening_burst",
-        "effectPerLevel": 33
-      },
-      {
-        "key": "quantum_entanglement",
-        "name": "宏量子纠缠",
-        "description": "挖穿一颗星球时，宏观纠缠让另外的星球同步共振。每级使当次挖穿额外结算 0.2 颗星球 的核心与进度（多颗星球同时爆炸），换星保留。",
-        "unlockResets": 2,
-        "baseCost": 2,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "global_linear",
-        "effectPerLevel": 0.01
-      },
-      {
-        "key": "entangled_echo",
-        "name": "纠缠回声",
-        "description": "纠缠态的回声让已挖穿的星球仍在虚空中产出。每级使**矿币收益**与**挖矿深度**在星球挖穿后仍保留 12% 的余烬加成（可叠加）。",
-        "unlockResets": 4,
+        "key": "stellar_forge",
+        "name": "恒星系装备铸造",
+        "description": "每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的20%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。",
+        "unlockResets": 3,
         "baseCost": 3,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "global_linear",
-        "effectPerLevel": 0.006
-      },
-      {
-        "key": "many_worlds_mining",
-        "name": "多世界分矿",
-        "description": "在平行世界同时开矿。每级使**并行开采效率**类本地科技的基础强度 +18%（与多世界分支数相关）。",
-        "unlockResets": 6,
-        "baseCost": 5,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "equipment_strength",
-        "effectPerLevel": 0.009
-      },
-      {
-        "key": "math_weapon",
-        "name": "数学武器·真理律令",
-        "description": "用数学规律直接改写开采公式。每级使全部本地科技的基础效果 +15%（包括速度、收入、深度等所有乘区），重新购买后生效。",
-        "unlockResets": 8,
-        "baseCost": 8,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "equipment_strength",
-        "effectPerLevel": 0.0075
-      },
-      {
-        "key": "riemann_engine",
-        "name": "黎曼引擎",
-        "description": "以黎曼猜想的零点分布优化钻探路径。每级使**挖矿速度**科技单级强度 +22%。",
-        "unlockResets": 12,
-        "baseCost": 12,
-        "costGrowth": 3,
+        "costGrowth": 6,
         "maxLevel": 8,
-        "effectKind": "speed_strength",
-        "effectPerLevel": 0.011
-      },
-      {
-        "key": "godel_shield",
-        "name": "哥德尔护盾",
-        "description": "不完备性护盾让矿渣悖论自指。每级使**额外深度**类科技强度 +25%。",
-        "unlockResets": 15,
-        "baseCost": 15,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "depth_strength",
-        "effectPerLevel": 0.01
-      },
-      {
-        "key": "turing_tape",
-        "name": "图灵缎带",
-        "description": "无限纸带上的矿工永不停歇。每级使**班次接力**与**科技共振**的“自动线”计数 +1 虚拟加成（不建也算）。",
-        "unlockResets": 18,
-        "baseCost": 10,
-        "costGrowth": 4,
-        "maxLevel": 8,
-        "effectKind": "line_synergy",
-        "effectPerLevel": 0.002
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.2
       },
       {
         "key": "blackhole_furnace",
@@ -265,37 +121,37 @@
         "effectPerLevel": 0.012
       },
       {
-        "key": "hawking_radiation",
-        "name": "霍金辐射阱",
-        "description": "黑洞蒸发辐射回收能量。每级使**额外收入**强度 +28%。",
-        "unlockResets": 7,
-        "baseCost": 6,
+        "key": "stellar_procurement",
+        "name": "星际标准化建设",
+        "description": "永久降低全部本地设备的**矿币价格**。第L级将原价除以(1+0.25L)，8级时只需原价的三分之一；不降低**星球核心**价格，不改变**挖矿深度**和科技前置要求。适合反复重建设备。",
+        "unlockResets": 3,
+        "baseCost": 5,
         "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "income_strength",
-        "effectPerLevel": 0.0112
+        "maxLevel": 8,
+        "effectKind": "local_discount",
+        "effectPerLevel": 0.25
       },
       {
-        "key": "event_horizon",
-        "name": "视界编织",
-        "description": "在视界表面编织采矿网络。每级使**并行开采效率** +0.35。",
-        "unlockResets": 10,
-        "baseCost": 7,
+        "key": "entangled_echo",
+        "name": "纠缠回声",
+        "description": "纠缠态的回声让已挖穿的星球仍在虚空中产出。每级使**矿币收益**与**挖矿深度**在星球挖穿后仍保留 12% 的余烬加成（可叠加）。",
+        "unlockResets": 4,
+        "baseCost": 3,
         "costGrowth": 3,
         "maxLevel": 5,
         "effectKind": "global_linear",
-        "effectPerLevel": 0.0175
+        "effectPerLevel": 0.006
       },
       {
-        "key": "singularity_heart",
-        "name": "奇点之心",
-        "description": "每级令矿币与深度同时 ×1.15（黑洞质量增长）。",
-        "unlockResets": 20,
-        "baseCost": 20,
-        "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "global_linear",
-        "effectPerLevel": 0.0075
+        "key": "stellar_relay",
+        "name": "恒星系联合勘探",
+        "description": "每级让当前星球每条已建成的**自动线**贡献1.5%的加成；各条线的贡献相加，再同时提升**矿币收益**和**挖矿深度**。换星后需重建设备，才能重新获得这些加成。",
+        "unlockResets": 5,
+        "baseCost": 4,
+        "costGrowth": 8,
+        "maxLevel": 8,
+        "effectKind": "line_synergy",
+        "effectPerLevel": 0.015
       },
       {
         "key": "string_resonance",
@@ -309,6 +165,50 @@
         "effectPerLevel": 0.002
       },
       {
+        "key": "many_worlds_mining",
+        "name": "多世界分矿",
+        "description": "在平行世界同时开矿。每级使**并行开采效率**类本地科技的基础强度 +18%（与多世界分支数相关）。",
+        "unlockResets": 6,
+        "baseCost": 5,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.009
+      },
+      {
+        "key": "maxwell_sorter",
+        "name": "麦克斯韦妖分拣",
+        "description": "妖精分拣让矿渣自动归类。每级使本地成本再 ÷1.18（与标准化叠加）。",
+        "unlockResets": 6,
+        "baseCost": 8,
+        "costGrowth": 4,
+        "maxLevel": 8,
+        "effectKind": "local_discount",
+        "effectPerLevel": 0.0216
+      },
+      {
+        "key": "hawking_radiation",
+        "name": "霍金辐射阱",
+        "description": "黑洞蒸发辐射回收能量。每级使**额外收入**强度 +28%。",
+        "unlockResets": 7,
+        "baseCost": 6,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "income_strength",
+        "effectPerLevel": 0.0112
+      },
+      {
+        "key": "math_weapon",
+        "name": "数学武器·真理律令",
+        "description": "用数学规律直接改写开采公式。每级使全部本地科技的基础效果 +15%（包括速度、收入、深度等所有乘区），重新购买后生效。",
+        "unlockResets": 8,
+        "baseCost": 8,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.0075
+      },
+      {
         "key": "dimensional_fold",
         "name": "维度折叠引擎",
         "description": "折叠空间让钻头同时出现在多个深度。每级使矿币与深度 ×1.2（维度折叠）。",
@@ -320,15 +220,26 @@
         "effectPerLevel": 0.0156
       },
       {
-        "key": "causality_editor",
-        "name": "因果律编辑器",
-        "description": "先写结果再补过程。每级使**暴击率**上限 +2%（突破65%限制，最高75%）。",
-        "unlockResets": 14,
-        "baseCost": 13,
+        "key": "event_horizon",
+        "name": "视界编织",
+        "description": "在视界表面编织采矿网络。每级使**并行开采效率** +0.35。",
+        "unlockResets": 10,
+        "baseCost": 7,
         "costGrowth": 3,
         "maxLevel": 5,
-        "effectKind": "equipment_strength",
-        "effectPerLevel": 0.004
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.0175
+      },
+      {
+        "key": "galactic_drive",
+        "name": "银河远航引擎",
+        "description": "每级令**矿币收益**和**挖矿深度**同时乘以约1.189；每4级合计翻倍。空矿井也生效，但本地科技仍需从零付费建设。",
+        "unlockResets": 10,
+        "baseCost": 10,
+        "costGrowth": 3,
+        "maxLevel": 20,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.25
       },
       {
         "key": "dyson_cone",
@@ -342,15 +253,15 @@
         "effectPerLevel": 0.009
       },
       {
-        "key": "antimatter_tide",
-        "name": "反物质潮汐",
-        "description": "正反物质湮灭冲击岩层。每级使**矿石脆弱度**强度 +20%。",
-        "unlockResets": 16,
-        "baseCost": 14,
+        "key": "riemann_engine",
+        "name": "黎曼引擎",
+        "description": "以黎曼猜想的零点分布优化钻探路径。每级使**挖矿速度**科技单级强度 +22%。",
+        "unlockResets": 12,
+        "baseCost": 12,
         "costGrowth": 3,
-        "maxLevel": 5,
-        "effectKind": "equipment_strength",
-        "effectPerLevel": 0.01
+        "maxLevel": 8,
+        "effectKind": "speed_strength",
+        "effectPerLevel": 0.011
       },
       {
         "key": "time_sand",
@@ -364,6 +275,39 @@
         "effectPerLevel": 0.014
       },
       {
+        "key": "causality_editor",
+        "name": "因果律编辑器",
+        "description": "先写结果再补过程。每级使**暴击率**上限 +2%（突破65%限制，最高75%）。",
+        "unlockResets": 14,
+        "baseCost": 13,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.004
+      },
+      {
+        "key": "godel_shield",
+        "name": "哥德尔护盾",
+        "description": "不完备性护盾让矿渣悖论自指。每级使**额外深度**类科技强度 +25%。",
+        "unlockResets": 15,
+        "baseCost": 15,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "depth_strength",
+        "effectPerLevel": 0.01
+      },
+      {
+        "key": "antimatter_tide",
+        "name": "反物质潮汐",
+        "description": "正反物质湮灭冲击岩层。每级使**矿石脆弱度**强度 +20%。",
+        "unlockResets": 16,
+        "baseCost": 14,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.01
+      },
+      {
         "key": "imaginary_route",
         "name": "虚数航道",
         "description": "在虚数空间开辟航道。每级使**过量穿透** +0.15（不耗暴击）。",
@@ -375,6 +319,17 @@
         "effectPerLevel": 0.006
       },
       {
+        "key": "turing_tape",
+        "name": "图灵缎带",
+        "description": "无限纸带上的矿工永不停歇。每级使**班次接力**与**科技共振**的“自动线”计数 +1 虚拟加成（不建也算）。",
+        "unlockResets": 18,
+        "baseCost": 10,
+        "costGrowth": 4,
+        "maxLevel": 8,
+        "effectKind": "line_synergy",
+        "effectPerLevel": 0.002
+      },
+      {
         "key": "gaia_network",
         "name": "盖亚共生网络",
         "description": "星球意识协助采矿。每级使**猫矿工产能**与协同强度 +16%。",
@@ -384,6 +339,17 @@
         "maxLevel": 5,
         "effectKind": "equipment_strength",
         "effectPerLevel": 0.008
+      },
+      {
+        "key": "singularity_heart",
+        "name": "奇点之心",
+        "description": "每级令矿币与深度同时 ×1.15（黑洞质量增长）。",
+        "unlockResets": 20,
+        "baseCost": 20,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.0075
       },
       {
         "key": "stardust_alchemy",
@@ -406,17 +372,6 @@
         "maxLevel": 5,
         "effectKind": "equipment_strength",
         "effectPerLevel": 0.006
-      },
-      {
-        "key": "maxwell_sorter",
-        "name": "麦克斯韦妖分拣",
-        "description": "妖精分拣让矿渣自动归类。每级使本地成本再 ÷1.18（与标准化叠加）。",
-        "unlockResets": 6,
-        "baseCost": 8,
-        "costGrowth": 4,
-        "maxLevel": 8,
-        "effectKind": "local_discount",
-        "effectPerLevel": 0.0216
       },
       {
         "key": "klein_storage",
@@ -496,17 +451,6 @@
         "effectPerLevel": 0.009
       },
       {
-        "key": "vacuum_decay",
-        "name": "真空衰变",
-        "description": "触发局部真空衰变，能量爆发。每级使新星首秒 +40（叠加大爆发）。",
-        "unlockResets": 100,
-        "baseCost": 160,
-        "costGrowth": 4,
-        "maxLevel": 3,
-        "effectKind": "opening_burst",
-        "effectPerLevel": 2.0
-      },
-      {
         "key": "eternal_city",
         "name": "永恒城",
         "description": "建成永不重置的城。每级使本地科技满级后深度 +1.2（与解体工程叠加）。",
@@ -573,6 +517,17 @@
         "effectPerLevel": 0.0144
       },
       {
+        "key": "vacuum_decay",
+        "name": "真空衰变",
+        "description": "触发局部真空衰变，能量爆发。每级使新星首秒 +40（叠加大爆发）。",
+        "unlockResets": 100,
+        "baseCost": 160,
+        "costGrowth": 4,
+        "maxLevel": 3,
+        "effectKind": "opening_burst",
+        "effectPerLevel": 2.0
+      },
+      {
         "key": "mythic_forge",
         "name": "神话熔炉",
         "description": "神话时代的余烬重燃。每级使**额外深度** +38%。",
@@ -615,6 +570,324 @@
         "maxLevel": 5,
         "effectKind": "global_speed",
         "effectPerLevel": 0.0192
+      },
+      {
+        "key": "kerr_tow",
+        "name": "克尔引力牵引",
+        "description": "利用克尔黑洞的拖曳效应牵引矿船。每级令**矿币收益**和**挖矿深度**同时乘以约 ×1.008，满 5 级合计约 ×1.042。空矿井也生效，本地科技仍需从零付费建设。换星保留。",
+        "unlockResets": 390,
+        "baseCost": 760,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.012
+      },
+      {
+        "key": "superstring_mill",
+        "name": "超弦编织厂",
+        "description": "把弦直接编成矿机骨架。每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的 0.9%，满 5 级共 4.5%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。换星保留，重新购买设备后生效。",
+        "unlockResets": 620,
+        "baseCost": 1100,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.009
+      },
+      {
+        "key": "zero_point_tap",
+        "name": "零点能抽取",
+        "description": "从真空零点能里抽取结算差额，**矿币收益**提升。换星保留。",
+        "unlockResets": 930,
+        "baseCost": 1700,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "income_strength",
+        "effectPerLevel": 0.013
+      },
+      {
+        "key": "lens_quarry",
+        "name": "引力透镜矿场",
+        "description": "用引力透镜把钻头的作用力聚焦到一点，**挖矿深度**提升。换星保留。",
+        "unlockResets": 1400,
+        "baseCost": 2800,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "depth_strength",
+        "effectPerLevel": 0.014
+      },
+      {
+        "key": "dyson_swarm",
+        "name": "戴森球群",
+        "description": "整个恒星系铺满采能卫星。直接给总倍率加数：每级 +0.018，满 5 级 +0.09。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 2300,
+        "baseCost": 4700,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.018
+      },
+      {
+        "key": "warp_lane",
+        "name": "曲率泡航道",
+        "description": "在星区之间铺设常驻曲率泡。每级令**矿币收益**和**挖矿深度**同时乘以约 ×1.010，满 5 级合计约 ×1.053。空矿井也生效，本地科技仍需从零付费建设。换星保留。",
+        "unlockResets": 3600,
+        "baseCost": 8800,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.015
+      },
+      {
+        "key": "anneal_scheduler",
+        "name": "量子退火调度",
+        "description": "用退火算法重排施工顺序，先建什么后建什么都算到了最省的那一种。永久降低全部本地设备的**矿币价格**：第L级把原价除以 (1+0.02L)，满 8 级约为原价的 86%。不降低**星球核心**价格，也不改变**挖矿深度**和科技前置要求。换星保留。",
+        "unlockResets": 5800,
+        "baseCost": 17000,
+        "costGrowth": 3,
+        "maxLevel": 8,
+        "effectKind": "local_discount",
+        "effectPerLevel": 0.02
+      },
+      {
+        "key": "fermi_answer",
+        "name": "费米解答",
+        "description": "既然没人来，那就自己铺满。每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的 1.1%，满 5 级共 5.5%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。换星保留，重新购买设备后生效。",
+        "unlockResets": 9600,
+        "baseCost": 38000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.011
+      },
+      {
+        "key": "spacetime_anchor",
+        "name": "时空锚点",
+        "description": "给每条流水线钉一枚时空锚。每级让当前星球每条已建成的**自动线**多贡献 0.22% 的加成，各条线相加后同时提升**矿币收益**和**挖矿深度**。换星后需重建设备才能重新获得这些加成。",
+        "unlockResets": 16000,
+        "baseCost": 96000,
+        "costGrowth": 3,
+        "maxLevel": 8,
+        "effectKind": "line_synergy",
+        "effectPerLevel": 0.0022
+      },
+      {
+        "key": "entropy_reverser",
+        "name": "熵减引擎",
+        "description": "局部逆转热力学第二定律。直接给总倍率加数：每级 +0.02，满 5 级 +0.1。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 33000,
+        "baseCost": 220000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.02
+      },
+      {
+        "key": "galactic_pump",
+        "name": "银河环流泵",
+        "description": "把整条旋臂的物质流导进结算口，**矿币收益**提升。换星保留。",
+        "unlockResets": 61000,
+        "baseCost": 520000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "income_strength",
+        "effectPerLevel": 0.015
+      },
+      {
+        "key": "dark_lattice",
+        "name": "暗物质网格",
+        "description": "以暗物质结晶作钻头衬底，**挖矿深度**提升。换星保留。",
+        "unlockResets": 100000,
+        "baseCost": 1100000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "depth_strength",
+        "effectPerLevel": 0.017
+      },
+      {
+        "key": "samsara_algo",
+        "name": "轮回算法",
+        "description": "把上一轮的最优解直接烧进下一轮。每级令**矿币收益**和**挖矿深度**同时乘以约 ×1.012，满 5 级合计约 ×1.061。空矿井也生效，本地科技仍需从零付费建设。换星保留。",
+        "unlockResets": 170000,
+        "baseCost": 2600000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.017
+      },
+      {
+        "key": "cosmic_string_mine",
+        "name": "宇宙弦采掘",
+        "description": "直接开采宇宙弦本身作为建材。每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的 1.2%，满 5 级共 6%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。换星保留，重新购买设备后生效。",
+        "unlockResets": 280000,
+        "baseCost": 6400000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.012
+      },
+      {
+        "key": "genesis_code",
+        "name": "创世代码",
+        "description": "读到了这个宇宙的源码，并改了两行。直接给总倍率加数：每级 +0.022，满 5 级 +0.11。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 560000,
+        "baseCost": 15000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.022
+      },
+      {
+        "key": "heat_death_recycler",
+        "name": "热寂回收厂",
+        "description": "回收热寂宇宙的残值。本星全部本地科技满级之后，额外提高**挖矿深度**：1/2/3 级为 ×1.1/×1.2/×1.3；不增加**矿币收益**。换星后暂时失效，设备重新满级才恢复。换星保留。",
+        "unlockResets": 960000,
+        "baseCost": 36000000,
+        "costGrowth": 3,
+        "maxLevel": 3,
+        "effectKind": "completion_depth",
+        "effectPerLevel": 0.1
+      },
+      {
+        "key": "multiverse_hub",
+        "name": "多元宇宙枢纽",
+        "description": "同时在多个宇宙开矿，并把结果并档。每级令**矿币收益**和**挖矿深度**同时乘以约 ×1.014，满 5 级合计约 ×1.072。空矿井也生效，本地科技仍需从零付费建设。换星保留。",
+        "unlockResets": 1600000,
+        "baseCost": 98000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.02
+      },
+      {
+        "key": "big_bang",
+        "name": "大爆发",
+        "description": "重演一次大爆炸：星球越是瞬间挖穿，这一秒就越是全部。每次抵达新星球后的前 1 秒，**矿币收益**和**挖矿深度**同时获得爆发倍率：1/2/3 级为 ×34/×67/×100。过期恢复正常，购买不会重启这一秒。换星保留。",
+        "unlockResets": 2300000,
+        "baseCost": 1700000000,
+        "costGrowth": 3,
+        "maxLevel": 3,
+        "effectKind": "opening_burst",
+        "effectPerLevel": 33
+      },
+      {
+        "key": "omega_observer",
+        "name": "终焉观测者",
+        "description": "观测行为本身就在产出矿石。直接给总倍率加数：每级 +0.025，满 5 级 +0.125。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 2800000,
+        "baseCost": 250000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.025
+      },
+      {
+        "key": "cmb_echo",
+        "name": "宇宙微波回响",
+        "description": "整片宇宙的背景辐射都成了可读的矿脉图。直接给总倍率加数：每级 +0.02，满 5 级 +0.1。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 4900000,
+        "baseCost": 590000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.02
+      },
+      {
+        "key": "klein_galaxy",
+        "name": "克莱因银河",
+        "description": "把银河折成一个没有内外之分的曲面，运输距离归零。每级令**矿币收益**和**挖矿深度**同时乘以约 ×1.013，满 5 级合计约 ×1.064。空矿井也生效，本地科技仍需从零付费建设。换星保留。",
+        "unlockResets": 7900000,
+        "baseCost": 1400000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_speed",
+        "effectPerLevel": 0.018
+      },
+      {
+        "key": "last_proton",
+        "name": "最后的质子",
+        "description": "连质子衰变都被拿来当原料。每级使除**挖矿速度**和**暴击率**之外的本地科技单级强度增加基础值的 1.3%，满 5 级共 6.5%；与**核心精炼工艺**、**地核穿透材料**的强化相乘。换星保留，重新购买设备后生效。",
+        "unlockResets": 12000000,
+        "baseCost": 3000000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "equipment_strength",
+        "effectPerLevel": 0.013
+      },
+      {
+        "key": "final_chapter",
+        "name": "万物终章",
+        "description": "写下这条银河的最后一行记录。直接给总倍率加数：每级 +0.03，满 5 级 +0.15。同时提高**矿币收益**和**挖矿深度**，空矿井也生效。换星保留。",
+        "unlockResets": 18000000,
+        "baseCost": 7500000000,
+        "costGrowth": 3,
+        "maxLevel": 5,
+        "effectKind": "global_linear",
+        "effectPerLevel": 0.03
+      }
+    ],
+    "sectors": [
+      {
+        "key": "s1",
+        "name": "启明星区",
+        "targetPlanets": 5,
+        "rewardCores": 3,
+        "rewardTechKey": "planet_drive",
+        "rewardTechLevels": 0,
+        "flavor": "前五颗被挖穿的星球——也是你亲手启程的五次。设备图纸从此不再随星球消失，矿井开始自己前往下一颗星球；第一次永久科技该买什么，由你自己决定。"
+      },
+      {
+        "key": "s2",
+        "name": "猎户支臂",
+        "targetPlanets": 12,
+        "rewardCores": 12,
+        "rewardTechKey": "galactic_drive",
+        "rewardTechLevels": 1,
+        "flavor": "十二颗星球连成一条采掘带，矿井第一次学会了自己重建自己。"
+      },
+      {
+        "key": "s3",
+        "name": "英仙旋臂",
+        "targetPlanets": 150,
+        "rewardCores": 260,
+        "rewardTechKey": "photon_sail",
+        "rewardTechLevels": 1,
+        "flavor": "旋臂级产能。星球开始以小时计被挖穿。"
+      },
+      {
+        "key": "s4",
+        "name": "人马旋臂",
+        "targetPlanets": 23000,
+        "rewardCores": 3500000,
+        "rewardTechKey": "spacetime_anchor",
+        "rewardTechLevels": 1,
+        "flavor": "黑洞被当成牵引机使用的年代。"
+      },
+      {
+        "key": "s5",
+        "name": "盾牌–半人马臂",
+        "targetPlanets": 960000,
+        "rewardCores": 5000000000,
+        "rewardTechKey": "heat_death_recycler",
+        "rewardTechLevels": 1,
+        "flavor": "整条旋臂的恒星都被套上了采能壳。"
+      },
+      {
+        "key": "s6",
+        "name": "银心悬臂",
+        "targetPlanets": 4400000,
+        "rewardCores": 100000000000,
+        "rewardTechKey": "big_bang",
+        "rewardTechLevels": 1,
+        "flavor": "逼近银心，熵开始倒流。"
+      },
+      {
+        "key": "s7",
+        "name": "银河中枢",
+        "targetPlanets": 27282000,
+        "rewardCores": 0,
+        "rewardTechKey": "final_chapter",
+        "rewardTechLevels": 1,
+        "flavor": "最后一颗星球。挖穿它，这条银河就彻底空了。"
       }
     ]
   },
