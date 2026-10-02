@@ -47,12 +47,23 @@
           <div><span>已完成</span><strong id="completedValue">0</strong><small>颗星球</small></div>
           <div><span>已离开</span><strong id="resetsValue">0</strong><small>次航程</small></div>
           <div><span>永久科技倍率</span><strong id="prestigeSpeed">×1</strong><small>不含转生次数</small></div>
-          <div><span>调试门槛</span><strong id="prestigeThreshold">3级</strong><small>当前动态值</small></div>
+          <div><span>转自动所需</span><strong id="prestigeThreshold">亲手 3 级</strong><small>每挖穿一颗少 1 级</small></div>
         </div>
+      </div>
+      <div class="sector-panel">
+        <div class="sector-heading"><strong id="sectorName">星区</strong><span id="sectorCount"></span></div>
+        <progress id="sectorProgress" max="1" value="0" aria-label="本星区进度"></progress>
+        <div class="discovery-meta"><span id="sectorProgressText"></span><span id="sectorReward"></span></div>
+        <p id="sectorFlavor" class="subtle"></p>
       </div>
       <p id="galaxyGoalNote" class="galaxy-goal-note"></p>
       <p id="prestigeLockedReward" class="prestige-locked-reward">挖穿后获得星球核心，解锁永久科技</p>
       <div id="completionAnnouncement" class="completion-announcement" role="status" aria-live="polite" hidden></div>
+      <div id="finalReport" class="final-report" hidden>
+        <h3>银河开采完成 · 结算</h3>
+        <div id="finalReportGrid" class="final-report-grid"></div>
+        <p id="finalReportTitleLine" class="final-report-title"></p>
+      </div>
       <div id="departurePanel" class="departure-panel" hidden>
         <div>
           <h3>前往下一颗星球</h3>
@@ -68,15 +79,8 @@
         <div class="core-shop-wrap">
           <div class="subsection-heading"><div><p class="eyebrow">PERMANENT TECH / 永久科技</p><h2 id="coreShopTitle">星球核心技术</h2></div><span id="permanentSummary">永久科技倍率 ×1</span></div>
           <div class="core-auto-control">
-            <label for="coreAutoRoute">核心托管</label>
-            <select id="coreAutoRoute">
-              <option value="off">关闭</option>
-              <option value="balanced">均衡低价</option>
-              <option value="speed">速度优先</option>
-              <option value="rebuild">重建优先</option>
-              <option value="burst">爆发优先</option>
-            </select>
-            <small id="coreAutoRouteHint">关闭时所有永久科技保持手动购买；旧存档不会自动开启。</small>
+            <label><input type="checkbox" id="coreHelperToggle" checked> 永久科技夜班助手</label>
+            <small id="coreHelperHint"></small>
           </div>
           <div id="coreShop" class="core-shop"></div>
         </div>
@@ -96,25 +100,24 @@
       </div>
     </section>
     <section class="control-section">
-      <div class="section-heading"><h2>时间控制台</h2><span class="subtle">全自动后连续事件采购 · 行星轮回</span></div>
+      <div class="section-heading"><h2>开始游戏</h2><span class="subtle">点一次就会一直挖下去，中途不需要再管</span></div>
       <div class="control-row">
-        <button data-advance="0.016666666666666666" data-continuous="true">推进1秒</button>
+        <span class="subtle" style="align-self:center">调试快进：</span>
         <button data-advance="60">推进1小时</button>
         <button data-advance="1200">推进20小时</button>
         <button data-advance="1440" class="primary">推进1天</button>
         <button data-advance="4320">推进3天</button>
         <button data-advance="43200">推进30天</button>
-        <button id="toggleButton">连续挖矿</button>
-        <button id="resetButton" class="danger-ghost">重置测试进度</button>
+        <button id="toggleButton" class="primary">▶ 开始挖矿游戏</button>
       </div>
       <p id="actionNotice" class="action-notice" role="status" aria-live="polite">矿井已就绪。</p>
-      <p class="subtle" style="margin-top:6px">所有推进均按 10分钟 逐段结算（完美步进）：1次30天 = 30次1天 = 720次1小时；助手仅在每日00:00触发，推进中会显示“助手触发 +N级 / 距助手下班”</p>
+      <p class="subtle" style="margin-top:6px">开工后时间会持续流动（挖穿星球、启程、开关弹窗都不会让它停下）。右侧几个「推进N天」是调试用的快进按钮，正式版不会有。</p>
     </section>
     <section class="construction-section">
       <div class="section-heading">
         <div><p class="eyebrow">WORKSHOP / 装备建设</p><h2>今天的工程</h2></div>
-        <p class="subtle">每台设备手动建设满 3 级（即「完成调试」）后转入自动线，由矿井自动继续升级——不需要一直盯着。</p>
-        <button id="planButton" class="primary">批量建设</button>
+        <p class="subtle">每台设备你亲手建满 3 级之后，矿井就会接手，自动一直升下去——不用一直盯着。每挖穿一颗星球，需要你亲手建的级数还会少 1 级。</p>
+        <button id="planButton" class="primary">一键建设（推荐）</button>
       </div>
       <div class="view-tabs" role="tablist" aria-label="科技分类">
         <button role="tab" id="tab-construction" data-view="construction" aria-selected="true" aria-controls="techTree">待建设 <span id="constructionCount">0</span></button>
@@ -124,7 +127,7 @@
       <div id="techTree" class="tech-tree" role="tabpanel" aria-labelledby="tab-construction"></div>
     </section>
     <details class="engineering">
-      <summary>工程数据与回放</summary>
+      <summary>工程数据与回放（调试用）</summary>
       <div class="engineering-inner">
         <div class="settings">
           <label>路线 <select id="routeSelect"><option value="balanced">均衡建设</option><option value="cheapest">最低价格</option><option value="depth">深度优先</option><option value="income">收入优先</option></select></label>
@@ -133,8 +136,9 @@
           <label>Seed <input id="seedInput" type="number" value="42" step="1"></label>
         </div>
         <p class="subtle">独立新局回放 / seed 42 / 与当前存档分开</p>
+        <p class="subtle">危险操作：<button id="resetButton" class="danger-ghost">重置测试进度</button></p>
         <div id="auditSummary" class="audit-summary"></div>
-        <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th id="replayDepthHeading">D30 深度</th><th id="replayEraHeading">D30 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>画像</th><th>手动级</th><th>助手级</th><th>自动级</th><th>查看次数</th><th id="replayDepthHeading">挖穿首星</th><th id="replayEraHeading">D30 时代</th></tr></thead><tbody id="profileRows"></tbody></table></div>
         <div class="multiplier-heading"><h3>产能乘数</h3><span>矿币收益 <b id="incomeMultiplier"></b> / 挖矿深度 <b id="depthMultiplier"></b></span></div>
         <div id="multiplierList" class="multiplier-list"></div>
       </div>
@@ -148,14 +152,14 @@
       <p class="description-label" hidden>基础效果（未计永久强化）</p>
       <p class="description"></p>
       <p class="tech-strength"></p>
-      <div class="manual-progress" aria-label="装备调试进度"></div>
+      <div class="manual-progress" aria-label="亲手建设进度"></div>
       <div class="tech-meta"><span class="progress-label"></span><b class="cost"></b></div>
-      <div class="tech-actions"><button class="upgrade-button">升级1级</button><button class="commission-button">完成调试</button></div>
+      <div class="tech-actions"><button class="upgrade-button">亲手建设 +1 级</button></div>
       <small class="lock-reason"></small>
     </article>
   </template>
   <dialog id="planDialog">
-    <form method="dialog"><div class="section-heading"><h2>本轮建设清单</h2><button value="cancel" aria-label="关闭建设清单">取消</button></div></form>
+    <form method="dialog"><div class="section-heading"><h2>一键建设清单</h2><button value="cancel" aria-label="关闭建设清单">取消</button></div></form>
     <p id="planSummary"></p><ul id="planItems"></ul>
     <div class="dialog-actions"><button id="confirmPlan" class="primary">确认建设</button></div>
   </dialog>

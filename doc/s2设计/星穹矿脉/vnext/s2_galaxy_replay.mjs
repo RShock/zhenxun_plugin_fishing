@@ -2,10 +2,12 @@ import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { S2Engine, validateGameData } from "../../../../web/static/s2-vnext/engine.js";
 
-export function replayGalaxy(data, { seed = 42, profile = "daily", route = "balanced", days = 600, stopAfterResearch = false } = {}) {
-  if (!["daily", "absent"].includes(profile) || !["balanced", "speed", "rebuild", "burst", "off"].includes(route)
+export function replayGalaxy(data, { seed = 42, profile = "daily", coreHelper = true, handCoresPerDay = 6, days = 600, stopAfterResearch = false } = {}) {
+  if (!["daily", "absent"].includes(profile) || typeof coreHelper !== "boolean"
+    || !Number.isInteger(handCoresPerDay) || handCoresPerDay < 0
     || !Number.isInteger(days) || days <= 0) throw new Error("Invalid galaxy replay options");
   const e = new S2Engine(data, { seed });
+  e.setCoreHelperEnabled(coreHelper);
   const stages = [];
   const research = [];
   const milestones = [];
@@ -29,8 +31,8 @@ export function replayGalaxy(data, { seed = 42, profile = "daily", route = "bala
     settle(plan, count);
   };
   const purchase = e.purchaseCore.bind(e);
-  e.purchaseCore = (key) => {
-    const item = purchase(key);
+  e.purchaseCore = (key, options) => {
+    const item = purchase(key, options);
     if (item.ok) {
       research.push({ ...item, elapsedDays: e.state.minute / 1440, planets: e.state.completedPlanets });
       if (Object.values(e.coreSpecs).every((spec) => e.state.coreLevels[spec.key] === spec.maxLevel)) {
@@ -54,15 +56,26 @@ export function replayGalaxy(data, { seed = 42, profile = "daily", route = "bala
   const started = performance.now();
   for (let day = 0; day < days && !e.galaxyComplete(); day += 1) {
     e.mineBlock(1200); compiled += e.lastBatchSummary.compiled; events += e.lastBatchSummary.events;
-    if (profile === "daily") e.strategyVisit();
-    if (e.state.planetComplete && e.state.resets === 0) {
-      e.setCoreAutoRoute(route);
+    if (profile === "daily") {
+      e.strategyVisit();
+      // 每天上线的玩家顺手把永久科技亲手买几级（最便宜优先）——这正是"亲手 N 级转自动"的那几级
+      for (let i = 0; i < handCoresPerDay; i += 1) {
+        const target = Object.values(e.coreSpecs).filter((spec) => e.coreAvailable(spec.key)
+          && e.coreCost(spec.key) <= e.state.cores)
+          .sort((a, b) => e.coreCost(a.key) - e.coreCost(b.key) || a.key.localeCompare(b.key))[0];
+        if (!target || !e.purchaseCore(target.key).ok) break;
+      }
+    }
+    // 规则变更（2026-10-02）：前 rules.manualDepartures 次启程必须手动，
+    // 这里模拟玩家当天就点掉，第一次启程时顺带设定核心托管路线。
+    while (e.state.planetComplete && !e.galaxyComplete() && e.state.resets < e.manualDepartureQuota()) {
       e.departPlanet();
+      e.mineBlock(10);
     }
     e.mineBlock(240); compiled += e.lastBatchSummary.compiled; events += e.lastBatchSummary.events;
     if (stopAfterResearch && researchComplete) break;
   }
-  return { engine: e, result: { seed, profile, route, elapsedMs: performance.now() - started,
+  return { engine: e, result: { seed, profile, coreHelper, elapsedMs: performance.now() - started,
     completedPlanets: e.state.completedPlanets,
     elapsedDays: e.state.planetHistory.at(-1)?.completedMinute / 1440,
     cores: e.state.cores, coreLevels: e.state.coreLevels, compiled, events, stages, milestones, research,
@@ -87,7 +100,7 @@ export function calibrateGalaxyGoal(data, { tailDays = 5, roundTo = 1000, ...opt
   const recommendedTarget = Math.ceil(exact / roundTo) * roundTo;
   trial.prestige.galaxyTargetPlanets = recommendedTarget;
   validateGameData(trial);
-  return { referenceProfile: result.profile, referenceRoute: result.route, researchComplete: result.researchComplete,
+  return { referenceProfile: result.profile, referenceCoreHelper: result.coreHelper, researchComplete: result.researchComplete,
     finalSeconds: seconds, requestedTailDays: tailDays, recommendedTarget,
     actualTailDays: (recommendedTarget - result.researchComplete.planets) * seconds / 86400 };
 }
@@ -97,7 +110,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = process.argv.slice(2);
   const value = (key, fallback) => args.includes(key) ? args[args.indexOf(key) + 1] : fallback;
   const options = { seed: Number(value("--seed", 42)), profile: value("--profile", "daily"),
-    route: value("--route", "balanced"), days: Number(value("--days", 600)) };
+    coreHelper: value("--core-helper", "on") !== "off", days: Number(value("--days", 600)) };
   if (args.includes("--calibrate")) console.log(JSON.stringify(calibrateGalaxyGoal(data, options), null, 2));
   else {
     const { engine, result } = replayGalaxy(data, options);

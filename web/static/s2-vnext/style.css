@@ -235,3 +235,19 @@ footer { padding: 23px 0 35px; color: var(--muted); font-size: 11px; }
 .next-checkin { margin-top: 8px; font-size: 12px; color: var(--muted); background: #f4f6f8; padding: 8px 10px; border-radius: 6px; border-left: 3px solid var(--muted); line-height: 1.6; }
 .core-idle-hint { margin-top: 10px; font-size: 12px; color: #8a6d1f; background: #fdf6e3; padding: 9px 11px; border-radius: 6px; border-left: 3px solid #e0b94f; line-height: 1.7; overflow-wrap: anywhere; }
 .core-idle-hint strong { color: #6d5414; }
+
+/* ── 星区进度（二阶段的可见进度，替代长期停在 0% 的银河百分比）── */
+.sector-panel { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 10px 0 6px; background: #fbfdfc; }
+.sector-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sector-heading strong { font-size: 15px; color: var(--green); }
+.sector-panel progress { width: 100%; height: 10px; margin: 8px 0 4px; }
+.sector-panel .subtle { margin: 4px 0 0; }
+
+/* ── 通关结算 ── */
+.final-report { border: 2px solid var(--gold); border-radius: 14px; padding: 14px 16px; margin: 10px 0; background: #fffdf6; }
+.final-report h3 { margin: 0 0 10px; color: var(--gold); }
+.final-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.final-report-grid article { display: flex; flex-direction: column; gap: 2px; }
+.final-report-grid span { color: var(--muted); font-size: 12px; }
+.final-report-grid strong { font-size: 17px; }
+.final-report-title { margin: 12px 0 0; font-size: 15px; }

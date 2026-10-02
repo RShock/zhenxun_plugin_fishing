@@ -1,24 +1,20 @@
 ﻿# S2 vNext：星穹矿脉模拟实验室
 
-这里是 S2 独立实验区，暂不接 NoneBot 或数据库。当前是 schema v3 转生版，内容版本 `prestige-3`，可试玩首星通关、十项核心科技、连续换星和银河终局，并接续十天、旧三十天及 `prestige-1/2` 存档。终点由科技完成后的约五天实际产能反推，当前为1952000颗，后续随科技设计重新标定。
+这里是 S2 独立实验区，暂不接 NoneBot 或数据库。当前是 schema v3 转生版，内容版本 `sector-1`，可试玩首星通关、七个星区、72 项永久科技、连续换星和银河终局。终点由科技研究完成后的约五天实际产能反推，当前为 **27,282,000 颗**（必须用 `s2_galaxy_replay.mjs --calibrate` 推导，不要手填）。
+
+**2026-10-02 起**：旧版存档（`prestige-1/2`、旧三十天）的迁移逻辑已随「核心托管五路线」一起删除，`contentVersion` 对不上的存档一律整份拒绝；Python 参考实现与对应的 pytest 文件也已删除（详见 `CHANGELOG_2026-10-02_评审处置与代码改动.md`），现在只有一套 JavaScript 实现和 `node --test` 套件。
 
 ## 运行
 
 ```powershell
-.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_first_ten_days.py --days 10 --seed 42 --output HELPER_TEN_DAYS_TRACE.md
+# 全套回归（5 个文件 / 56 条，全绿；银河那几条各要一两分钟）
+node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_engine.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_late_factors.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_descriptions.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_prestige.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_voyage.test.mjs
 
-.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_thirty_days.py --matrix --output
-
-$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
-$env:PYTHONDONTWRITEBYTECODE = '1'
-.venv\Scripts\python.exe -m pytest zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_mining_simulator.py zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_thirty_days.py zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_prestige.py -q -p no:cacheprovider
-
-node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_engine.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_late_factors.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_descriptions.test.mjs zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_prestige.test.mjs
-
+# 十二颗星球的换星回放（--core-helper 控制永久科技的夜班助手，默认 on）
 node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_prestige_replay.mjs --seed 42 --planets 12 --profile daily
-node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_prestige_replay.mjs --seed 42 --planets 12 --profile absent --core-route none
-.venv\Scripts\python.exe zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_mining_simulator.py --seed 42 --planets 12 --profile daily --core-route balanced
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_prestige_replay.mjs --seed 42 --planets 12 --profile absent --core-helper off
 
+# 本地起静态服务试玩
 .venv\Scripts\python.exe -m http.server 8766 --bind 127.0.0.1 --directory zhenxun/plugins/zhenxun_plugin_fishing/web/static/s2-vnext
 ```
 
@@ -52,9 +48,9 @@ node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_p
 
 - 时间控制区提供“重置测试进度”按钮；确认后会先将当前存档备份到带时间戳的本地键，再用 Seed 输入框开新局。备份失败时取消重置，避免测试操作覆盖当前进度。
 
-离线调参工具 `calibrate_thirty_days.mjs` 默认只输出，显式 `--write` 才写入共享数据。价格一经写入就是固定价格，不随玩家当前收入变化。迁移回归用固定历史提交 `25f9313`，运行测试的克隆需保留该历史对象。
+离线调参工具 `calibrate_thirty_days.mjs` 默认只输出，显式 `--write` 才写入共享数据。价格一经写入就是固定价格，不随玩家当前收入变化。
 
-独立测试必须禁用 pytest 插件自动加载，否则 nonebug 会要求正式机器人环境；保留插件 `pytest.ini` 的 `support.pytest_plugin`，不要用空 `addopts` 覆盖，否则测试收集会导入正式 NoneBot 插件。说明测试检查安全渲染、引用名称、数值口径和作用域；转生测试覆盖奖励、清空、自动化、存档、多星步进等价与双端对照。既有早期暴击率封顶造成的末级收益饱和暂保留，避免改动已认可的前十天。
+教学期（前 30 天）的经济学由 `thirty_days_baseline.json` 钉住：五种画像各跑 30 天，对账矿币、深度、事件指纹、随机数指纹、首星是否挖穿、核心余额。**改动不该波及教学期**；真要重录，先确认是有意为之，再用 `s2_prestige.test.mjs` 第一条用例里的字段重新生成。原先这条回归是跟历史提交 `8da6657` 的数据对比，仓库改成浅克隆后取不到那个对象，而且一阶段压缩（首星 D39→D28）之后那份旧数值本就不再成立，故改为仓库内基线。
 
 首星历史实验见 `PRESTIGE_PLAYTEST.md`：五 seed 下，每日一次首星约 39.4-40.3 个完整日、助手路线约 43.9 日挖穿，满级后的真实采矿约五日。该报告的转生免费倍率和后续航程数据已被替代。`GALAXY_PLAYTEST.md` 是七科技百万终点的历史实验，当前以 `INTERSTELLAR_PLAYTEST.md` 为准；旧核心等级与余额保留，但效果按当前数据重新计算，历史支出按旧价格校验。
 
@@ -62,11 +58,10 @@ node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_p
 
 ```powershell
 node --test zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_voyage.test.mjs
-$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = '1'
-.venv\Scripts\python.exe -m pytest zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/test_s2_voyage.py -q -p no:cacheprovider
-node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile daily --route balanced
-node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile absent --route balanced
-node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --calibrate
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile daily --days 600
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile absent --days 600
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --profile absent --core-helper off --days 600
+node zhenxun/plugins/zhenxun_plugin_fishing/doc/s2设计/星穹矿脉/vnext/s2_galaxy_replay.mjs --calibrate --days 600
 ```
 
 回放从零开始，首星完成后在每日 20:00 确认首次启程并启用核心托管；`absent` 不进行手动本地建设，仍需要这一次人为启程授权。完全不花核心可用 `--route off` 对照。
