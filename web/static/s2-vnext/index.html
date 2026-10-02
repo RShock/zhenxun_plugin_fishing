@@ -11,7 +11,7 @@
   <main class="shell">
     <header class="masthead">
       <div><p class="eyebrow">S2 / STARVAULT MINE</p><h1>星穹矿脉</h1></div>
-      <div class="station-id"><span id="stationPlanet">第 1 颗星球</span><strong id="timeValue">D1 00:00</strong><small id="seedValue">seed 42</small></div>
+      <div class="station-id"><span id="stationPlanet">第 1 颗星球</span><strong id="timeValue">D1 00:00</strong></div>
     </header>
     <p id="saveNotice" class="notice" role="status"></p>
     <section class="scene-hero" aria-label="矿场">
@@ -23,8 +23,8 @@
     <section class="status-grid" aria-label="矿区状态">
       <article class="metric"><span><img class="s2-icon" src="./assets/icon_credits.png" alt="">矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
       <article class="metric"><span><img class="s2-icon" src="./assets/icon_depth.png" alt="">挖矿深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
-      <article class="metric"><span><img class="s2-icon" src="./assets/icon_era.png" alt="">当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
-      <article class="metric"><span><img class="s2-icon" src="./assets/icon_built.png" alt="">累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_era.png" alt="">当前时代</span><strong id="eraValue">原始时代</strong></article>
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_built.png" alt="">累计建设等级</span><strong id="totalBuiltValue">0</strong></article>
     </section>
     <section class="mine-overview">
       <div class="next-discovery">
@@ -44,13 +44,13 @@
         <div class="planet-progress-panel">
           <div class="planet-progress-heading"><strong id="planetState">开采进行中</strong><span id="planetElapsed">本星球 0分钟</span></div>
           <progress id="planetProgress" max="1" value="0" aria-label="当前星球挖掘进度"></progress>
-          <div class="discovery-meta"><span id="planetProgressText"></span><span id="allMaxedStatus"></span></div>
+          <div class="discovery-meta"><span id="planetProgressText"></span></div>
         </div>
         <div class="prestige-stats" aria-label="轮回统计">
           <div><span>已完成</span><strong id="completedValue">0</strong><small>颗星球</small></div>
-          <div><span>已离开</span><strong id="resetsValue">0</strong><small>次航程</small></div>
-          <div><span>永久科技倍率</span><strong id="prestigeSpeed">×1</strong><small>不含转生次数</small></div>
-          <div><span>转自动所需</span><strong id="prestigeThreshold">亲手 3 级</strong><small>每挖穿一颗少 1 级</small></div>
+
+          <div><span>永久科技倍率</span><strong id="prestigeSpeed">×1</strong></div>
+
         </div>
       </div>
       <div class="sector-panel">
@@ -105,31 +105,31 @@
     <section class="control-section">
       <div class="section-heading"><h2>开始游戏</h2><span class="subtle">点一次就会一直挖下去，中途不需要再管</span></div>
       <div class="control-row">
-        <span class="subtle" style="align-self:center">调试快进：</span>
+        <div class="debug-only" hidden><span>调试快进：</span>
         <button data-advance="60">推进1小时</button>
         <button data-advance="1200">推进20小时</button>
         <button data-advance="1440" class="primary">推进1天</button>
         <button data-advance="4320">推进3天</button>
         <button data-advance="43200">推进30天</button>
-        <button id="toggleButton" class="primary">▶ 开始挖矿游戏</button>
+        </div><button id="toggleButton" class="primary">▶ 开始挖矿游戏</button>
       </div>
       <p id="actionNotice" class="action-notice" role="status" aria-live="polite">矿井已就绪。</p>
-      <p class="subtle" style="margin-top:6px">开工后时间会持续流动（挖穿星球、启程、开关弹窗都不会让它停下）。右侧几个「推进N天」是调试用的快进按钮，正式版不会有。</p>
+
     </section>
     <section class="construction-section">
       <div class="section-heading">
         <div><p class="eyebrow">WORKSHOP / 装备建设</p><h2>今天的工程</h2></div>
-        <p class="subtle">每台设备你亲手建满 3 级之后，矿井就会接手，自动一直升下去——不用一直盯着。每挖穿一颗星球，需要你亲手建的级数还会少 1 级。</p>
+        <p class="subtle">建设设备，提升采矿收益与速度。</p>
         <button id="planButton" class="primary">一键建设（推荐）</button>
       </div>
       <div class="view-tabs" role="tablist" aria-label="科技分类">
         <button role="tab" id="tab-construction" data-view="construction" aria-selected="true" aria-controls="techTree">待建设 <span id="constructionCount">0</span></button>
-        <button role="tab" id="tab-automated" data-view="automated" aria-selected="false" aria-controls="techTree">已自动化 <span id="automatedCount">0</span></button>
+        <button role="tab" id="tab-automated" data-view="automated" aria-selected="false" aria-controls="techTree">已建设 <span id="automatedCount">0</span></button>
         <button role="tab" id="tab-frontier" data-view="frontier" aria-selected="false" aria-controls="techTree">前沿科技 <span id="frontierCount">0</span></button>
       </div>
       <div id="techTree" class="tech-tree" role="tabpanel" aria-labelledby="tab-construction"></div>
     </section>
-    <details class="engineering">
+    <details class="engineering debug-only" hidden>
       <summary>工程数据与回放（调试用）</summary>
       <div class="engineering-inner">
         <div class="settings">
@@ -155,9 +155,9 @@
       <p class="description-label" hidden>基础效果（未计永久强化）</p>
       <p class="description"></p>
       <p class="tech-strength"></p>
-      <div class="manual-progress" aria-label="亲手建设进度"></div>
+
       <div class="tech-meta"><span class="progress-label"></span><b class="cost"></b></div>
-      <div class="tech-actions"><button class="upgrade-button">亲手建设 +1 级</button></div>
+      <div class="tech-actions"><button class="upgrade-button">升级 +1 级</button></div>
       <small class="lock-reason"></small>
     </article>
   </template>
@@ -170,6 +170,6 @@
     <h2>重置测试进度？</h2><p>当前行星轮回进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=s2-art-1"></script>
+  <script type="module" src="./app.js?v=s2-player-2"></script>
 </body>
 </html>
