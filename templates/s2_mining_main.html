@@ -3,8 +3,8 @@
 .mining-header { text-align:center; padding:8px 0 6px; }
 .mining-title { font-size:26px; font-weight:800; color:#6b3a1a; letter-spacing:2px; }
 .mining-sub { font-size:12px; color:#9a7b5a; margin-top:2px; }
-.scene-box { position:relative; height:180px; background:#263530; border-radius:14px; overflow:hidden; border:4px solid #fff3d2; margin:10px 0; display:flex; align-items:center; justify-content:center; color:#f3f5ec; font-size:48px; }
-.scene-caption { position:absolute; top:10px; left:14px; right:14px; display:flex; justify-content:space-between; font-size:11px; color:#b8dcbe; }
+.scene-box { position:relative; height:auto; background:#263530; border-radius:14px; overflow:hidden; border:4px solid #fff3d2; margin:10px 0; display:flex; align-items:center; justify-content:center; color:#f3f5ec; font-size:48px; }
+.scene-caption { position:absolute; top:10px; left:14px; right:14px; display:flex; justify-content:space-between; font-size:11px; color:#fff4db; text-shadow:0 1px 3px #30253f; }
 .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
 .stat-card { background:#fffaf0; border:1.5px solid #ead8bd; border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:8px; }
 .stat-icon { font-size:22px; }
@@ -29,6 +29,7 @@
 .breakthrough b { color:#fff; }
 .depart-btn { background:#26a269; color:#fff; border:0; border-radius:10px; padding:10px 20px; font-weight:800; margin-top:8px; }
 .mode-hint { text-align:center; font-size:11px; color:#9a7b5a; margin-top:6px; }
+{% include "s2_art.css" %}
 {% endblock %}
 {% block content %}
 <div class="mining-header">
@@ -36,24 +37,25 @@
   <div class="mining-sub">第 {{ state.planet }} 颗星球 · 第 {{ state.completedPlanets }} 次挖穿</div>
 </div>
 {% if not state.s2_unlocked %}
-<div class="report-box">🔒 尚未解锁：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。</div>
+<div class="report-box"><img class="s2-inline" src="{{ s2_image('icon_locked') }}" alt=""> 尚未解锁：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。</div>
 {% else %}
 <div class="scene-box">
   <div class="scene-caption"><span>{{ era_name }}</span><span>{% if state.planetComplete %}已挖穿{% else %}采矿作业中{% endif %}</span></div>
-  <span>⛏️🐱🪨</span>
+  <img class="shaft-art" src="{{ s2_image('scene_shaft') }}" alt="三只猫矿工在分层岩石与竖井中作业">
 </div>
 <div class="stats-grid">
-  <div class="stat-card"><span class="stat-icon">💎</span><div><div class="stat-label">矿币</div><div class="stat-value">{{ state.credits|int }} <span class="stat-icon" style="font-size:14px">◆</span></div><div class="stat-sub">+{{ income_rate|round(1) }}/分</div></div></div>
-  <div class="stat-card"><span class="stat-icon">⛏️</span><div><div class="stat-label">深度</div><div class="stat-value">{{ (state.depth/1000)|round(1) }}km / {{ (state.targetDepth/1000)|round(1) }}km</div><div class="stat-sub">{{ (state.depth/state.targetDepth*100)|round(1) }}%</div></div></div>
-  <div class="stat-card"><span class="stat-icon">⚙️</span><div><div class="stat-label">时代</div><div class="stat-value">{{ era_name }}</div><div class="stat-sub">{{ completed_eras }}/5 已解锁</div></div></div>
-  <div class="stat-card"><span class="stat-icon">🔨</span><div><div class="stat-label">已建</div><div class="stat-value">{{ state.totalBuilt }}级</div><div class="stat-sub">{{ state.autoUnlocked|length }} 已自动</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_credits') }}" alt=""><div><div class="stat-label">矿币</div><div class="stat-value">{{ state.credits|int }} </div><div class="stat-sub">+{{ income_rate|round(1) }}/分</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_depth') }}" alt=""><div><div class="stat-label">深度</div><div class="stat-value">{{ (state.depth/1000)|round(1) }}km / {{ (state.targetDepth/1000)|round(1) }}km</div><div class="stat-sub">{{ (state.depth/state.targetDepth*100)|round(1) }}%</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_era') }}" alt=""><div><div class="stat-label">时代</div><div class="stat-value">{{ era_name }}</div><div class="stat-sub">{{ completed_eras }}/5 已解锁</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_built') }}" alt=""><div><div class="stat-label">已建</div><div class="stat-value">{{ state.totalBuilt }}级</div><div class="stat-sub">{{ state.autoUnlocked|length }} 已自动</div></div></div>
 </div>
 <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:{{ (state.depth/state.targetDepth*100)|round(1) }}%"></div><div class="progress-text">{{ (state.depth/state.targetDepth*100)|round(1) }}%</div></div></div>
 
 {% if state.planetComplete %}
 <div class="breakthrough">
-  <div style="font-size:18px; font-weight:800;">☆ 第 {{ state.planet }} 颗星球 已挖穿！ ☆</div>
-  <div style="margin-top:6px; font-size:12px;">本次耗时 {{ planet_minutes }} 分钟 | 获得 1 星球核心 ◎</div>
+  <img class="planet-art" src="{{ s2_image('planet_cracked') }}" alt="裂开的星球与发光核心">
+  <div style="font-size:18px; font-weight:800;">第 {{ state.planet }} 颗星球 已挖穿！</div>
+  <div style="margin-top:6px; font-size:12px;">本次耗时 {{ planet_minutes }} 分钟 | 获得 1 星球核心 <img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""></div>
   {% if state.completedPlanets < 5 %}
   <div style="margin-top:6px; font-size:12px; color:#b8dcff;">前5颗需手动启程</div>
   <div><span class="depart-btn">发送【下一个星球】</span></div>
@@ -64,7 +66,7 @@
 {% else %}
 <div class="next-card">
   <div class="next-left">
-    <div class="next-icon">{{ next_icon }}</div>
+    <div class="next-icon"><img class="tech-art" src="{{ next_icon }}" alt=""></div>
     <div><div class="next-label">下一个项目</div><div class="next-name">{{ next_name }} Lv{{ next_lv }}</div><div style="font-size:11px; color:#9a7b5a;">{{ next_cost }} 矿币</div></div>
   </div>
   <div class="next-btn">+1 级</div>
@@ -73,7 +75,7 @@
 
 {% if delta %}
 <div class="report-box">
-  {% if delta.first %}🎉 首次进入星穹矿脉，自动挖矿已开始{% else %}
+  {% if delta.first %}<img class="s2-inline" src="{{ s2_image('icon_celebrate') }}" alt=""> 首次进入星穹矿脉，自动挖矿已开始{% else %}
   距上次报告 {{ delta.reportMinutes }} 分钟<br>
   本次收益：+{{ delta.reportCredits|int }} 矿币{% if delta.reportPlanets>0 %}，+{{ delta.reportPlanets }} 颗星球{% endif %}<br>
   {% if delta.helperBuys %}{{ helper_name }}助手自动购买：{{ delta.helperBuys|join("、") }}{% else %}{{ helper_name }}助手待机中{% endif %}
@@ -82,8 +84,8 @@
 {% endif %}
 
 <div class="helper-bar">
-  <span>{{ helper_name }}助手：{% if state.helperEnabled %}<span class="helper-on">自动购买中</span>{% else %}<span class="helper-off">已关闭</span>{% endif %}</span>
-  <span>◎ {{ state.cores }} 核心</span>
+  <span class="helper-identity"><img class="helper-art" src="{{ s2_image('helper_fatfish') }}" alt="大肥鱼矿工助手">{{ helper_name }}助手：{% if state.helperEnabled %}<span class="helper-on">自动购买中</span>{% else %}<span class="helper-off">已关闭</span>{% endif %}</span>
+  <span><img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""> {{ state.cores }} 核心</span>
 </div>
 <div class="mode-hint">发送【挖矿】查看收益 · 【挖矿商店】浏览升级 · 【下一个星球】启程</div>
 {% endif %}

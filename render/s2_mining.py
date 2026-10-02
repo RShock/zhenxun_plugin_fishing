@@ -1,57 +1,9 @@
-"""S2 挖矿渲染（emoji 占位版，正式像素图后续切片）"""
+"""S2 挖矿渲染：共享像素素材与动态游戏数据。"""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from .base import gradient_bg, render_html, render_template
-
-S2_EMOJI_MAP = {
-    "rotary_pick": "⛏️",
-    "split_tunnel": "🛤️",
-    "cat_crew": "🐱",
-    "honed_edge": "🔪",
-    "ore_ledger": "📒",
-    "fault_mapping": "🪨",
-    "deep_marker": "📏",
-    "steam_array": "🚂",
-    "crew_whistle": "🪈",
-    "impact_hammer": "🔨",
-    "blast_charge": "🧨",
-    "relay_shift": "👥",
-    "drill_momentum": "🌀",
-    "union_rhythm": "🐾",
-    "arc_pick": "⚡",
-    "weakpoint_scope": "🎯",
-    "plasma_edge": "🔥",
-    "overpenetration": "💥",
-    "grid_resonance": "🔊",
-    "pulse_booster": "💨",
-    "seismic_echo": "🚃",
-    "induction_ledger": "📊",
-    "capacitor_bank": "🔋",
-    "sorting_optics": "🔍",
-    "pressure_converter": "🖥️",
-    "mesh_topology": "🧵",
-    "ceramic_bearings": "💿",
-    "thermal_recovery": "🛰️",
-    "craft_diversity": "🧹",
-    "support_lattice": "🏗️",
-    "cascade_bus": "🚌",
-    "closed_loop_cooling": "♻️",
-    "autonomous_survey": "🔭",
-    "pressure_accumulator": "🛢️",
-    "precision_matrix": "💠",
-    "distance_fold": "📦",
-    "phase_anchor": "⚓",
-    "gravity_lens": "🪐",
-    "singularity_crew": "👾",
-    "quantum_fault": "🔮",
-    "vacuum_bus": "🏭",
-    "quantum_sorter": "🧬",
-    "tidal_bore": "🌊",
-    "stellar_sync": "✨",
-}
+from .s2_assets import get_s2_icon_src, get_s2_image_src
 
 
 async def render_mining_main(state: dict, delta: dict, helper_name: str = "大肥鱼") -> bytes:
@@ -86,7 +38,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
             next_name = nxt["name"]
             next_lv = nxt["lv"] + 1
             next_cost = nxt["cost"]
-            next_icon = S2_EMOJI_MAP.get(nxt["key"], "⛏️")
+            next_key = nxt["key"]
         else:
             # 找下一个待解锁（时代/前置）
             nxt = next((e for e in entries if not e["unlocked"]), None)
@@ -94,17 +46,17 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
                 next_name = nxt["name"]
                 next_lv = nxt["lv"] + 1
                 next_cost = nxt["cost"]
-                next_icon = S2_EMOJI_MAP.get(nxt["key"], "⛏️")
+                next_key = nxt["key"]
             else:
                 next_name = "暂无可建"
                 next_lv = 0
                 next_cost = 0
-                next_icon = "⬜"
+                next_key = None
     except Exception:
         next_name = "分岔矿道"
         next_lv = 3
         next_cost = 760
-        next_icon = "🛤️"
+        next_key = "split_tunnel"
 
     # 速率
     try:
@@ -127,7 +79,8 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         next_name=next_name,
         next_lv=next_lv,
         next_cost=next_cost,
-        next_icon=next_icon,
+        next_icon=get_s2_icon_src(next_key) if next_key else get_s2_image_src("icon_empty"),
+        s2_image=get_s2_image_src,
         income_rate=income_rate,
         depth_rate=depth_rate,
         planet_minutes=planet_minutes,
@@ -145,7 +98,8 @@ async def render_mining_shop(state: dict, rows: list[dict], page: int, pages: in
         page=page,
         pages=pages,
         total=len(rows) + (pages - 1) * 6,  # 近似总数，前端仅展示
-        emoji_map=S2_EMOJI_MAP,
+        s2_tech=get_s2_icon_src,
+        s2_image=get_s2_image_src,
     )
     # 修正 total 为真实总数，需传入
     # 重新渲染一次带正确的 total（上面 len(rows) 不准）
@@ -163,6 +117,7 @@ async def render_shop_with_total(state: dict, rows: list[dict], page: int, pages
         page=page,
         pages=pages,
         total=total,
-        emoji_map=S2_EMOJI_MAP,
+        s2_tech=get_s2_icon_src,
+        s2_image=get_s2_image_src,
     )
     return await render_html(html, 720)

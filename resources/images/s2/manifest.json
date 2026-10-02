@@ -1,0 +1,2590 @@
+{
+  "version": 1,
+  "technologyCount": 119,
+  "runtimeImageCount": 136,
+  "files": {
+    "helper_fatfish.png": {
+      "batch": "ui-01",
+      "key": "helper_fatfish",
+      "rect": [
+        0,
+        928,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        128,
+        128
+      ],
+      "mode": "RGBA",
+      "sha256": "f204a392d32ee30c4a6583949ddbeddc9888634c79abd94e67ccc24242407986"
+    },
+    "icon_built.png": {
+      "batch": "ui-01",
+      "key": "icon_built",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e28bc2e04c9fc962e5814cfab4ecec9b12fa37cce57729e09596c9cc350f5bbc"
+    },
+    "icon_celebrate.png": {
+      "batch": "ui-01",
+      "key": "icon_celebrate",
+      "rect": [
+        0,
+        627,
+        313,
+        928
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "8a2a0d8f33bd65c907e7ca6e847b8b45667b23874d5ae3586a80f4f48ef06413"
+    },
+    "icon_core.png": {
+      "batch": "ui-01",
+      "key": "icon_core",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "14dd3c1679e7fdcc628e0b61c36e3f4414ed02e4b7cc3e5669b59c01f0121d9b"
+    },
+    "icon_credits.png": {
+      "batch": "ui-01",
+      "key": "icon_credits",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2192f872b21bb469283e07495417cb4e4c3cc069e74f0e7734cfbfacfdb3bd95"
+    },
+    "icon_depart.png": {
+      "batch": "ui-01",
+      "key": "icon_depart",
+      "rect": [
+        313,
+        627,
+        627,
+        928
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e735881efc7366e4cd62d12b192c7ebd7965cd817b2fcee7538a9f1df93e36d1"
+    },
+    "icon_depth.png": {
+      "batch": "ui-01",
+      "key": "icon_depth",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2295e5f6b29fbb74e6eba36122ef670120760f625c78f4055a037781987a2fd0"
+    },
+    "icon_empty.png": {
+      "batch": "ui-01",
+      "key": "icon_empty",
+      "rect": [
+        637,
+        928,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "d19527c0f2a03fa3ac04791f0f3bb38dbfa1cd2ecd41b412019f3b26b4e2e43e"
+    },
+    "icon_era.png": {
+      "batch": "ui-01",
+      "key": "icon_era",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "db3c47096b01516b9dc869637376333d4442a1bba89b25b2fa8cbf8362d52bba"
+    },
+    "icon_galaxy.png": {
+      "batch": "ui-01",
+      "key": "icon_galaxy",
+      "rect": [
+        940,
+        627,
+        1254,
+        928
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "75c3e00189f0c53981de91e61093a8872389b827c043e8164fbbe387ced9a13b"
+    },
+    "icon_locked.png": {
+      "batch": "ui-01",
+      "key": "icon_locked",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "18745df0273d8b125f5286eb965af688c1ed8a924f78899612ca7f0cf3a09937"
+    },
+    "icon_ready.png": {
+      "batch": "ui-01",
+      "key": "icon_ready",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "6134ad73f94874b6d74f7332ea365ee9a6c6134f92ccb6c66cee3cc61790d044"
+    },
+    "icon_research.png": {
+      "batch": "ui-01",
+      "key": "icon_research",
+      "rect": [
+        627,
+        627,
+        940,
+        928
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "526e01d4c9829362db4becb0d26c31efb50a7f26e40384d628ba0a462208fa3c"
+    },
+    "icon_settings.png": {
+      "batch": "ui-01",
+      "key": "icon_settings",
+      "rect": [
+        940,
+        928,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a27dfd2f8fac1f57b87fb55fc4b17b752d7d0a7cf37a7e21abf3242e163f18cc"
+    },
+    "icon_wait.png": {
+      "batch": "ui-01",
+      "key": "icon_wait",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "29636a2b6a52bf7a0b9c15a7ac9d9dcf7e1e71974ab28308c993ec56e487be9c"
+    },
+    "planet_cracked.png": {
+      "batch": "ui-01",
+      "key": "planet_cracked",
+      "rect": [
+        313,
+        928,
+        637,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "sha256": "e66353bc28e0513b6fb9dc30ff51383fb8966b4d68c1058f6c94730e9738d978"
+    },
+    "scene_shaft.png": {
+      "source": "approved-main",
+      "rect": [
+        123,
+        338,
+        1670,
+        876
+      ],
+      "reviewed": true,
+      "size": [
+        1376,
+        479
+      ],
+      "mode": "RGB",
+      "sha256": "9b5bbad33dac15aa9810433adcea98d9dc86702951fbf4bea59346289a3f3934"
+    },
+    "tech_akasha_record.png": {
+      "batch": "core-03",
+      "key": "akasha_record",
+      "rect": [
+        0,
+        627,
+        316,
+        927
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e0a6fd32336e7c8436f7ac5d5a4a72b457b56f8ed9ac58f84b6495c2cd2ce23c"
+    },
+    "tech_anneal_scheduler.png": {
+      "batch": "core-04",
+      "key": "anneal_scheduler",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "ad622a41f5829e7621d679935e00291a8353d60f557754a6d0055179eca6893a"
+    },
+    "tech_antimatter_tide.png": {
+      "batch": "core-05",
+      "key": "antimatter_tide",
+      "rect": [
+        940,
+        627,
+        1254,
+        936
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1660e0698db112f6477b5c2c371388ab6658970317f2872cec076aabdafe49a1"
+    },
+    "tech_arc_pick.png": {
+      "batch": "local-01",
+      "key": "arc_pick",
+      "rect": [
+        627,
+        931,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a1ef6f7c689c93b9854d3590a423970c8d36ed07bdee28829e0d465f18097f7f"
+    },
+    "tech_autonomous_survey.png": {
+      "batch": "local-03",
+      "key": "autonomous_survey",
+      "rect": [
+        0,
+        627,
+        313,
+        929
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "20ab01b55ecbb936cdfed144ae66785d25651125772144dbf4f77ec7e934b82f"
+    },
+    "tech_big_bang.png": {
+      "batch": "core-05",
+      "key": "big_bang",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b4313e522bb37e047f23668dd000315461cccecd5ad3b36659e62ed9897ac740"
+    },
+    "tech_blackhole_furnace.png": {
+      "batch": "core-01",
+      "key": "blackhole_furnace",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "289dbadd5baa1fda91a4b9c408e43e98c18a9675dd76c6044204a3d3def2141e"
+    },
+    "tech_blast_charge.png": {
+      "batch": "local-01",
+      "key": "blast_charge",
+      "rect": [
+        627,
+        627,
+        940,
+        931
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "8239e0633c6e916538717dac33ad242debffc9c82ec3316cc9cc74516f3a31f7"
+    },
+    "tech_capacitor_bank.png": {
+      "batch": "local-03",
+      "key": "capacitor_bank",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b323166971f30d208b00f8696fb25bf4a034b30ce09bca37636728974e997899"
+    },
+    "tech_cascade_bus.png": {
+      "batch": "local-02",
+      "key": "cascade_bus",
+      "rect": [
+        313,
+        627,
+        627,
+        940
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "9e3130853eea5130daa5fecd2d32ec6a5274541304871fab2575c29bac2841e1"
+    },
+    "tech_cat_crew.png": {
+      "batch": "local-01",
+      "key": "cat_crew",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "74aafc2bd2bfd25017b6a356a70741df2148a4abac1bde4e03be0a5f4109c3e9"
+    },
+    "tech_causality_editor.png": {
+      "batch": "core-02",
+      "key": "causality_editor",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "09c090346e1dfae740a7c07122fadd2652bf3db6e68d6c41afbf277ada6dae0b"
+    },
+    "tech_ceramic_bearings.png": {
+      "batch": "local-03",
+      "key": "ceramic_bearings",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "9319882a00a34283fcb7428316c0ac2048c2d064b06bfa21ad92b6f4a34580a5"
+    },
+    "tech_chaos_ledger.png": {
+      "batch": "core-03",
+      "key": "chaos_ledger",
+      "rect": [
+        940,
+        0,
+        1254,
+        335
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "02ef573feb192bb69cb80f5d9408b340a4e04411f72fae528977865116298f37"
+    },
+    "tech_chrono_crown.png": {
+      "batch": "core-03",
+      "key": "chrono_crown",
+      "rect": [
+        627,
+        927,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "d220a18d098b2ae18f52805b412dfb2b9f4298f1ad5de64a1b3778c3a1336a11"
+    },
+    "tech_closed_loop_cooling.png": {
+      "batch": "local-03",
+      "key": "closed_loop_cooling",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "c16e4dc9227cbee6d49b520db62d20ea0ba2d131e49127a03f51666f149f1706"
+    },
+    "tech_cmb_echo.png": {
+      "batch": "core-05",
+      "key": "cmb_echo",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "c15f8802a8c7f5bae64f537b585207749c530a54d707e83a3e68ea02ce714a51"
+    },
+    "tech_core_depth.png": {
+      "batch": "core-01",
+      "key": "core_depth",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "12d4c23c9389a293e5150a64557e6a9888afbe1cef97634904cb94d294ca76df"
+    },
+    "tech_core_drill.png": {
+      "batch": "core-01",
+      "key": "core_drill",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2f02756edd0e357cc05b443135e00dcb554ccf960f9c2937a9e7ad9fdfa43492"
+    },
+    "tech_core_refining.png": {
+      "batch": "core-05",
+      "key": "core_refining",
+      "rect": [
+        0,
+        936,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a517174ebd849f44f8a9714341e937e18c54cfd6261d55b9535ee710af214d53"
+    },
+    "tech_cosmic_string_mine.png": {
+      "batch": "core-04",
+      "key": "cosmic_string_mine",
+      "rect": [
+        627,
+        924,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "78aae30d99f73d06bbd220891745707a5ae5d215d581e5d67395cd3eed9e2315"
+    },
+    "tech_craft_diversity.png": {
+      "batch": "local-02",
+      "key": "craft_diversity",
+      "rect": [
+        0,
+        627,
+        313,
+        940
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "386ba88b9e2222708a96405beb19f305885107943895ede8d9e9bb51d19e1457"
+    },
+    "tech_crew_whistle.png": {
+      "batch": "local-01",
+      "key": "crew_whistle",
+      "rect": [
+        0,
+        627,
+        313,
+        931
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2360a7352b930e45653b49c699d1136190ec3520aad1a8e44371d75f3ed247f2"
+    },
+    "tech_dark_lattice.png": {
+      "batch": "core-04",
+      "key": "dark_lattice",
+      "rect": [
+        0,
+        924,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "0f404bf322eeb7962a85b1dc562843bf3dac52ae7e5a307667983c591fd05088"
+    },
+    "tech_deep_marker.png": {
+      "batch": "local-01",
+      "key": "deep_marker",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "45ba59444d4477b08ede91b978cb3942c8ff0ae236bfb9276c40874c83e43bca"
+    },
+    "tech_dimensional_fold.png": {
+      "batch": "core-02",
+      "key": "dimensional_fold",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "070f0fac69da8f84a5139147306eab13a7254bba48d6a96b5e934ee2c430d728"
+    },
+    "tech_distance_fold.png": {
+      "batch": "local-02",
+      "key": "distance_fold",
+      "rect": [
+        940,
+        627,
+        1254,
+        940
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1645070e7849173ea9a331388806635a5b2c763bd10cf0b8c98b5dd401b90c2e"
+    },
+    "tech_drill_momentum.png": {
+      "batch": "local-01",
+      "key": "drill_momentum",
+      "rect": [
+        0,
+        931,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "36d4c1f4a8b1b0bd2c4725f3cda3fab59f68ca4191d44472218640c1b9d5ed09"
+    },
+    "tech_dyson_cone.png": {
+      "batch": "core-02",
+      "key": "dyson_cone",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "734e6942a62d81dba8308ab2e25b5b38d2e738773821c274318357649fda2ef1"
+    },
+    "tech_dyson_swarm.png": {
+      "batch": "core-04",
+      "key": "dyson_swarm",
+      "rect": [
+        324,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "6ce0d6829d42894bfb5c0158f91eb2312dd46bff526a202d4315a79b04f5621f"
+    },
+    "tech_entangled_echo.png": {
+      "batch": "core-01",
+      "key": "entangled_echo",
+      "rect": [
+        313,
+        627,
+        627,
+        930
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "d0de4fc43f8b59e10ac0193d6fd95f7a499f8d3e24f32ba2306471db1afcdb89"
+    },
+    "tech_entropy_reverser.png": {
+      "batch": "core-04",
+      "key": "entropy_reverser",
+      "rect": [
+        627,
+        627,
+        940,
+        924
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "4eb0a5db26efd35d1bf59baee58776b0e8328aa1056f30f7172408a597626e02"
+    },
+    "tech_eternal_city.png": {
+      "batch": "core-03",
+      "key": "eternal_city",
+      "rect": [
+        627,
+        335,
+        943,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b4ba7f55eebf1d4629136dfb25f5f3d80bc8590867f655214c0490c54c6cef54"
+    },
+    "tech_event_horizon.png": {
+      "batch": "core-02",
+      "key": "event_horizon",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a50b4f8d8d8fea27ce495623fe7a9f99d86956c69488deace962a8f22b613dc3"
+    },
+    "tech_fault_mapping.png": {
+      "batch": "local-01",
+      "key": "fault_mapping",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "291c483b858e96e8232e36bc4abac9183c5a6429c8ed12a029d49a4165fe088f"
+    },
+    "tech_fermi_answer.png": {
+      "batch": "core-04",
+      "key": "fermi_answer",
+      "rect": [
+        0,
+        627,
+        318,
+        924
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "0997dacafe407276e1447c4a0f14003476cce13a542e9d55b684369208d40405"
+    },
+    "tech_final_chapter.png": {
+      "batch": "core-05",
+      "key": "final_chapter",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2a9fdfbd7f8f6e8399fcd7ca4e0acc2b18182235591381c63e023717bc6fc11b"
+    },
+    "tech_gaia_network.png": {
+      "batch": "core-02",
+      "key": "gaia_network",
+      "rect": [
+        940,
+        627,
+        1254,
+        926
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "6260bc400a8e08db57dddad87332fc187500652a87ebfb3a164157487d66c847"
+    },
+    "tech_galactic_drive.png": {
+      "batch": "core-02",
+      "key": "galactic_drive",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "5f34644b16147e6fb56e4fbf84be90f7249cd0e81ce61dfc5e623f7175773d4b"
+    },
+    "tech_galactic_pump.png": {
+      "batch": "core-04",
+      "key": "galactic_pump",
+      "rect": [
+        940,
+        627,
+        1254,
+        924
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "719d51397cdfcad34024d957669e69be6afed867e781d7b060082d316cd59c67"
+    },
+    "tech_genesis_code.png": {
+      "batch": "core-04",
+      "key": "genesis_code",
+      "rect": [
+        940,
+        924,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "eeced3612c41a77c002cf8d6e5379347298f7ade97f9e3472ce2e1571212b736"
+    },
+    "tech_godel_shield.png": {
+      "batch": "core-02",
+      "key": "godel_shield",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "ee32b3d6950f73aaab9baae315251a7b5c3b7b1890cd5b4327d336204d28d52b"
+    },
+    "tech_gravity_lens.png": {
+      "batch": "local-02",
+      "key": "gravity_lens",
+      "rect": [
+        0,
+        940,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a97f461e2a490f5f0f3d70762d755fdcca78ce00c994fe99066345d988c4634e"
+    },
+    "tech_grid_resonance.png": {
+      "batch": "local-02",
+      "key": "grid_resonance",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "5cf9dae89a6ba959a3993106c8dc401a4222200f210287eab49fef845e277037"
+    },
+    "tech_hawking_radiation.png": {
+      "batch": "core-05",
+      "key": "hawking_radiation",
+      "rect": [
+        627,
+        627,
+        940,
+        936
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b590511582db88090172728a748ce0388e7bc52c4e0708d13402ede25a1bb41a"
+    },
+    "tech_heat_death_recycler.png": {
+      "batch": "core-05",
+      "key": "heat_death_recycler",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "6089ec612a76b151b10cc6e179706251c9c268736bff5414f0e8162bd84c35b3"
+    },
+    "tech_honed_edge.png": {
+      "batch": "local-03",
+      "key": "honed_edge",
+      "rect": [
+        940,
+        929,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "39e090ab131bdcab532818251a288b84dbe62e45578a74edbb4ed5f48f01cd92"
+    },
+    "tech_imaginary_route.png": {
+      "batch": "core-02",
+      "key": "imaginary_route",
+      "rect": [
+        313,
+        627,
+        627,
+        926
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "8ec3dcacdbfd245a4a28c1066aff53f2f21b9d4afabd740a7f3b71dcf4d82b09"
+    },
+    "tech_impact_hammer.png": {
+      "batch": "local-01",
+      "key": "impact_hammer",
+      "rect": [
+        313,
+        627,
+        627,
+        931
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "aaee428cb7eccccb78c2d095e6f3c7522c20c916b82138fecf2de22c3871ca2d"
+    },
+    "tech_induction_ledger.png": {
+      "batch": "local-02",
+      "key": "induction_ledger",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e8b324106949b27e42f8acd2e6c1cc1e64b59d006350a522ac3af1cab86dfa6d"
+    },
+    "tech_kerr_tow.png": {
+      "batch": "core-04",
+      "key": "kerr_tow",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "defb20da5b8fdeb76172da48ec2205d0519c719f4b31678176573cc7c70e1304"
+    },
+    "tech_klein_galaxy.png": {
+      "batch": "core-05",
+      "key": "klein_galaxy",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "108ea3ed006edcd5e7933e8e82dbd98b2509a833bddd9d33e4d437c13edca023"
+    },
+    "tech_klein_storage.png": {
+      "batch": "core-02",
+      "key": "klein_storage",
+      "rect": [
+        940,
+        926,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "0322436b71b8d91586cd4ac4338d52e0ad00129dcdee4d672e1e0ce347bfb756"
+    },
+    "tech_kunlun_xu.png": {
+      "batch": "core-03",
+      "key": "kunlun_xu",
+      "rect": [
+        627,
+        0,
+        940,
+        335
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "f0f439fd98c08332d6801a91e4cebaf17381f2d80669b7364d38a51cb8b7b636"
+    },
+    "tech_landau_damping.png": {
+      "batch": "core-03",
+      "key": "landau_damping",
+      "rect": [
+        0,
+        0,
+        316,
+        335
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "c6c2be8d3dcd039762407fd758d138c748d9f5117dcaab5dc672f36c04db0b4c"
+    },
+    "tech_last_proton.png": {
+      "batch": "core-05",
+      "key": "last_proton",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2c45a0c97e717f509afad08720597439fed66296686f8826cb96c40857a1820c"
+    },
+    "tech_lens_quarry.png": {
+      "batch": "core-04",
+      "key": "lens_quarry",
+      "rect": [
+        0,
+        313,
+        324,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "be1842fa395eec381c03280bb007e29fd1c9f661333fdb8ae005c9c8e5b59bf9"
+    },
+    "tech_many_worlds_mining.png": {
+      "batch": "core-05",
+      "key": "many_worlds_mining",
+      "rect": [
+        0,
+        627,
+        320,
+        936
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1ba279a499c3615bb8b4cda51c75b25a4882422168a84e564703230c42de3608"
+    },
+    "tech_math_weapon.png": {
+      "batch": "core-01",
+      "key": "math_weapon",
+      "rect": [
+        940,
+        930,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "95e32e52137fd4d485af2f06291b2bed83b43e3e6a6c2032e32f88e43497c46f"
+    },
+    "tech_maxwell_sorter.png": {
+      "batch": "core-01",
+      "key": "maxwell_sorter",
+      "rect": [
+        316,
+        930,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "344c28be9058fc4633914a2a3447c0b9a0a3682a3b0dfa88bcd7cef846307040"
+    },
+    "tech_mesh_topology.png": {
+      "batch": "local-02",
+      "key": "mesh_topology",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "047b12d8f044efdd9aca988519e28e9387c5a2bf62d39b00f0115d7683b56194"
+    },
+    "tech_multiverse_hub.png": {
+      "batch": "core-05",
+      "key": "multiverse_hub",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "14c48b52bceb2c990fb7dca2c7841d6d394e19174af4cc94ad3355a480992b39"
+    },
+    "tech_mythic_forge.png": {
+      "batch": "core-03",
+      "key": "mythic_forge",
+      "rect": [
+        313,
+        927,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b17681d706aafb5046c7d4b972e2968ce366096948ce10c15b82cdb0e0b8783e"
+    },
+    "tech_neutrino_drift.png": {
+      "batch": "core-05",
+      "key": "neutrino_drift",
+      "rect": [
+        627,
+        936,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "5a23befefcebdf9d650a26f6d0e2e7be1768c0e55bc0301988746f30296709da"
+    },
+    "tech_omega_observer.png": {
+      "batch": "core-05",
+      "key": "omega_observer",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "cdba46c6e1a66c185ad2e53646b42cb997c9f2534b65dcc29277ef8cb6eedc3a"
+    },
+    "tech_omega_point.png": {
+      "batch": "core-05",
+      "key": "omega_point",
+      "rect": [
+        940,
+        936,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "4e12d9e5d929e1c66df068d886722145bdd7e03074d6e7b425b85b4916f0f9a3"
+    },
+    "tech_opening_salvo.png": {
+      "batch": "local-02",
+      "key": "opening_salvo",
+      "rect": [
+        940,
+        940,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "04168aab9e4bd4ab26253d818f393e42c73800a1ab96ca83e0856f61849e5e5a"
+    },
+    "tech_ore_ledger.png": {
+      "batch": "local-01",
+      "key": "ore_ledger",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "11d2ffc05c5e56837d91263dde02f5ba8949d265beaf1b70caa97c2a7d947510"
+    },
+    "tech_ouroboros.png": {
+      "batch": "core-03",
+      "key": "ouroboros",
+      "rect": [
+        943,
+        335,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "591b8cbc7d963278900d3a718c520aff11e23e335a75ab6bba3a66d300deef46"
+    },
+    "tech_overpenetration.png": {
+      "batch": "local-02",
+      "key": "overpenetration",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "7262540699366985c66d66d8e1c3b3b10b0bf2320f4633ed2206ab82e9af140b"
+    },
+    "tech_paradox_engine.png": {
+      "batch": "core-03",
+      "key": "paradox_engine",
+      "rect": [
+        940,
+        627,
+        1254,
+        927
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "a97a562dc24adef59cc9fb5e384027b97031b89b3b531492f0fa9296a4f1a558"
+    },
+    "tech_phase_anchor.png": {
+      "batch": "local-03",
+      "key": "phase_anchor",
+      "rect": [
+        627,
+        627,
+        940,
+        929
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1c46c02b62579d9d0eaf5fcd75c22ec958d79cc7b1d050683c52d2cd7a7bf5de"
+    },
+    "tech_photon_sail.png": {
+      "batch": "core-03",
+      "key": "photon_sail",
+      "rect": [
+        0,
+        335,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "c06ea2d860b7b7d23c7def6382ce1c1708c57937fe83a5ac641e10e439b5e963"
+    },
+    "tech_planet_drive.png": {
+      "batch": "core-01",
+      "key": "planet_drive",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "4112cc5f38ca1f5403eab106f1d1547ff806e4947491bb2321672862da857a19"
+    },
+    "tech_planetary_exhaustion.png": {
+      "batch": "core-01",
+      "key": "planetary_exhaustion",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "b2b81ac8c628b7949ea4c5b960703c05760a361e0f657c9876edd247d9e23995"
+    },
+    "tech_planetary_lens.png": {
+      "batch": "local-03",
+      "key": "planetary_lens",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1baeff7cad1c397a540fb0e47191c1e8a82d6615b298248eba125cc57e296b36"
+    },
+    "tech_planetary_parallel.png": {
+      "batch": "local-03",
+      "key": "planetary_parallel",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "f5495ae64034fac8051da17324a19b3ac4cd059fecc378ef5b395745ba2c6c5a"
+    },
+    "tech_plasma_edge.png": {
+      "batch": "local-02",
+      "key": "plasma_edge",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e0b049aa879546c0b9c46c3559fe5d07f5b9637593f28cc8c6f17fc5ad1d2a83"
+    },
+    "tech_precision_matrix.png": {
+      "batch": "local-02",
+      "key": "precision_matrix",
+      "rect": [
+        627,
+        627,
+        940,
+        940
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "aaa545f34bb890789adef6c721fb2e0e660940914002edbda84f97b2143e2763"
+    },
+    "tech_pressure_accumulator.png": {
+      "batch": "local-03",
+      "key": "pressure_accumulator",
+      "rect": [
+        313,
+        627,
+        627,
+        929
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "7fab97e614c8f6c8b6974d264455c6b3e5c74edae4863bfe6d8a3710af9baa5a"
+    },
+    "tech_pressure_converter.png": {
+      "batch": "local-02",
+      "key": "pressure_converter",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "02ee0dce15786dbcb703727948c1e19f1264fa699c87b2034fdb4720856fc6b1"
+    },
+    "tech_prism_core.png": {
+      "batch": "core-03",
+      "key": "prism_core",
+      "rect": [
+        940,
+        927,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "4890637820cc9fdffe43c3c2bc27bde9197ba38c1b4369c672087f44a6fba027"
+    },
+    "tech_pulse_booster.png": {
+      "batch": "local-02",
+      "key": "pulse_booster",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2cad81c823f42e8cd04d9eb080755451112000b708949ef173bc1408bd21b415"
+    },
+    "tech_quantum_budget.png": {
+      "batch": "core-03",
+      "key": "quantum_budget",
+      "rect": [
+        627,
+        627,
+        940,
+        927
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "8cb05051cb387539cd26939721a86e13d2e1ec7cf1ddf4df9220bbdcfcae10ce"
+    },
+    "tech_quantum_entanglement.png": {
+      "batch": "core-01",
+      "key": "quantum_entanglement",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "14db2c036a6e200458249c3be0f9af108babd105514b415bfe9306690d2f1abc"
+    },
+    "tech_quantum_fault.png": {
+      "batch": "local-02",
+      "key": "quantum_fault",
+      "rect": [
+        627,
+        940,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "672836070801c19e8852444bb35aa7e1c5566e07a3cd1da798669f33f22eb345"
+    },
+    "tech_quantum_sorter.png": {
+      "batch": "local-03",
+      "key": "quantum_sorter",
+      "rect": [
+        0,
+        929,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "37fda8787e4dca47a980983e6fd7753786cc2316916d329364f60eb2c9c9d9e7"
+    },
+    "tech_relay_shift.png": {
+      "batch": "local-01",
+      "key": "relay_shift",
+      "rect": [
+        940,
+        627,
+        1254,
+        931
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "ec6c9c2c028e3b7b45a85045061b21c08dbb8d39be15014416ff5d7ba092d814"
+    },
+    "tech_riemann_engine.png": {
+      "batch": "core-02",
+      "key": "riemann_engine",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "3971bb88db8abfd760c2f559dd658e2ede2fd578c2866ebf48978995569c69a3"
+    },
+    "tech_rotary_pick.png": {
+      "batch": "local-01",
+      "key": "rotary_pick",
+      "rect": [
+        0,
+        0,
+        313,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "cec9025cb39757207eed1e16a952134d7d48eae289a73937fbf9937ad8378b76"
+    },
+    "tech_samsara_algo.png": {
+      "batch": "core-04",
+      "key": "samsara_algo",
+      "rect": [
+        313,
+        924,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1c9e7b247864f8fe6ed39fdd537e4f6279d6d1550bcf98656d365b15547f7cd9"
+    },
+    "tech_seismic_echo.png": {
+      "batch": "local-03",
+      "key": "seismic_echo",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "54405757e9773b00e9c577ef27d4a8ecb98429ceb20bc9e386971f8c58649f3e"
+    },
+    "tech_singularity_crew.png": {
+      "batch": "local-02",
+      "key": "singularity_crew",
+      "rect": [
+        313,
+        940,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "3b2353944008b2385b95b9c3ecacf8700e5b77feaf57f3adc76cc8c6ab5892b3"
+    },
+    "tech_singularity_heart.png": {
+      "batch": "core-02",
+      "key": "singularity_heart",
+      "rect": [
+        0,
+        926,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "f012bdc6f67e4cac855479aa2e2e7b6143d1c486c5396eac5d3e2ef4c4d5ebc9"
+    },
+    "tech_sorting_optics.png": {
+      "batch": "local-03",
+      "key": "sorting_optics",
+      "rect": [
+        0,
+        313,
+        313,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "63db62f6fdea136b88e9d7ca2671a752ee125dc700233859eda68d806de0c16e"
+    },
+    "tech_spacetime_anchor.png": {
+      "batch": "core-04",
+      "key": "spacetime_anchor",
+      "rect": [
+        318,
+        627,
+        627,
+        924
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "884fba09734ca6ae872df3249565baff7c6d145b94e49d7494b9134cc2093a5f"
+    },
+    "tech_split_tunnel.png": {
+      "batch": "local-01",
+      "key": "split_tunnel",
+      "rect": [
+        313,
+        0,
+        627,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "5a0946ff54e38bb09f9ff6eccb082e97ef34f8767e43ebd57db3fb1d7b80d864"
+    },
+    "tech_stardust_alchemy.png": {
+      "batch": "core-02",
+      "key": "stardust_alchemy",
+      "rect": [
+        313,
+        926,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "84c52321a2521c53806bf5579901441fec1e813f6e601cd25dc4d235a2eba602"
+    },
+    "tech_steam_array.png": {
+      "batch": "local-01",
+      "key": "steam_array",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "438382b19de1051dfd4ba45b50e28748e24992d78a47bbc16a7da115ddb284d3"
+    },
+    "tech_stellar_forge.png": {
+      "batch": "core-05",
+      "key": "stellar_forge",
+      "rect": [
+        313,
+        936,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "bcefac38e05f4bd69122b7370ff6ff8658a1e09a63b750bbf1aeb358834dd979"
+    },
+    "tech_stellar_procurement.png": {
+      "batch": "core-01",
+      "key": "stellar_procurement",
+      "rect": [
+        0,
+        627,
+        313,
+        930
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "9780f82030c498d1b496e7605dc0b6ba604dead192d54c58de2f7c69768cf6f1"
+    },
+    "tech_stellar_relay.png": {
+      "batch": "core-01",
+      "key": "stellar_relay",
+      "rect": [
+        627,
+        627,
+        940,
+        930
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "3d0ad53c64236fcf60dbb3a0b2ed92a5ac036ef34c7039ce99400687b3acda56"
+    },
+    "tech_stellar_sync.png": {
+      "batch": "local-03",
+      "key": "stellar_sync",
+      "rect": [
+        627,
+        929,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "f2587d95b1802167d34548519303e437c28bce1b73401d51884ec46a3a1a2ef2"
+    },
+    "tech_string_resonance.png": {
+      "batch": "core-05",
+      "key": "string_resonance",
+      "rect": [
+        320,
+        627,
+        627,
+        936
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "d36327b93d8a08fdea20096cc33b41ec3ac663b34f12f241a8dfb37c63f749e8"
+    },
+    "tech_superstring_mill.png": {
+      "batch": "core-04",
+      "key": "superstring_mill",
+      "rect": [
+        627,
+        0,
+        940,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "c362f38eb4c7bc8b6069197e88ed98c58359537a3ca62976e986e21a04372beb"
+    },
+    "tech_support_lattice.png": {
+      "batch": "local-03",
+      "key": "support_lattice",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "015b3c3d17e2511fcb8ca5cd0cd1502c003a27336b8e516e5aa8e13149cb3204"
+    },
+    "tech_thermal_recovery.png": {
+      "batch": "local-02",
+      "key": "thermal_recovery",
+      "rect": [
+        940,
+        313,
+        1254,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "0a24e7d762ca865d81ee830b32063940e80dffc5c53f932b2273bb49de6ca2df"
+    },
+    "tech_tidal_bore.png": {
+      "batch": "local-03",
+      "key": "tidal_bore",
+      "rect": [
+        313,
+        929,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "1cb9a946e4635b035df164d9f0a40dc0bb5752f65958c5c645414836e7f71acb"
+    },
+    "tech_time_sand.png": {
+      "batch": "core-02",
+      "key": "time_sand",
+      "rect": [
+        313,
+        313,
+        627,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "0add5cec83b624e79e0026be488615cc03a03ceb1ddc862854fe512667dac3e6"
+    },
+    "tech_turing_tape.png": {
+      "batch": "core-02",
+      "key": "turing_tape",
+      "rect": [
+        627,
+        627,
+        940,
+        926
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "570ba600e929f4192461fd5079374f7efda115fa4122fb58963c8b8aaa0771de"
+    },
+    "tech_union_rhythm.png": {
+      "batch": "local-01",
+      "key": "union_rhythm",
+      "rect": [
+        313,
+        931,
+        627,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "961528681ba9680736039b958d8a30465b51a5a5b35d56ef20ee9ca22021da5e"
+    },
+    "tech_vacuum_bus.png": {
+      "batch": "local-03",
+      "key": "vacuum_bus",
+      "rect": [
+        940,
+        627,
+        1254,
+        929
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "40d00a3f5b24a03d239fef4263657d5617a78576c9ef009863e474777c21b420"
+    },
+    "tech_vacuum_decay.png": {
+      "batch": "core-03",
+      "key": "vacuum_decay",
+      "rect": [
+        0,
+        927,
+        313,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "04d2ebeefeb26233bcf6e130c86af11085aa7f34a93b0366df22a6bbc64c54f8"
+    },
+    "tech_void_echo.png": {
+      "batch": "core-02",
+      "key": "void_echo",
+      "rect": [
+        627,
+        926,
+        940,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "5628059b1b45120863e622035a3f129884c18d853be886d874563b434566e297"
+    },
+    "tech_warp_lane.png": {
+      "batch": "core-04",
+      "key": "warp_lane",
+      "rect": [
+        627,
+        313,
+        940,
+        627
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "341846da624c1acf5db86665146e37df2d75698da622e6a1fc3cbbc0e41c5698"
+    },
+    "tech_weakpoint_scope.png": {
+      "batch": "local-01",
+      "key": "weakpoint_scope",
+      "rect": [
+        940,
+        931,
+        1254,
+        1254
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "2773babd56b993a1ea37fd81e5dec7337d49dc025f6364da48e38ead544a597b"
+    },
+    "tech_world_tree.png": {
+      "batch": "core-03",
+      "key": "world_tree",
+      "rect": [
+        316,
+        627,
+        627,
+        927
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "e1658e00cb71b103ea53f32aefeea45b6905c6fc1aefb82cfdda40c00544bb51"
+    },
+    "tech_xuanhuan_jade.png": {
+      "batch": "core-03",
+      "key": "xuanhuan_jade",
+      "rect": [
+        316,
+        0,
+        627,
+        335
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "47be7f50846aa4a418cae25b2817707267c212754bc2e69184eeb867df908b7c"
+    },
+    "tech_zero_point_tap.png": {
+      "batch": "core-04",
+      "key": "zero_point_tap",
+      "rect": [
+        940,
+        0,
+        1254,
+        313
+      ],
+      "edgeWarning": false,
+      "reviewed": true,
+      "size": [
+        64,
+        64
+      ],
+      "mode": "RGBA",
+      "sha256": "6210df52152d4d43c6b062dd70aa250b9f4fc44655f63e90c4a1612e0e5369ef"
+    }
+  },
+  "thumbnails": {
+    "helper_fatfish.png": "33152a7f615eb0d6c2046c06c9adf7407e16d8a2870356108d06f4adb2da400c",
+    "icon_built.png": "4be5692bc795577d6ba8df7b03f3adb545a9939621a5245c0fea2bbf706b40cc",
+    "icon_celebrate.png": "b118b77862fe494a41fdd1383736b38f2fcdc855f39f8d338e397743ed89e50a",
+    "icon_core.png": "88c77824e0469ffafd48cc10d1fb448f4f1d89ca6f32b19e76d6a4cf9576177e",
+    "icon_credits.png": "4f4c7b1b3460011fc31df65d2083f63ea37a2ac46946cf3cf0280425797f3ce6",
+    "icon_depart.png": "b7a34786bf5271d702cbcc398fed3186ce7c6d64e0c11435af091e1493d7097b",
+    "icon_depth.png": "46a3b6915e9d52adf5b2387106894a8781a45ba801b13f782acd42c25e027238",
+    "icon_empty.png": "b42abfda98f59269b0116082b73cb85223c8ddc6f69026a4f32fc8bac51a24aa",
+    "icon_era.png": "a9b05392e483958a407cd1ee210497f0fe1759a11725d5db75df12376bd098a8",
+    "icon_galaxy.png": "7177f0737446d0243f8ec8a4f648059f461bc1ff88f250ebde2764dd8a596aa8",
+    "icon_locked.png": "bf65b5bfeeb0f8b9533f7b984dcfd761d68cebbbaf646cb5e4b4a1a26db66f09",
+    "icon_ready.png": "dedfd666d0251d5d8a6d987e3d1ae5471fc064593ab76d1356e80740613c09d8",
+    "icon_research.png": "a719c372cc300aeaed77a5ab442e0ccf9d9594679894fc734e7e499cc8ccf678",
+    "icon_settings.png": "fa2dc713b2ffb3b10c0eff3f45a33b43570852d12ae60eace434223b9b4eed32",
+    "icon_wait.png": "51bf876cbb46226cec9a574253b34de239ea78015d72e6b5edf2e7db40e96533",
+    "planet_cracked.png": "79e892a54ed80156673c93d898cef70310101d9bd11ec7d147f7b79e59e0c52c",
+    "tech_akasha_record.png": "9a557bd219a43b4d962f161884edb9028a74750bcd2763d594dd99678c60268c",
+    "tech_anneal_scheduler.png": "414ea13ee2cdef40acf829cc8dec333696e5a21a7f94279592e7e7b98c38631f",
+    "tech_antimatter_tide.png": "09dd54c82391a2fface0a51f0198eb99f0ce1d5eeb08ea6d9ff55f523ca5722c",
+    "tech_arc_pick.png": "a55db2521ecc9b65cdf8665e4276a919c970869763a42d9d579e3acb3eac5bfc",
+    "tech_autonomous_survey.png": "1150c03211edad563f126668539c378f58dcdefb48e333b75a74091caadab4ce",
+    "tech_big_bang.png": "7807e0d2e1bdb223fe263998eff39902da9b1b8267851825db4730de67bae4c2",
+    "tech_blackhole_furnace.png": "d44203c272493aca1a7d3389c3a9c4e7be8f6ff15682cf0f02697c4f0fbe762b",
+    "tech_blast_charge.png": "d20dea8555478de72124d4aec989600575f7bf94198c266cbcc8a2ecccbc13ff",
+    "tech_capacitor_bank.png": "5aa6fed39a7561ba6ba86c8f69c566ff5e8a4f36fcd75371ede33c799a5a5a62",
+    "tech_cascade_bus.png": "c06d2e5a05e14e98e46eaeaa6ab60d98e323f9cf5ef91dcc1e1e0fbe6df49eff",
+    "tech_cat_crew.png": "76a45af0a30758aaf3c2ecb066b5a12c537671451f2394a3ea60e88a5e0e604b",
+    "tech_causality_editor.png": "398878db8ce95241cd063666b147dd424536048fd4ff1782759f6d0e2861dc34",
+    "tech_ceramic_bearings.png": "7849cad266b7b3a4e6db7af995a2673d6452c8f431352a9a9d00333b1de31e16",
+    "tech_chaos_ledger.png": "52bb4834b5ae3f992231271dc2849e35fef1f64f46accbd45c00c9d9d36bacea",
+    "tech_chrono_crown.png": "1f2c081a66d31a025cfc3209d6c10279b39f4d6cf881b0fa9a1396680a6ad6ec",
+    "tech_closed_loop_cooling.png": "598c5d89c03fe3299ebfb37aa5126dd2aab003eaee6bac27aa8741f359a60ce6",
+    "tech_cmb_echo.png": "9dd8f6eb323e5818f5be5850c201e97b92963b41f8e8a6f1e0ec1dd96afffef5",
+    "tech_core_depth.png": "787e39ee58bf4d583b8cb8dfe80cb3dc5f324946c66ffc1a094fb711646e5b9b",
+    "tech_core_drill.png": "c2f1dc0dc766ba7a9a68cc07a0df933d87e93695ce51e1c67b59114636c14d68",
+    "tech_core_refining.png": "7f22b8a3c9c7ac118dd823eada9ead006dbe0a7223a13e43b046d91bc70dd5e7",
+    "tech_cosmic_string_mine.png": "fa52df621b0b5b073c659e38be5da787425a21f211fcf1b822db5c6422234554",
+    "tech_craft_diversity.png": "43c714efbb28f5a0c1b9abd106587581106f806c2bb71dbf93e8c2a85fe819bc",
+    "tech_crew_whistle.png": "ec7c35041c152cfa609b3e307a99ace0b3577536753838c866f00e1961c6bc03",
+    "tech_dark_lattice.png": "bc105d289a16cae654d55e61e9d40ee5ccf07be96a5d1abf543716147b0e0b7a",
+    "tech_deep_marker.png": "66848be0b509745f9d8e4ffcb49711570ec38c35dcf9836a51a2a21c36fa6071",
+    "tech_dimensional_fold.png": "b0d0157168ae01e2dd657c3e2a3e6de061467873d38033579e5067d24363aae6",
+    "tech_distance_fold.png": "d7a72eeb7275cdd74eb64ecde0384c1da05bc897c5b76b26f0ef76f4d62203ad",
+    "tech_drill_momentum.png": "9e2a5dd4257ef0eaced0cc81f60c77e24adf0f07fb33637e0700aa9b79544e0f",
+    "tech_dyson_cone.png": "6e6acf2c2a5994a6f4cfb40e1adb1351bb887a3f585192d827c2c465f9f0ad5b",
+    "tech_dyson_swarm.png": "5e1b0f46ee9675e9d1fb807628dc3ca7775bfcfaa18f662ffa450cabc36559b3",
+    "tech_entangled_echo.png": "d7f85767514c9a551c0bd8ebafd731e663a0278dfaa4470c3b7a1fdca1f031e9",
+    "tech_entropy_reverser.png": "d33ea1950329afe5a92cd43ce67b055a82afa921f7a7d9795572002d2d16f3f2",
+    "tech_eternal_city.png": "39b587f484b343afac7e9fb7abd6fed176a2036ba6badfe9a168b9881bb53065",
+    "tech_event_horizon.png": "def9f2b25ad6c31d4c0b46ddf2b964bdd58cb51e2c0f4c6f19f847a251f5288f",
+    "tech_fault_mapping.png": "36790a6a85458765c3dc3a81fe235165be3546ef1a2f43245cc8f106a817866e",
+    "tech_fermi_answer.png": "b05546e1df5dc22ffc2317c83e31b8a82644b0299b9aa5d17671d3dc9a8674a1",
+    "tech_final_chapter.png": "338a79f627c9cc3bc2d4386b394ee4abe90c30dda05cdecf9e1814c6d02ce1cf",
+    "tech_gaia_network.png": "0abdb3f26cdd18a6a451b3661f5d0f410f88a0d418867358d24f2ef1b6390d0a",
+    "tech_galactic_drive.png": "3579e337abf0a2d2dc29844fc94ac4a99a8be5192f269ce4fa71166860e6ce18",
+    "tech_galactic_pump.png": "d6675df8cc6207f3159e87d8b7968d29edf252f3f53e96f6c81f77220d55f4b7",
+    "tech_genesis_code.png": "8e4073f8a52f838dc20579daa66b587f5feaad878ef77f423b0bdb4726cacb72",
+    "tech_godel_shield.png": "562c64bf5b49879be2aac7e41620d3d0cdd1beb887b1114ea633efdd784314ba",
+    "tech_gravity_lens.png": "3a781a3903a27b371db5dd312d87976062a28cda7d192b6f37713b009016d343",
+    "tech_grid_resonance.png": "8edd85a3e92b2c544760a707c326dc396a95f3fbc0cc98ccaceba4bd6d0f0e09",
+    "tech_hawking_radiation.png": "42bcd207f458e22c0bc24ec00166ed28659e56b1984fe02684519940332d737f",
+    "tech_heat_death_recycler.png": "b255381f63bd9a1e2279fb4111961f74ebcf30e5532b0fe6db3b3af7028160e5",
+    "tech_honed_edge.png": "1194836efec632e4348159c6d533b17804f478b448da530d61daadd81de9d06d",
+    "tech_imaginary_route.png": "80cf8099dab046d8d3885dd565327e6c2fb3eb3c14b9280b83e54f74a123999c",
+    "tech_impact_hammer.png": "d7c61485b573628f3369c39f97a0321722e5f3e25a1dc2084e31dcbf25f9ac59",
+    "tech_induction_ledger.png": "8808e6498ece7776ec408c6690942c3f1f12e3b99c1c7ede1a41f19454d0e664",
+    "tech_kerr_tow.png": "0c038dddce729c212dd507125f4c5f859eac69e2dd5643024ffd3424cd5f3fb1",
+    "tech_klein_galaxy.png": "c120a2fa4a8f13c1b7926f2d2efc29708f7be4956fcd188de9fa930d2dde7850",
+    "tech_klein_storage.png": "e7345f6c7a7d527bfc1a38eb967202933af7a5b0659e40111ceed0244423edfd",
+    "tech_kunlun_xu.png": "10280e6d173c2b8f17ee731862c8e8549a4ac3da716921d4e6f5eeb59c09d2c5",
+    "tech_landau_damping.png": "11ce42fd19e0969721c459e4ca264e52fd024cc57651a77e928928d75c7c68b9",
+    "tech_last_proton.png": "fdb72dd5839f2a40af69eaac95a5c542a3e6dbc124e67a31237fe19c2db2fc84",
+    "tech_lens_quarry.png": "aa995073624660d6767805fbbae8df8e1989062ec8889704c1e5bb20b6f10ba1",
+    "tech_many_worlds_mining.png": "e429226293ec877c6ad91e0300499d9155283145b304afb8afd04f0a177ed5df",
+    "tech_math_weapon.png": "8b6fde180ea833ce62d95e2079c8c8b1150bf215aad2e618ff8f124753eaa8cc",
+    "tech_maxwell_sorter.png": "c14eb693432c4fb11d8e34eefd845e5f1fc43736936542a20de2d09a603bef95",
+    "tech_mesh_topology.png": "6d4542af8a34650943edcca33ed00b96ae9d715bb57d67499dc1f4eaceaa71a4",
+    "tech_multiverse_hub.png": "f721e4ecd7e9277b710234ffa48302f6ca77863d285ab67b70c5ce10c0cbbc0a",
+    "tech_mythic_forge.png": "da4eab90e2acc3acf39c4af6eccb2a19d38f6339e988a60e000db84cecb8bf9a",
+    "tech_neutrino_drift.png": "93a081187c2077c386f24d2d49c95788d9e478faee2a69b735f7cee083a53680",
+    "tech_omega_observer.png": "a05adea4d40aba4d67dd5a2378af02f80f003fa671fc4f9b404990329e976e0b",
+    "tech_omega_point.png": "ccf633bda7fcf60ed70d4496d08867736b950cdb256ad2947a4034a1090ee61d",
+    "tech_opening_salvo.png": "5cb9ff63a514b079232e42d783693063d18630ec616030a7a9bf589019797227",
+    "tech_ore_ledger.png": "8a8b5cb0b1f2970a675266490b301cc6c2a42b2ba9ab47e2b756069a24a30d0e",
+    "tech_ouroboros.png": "f7a1f76d6bd4cbf5baf8de103db1b5954052213149700ab1b5783a450a1a8b22",
+    "tech_overpenetration.png": "587e2b64e79ab626defdcc97daf5211b99786f93c7816ace877f1b5f879cc35a",
+    "tech_paradox_engine.png": "574d88c91a383154cb7eacefb2c2a764be2e06ff2333fc44b6a1583336e29e3c",
+    "tech_phase_anchor.png": "5230158c42d2e111c86fdeed964e46559394d4c5997fdf4bef5246d03c5b3539",
+    "tech_photon_sail.png": "9a71925bdead7fbd1784de7ea716d50a78771dc309704342fb0b6d5a2df33a45",
+    "tech_planet_drive.png": "582c32357c3cb56a506c7b926037563f81bed9dc0877a1a4bee19db0b49fd0d7",
+    "tech_planetary_exhaustion.png": "665f7b0306b9c3593c0c4ddfb4eeabe910030a62f65985b574c0597e27e764e8",
+    "tech_planetary_lens.png": "711dbe2c9fe4db2b90bbb91894c292c4c4fbd7b4573ce063dd1028da06b3aca7",
+    "tech_planetary_parallel.png": "7474200adea5ec4407156675f1c75dbc1c66eb427b30b7d6906db2522a2439b9",
+    "tech_plasma_edge.png": "f2a6a36ec50d7bbe1d6da758449d08aa38cc4da6d7e4c1c07a418cf0e92682a8",
+    "tech_precision_matrix.png": "81049d82d5adbb7ba86346dfdd385d9da13b664e2dc10bc4c810c0cfb1230ee5",
+    "tech_pressure_accumulator.png": "f60da96ebe338e0ad13778c8ab089104e44833c6a9c5bd45ceab0cf573734ebd",
+    "tech_pressure_converter.png": "def8bdb4797b5440eefb798133ef2508bed14b490028b25bebb11f8fa8b88814",
+    "tech_prism_core.png": "d58d6c48b767b6e783f0889cce15bb9fc2e70b79b01696389c6fb56d380198f3",
+    "tech_pulse_booster.png": "fe08bc06aecab190fcdcb5db353a9fa68d3a0512e1ec7ec37202a2f7c4f9316a",
+    "tech_quantum_budget.png": "4a112b01cd01a60523e8681aa715ada88d1e87739be53f3a7a486d9b7b379c31",
+    "tech_quantum_entanglement.png": "d560421cfaf5122a35628d991588b8491d8bef23b8836e674ddbbb094fee91ed",
+    "tech_quantum_fault.png": "2699dbbe056fe1a8c2eac14c4b002598d9a276eccd153176aecd86122f7278f3",
+    "tech_quantum_sorter.png": "d429e9411dad89f36335c73134d2770c7a05d65c38332431d1d1e55fb4283fe7",
+    "tech_relay_shift.png": "99f0d90f6bfb63389d13acdc124d8d6f2a88dacabf79759cec779acb55649641",
+    "tech_riemann_engine.png": "a6bcd3a6cdc4d8d4ca923109edc13fe6de5fca29e7623062d2c72e69a8ad0d7c",
+    "tech_rotary_pick.png": "6cffa1f43dcd742052a1f3e9c986c47980971ae1d31a5f53ff16de72751687b0",
+    "tech_samsara_algo.png": "a7feb1cbb1f9ea15d80db592b86897329ef0c7166fd26b9a228f57f348d85c21",
+    "tech_seismic_echo.png": "3c0a65fd532696eb03908d903b62279c1a1a1d6117c0d2246bcb7abc08b529e7",
+    "tech_singularity_crew.png": "6d829747890b2d97a5d7c435f14509573e8e67baf03239604f867c9c35b77958",
+    "tech_singularity_heart.png": "d6b7972df918903dcebaf5acebefd8275c848d150eed45fd53680c7000a49a84",
+    "tech_sorting_optics.png": "f09561867aa8d77735ab8d14119a8418b0a4d03ec83d3ca654725842dc369fb8",
+    "tech_spacetime_anchor.png": "8004db94a004a0ce3ec7cd9bfe36019691a3dcf06c9e86e3ca28040a60fb8088",
+    "tech_split_tunnel.png": "51911ceb7bb28049d065f9433002f9072f441ea18f17b4158c44410fda504b83",
+    "tech_stardust_alchemy.png": "be14e9aefca93f4e6a2b63c23bf9600a10ee610c48bf6f03d83a12898d6f46d1",
+    "tech_steam_array.png": "308c0b4ab111ecd221509d12b486dc65a306f49558ed9518f0a946e2f6fbb606",
+    "tech_stellar_forge.png": "bed1981e1da328b86ef921985f7d36c7ed266d1dceb052a7bd69dc8300bdaca0",
+    "tech_stellar_procurement.png": "b9d0120563df33331f306d6591d089ca450fe98e8f7674f3c983925473c37ee1",
+    "tech_stellar_relay.png": "ad7145cb4e90775653eac1f6bfa035c8b97a7e6a46021aec682bd022a01895bc",
+    "tech_stellar_sync.png": "ccbf833023b99025dec624df70ddbe7d8d403b7299178ddfe017f3e1541835a1",
+    "tech_string_resonance.png": "4c4f6eb1b45f8af394abb3e0eabbab07063ac2312716544a0894bf5f31e619a3",
+    "tech_superstring_mill.png": "f01759ca64c7fafdd6ba8d91ca87ad1a10b2255663ffb3af9488eff6987f4c04",
+    "tech_support_lattice.png": "0e4a2df07f35b3990e072a729b4351bb88835c359e51268d4c933535d7ff2940",
+    "tech_thermal_recovery.png": "0ebb0f6230739354be110c1da0a3912a3cec5f166f1a196419da7c0243c02720",
+    "tech_tidal_bore.png": "e9889829cd9db0e6d22a7b5adb5b28397b3ce53ef6696b6b18dea4056d5d71c7",
+    "tech_time_sand.png": "335a721be42d657b3cceb3fdd7a5de6e4838863338583cc348a4ffee5dbd7c75",
+    "tech_turing_tape.png": "9c0f2291ab2c3059d416ffd8c60a417cecc8b815734bf60c30850e10bf4da3b0",
+    "tech_union_rhythm.png": "fc214a1ca506e4d8f47c3ef074ab5b5d4ba13e57e6a42daffb9dcc0898b665a6",
+    "tech_vacuum_bus.png": "fd15a24040cf376d44dd2cbdeba2fc2b96880c3ec2ebdd36b9feb8fbbe75bdb3",
+    "tech_vacuum_decay.png": "1f97ed6354390d444926fdf4afec26eb4b98d83853d64ac0e2c5d2d09c55bd4c",
+    "tech_void_echo.png": "fabfcb49ce5f98650e1c13e1b505bd470be62a16b5d54cd82e449d4e4bd21850",
+    "tech_warp_lane.png": "f0cb40ceaa6d2a96c315b677e483a9537f2740525e9cfdb627c6ac3f846db79e",
+    "tech_weakpoint_scope.png": "1dfc7ded249ebab7e1eb818a5b2c9450e0695c11ddd2a2527f65558a39f6d547",
+    "tech_world_tree.png": "d3ef2e569ce0bde2c148ee542435a462d55c4fb395cf0634d8be0b6eaf9e5e89",
+    "tech_xuanhuan_jade.png": "49404119a777f7df3fb5db5e8608b072c48e756a2b4a4918b39bc0cc7cd79bdb",
+    "tech_zero_point_tap.png": "80e86267ec5a05410740ee2438f037e9eb620abc28352f9140a7b683af98bf9f"
+  }
+}

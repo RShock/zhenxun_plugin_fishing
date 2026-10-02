@@ -1,3 +1,4 @@
+import { artwork, techArtwork, illustratedNotice } from "./art.js?v=s2-art-1";
 import { S2Engine, loadGameData, runReplay } from "./engine.js?v=3-prestige-5";
 import { renderDescription } from "./description.js?v=3-prestige-5";
 
@@ -64,7 +65,7 @@ const showToast = (text) => {
     document.body.appendChild(el);
   }
   toastLines = [...toastLines.slice(-3), text];
-  el.textContent = toastLines.join("\n");
+  el.replaceChildren(...toastLines.map(illustratedNotice));
   el.style.transform = "translateY(0)"; el.style.opacity = "1";
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.transform = "translateY(20px)"; el.style.opacity = "0"; toastLines = []; }, 4200);
@@ -150,7 +151,7 @@ function advance(minutes) {
   const parts = [`已过${duration(minutes)}`];
   // P2-7：时代只在第 1 颗星球播报。之后每颗新星球都会从原始时代重来一遍，再播就成了噪音。
   if (engine.currentEra() !== before.era && before.resets === 0 && currentPlanet() === 1) {
-    parts.push(`🎉 进入【${eraName(engine.currentEra())}】`);
+    parts.push(`进入【${eraName(engine.currentEra())}】`);
     showToast(`🎉 进入【${eraName(engine.currentEra())}】`);
   }
   announceMilestones(before, completed);
@@ -347,13 +348,13 @@ function renderNextUpgradeBanner(container, preferredKey) {
   }
   container.hidden = false;
   if (eta.wait < 0.5) {
-    container.innerHTML = `✅ 下一项 <strong>${eta.name}</strong> 已可升级（${formatNumber(eta.cost)} 矿币）— 点绿色卡片立即开工`;
+    container.innerHTML = `${artwork("icon_ready").outerHTML} 下一项 <strong>${eta.name}</strong> 已可升级（${formatNumber(eta.cost)} 矿币）— 点绿色卡片立即开工`;
   } else if (eta.depthWait > eta.creditWait) {
-    container.innerHTML = `⏳ 下一项 <strong>${eta.name}</strong> 受深度限制：需挖至 ${formatNumber(eta.needDepth)}（当前 ${formatNumber(engine.state.depth)}，约 <strong>${duration(eta.depthWait)}后</strong>）`;
+    container.innerHTML = `${artwork("icon_wait").outerHTML} 下一项 <strong>${eta.name}</strong> 受深度限制：需挖至 ${formatNumber(eta.needDepth)}（当前 ${formatNumber(engine.state.depth)}，约 <strong>${duration(eta.depthWait)}后</strong>）`;
   } else {
     const waitText = duration(eta.wait);
     const clockText = clock(engine.state.minute + eta.wait);
-    container.innerHTML = `⏳ 下一项 <strong>${eta.name}</strong> 预计 <strong>${waitText}后</strong> 可升级（${clockText}，还差 ${formatNumber(Math.max(0, eta.cost - engine.state.credits))} 矿币）— 先去挖矿或推进时间`;
+    container.innerHTML = `${artwork("icon_wait").outerHTML} 下一项 <strong>${eta.name}</strong> 预计 <strong>${waitText}后</strong> 可升级（${clockText}，还差 ${formatNumber(Math.max(0, eta.cost - engine.state.credits))} 矿币）— 先去挖矿或推进时间`;
   }
 }
 function renderStatus() {
@@ -379,7 +380,8 @@ function renderStatus() {
   if (engine.galaxyComplete() && timer) stop();
   const running = timer !== null;
   $("#toggleButton").textContent = engine.galaxyComplete() ? "银河开采已完成"
-    : running ? "⛏ 矿井运转中（时间持续流动）" : "▶ 开始挖矿游戏";
+    : running ? "矿井运转中（时间持续流动）" : "开始挖矿游戏";
+  $("#toggleButton").prepend(artwork(running ? "icon_depth" : "icon_depart"));
   $("#toggleButton").disabled = running || engine.galaxyComplete();
   $("#toggleButton").title = running
     ? "已经开工：时间会一直走下去，不需要也无法暂停"
@@ -415,6 +417,9 @@ function renderHelper() {
   if (!items.size) root.textContent = report ? (report.reason || "本班没有新增建设。") : "值班记录尚为空。";
 }
 function renderNext() {
+  // Early return states must not retain the previous upgrade artwork/banner.
+  const previousBanner = document.getElementById("nextEtaBanner");
+  if (previousBanner) previousBanner.hidden = true;
   let checkin = document.getElementById("nextCheckin");
   if (!checkin) {
     checkin = document.createElement("p");
@@ -452,7 +457,7 @@ function renderNext() {
     return;
   }
   const spec = engine.specs[next]; let current; let target; let rate; let unit;
-  $("#nextName").textContent = spec.name; renderDescription($("#nextReason"), lockedReason(next) || "矿币充足，可以开工");
+  $("#nextName").textContent = spec.name; $("#nextName").prepend(techArtwork(spec.key)); renderDescription($("#nextReason"), lockedReason(next) || "矿币充足，可以开工");
   if (engine.available(next) || (manualTarget(next) === 0 && engine.available(next, true))) {
     current = engine.state.credits; target = engine.costFor(next);
     rate = data.rules.baseCreditsPerMinute * engine.incomeMultiplier(); unit = "矿币";
@@ -474,7 +479,8 @@ function renderNext() {
   const checkinEvent = nextCheckin();
   checkin.hidden = !checkinEvent;
   if (checkinEvent) {
-    checkin.textContent = `🕒 下次看点：${clock(checkinEvent.minute)} · ${checkinEvent.label} —— 在那之前可以放心离开`;
+    checkin.textContent = `下次看点：${clock(checkinEvent.minute)} · ${checkinEvent.label} —— 在那之前可以放心离开`;
+    checkin.prepend(artwork("icon_wait"));
   }
 }
 function buy(orders) {
@@ -535,6 +541,7 @@ function renderTechTree() {
       card.classList.toggle("cannot-upgrade", !canUpgrade && view === "construction" && !auto);
       const h3 = card.querySelector("h3");
       h3.textContent = spec.name;
+      h3.prepend(techArtwork(spec.key));
       // 已有 eta badge 清理
       const oldBadge = h3.querySelector(".eta-badge");
       if (oldBadge) oldBadge.remove();
@@ -778,6 +785,7 @@ function renderCoreShop() {
       channel.textContent = commissioned ? "已转自动" : `亲手 ${hand} / ${engine.coreCommissionLevels}`;
       top.append(channel);
       const name = document.createElement("h3"); name.textContent = spec.name;
+      name.prepend(techArtwork(spec.key));
       const description = document.createElement("p"); description.className = "description";
       renderDescription(description, spec.description);
       const permanent = document.createElement("p"); permanent.className = "permanent-note";
@@ -885,7 +893,8 @@ function renderPrestige() {
     && s.cores >= cheapestCore.cost && !engine.galaxyComplete();
   coreIdleHint.hidden = !coreIdle;
   if (coreIdle) {
-    renderDescription(coreIdleHint, `💡 **${formatNumber(s.cores)} 个星球核心闲置中**——核心放着不会自己变强。现在就可以亲手购买「**${cheapestCore.name}**」（${formatNumber(cheapestCore.cost)} 核心），或把上方的「**永久科技夜班助手**」打开，让它替你把核心花掉。`);
+    renderDescription(coreIdleHint, `**${formatNumber(s.cores)} 个星球核心闲置中**——核心放着不会自己变强。现在就可以亲手购买「**${cheapestCore.name}**」（${formatNumber(cheapestCore.cost)} 核心），或把上方的「**永久科技夜班助手**」打开，让它替你把核心花掉。`);
+    coreIdleHint.prepend(artwork("icon_research"));
   }
   const allMaxed = s.allMaxedMinute === null ? null : Math.max(0, Number(s.allMaxedMinute) - Number(s.planetStartedMinute));
   $("#allMaxedStatus").textContent = allMaxed === null

@@ -1,0 +1,69 @@
+/* S2 is a portrait game on every screen, including desktop preview. */
+body { background:linear-gradient(160deg,#f9ba78,#ff977f); min-height:100vh; }
+.shell { width:min(520px,calc(100% - 20px)); margin:14px auto; padding:0 16px; background:linear-gradient(#fff3e1,#ffdbc1); border:2px solid #fff3df; border-radius:24px; box-shadow:0 5px 0 #b7774940; }
+.masthead { display:block; text-align:center; padding:24px 0 16px; border-bottom:0; }
+.masthead h1 { font-size:32px; color:#653b26; letter-spacing:2px; }
+.masthead .eyebrow { color:#a67e5f; font-size:10px; }
+.station-id { display:flex; flex-direction:row; flex-wrap:wrap; justify-content:center; align-items:center; text-align:center; gap:8px 12px; margin-top:10px; }
+.station-id strong { font-size:14px; }
+.station-id small { font-size:10px; }
+.notice { text-align:center; padding:0 0 10px; }
+.scene-hero { width:100%; }
+.mine-scene { height:auto; min-height:0; width:100%; border-radius:12px; }
+.mine-scene img { display:block; width:100%; height:auto; min-height:0; object-fit:contain; }
+.scene-caption { top:6px; left:6px; right:6px; gap:4px; font-size:10px; }
+.scene-caption span,.scene-caption b { padding:2px 4px; }
+.status-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:14px 0; border:0; }
+.metric,.metric:last-child,.metric:nth-child(2) { padding:12px 10px; border:1px solid #eddbc4; border-radius:16px; box-shadow:0 3px 0 #e8c7a875; }
+.metric > span { display:flex; align-items:center; gap:4px; margin-bottom:6px; color:#79553e; }
+.metric strong { font-size:21px; }
+.metric small { font-size:10px; line-height:1.6; }
+.metric .s2-icon { width:28px; height:28px; margin:0; }
+.mine-overview { display:block; padding:0 0 16px; min-height:0; }
+.next-discovery { padding:16px; background:#fff8eb; border:1px solid #eddbc4; border-radius:16px; }
+.next-discovery h2 { font-size:20px; }
+.planet-summary,.prestige-content,.departure-panel,.core-grid,.tech-grid { grid-template-columns:minmax(0,1fr); }
+.planet-progress-panel { padding:16px 0; }
+.planet-progress-heading { gap:8px; flex-wrap:wrap; }
+.prestige-stats { border-left:0; border-top:1px solid var(--line); }
+.prestige-stats > div { padding:12px; }
+.prestige-stats strong { font-size:17px; }
+.section-heading,.subsection-heading { flex-wrap:wrap; gap:10px; }
+.section-heading h2 { font-size:18px; }
+.prestige-balance { white-space:normal; flex-wrap:wrap; gap:5px; }
+.prestige-balance strong { font-size:20px; }
+.core-shop-wrap > .subsection-heading { align-items:flex-start; flex-direction:column; }
+.core-auto-control { grid-template-columns:1fr; }
+.core-auto-control small { grid-column:auto; }
+.core-actions { grid-template-columns:1fr; }
+.core-actions button,.departure-actions button { width:100%; white-space:normal; }
+.departure-panel { gap:14px; }
+.departure-actions { align-items:stretch; }
+.departure-actions small { text-align:left; }
+.planet-history-wrap { padding:16px 0 0; border-left:0; border-top:1px solid var(--line); }
+.shift-grid { grid-template-columns:1fr 1fr; gap:14px; }
+.shift-items { grid-column:1/-1; }
+.shift-items span { white-space:normal; }
+.shift-grid strong { font-size:15px; }
+.control-row { display:grid; grid-template-columns:1fr 1fr; }
+#toggleButton { grid-column:1/-1; }
+.control-row .subtle { grid-column:1/-1; }
+.tech-grid,.core-grid { gap:12px; }
+.tech-card,.core-card { padding:16px; border-radius:14px; }
+.tech-top { flex-wrap:wrap; }
+.tech-actions { grid-template-columns:1fr; }
+.view-tabs { gap:6px; justify-content:space-between; }
+.view-tabs button { font-size:12px; flex:1; }
+.audit-summary,.multiplier-list { grid-template-columns:1fr; }
+.settings { align-items:flex-start; flex-direction:column; }
+.s2-tech-icon { width:48px; height:48px; }
+.s2-planet-art { width:120px; height:120px; }
+button { min-height:44px; }
+progress { height:10px; border-radius:6px; overflow:hidden; }
+footer { text-align:center; padding:20px 0; }
+@media(max-width:360px) {
+  .shell { padding:0 10px; width:calc(100% - 12px); }
+  .masthead h1 { font-size:28px; }
+  .metric strong { font-size:18px; }
+  .scene-caption { font-size:9px; }
+}

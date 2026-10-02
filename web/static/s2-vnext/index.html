@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>星穹矿脉 · 日班与夜班</title>
-  <link rel="stylesheet" href="./style.css?v=3-prestige-5">
+  <link rel="stylesheet" href="./style.css?v=s2-art-1">
+  <link rel="stylesheet" href="./portrait.css?v=s2-art-1">
 </head>
 <body>
   <main class="shell">
@@ -13,17 +14,19 @@
       <div class="station-id"><span id="stationPlanet">第 1 颗星球</span><strong id="timeValue">D1 00:00</strong><small id="seedValue">seed 42</small></div>
     </header>
     <p id="saveNotice" class="notice" role="status"></p>
-    <section class="status-grid" aria-label="矿区状态">
-      <article class="metric"><span>矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
-      <article class="metric"><span>挖矿深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
-      <article class="metric"><span>当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
-      <article class="metric"><span>累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
-    </section>
-    <section class="mine-overview">
+    <section class="scene-hero" aria-label="矿场">
       <div class="mine-scene">
-        <img src="./mining-section.svg" alt="首星矿井剖面：地表设备通过竖井连接地下钻探工作面" width="700" height="260">
+        <img src="./assets/scene_shaft.png" alt="首星矿井剖面：地表设备通过竖井连接地下钻探工作面" width="1376" height="479">
         <div class="scene-caption"><span id="sceneEra">原始时代</span><b id="sceneStatus">采矿作业中</b></div>
       </div>
+    </section>
+    <section class="status-grid" aria-label="矿区状态">
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_credits.png" alt="">矿币</span><strong id="creditsValue">0</strong><small id="incomeRate"></small></article>
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_depth.png" alt="">挖矿深度</span><strong id="depthValue">0</strong><small id="depthRate"></small></article>
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_era.png" alt="">当前时代</span><strong id="eraValue">原始时代</strong><small id="automationValue"></small></article>
+      <article class="metric"><span><img class="s2-icon" src="./assets/icon_built.png" alt="">累计建设等级</span><strong id="totalBuiltValue">0</strong><small id="purchaseCounts"></small></article>
+    </section>
+    <section class="mine-overview">
       <div class="next-discovery">
         <p class="eyebrow">NEXT / 下一项工程</p>
         <h2 id="nextName">手工矿镐</h2>
@@ -35,7 +38,7 @@
     <section class="prestige-section" aria-labelledby="planetTitle">
       <div class="section-heading">
         <div><p class="eyebrow">VOYAGE / 行星航程</p><h2 id="planetTitle">第 1 颗星球</h2></div>
-        <div class="prestige-balance"><span>可用星球核心</span><strong id="coresValue">0</strong></div>
+        <div class="prestige-balance"><span><img class="s2-icon" src="./assets/icon_core.png" alt="">可用星球核心</span><strong id="coresValue">0</strong></div>
       </div>
       <div class="planet-summary">
         <div class="planet-progress-panel">
@@ -66,7 +69,7 @@
       </div>
       <div id="departurePanel" class="departure-panel" hidden>
         <div>
-          <h3>前往下一颗星球</h3>
+          <img class="s2-planet-art" src="./assets/planet_cracked.png" alt="挖穿的星球与发光核心"><h3>前往下一颗星球</h3>
           <p id="departureDescription"></p>
         </div>
         <div class="departure-actions">
@@ -92,7 +95,7 @@
       </div>
     </section>
     <section class="shift-section">
-      <div class="section-heading"><h2>夜班笨助手</h2><label class="switch"><input id="helperToggle" type="checkbox" checked><span>自动值班</span></label></div>
+      <div class="section-heading"><h2><img class="s2-helper-icon" src="./assets/helper_fatfish.png" alt="大肥鱼矿工助手">夜班笨助手</h2><label class="switch"><input id="helperToggle" type="checkbox" checked><span>自动值班</span></label></div>
       <div class="shift-grid">
         <div><span class="field-label">下一次采购</span><strong id="helperNext">D2 00:00</strong><small id="helperCountdown"></small></div>
         <div><span class="field-label">最近一班</span><strong id="helperResult">等待第一班</strong><small id="helperSpent"></small></div>
@@ -167,6 +170,6 @@
     <h2>重置测试进度？</h2><p>当前行星轮回进度会被替换；重置前会在浏览器本地留下备份，不影响旧版试玩存档。</p>
     <div class="dialog-actions"><form method="dialog"><button>取消</button></form><button id="confirmReset" class="danger-ghost">确认重置</button></div>
   </dialog>
-  <script type="module" src="./app.js?v=3-prestige-5"></script>
+  <script type="module" src="./app.js?v=s2-art-1"></script>
 </body>
 </html>

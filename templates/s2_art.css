@@ -1,0 +1,41 @@
+/* S2 only: preserve the approved cream/peach concept without changing S1. */
+body { box-sizing:border-box; width:720px; min-width:720px; padding:20px; }
+.container { background:linear-gradient(180deg,#fff3df,#fbd4b5); border:2px solid #fff5df; box-shadow:0 5px 0 #dc9a7866; color:#653b26; }
+.s2-inline { width:24px; height:24px; object-fit:contain; vertical-align:middle; image-rendering:pixelated; }
+.stat-art { width:48px; height:48px; object-fit:contain; image-rendering:pixelated; flex-shrink:0; }
+.tech-art { width:40px; height:40px; object-fit:contain; image-rendering:pixelated; }
+.shaft-art { display:block; width:100%; height:auto; }
+.planet-art { display:block; width:176px; height:176px; object-fit:contain; margin:0 auto 12px; image-rendering:pixelated; }
+.helper-identity { display:flex; align-items:center; gap:6px; }
+.helper-art { width:40px; height:40px; object-fit:contain; image-rendering:pixelated; }
+/* 720px delivery images are read at roughly half size in a phone chat. */
+.mining-title { font-size:36px; }
+.mining-sub { font-size:16px; }
+.scene-caption { font-size:14px; }
+.stat-card { padding:14px 12px; gap:10px; }
+.stat-art { width:56px; height:56px; }
+.stat-label { font-size:16px; }
+.stat-value { font-size:22px; }
+.stat-sub { font-size:16px; }
+.stats-grid { gap:12px; margin-bottom:16px; }
+.progress-bar { height:24px; }
+.progress-text { font-size:16px; }
+.next-icon { width:64px; height:64px; flex-shrink:0; }
+.next-icon .tech-art { width:56px; height:56px; }
+.next-label { font-size:16px; }
+.next-name { font-size:24px; }
+.next-btn { font-size:22px; }
+.next-card { padding:16px; }
+.report-box { font-size:17px; }
+.helper-bar { font-size:16px; padding:10px; }
+.helper-art { width:48px; height:48px; }
+.mode-hint { font-size:14px; line-height:1.8; }
+.shop-title { font-size:26px; }
+.shop-page,.shop-stats { font-size:16px; }
+.row { grid-template-columns:36px 64px 1fr 110px; padding:16px 6px; gap:10px; }
+.icon-box { width:60px; height:60px; }
+.icon-box .tech-art { width:56px; height:56px; }
+.name { font-size:20px; }
+.lv,.reason { font-size:15px; line-height:1.6; }
+.cost { font-size:18px; }
+.pagination,.hint { font-size:16px; line-height:1.8; }
