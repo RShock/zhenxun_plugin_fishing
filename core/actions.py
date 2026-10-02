@@ -285,6 +285,16 @@ async def try_auto_fish_on_idle(
     if await FishingUser.is_fishing(user_id):
         return None
 
+    # S2 挖矿期间禁止自动恢复钓鱼（互斥）
+    try:
+        from ..s2_mining import get_s2_state
+
+        s2_state = await get_s2_state(user_id)
+        if s2_state.get("mode") == "mining" and not s2_state.get("stopMining"):
+            return None
+    except Exception:
+        pass
+
     user = await get_or_create_user(user_id, nickname)
     last_location_id = user.last_location_id
     last_active_time = user.last_active_time

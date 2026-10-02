@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block extra_css %}
+.shop-header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+.shop-title { font-size:18px; font-weight:800; color:#3b2f2f; }
+.shop-page { font-size:12px; color:#9a7b5a; }
+.shop-stats { display:flex; gap:10px; font-size:12px; color:#6b3a1a; background:#fff3d2; padding:6px 10px; border-radius:8px; margin-bottom:10px; }
+.row { display:grid; grid-template-columns:32px 44px 1fr 90px; gap:8px; align-items:center; padding:8px 6px; border-bottom:1px solid #ead8bd; }
+.row:last-child { border-bottom:0; }
+.idx { font-weight:800; color:#a0a0a0; text-align:center; }
+.icon-box { width:40px; height:40px; background:#fff; border:1px solid #ead8bd; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.name { font-weight:700; color:#3b2f2f; font-size:13px; }
+.lv { font-size:11px; color:#9a7b5a; }
+.cost { font-size:12px; font-weight:800; color:#d36b20; }
+.reason { font-size:11px; color:#9a7b5a; }
+.row.can-buy { background:#f0fff4; border-radius:8px; border:1.5px solid #7be0a3; }
+.row.can-buy .idx, .row.can-buy .name { color:#2e7d32; }
+.row.can-buy .reason { color:#2e7d32; font-weight:700; }
+.pagination { text-align:center; font-size:12px; color:#9a7b5a; margin:10px 0; }
+.hint { text-align:center; font-size:11px; color:#9a7b5a; background:#fffaf0; padding:8px; border-radius:8px; }
+{% endblock %}
+{% block content %}
+<div class="shop-header"><span class="shop-title">⛏️ 挖矿商店</span><span class="shop-page">第 {{ page }}/{{ pages }} 页</span></div>
+<div class="shop-stats"><span>💎 {{ state.credits|int }} 矿币</span><span>深度 {{ (state.depth/state.targetDepth*100)|round(1) }}%</span><span>已建 {{ state.totalBuilt }}级</span></div>
+{% for r in rows %}
+<div class="row {{ 'can-buy' if r.can else '' }}">
+  <div class="idx">{{ r.idx }}</div>
+  <div class="icon-box">{{ emoji_map.get(r.key, "⛏️") }}</div>
+  <div>
+    <div class="name">{{ r.name }} <span class="lv">Lv{{ r.lv }}/{{ r.max }}</span></div>
+    <div class="reason">{{ r.reason }}{% if r.lv < r.max %} · {{ r.cost }}矿币{% endif %}</div>
+  </div>
+  <div style="text-align:right;">
+    {% if r.lv < r.max %}<div class="cost">{{ r.cost }} ◆</div>{% else %}<div class="cost" style="color:#9a7b5a;">已满级</div>{% endif %}
+    <div class="lv">{{ r.era }}</div>
+  </div>
+</div>
+{% endfor %}
+<div class="pagination">共 {{ total }} 项 · 发送【挖矿商店 2】翻页</div>
+<div class="hint">发送【挖矿购买 2】或【挖矿购买 分岔矿道】购买<br>支持批量：【挖矿购买 1 5】</div>
+{% endblock %}

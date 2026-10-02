@@ -138,6 +138,14 @@ debug_render_matcher = on_regex(
 use_item_matcher = on_fishing_command("使用物品")
 weather_forecast_matcher = on_fishing_command("天气")
 cat_park_build_matcher = on_fishing_command("建设猫猫乐园")
+# S2 星穹矿脉
+switch_mode_matcher = on_fishing_command("切换模式")
+s2_mining_matcher = on_fishing_command("挖矿")
+s2_shop_matcher = on_fishing_command("挖矿商店")
+s2_buy_matcher = on_fishing_command("挖矿购买")
+s2_next_matcher = on_fishing_command("下一个星球")
+s2_stop_matcher = on_fishing_command("停止挖矿")
+s2_helper_matcher = on_fishing_command("大肥鱼助手")
 build_starry_ship_matcher = on_fishing_command("建设星空艇")
 # 公告内容可能含回车/多行，不能用 on_regex + `.`（默认不匹配换行）；
 # 与 GM 指令一致，走 on_command 前缀匹配，参数由 CommandArg 完整取出。
