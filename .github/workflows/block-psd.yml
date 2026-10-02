@@ -1,0 +1,52 @@
+name: Block PSD/PSB
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  block-psd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check current tree for PSD/PSB
+        run: |
+          echo "🔍 检查当前分支是否跟踪 PSD/PSB..."
+          if git ls-files | grep -qiE '\.(psd|psb)$'; then
+            echo "::error::检测到 PSD/PSB 已被跟踪，永久禁止入库！"
+            git ls-files | grep -iE '\.(psd|psb)$' | sed 's/^/::error::  /'
+            exit 1
+          fi
+          echo "✅ 当前分支无 PSD/PSB"
+
+      - name: Check full history for PSD/PSB
+        run: |
+          echo "🔍 检查完整 git 历史是否曾污染 PSD/PSB..."
+          if git log --all --pretty=format: --name-only --diff-filter=ADMR | grep -qiE '\.(psd|psb)$'; then
+            echo "::error::历史中发现 PSD/PSB，永远禁止进入远程！"
+            git log --all --pretty=format: --name-only --diff-filter=ADMR | grep -iE '\.(psd|psb)$' | sort -u | sed 's/^/::error::  /'
+            echo ""
+            echo "修复指引：需用 git filter-repo / BFG 重写历史："
+            echo "  git filter-repo --path-glob '*.psd' --path-glob '*.psb' --invert-paths --force"
+            exit 1
+          fi
+          echo "✅ 历史干净，无 PSD/PSB"
+
+      - name: Check PR diff for PSD/PSB
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 检查 PR 差异..."
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          if git diff --name-only --diff-filter=ACM "$BASE...$HEAD" | grep -qiE '\.(psd|psb)$'; then
+            echo "::error::PR 中包含 PSD/PSB 文件！"
+            git diff --name-only --diff-filter=ACM "$BASE...$HEAD" | grep -iE '\.(psd|psb)$' | sed 's/^/::error::  /'
+            exit 1
+          fi
+          echo "✅ PR 无 PSD/PSB"

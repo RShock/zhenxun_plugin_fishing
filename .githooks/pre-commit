@@ -1,0 +1,25 @@
+#!/bin/sh
+# 永久拦截 PSD/PSB 入库 - 本地最后一道闸
+# 即使 .gitignore 被 -f 绕过，也会失败
+
+# 检查 staged 文件
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+if echo "$STAGED" | grep -qiE '\.(psd|psb)$'; then
+  echo "❌ ERROR: 检测到 PSD/PSB 文件，永久禁止入库！"
+  echo "   被拦截文件："
+  echo "$STAGED" | grep -iE '\.(psd|psb)$' | sed 's/^/    /'
+  echo ""
+  echo "   原因：PSD/PSB 体积大且永远不应进入 git 历史（你之前已要求‘毫不犹豫删掉’）。"
+  echo "   解决：请将源文件存到网盘/对象存储，仓库只保留导出后的 png/jpg/webp。"
+  echo "   如确需强制提交，请先联系维护者修改 .gitignore/.githooks/CI 规则。"
+  exit 1
+fi
+
+# 额外拦截：检查是否有人尝试 add 已被 ignore 但用 -f 强加的 psd（history 里也不允许）
+if git ls-files --cached | grep -qiE '\.(psd|psb)$'; then
+  echo "❌ ERROR: 仓库已跟踪的 PSD/PSB 文件（历史污染）："
+  git ls-files --cached | grep -iE '\.(psd|psb)$' | sed 's/^/    /'
+  exit 1
+fi
+
+exit 0

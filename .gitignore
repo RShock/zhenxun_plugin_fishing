@@ -67,7 +67,20 @@ temp/
 
 # Local output / generated assets
 avatar_system/output/
+# ===== 永久禁止：PSD/PSB 等 Photoshop 设计源文件（体积大，永不入库，history 也不允许）=====
+# 即使 git add -f 也会被 pre-commit/pre-push/CI 拦截
 *.psd
+*.psb
+*.PSD
+*.PSB
+*.Psd
+*.Psb
+**/*.psd
+**/*.psb
+**/*.PSD
+**/*.PSB
+**/*.Psd
+**/*.Psb
 resources/temp.png
 resources/temp_processed.png
 resources/temp*.png

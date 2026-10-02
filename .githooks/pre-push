@@ -1,0 +1,33 @@
+#!/bin/sh
+# 永久拦截 PSD/PSB 推送 - 防止历史污染远程
+remote="$1"
+url="$2"
+
+# 检查本次推送涉及的 commit 中是否有 PSD
+# 获取本地将要推送的范围（兼容 shallow）
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  RANGE="origin/main..HEAD"
+  # shallow 可能没有 origin/main，fallback 到 HEAD 检查
+  if ! git rev-parse --verify origin/main >/dev/null 2>&1; then
+    RANGE="HEAD"
+  fi
+  # 列出 RANGE 内所有新增/修改文件
+  FILES=$(git diff --name-only --diff-filter=ACM $(git merge-base --is-ancestor HEAD origin/main 2>/dev/null && echo "origin/main" || echo "HEAD~1")..HEAD 2>/dev/null || git diff --name-only --cached --diff-filter=ACM 2>/dev/null || git ls-files)
+  # 更稳妥：直接扫描 RANGE 涉及的 tree
+  HIST_FILES=$(git log --pretty=format: --name-only --diff-filter=ADMR $RANGE 2>/dev/null | sort -u)
+  if echo "$HIST_FILES" | grep -qiE '\.(psd|psb)$'; then
+    echo "❌ ERROR: 推送被拒绝 - 检测到 PSD/PSB 历史污染！"
+    echo "$HIST_FILES" | grep -iE '\.(psd|psb)$' | sed 's/^/    /'
+    echo "   PSD 永远禁止进入远程历史，请移除后再推送。"
+    exit 1
+  fi
+fi
+
+# 最终兜底：当前工作区是否已跟踪 PSD
+if git ls-files | grep -qiE '\.(psd|psb)$'; then
+  echo "❌ ERROR: 仓库已跟踪 PSD/PSB，禁止推送："
+  git ls-files | grep -iE '\.(psd|psb)$' | sed 's/^/    /'
+  exit 1
+fi
+
+exit 0

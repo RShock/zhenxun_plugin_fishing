@@ -1,0 +1,9 @@
+# 永久禁止 PSD/PSB 入库 - 即使误加入也按 binary 处理，hooks/CI 会直接拦截并拒绝推送
+*.psd binary
+*.psb binary
+*.PSD binary
+*.PSB binary
+*.Psd binary
+*.Psb binary
+**/*.psd binary
+**/*.psb binary
