@@ -352,6 +352,40 @@ async def _(bot: Bot, event: Event, matcher: Matcher, group: tuple = RegexGroup(
 
     count, arg = _parse_use_item_arguments(item_name, rest)
 
+    # ── S2 挖矿中 的 药水 特殊处理（白名单 + 挖矿模式） ──
+    # 仅当用户在 S2 挖矿模式时，接管 时光药水 为 8h 模拟推进；其他药水在 S2 不可用且不扣除
+    try:
+        from ..s2_mining import get_s2_state as _s2_get_state, use_time_potion_in_s2 as _s2_use_time, is_s2_whitelisted_event as _s2_is_wl
+        # 仅白名单用户才走 S2 分支
+        is_whitelisted = False
+        try:
+            is_whitelisted = _s2_is_wl(event, user_id)
+        except Exception:
+            is_whitelisted = str(user_id) in {"470103427", "418648118"}
+        if is_whitelisted:
+            s2_state = await _s2_get_state(user_id)
+            in_mining = s2_state.get("mode") == "mining" and not s2_state.get("stopMining") and s2_state.get("started")
+            if in_mining:
+                norm = item_name.replace(" ", "").replace("　", "")
+                # 时光药水（含别名 时间药水）在 S2 中推进 8h/瓶
+                if norm in ("时光药水", "时间药水", "time_potion"):
+                    # 直接走 S2 药水，使用 S2 的库存检查与推进，不走普通钓鱼的时光药水（需钓鱼状态/鱼饵）
+                    success, message = await _s2_use_time(user_id, count)
+                    # S2 药水返回文本，直接发送
+                    await _send_text(matcher, message, user_id, is_private=is_private)
+                    return
+                # 其他药水在 S2 不可用且不扣除（静默不扣）
+                if norm in ("真多多药水", "多多药水", "幸运药水", "幸运药水", "闪光药水", "回档药水", "回溯药水"):
+                    await _send_text(matcher, f"S2 挖矿中，{item_name} 暂不可用（仅时光药水可在挖矿中推进 8 小时）。", user_id, is_private=is_private)
+                    return
+    except Exception as e:
+        # S2 分支异常不影响普通钓鱼流程，记录日志后继续
+        try:
+            from zhenxun.services.log import logger
+            logger.debug(f"S2 potion branch check failed: {e}")
+        except Exception:
+            pass
+
     use_check = await check_item_use(
         use_context, item_name, count=count, arg=arg
     )

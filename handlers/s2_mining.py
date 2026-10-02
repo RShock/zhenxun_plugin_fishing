@@ -21,9 +21,11 @@ from ..render.s2_mining import render_mining_main, render_shop_with_total
 from ..s2_mining import (
     S2_HELPER_NAME,
     S2_MANUAL_DEPARTURES,
+    S2_WHITELIST,
     get_mining_status,
     get_s2_state,
     get_shop_page,
+    is_s2_whitelisted_event,
     next_planet,
     purchase_upgrade,
     stop_mining,
@@ -34,9 +36,21 @@ from ..services.user_lock_service import with_user_lock
 from ..utils import _ensure_user, _get_nickname, _send_image, _send_text
 
 
+def _check_whitelist(event) -> bool:
+    try:
+        uid = event.get_user_id()
+    except Exception:
+        uid = ""
+    return is_s2_whitelisted_event(event, uid)
+
+
 @switch_mode_matcher.handle()
 @with_user_lock("S2/切换模式")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    if not _check_whitelist(event):
+        # 静默忽略，非白名单不产生副作用也不发送消息
+        await matcher.finish()
+        return
     user_id, nickname = await _ensure_user(event)
     raw = event.get_plaintext() if hasattr(event, "get_plaintext") else ""
     # 兼容 RegexGroup 与直接解析
@@ -57,6 +71,9 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 @s2_mining_matcher.handle()
 @with_user_lock("S2/挖矿")
 async def _(event: Event, matcher: Matcher):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, nickname = await _ensure_user(event)
     state, delta = await get_mining_status(user_id)
     if not state.get("s2_unlocked"):
@@ -78,6 +95,9 @@ async def _(event: Event, matcher: Matcher):
 @s2_shop_matcher.handle()
 @with_user_lock("S2/商店")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, _ = await _ensure_user(event)
     state = await get_s2_state(user_id)
     if not state.get("s2_unlocked"):
@@ -104,6 +124,9 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 @s2_buy_matcher.handle()
 @with_user_lock("S2/购买")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, _ = await _ensure_user(event)
     state = await get_s2_state(user_id)
     if not state.get("s2_unlocked"):
@@ -145,6 +168,9 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 @s2_next_matcher.handle()
 @with_user_lock("S2/下一个星球")
 async def _(event: Event, matcher: Matcher):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, _ = await _ensure_user(event)
     state = await get_s2_state(user_id)
     if not state.get("s2_unlocked"):
@@ -165,6 +191,9 @@ async def _(event: Event, matcher: Matcher):
 @s2_stop_matcher.handle()
 @with_user_lock("S2/停止挖矿")
 async def _(event: Event, matcher: Matcher):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, _ = await _ensure_user(event)
     ok, msg = await stop_mining(user_id)
     await _send_text(matcher, msg, user_id)
@@ -173,6 +202,9 @@ async def _(event: Event, matcher: Matcher):
 @s2_helper_matcher.handle()
 @with_user_lock("S2/助手")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
     user_id, _ = await _ensure_user(event)
     raw = event.get_plaintext() if hasattr(event, "get_plaintext") else ""
     arg = ""
