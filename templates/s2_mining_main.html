@@ -85,7 +85,7 @@
 
 <div class="helper-bar">
   <span class="helper-identity"><img class="helper-art" src="{{ fatfish_image() }}" alt="大肥鱼矿工助手">{{ helper_name }}助手：{% if state.helperEnabled %}<span class="helper-on">自动购买中</span>{% else %}<span class="helper-off">已关闭</span>{% endif %}</span>
-  <span><img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""> {{ state.cores }} 核心</span>
+  <span class="helper-core"><img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""> {{ state.cores }} 核心</span>
 </div>
 <div class="mode-hint">发送【挖矿】查看收益 · 【挖矿商店】浏览升级 · 【下一个星球】启程</div>
 {% endif %}
