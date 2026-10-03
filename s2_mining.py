@@ -98,16 +98,17 @@ async def _call_bridge(op: str, payload: dict[str, Any], timeout: float = 8.0) -
     return res
 
 
-def _asia_date_str(ts: int | None = None) -> str:
+def _asia_date_str(ts: float | None = None) -> str:
     """Asia/Shanghai 的 YYYY-MM-DD"""
     if ts is None:
-        ts = int(time.time())
+        ts = time.time()
     dt = datetime.fromtimestamp(ts, tz=_ASIA_TZ)
     return dt.strftime("%Y-%m-%d")
 
 
-def _asia_now_ts() -> int:
-    return int(time.time())
+def _asia_now_ts() -> float:
+    # 保留秒级小数，懒结算不因整分钟取整而丢失后期快速航程的进度。
+    return time.time()
 
 
 def is_whitelisted_id(user_id: str) -> bool:
@@ -541,9 +542,10 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
         state["real_last_helper_date"] = _asia_date_str(now)
         await save_s2_state(user_id, state)
         return state, {"credits": 0, "depth": 0, "helperBuys": [], "minutes": 0, "realMinutes": 0}
-    real_elapsed = max(0, (now - last) // 60)  # 分钟
-    if real_elapsed < 1:
+    real_elapsed_seconds = max(0.0, now - last)
+    if real_elapsed_seconds < 1.0:
         return state, {"credits": 0, "depth": 0, "helperBuys": [], "minutes": 0, "realMinutes": 0}
+    real_elapsed = real_elapsed_seconds / 60.0
     # 不再限制 1440，允许任意离线时长；但为避免一次性过大导致超时，分批处理
     # 对于 resets>=3 的批量航程，engine 会自动批量，此处直接整段 mine
     # 对于 <3，mineBlock 按 settlementMinutes 步进，也支持大段
@@ -582,6 +584,7 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
         "helperBuys": helper_buys,
         "minutes": total_real,
         "realMinutes": total_real,
+        "realSeconds": real_elapsed_seconds,
         "planets": after_planets - before_planets,
         "events": all_events,
     }
@@ -720,7 +723,7 @@ async def get_mining_status(user_id: str) -> tuple[dict[str, Any], dict[str, Any
     # 正常结算
     state, delta = await ensure_mining_tick(user_id, state)
     now = _asia_now_ts()
-    since = now - int(state.get("lastReportTime", now))
+    since = max(0.0, now - float(state.get("lastReportTime", now)))
     # 兼容旧报告字段
     report_credits = state["credits"] - float(state.get("lastReportCredits", 0))
     report_planets = state["completedPlanets"] - int(state.get("lastReportPlanets", 0))
@@ -728,7 +731,13 @@ async def get_mining_status(user_id: str) -> tuple[dict[str, Any], dict[str, Any
     state["lastReportCredits"] = state["credits"]
     state["lastReportPlanets"] = state["completedPlanets"]
     await save_s2_state(user_id, state)
-    delta["reportMinutes"] = max(0, since // 60)
+    delta["reportMinutes"] = max(0.0, since / 60.0)
+    delta["reportSeconds"] = max(0.0, float(since))
+    minutes_part = int(delta["reportSeconds"] // 60)
+    seconds_part = int(delta["reportSeconds"] % 60)
+    delta["reportElapsedText"] = (
+        f"{minutes_part}分钟{seconds_part}秒" if minutes_part else f"{seconds_part}秒"
+    )
     delta["reportCredits"] = report_credits
     delta["reportPlanets"] = report_planets
     return state, delta
