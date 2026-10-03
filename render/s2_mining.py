@@ -5,6 +5,38 @@ from __future__ import annotations
 from .base import gradient_bg, render_html, render_template
 from .s2_assets import get_fatfish_image_src, get_s2_icon_src, get_s2_image_src
 
+_PIXEL_DIGITS = {
+    "0": ("111", "101", "101", "101", "111"),
+    "1": ("010", "110", "010", "010", "111"),
+    "2": ("111", "001", "111", "100", "111"),
+    "3": ("111", "001", "111", "001", "111"),
+    "4": ("101", "101", "111", "001", "001"),
+    "5": ("111", "100", "111", "001", "111"),
+    "6": ("111", "100", "111", "101", "111"),
+    "7": ("111", "001", "001", "001", "001"),
+    "8": ("111", "101", "111", "101", "111"),
+    "9": ("111", "101", "111", "001", "111"),
+}
+
+
+def pixel_level_src(level: int) -> str:
+    """生成每个数字 3x5 像素的等级徽标。"""
+    import base64
+
+    digits = str(max(0, int(level)))
+    width = len(digits) * 4 - 1
+    rects = []
+    for offset, digit in enumerate(digits):
+        for y, row in enumerate(_PIXEL_DIGITS.get(digit, _PIXEL_DIGITS["0"])):
+            for x, bit in enumerate(row):
+                if bit == "1":
+                    rects.append(f"<rect x='{offset * 4 + x}' y='{y}' width='1' height='1'/>")
+    svg = (
+        f"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='5' "
+        f"viewBox='0 0 {width} 5'><g fill='%23fff8d6'>{''.join(rects)}</g></svg>"
+    )
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+
 
 async def render_mining_help() -> bytes:
     html = render_template(
@@ -96,6 +128,35 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         income_rate=income_rate,
         depth_rate=depth_rate,
         planet_minutes=planet_minutes,
+    )
+    return await render_html(html, 720)
+
+
+async def render_mining_status(state: dict, delta: dict) -> bytes:
+    from ..s2_mining import _load_game_data
+
+    levels = state.get("levels", {})
+    rows = []
+    for spec in _load_game_data().get("upgrades", []):
+        level = int(levels.get(spec["key"], 0))
+        if level <= 0:
+            continue
+        rows.append({
+            "name": spec.get("name", spec["key"]),
+            "level": level,
+            "max": int(spec.get("maxLevel", level)),
+            "icon": get_s2_icon_src(spec["key"]),
+            "pixel_level": pixel_level_src(level),
+        })
+    html = render_template(
+        "s2_mining_status.html",
+        body_bg=gradient_bg("peach"),
+        width=720,
+        state=state,
+        delta=delta,
+        rows=rows,
+        s2_image=get_s2_image_src,
+        fatfish_image=get_fatfish_image_src,
     )
     return await render_html(html, 720)
 

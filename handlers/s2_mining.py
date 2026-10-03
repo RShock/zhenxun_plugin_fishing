@@ -15,10 +15,11 @@ from ..matchers import (
     s2_mining_matcher,
     s2_next_matcher,
     s2_shop_matcher,
+    s2_status_matcher,
     s2_stop_matcher,
     switch_mode_matcher,
 )
-from ..render.s2_mining import render_mining_help, render_mining_main, render_shop_with_total
+from ..render.s2_mining import render_mining_help, render_mining_main, render_mining_status, render_shop_with_total
 from ..s2_mining import (
     S2_HELPER_NAME,
     S2_MANUAL_DEPARTURES,
@@ -55,6 +56,25 @@ async def _(event: Event, matcher: Matcher):
     await _send_image(matcher, image, user_id=event.get_user_id())
 
 
+@s2_status_matcher.handle()
+@with_user_lock("S2/状态")
+async def _(event: Event, matcher: Matcher):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
+    user_id, _ = await _ensure_user(event)
+    state = await get_s2_state(user_id)
+    if not state.get("s2_unlocked"):
+        await _send_text(matcher, "🔒 尚未解锁星穹矿脉。", user_id)
+        return
+    if state.get("mode") != "mining":
+        await _send_text(matcher, "请先发送【挖矿】进入挖矿模式。", user_id)
+        return
+    state, delta = await get_mining_status(user_id)
+    image = await render_mining_status(state, delta)
+    await _send_image(matcher, image, user_id=user_id)
+
+
 @switch_mode_matcher.handle()
 @with_user_lock("S2/切换模式")
 async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
@@ -86,11 +106,11 @@ async def _(event: Event, matcher: Matcher):
         await matcher.finish()
         return
     user_id, nickname = await _ensure_user(event)
-    state, delta = await get_mining_status(user_id)
+    # 先切换模式再读取状态；已有钓鱼存档时不能让 get_mining_status 抢先跳过切换。
+    state = await get_s2_state(user_id)
     if not state.get("s2_unlocked"):
         await _send_text(matcher, "🔒 尚未解锁星穹矿脉：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。", user_id)
         return
-    # 直接发送“挖矿”即视为切换并开始挖矿，减少模式指令负担。
     if state.get("mode") != "mining":
         ok, msg, state = await switch_mode(user_id, "挖矿")
         if not ok:
@@ -98,6 +118,8 @@ async def _(event: Event, matcher: Matcher):
             return
         state, delta = await get_mining_status(user_id)
         await _send_text(matcher, "已切换至【挖矿】模式，之后发送【挖矿】即可查看矿场。", user_id)
+    else:
+        state, delta = await get_mining_status(user_id)
     if state.get("stopMining"):
         await _send_text(matcher, "挖矿已暂停，发送【切换模式 挖矿】恢复。", user_id)
         return

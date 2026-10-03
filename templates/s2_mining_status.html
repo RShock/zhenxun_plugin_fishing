@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block extra_css %}
+{% include "s2_art.css" %}
+<style>
+.status-title { text-align:center; color:#6b3a1a; font-size:24px; font-weight:800; margin:2px 0 4px; }
+.status-sub { text-align:center; color:#9a7b5a; font-size:12px; margin-bottom:10px; }
+.status-summary { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.status-stat { background:#fffaf0; border:1.5px solid #ead8bd; border-radius:10px; padding:8px 10px; text-align:center; color:#6b3a1a; }
+.status-stat b { display:block; font-size:16px; color:#3b2f2f; }
+.tech-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; background:#fff3d2; border:1.5px solid #edbd91; border-radius:12px; padding:10px; }
+.tech-cell { min-width:0; position:relative; text-align:center; background:#fffaf0; border:1px solid #ead8bd; border-radius:9px; padding:7px 3px 5px; }
+.tech-cell img.tech-icon { width:54px; height:54px; object-fit:contain; image-rendering:pixelated; }
+.tech-cell .level-badge { position:absolute; right:4px; bottom:23px; width:auto; height:7px; image-rendering:pixelated; filter:drop-shadow(0 1px 1px #4f2b1e); }
+.tech-name { height:28px; overflow:hidden; color:#6b3a1a; font-size:10px; line-height:1.35; }
+.tech-max { color:#a27d62; font-size:9px; }
+.empty-tech { grid-column:1/-1; text-align:center; color:#9a7b5a; padding:20px 8px; }
+.status-hint { text-align:center; color:#9a7b5a; font-size:11px; margin-top:10px; }
+@media (max-width:420px) { .tech-grid { grid-template-columns:repeat(4, 1fr); gap:6px; padding:7px; } .tech-cell img.tech-icon { width:48px; height:48px; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="status-title">星穹矿脉 · 挖矿状态</div>
+<div class="status-sub">第 {{ state.planet }} 颗星球 · 已有科技总等级 {{ state.totalBuilt }}级</div>
+<div class="status-summary">
+  <div class="status-stat"><span>矿币</span><b>{{ state.credits|int }}</b></div>
+  <div class="status-stat"><span>深度</span><b>{{ (state.depth/state.targetDepth*100)|round(1) }}%</b></div>
+</div>
+<div class="tech-grid">
+  {% for r in rows %}
+  <div class="tech-cell">
+    <img class="tech-icon" src="{{ r.icon }}" alt="{{ r.name }}">
+    <img class="level-badge" src="{{ r.pixel_level }}" alt="Lv{{ r.level }}">
+    <div class="tech-name">{{ r.name }}</div>
+    <div class="tech-max">Lv{{ r.level }}/{{ r.max }}</div>
+  </div>
+  {% else %}
+  <div class="empty-tech">尚未建成科技。发送【挖矿商店】查看可建设项目。</div>
+  {% endfor %}
+</div>
+<div class="status-hint">图标右下角为像素等级 · 发送【挖矿】返回矿场</div>
+{% endblock %}
