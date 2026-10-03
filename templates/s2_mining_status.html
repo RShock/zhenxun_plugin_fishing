@@ -22,7 +22,7 @@
 <div class="status-title">星穹矿脉 · 挖矿状态</div>
 <div class="status-sub">第 {{ state.planet }} 颗星球 · 已有科技总等级 {{ state.totalBuilt }}级</div>
 <div class="status-summary">
-  <div class="status-stat"><span>矿币</span><b>{{ state.credits|int }}</b></div>
+  <div class="status-stat"><span>矿币</span><b>{{ s2_num(state.credits) }}</b></div>
   <div class="status-stat"><span>深度</span><b>{{ progress_pct|round(2) }}%</b></div>
 </div>
 <div class="tech-grid">

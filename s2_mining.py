@@ -121,6 +121,28 @@ def s2_progress_percent(state: dict[str, Any]) -> float:
     return min(100.0, math.log10(depth + 1.0) / math.log10(target + 1.0) * 100.0)
 
 
+def s2_format_number(value: Any) -> str:
+    """S2 面向玩家的中文数量级格式，最多保留两位有效数字，禁止科学计数法。"""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "0"
+    if not math.isfinite(number):
+        return "0"
+    sign = "-" if number < 0 else ""
+    number = abs(number)
+    units = ((10**16, "亿亿"), (10**12, "万亿"), (10**8, "亿"), (10**4, "万"))
+    for base, unit in units:
+        if number >= base:
+            quotient = number / base
+            decimals = 1 if quotient < 10 else 0
+            text = f"{quotient:.{decimals}f}".rstrip("0").rstrip(".")
+            return f"{sign}{text}{unit}"
+    if number.is_integer():
+        return f"{sign}{int(number)}"
+    return f"{sign}{number:.2f}".rstrip("0").rstrip(".")
+
+
 def is_whitelisted_id(user_id: str) -> bool:
     return str(user_id) in S2_WHITELIST
 
@@ -888,7 +910,7 @@ async def purchase_upgrade(user_id: str, ident: str, count: int = 1) -> tuple[bo
         if bought < count:
             # 部分成功
             lvl = state["levels"][key]
-            return True, f"已购买 {bought} 级（请求 {count} 级），{spec['name']} → Lv{lvl}，剩余 {int(state['credits'])} 矿币。"
+            return True, f"已购买 {bought} 级（请求 {count} 级），{spec['name']} → Lv{lvl}，剩余 {s2_format_number(state['credits'])} 矿币。"
         lvl = state["levels"][key]
         extra = ""
         # 检查是否刚转自动
@@ -896,10 +918,10 @@ async def purchase_upgrade(user_id: str, ident: str, count: int = 1) -> tuple[bo
             extra = " 已转自动"
         if bought == 1:
             cost = purchases[0].get("cost", 0)
-            return True, f"购买成功：{spec['name']} Lv{lvl}（消耗 {int(cost)} 矿币），{S2_EMOJI['credits']}剩余 {int(state['credits'])}。{extra}"
+            return True, f"购买成功：{spec['name']} Lv{lvl}（消耗 {s2_format_number(cost)} 矿币），剩余 {s2_format_number(state['credits'])}。{extra}"
         else:
             total_cost = sum(p.get("cost", 0) for p in purchases)
-            return True, f"批量购买成功：{spec['name']} +{bought} 级 → Lv{lvl}，共消耗 {int(total_cost)}，{S2_EMOJI['credits']}剩余 {int(state['credits'])}。{extra}"
+            return True, f"批量购买成功：{spec['name']} +{bought} 级 → Lv{lvl}，共消耗 {s2_format_number(total_cost)}，剩余 {s2_format_number(state['credits'])}。{extra}"
     except Exception as e:
         return False, f"购买异常：{e}"
 
@@ -913,7 +935,7 @@ async def next_planet(user_id: str) -> tuple[bool, str]:
         eng_state = state["engine_snapshot"]["state"]
         remain = max(0, eng_state["targetDepth"] - eng_state["depth"])
         pct = (eng_state["depth"] / eng_state["targetDepth"] * 100) if eng_state["targetDepth"] else 0
-        return False, f"星球尚未挖穿：进度 {pct:.1f}%（{int(eng_state['depth'])}/{int(eng_state['targetDepth'])}），还需 {int(remain)} 深度。"
+        return False, f"星球尚未挖穿：进度 {pct:.1f}%（当前 {s2_format_number(eng_state['depth'])}，还需 {s2_format_number(remain)} 深度）。"
     # 尝试 depart via bridge
     try:
         res = await _call_bridge("depart", {"snapshot": state["engine_snapshot"]})

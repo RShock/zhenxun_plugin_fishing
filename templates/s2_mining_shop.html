@@ -21,17 +21,17 @@
 {% endblock %}
 {% block content %}
 <div class="shop-header"><span class="shop-title"><img class="s2-inline" src="{{ s2_image('icon_depth') }}" alt=""> 挖矿商店</span><span class="shop-page">第 {{ page }}/{{ pages }} 页</span></div>
-<div class="shop-stats"><span><img class="s2-inline" src="{{ s2_image('icon_credits') }}" alt=""> {{ state.credits|int }} 矿币</span><span>深度 {{ progress_pct|round(2) }}%</span><span>已有科技总等级 {{ state.totalBuilt }}级</span></div>
+<div class="shop-stats"><span><img class="s2-inline" src="{{ s2_image('icon_credits') }}" alt=""> {{ s2_num(state.credits) }} 矿币</span><span>深度 {{ progress_pct|round(2) }}%</span><span>已有科技总等级 {{ state.totalBuilt }}级</span></div>
 {% for r in rows %}
 <div class="row {{ 'can-buy' if r.can else '' }}">
   <div class="idx">{{ r.idx }}</div>
   <div class="icon-box"><img class="tech-art" src="{{ s2_tech(r.key) }}" alt=""></div>
   <div>
     <div class="name">{{ r.name }} <span class="lv">Lv{{ r.lv }}/{{ r.max }}</span></div>
-    <div class="reason">{{ r.reason }}{% if r.lv < r.max %} · {{ r.cost }}矿币{% endif %}</div>
+    <div class="reason">{{ r.reason }}{% if r.lv < r.max %} · {{ s2_num(r.cost) }}矿币{% endif %}</div>
   </div>
   <div style="text-align:right;">
-    {% if r.lv < r.max %}<div class="cost">{{ r.cost }} <img class="s2-inline" src="{{ s2_image('icon_credits') }}" alt=""></div>{% else %}<div class="cost" style="color:#9a7b5a;">已满级</div>{% endif %}
+    {% if r.lv < r.max %}<div class="cost">{{ s2_num(r.cost) }} <img class="s2-inline" src="{{ s2_image('icon_credits') }}" alt=""></div>{% else %}<div class="cost" style="color:#9a7b5a;">已满级</div>{% endif %}
     <div class="lv">{{ r.era }}</div>
   </div>
 </div>

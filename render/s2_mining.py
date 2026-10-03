@@ -103,7 +103,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
 
     # 速率
     try:
-        from ..s2_mining import _income_rate, _depth_rate, s2_progress_percent
+        from ..s2_mining import _income_rate, _depth_rate, s2_format_number, s2_progress_percent
         income_rate = _income_rate(state)
         depth_rate = _depth_rate(state)
         progress_pct = s2_progress_percent(state)
@@ -111,6 +111,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         income_rate = 8
         depth_rate = 25
         progress_pct = 0
+        s2_format_number = lambda value: str(value)
     planet_minutes = round((state.get("real_last_tick", 0) - state.get("startTime", 0)) / 60, 1) if state.get("startTime") else 0
     html = render_template(
         "s2_mining_main.html",
@@ -131,12 +132,13 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         depth_rate=depth_rate,
         planet_minutes=planet_minutes,
         progress_pct=progress_pct,
+        s2_num=s2_format_number,
     )
     return await render_html(html, 720)
 
 
 async def render_mining_status(state: dict, delta: dict) -> bytes:
-    from ..s2_mining import _load_game_data, s2_progress_percent
+    from ..s2_mining import _load_game_data, s2_format_number, s2_progress_percent
 
     levels = state.get("levels", {})
     rows = []
@@ -161,12 +163,13 @@ async def render_mining_status(state: dict, delta: dict) -> bytes:
         s2_image=get_s2_image_src,
         fatfish_image=get_fatfish_image_src,
         progress_pct=s2_progress_percent(state),
+        s2_num=s2_format_number,
     )
     return await render_html(html, 720)
 
 
 async def render_mining_shop(state: dict, rows: list[dict], page: int, pages: int) -> bytes:
-    from ..s2_mining import s2_progress_percent
+    from ..s2_mining import s2_format_number, s2_progress_percent
     html = render_template(
         "s2_mining_shop.html",
         body_bg=gradient_bg("peach"),
@@ -179,6 +182,7 @@ async def render_mining_shop(state: dict, rows: list[dict], page: int, pages: in
         s2_tech=get_s2_icon_src,
         s2_image=get_s2_image_src,
         progress_pct=s2_progress_percent(state),
+        s2_num=s2_format_number,
     )
     # 修正 total 为真实总数，需传入
     # 重新渲染一次带正确的 total（上面 len(rows) 不准）
@@ -187,7 +191,7 @@ async def render_mining_shop(state: dict, rows: list[dict], page: int, pages: in
 
 
 async def render_shop_with_total(state: dict, rows: list[dict], page: int, pages: int, total: int) -> bytes:
-    from ..s2_mining import s2_progress_percent
+    from ..s2_mining import s2_format_number, s2_progress_percent
     html = render_template(
         "s2_mining_shop.html",
         body_bg=gradient_bg("peach"),
@@ -200,5 +204,6 @@ async def render_shop_with_total(state: dict, rows: list[dict], page: int, pages
         s2_tech=get_s2_icon_src,
         s2_image=get_s2_image_src,
         progress_pct=s2_progress_percent(state),
+        s2_num=s2_format_number,
     )
     return await render_html(html, 720)
