@@ -78,6 +78,22 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     group_id = _get_group_context_id(event)
     is_private = _is_private_chat(event)
 
+    # S2 白名单用户在挖矿中直接发送“钓鱼”即切回钓鱼模式；普通玩家不受影响。
+    mode_switch_hint = ""
+    try:
+        from ..s2_mining import get_s2_state, is_s2_whitelisted_event, switch_mode
+
+        if is_s2_whitelisted_event(event, user_id):
+            s2_state = await get_s2_state(user_id)
+        else:
+            s2_state = {}
+        if s2_state.get("mode") == "mining":
+            ok, mode_switch_hint, _ = await switch_mode(user_id, "钓鱼")
+            if ok:
+                mode_switch_hint = "已切换至【钓鱼】模式。"
+    except Exception:
+        mode_switch_hint = ""
+
     location_input = group[0] if group and group[0] else ""
     if location_input:
         if location_input.lower() == "s1":
@@ -85,6 +101,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         image, success, hint = await start_fishing(
             user_id, location_input, nickname, group_id=group_id
         )
+        hint = "\n".join(filter(None, [mode_switch_hint, hint]))
         await _send_image(matcher, image, hint, user_id, is_private=is_private)
         await matcher.finish()
     else:
@@ -120,7 +137,7 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
 
         locations = ConfigManager.get_locations()
         image = await render_location_select(user_id, locations, user.rod_level)
-        await _send_image(matcher, image, user_id=user_id, is_private=is_private)
+        await _send_image(matcher, image, mode_switch_hint, user_id, is_private=is_private)
 
 
 @fishing_matcher.got("location")

@@ -76,7 +76,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "å¤§è‚
     except Exception:
         income_rate = 8
         depth_rate = 25
-    planet_minutes = int((state.get("lastTick", 0) - state.get("startTime", 0)) // 60) if state.get("startTime") else 0
+    planet_minutes = round((state.get("real_last_tick", 0) - state.get("startTime", 0)) / 60, 1) if state.get("startTime") else 0
     html = render_template(
         "s2_mining_main.html",
         body_bg=gradient_bg("peach"),

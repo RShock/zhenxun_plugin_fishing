@@ -90,10 +90,14 @@ async def _(event: Event, matcher: Matcher):
     if not state.get("s2_unlocked"):
         await _send_text(matcher, "🔒 尚未解锁星穹矿脉：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。", user_id)
         return
-    # 若不在挖矿模式，提示切换
+    # 直接发送“挖矿”即视为切换并开始挖矿，减少模式指令负担。
     if state.get("mode") != "mining":
-        await _send_text(matcher, "当前在【钓鱼】模式，请先发送【切换模式 挖矿】。", user_id)
-        return
+        ok, msg, state = await switch_mode(user_id, "挖矿")
+        if not ok:
+            await _send_text(matcher, msg, user_id)
+            return
+        state, delta = await get_mining_status(user_id)
+        await _send_text(matcher, "已切换至【挖矿】模式，之后发送【挖矿】即可查看矿场。", user_id)
     if state.get("stopMining"):
         await _send_text(matcher, "挖矿已暂停，发送【切换模式 挖矿】恢复。", user_id)
         return
