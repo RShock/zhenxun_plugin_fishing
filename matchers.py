@@ -61,6 +61,9 @@ gm_money_matcher = on_command(
 gm_give_gold_matcher = on_command(
     "gm发钱", permission=SUPERUSER, priority=5, block=True
 )
+gm_give_mining_matcher = on_command(
+    "gm发矿", permission=SUPERUSER, priority=5, block=True
+)
 # 长命令写在前面，避免与 gm添加 混淆（实际按首 token 精确匹配）
 gm_add_skin_matcher = on_command(
     "gm添加皮肤", permission=SUPERUSER, priority=5, block=True

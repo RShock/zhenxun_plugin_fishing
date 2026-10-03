@@ -331,6 +331,30 @@ async def save_s2_state(user_id: str, state: dict[str, Any]) -> None:
     await user.save(update_fields=["items"])
 
 
+async def grant_mining_credits(user_id: str, amount: int) -> tuple[bool, str]:
+    """安全发放 S2 矿币，只改引擎快照中的 credits，不改鱼币 gold。"""
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return False, "矿币数量必须是正整数。"
+    if amount <= 0:
+        return False, "矿币数量必须是正整数。"
+    try:
+        state = await get_s2_state(str(user_id))
+        snapshot = state.get("engine_snapshot")
+        if not snapshot or not isinstance(snapshot.get("state"), dict):
+            await _ensure_engine_snapshot(state)
+            snapshot = state["engine_snapshot"]
+        engine_state = snapshot["state"]
+        before = int(engine_state.get("credits", 0))
+        engine_state["credits"] = before + amount
+        await _sync_state_from_engine(state, engine_state)
+        await save_s2_state(str(user_id), state)
+        return True, f"已向 {user_id} 添加 {amount} 矿币，当前余额 {int(engine_state['credits'])}。"
+    except Exception as exc:
+        return False, f"发放矿币失败：{exc}"
+
+
 async def is_s2_unlocked(user_id: str) -> bool:
     items = await FishingUser.get_user_items(user_id)
     for it in items:

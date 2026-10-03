@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .base import gradient_bg, render_html, render_template
-from .s2_assets import get_s2_icon_src, get_s2_image_src
+from .s2_assets import get_fatfish_image_src, get_s2_icon_src, get_s2_image_src
 
 
 async def render_mining_help() -> bytes:
@@ -12,6 +12,7 @@ async def render_mining_help() -> bytes:
         body_bg=gradient_bg("peach"),
         width=720,
         s2_image=get_s2_image_src,
+        fatfish_image=get_fatfish_image_src,
     )
     return await render_html(html, 720)
 
@@ -91,6 +92,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "å¤§è‚
         next_cost=next_cost,
         next_icon=get_s2_icon_src(next_key) if next_key else get_s2_image_src("icon_empty"),
         s2_image=get_s2_image_src,
+        fatfish_image=get_fatfish_image_src,
         income_rate=income_rate,
         depth_rate=depth_rate,
         planet_minutes=planet_minutes,

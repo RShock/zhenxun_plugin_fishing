@@ -17,6 +17,7 @@ from ..matchers import (
     gm_force_stop_matcher,
     gm_give_fish_matcher,
     gm_give_gold_matcher,
+    gm_give_mining_matcher,
     gm_limit_off_matcher,
     gm_limit_on_matcher,
     gm_money_matcher,
@@ -174,6 +175,40 @@ async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
         target_ids,
         "发钱",
         lambda uid, a=amount: gm_add_gold(uid, a),
+    )
+    await matcher.finish(message)
+
+
+@gm_give_mining_matcher.handle()
+async def _(event: Event, matcher: Matcher, arg: Message = CommandArg()):
+    """为指定用户添加 S2 矿币；省略目标时默认添加给执行 GM。"""
+    from ..s2_mining import grant_mining_credits
+
+    body = _cmd_text(arg)
+    if not body:
+        await matcher.finish("格式：gm发矿 数量 [@用户/QQ号]")
+    parts = body.split()
+    try:
+        amount = int(parts[0])
+    except (ValueError, TypeError):
+        await matcher.finish("矿币数量必须是正整数。格式：gm发矿 数量 [@用户/QQ号]")
+    if amount <= 0:
+        await matcher.finish("矿币数量必须是正整数。")
+
+    residual = body[len(parts[0]):].strip() if body.startswith(parts[0]) else " ".join(parts[1:])
+    target_ids = _resolve_target_ids(event, residual)
+    if not target_ids:
+        target_ids = [str(event.get_user_id())]
+
+    if len(target_ids) == 1:
+        ok, message = await grant_mining_credits(target_ids[0], amount)
+        await matcher.finish(message)
+
+    from ..gm import gm_apply_to_users
+    success, message = await gm_apply_to_users(
+        target_ids,
+        "发矿",
+        lambda uid, a=amount: grant_mining_credits(uid, a),
     )
     await matcher.finish(message)
 
