@@ -65,6 +65,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     CommandDef(r"下一个星球", "下一个星球", "s2_next_matcher", ("下一个星球",)),
     CommandDef(r"停止挖矿", "停止挖矿", "s2_stop_matcher", ("停止挖矿",)),
     CommandDef(r"大肥鱼(?:助手)?(?:\s*(开启|关闭))?", "大肥鱼助手", "s2_helper_matcher", ("大肥鱼助手", "大肥鱼")),
+    CommandDef(r"挖矿帮助", "挖矿帮助", "s2_help_matcher", ("挖矿帮助",)),
     CommandDef(r"挖矿", "挖矿", "s2_mining_matcher", ("挖矿",)),
     CommandDef(r"建设星空艇", "建设星空艇", "build_starry_ship_matcher", ("建设星空艇",)),
     CommandDef(r"(?:设定鱼饵|设置鱼饵|选择鱼饵)\s*(.*)", "设定鱼饵", "set_bait_matcher", ("设定鱼饵",)),

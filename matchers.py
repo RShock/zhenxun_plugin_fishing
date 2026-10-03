@@ -146,6 +146,7 @@ s2_buy_matcher = on_fishing_command("挖矿购买")
 s2_next_matcher = on_fishing_command("下一个星球")
 s2_stop_matcher = on_fishing_command("停止挖矿")
 s2_helper_matcher = on_fishing_command("大肥鱼助手")
+s2_help_matcher = on_fishing_command("挖矿帮助")
 build_starry_ship_matcher = on_fishing_command("建设星空艇")
 # 公告内容可能含回车/多行，不能用 on_regex + `.`（默认不匹配换行）；
 # 与 GM 指令一致，走 on_command 前缀匹配，参数由 CommandArg 完整取出。

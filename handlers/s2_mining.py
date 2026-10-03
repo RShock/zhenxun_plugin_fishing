@@ -11,13 +11,14 @@ from nonebot.params import RegexGroup
 from ..matchers import (
     s2_buy_matcher,
     s2_helper_matcher,
+    s2_help_matcher,
     s2_mining_matcher,
     s2_next_matcher,
     s2_shop_matcher,
     s2_stop_matcher,
     switch_mode_matcher,
 )
-from ..render.s2_mining import render_mining_main, render_shop_with_total
+from ..render.s2_mining import render_mining_help, render_mining_main, render_shop_with_total
 from ..s2_mining import (
     S2_HELPER_NAME,
     S2_MANUAL_DEPARTURES,
@@ -42,6 +43,16 @@ def _check_whitelist(event) -> bool:
     except Exception:
         uid = ""
     return is_s2_whitelisted_event(event, uid)
+
+
+@s2_help_matcher.handle()
+@with_user_lock("S2/帮助")
+async def _(event: Event, matcher: Matcher):
+    if not _check_whitelist(event):
+        await matcher.finish()
+        return
+    image = await render_mining_help()
+    await _send_image(matcher, image, user_id=event.get_user_id())
 
 
 @switch_mode_matcher.handle()
