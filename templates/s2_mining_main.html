@@ -34,7 +34,7 @@
 {% block content %}
 <div class="mining-header">
   <div class="mining-title">星穹矿脉</div>
-  <div class="mining-sub">第 {{ state.planet }} 颗星球 · 第 {{ state.completedPlanets }} 次挖穿</div>
+  {% if state.completedPlanets > 0 %}<div class="mining-sub">第 {{ state.planet }} 颗星球</div>{% endif %}
 </div>
 {% if not state.s2_unlocked %}
 <div class="report-box"><img class="s2-inline" src="{{ s2_image('icon_locked') }}" alt=""> 尚未解锁：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。</div>
@@ -75,7 +75,7 @@
 
 {% if delta %}
 <div class="report-box">
-  {% if delta.first %}<img class="s2-inline" src="{{ s2_image('icon_celebrate') }}" alt=""> 首次进入星穹矿脉，自动挖矿已开始。输入【挖矿帮助】查看玩法说明。{% else %}
+  {% if delta.first %}<img class="s2-inline" src="{{ s2_image('icon_celebrate') }}" alt=""> 首次进入星穹矿脉，自动挖矿已开始。{% else %}
   距上次报告 {{ delta.reportElapsedText or (delta.reportMinutes|string + '分钟') }}<br>
   本次收益：+{{ s2_num(delta.reportCredits) }} 矿币{% if delta.reportPlanets>0 %}，+{{ delta.reportPlanets }} 颗星球{% endif %}<br>
   {% if delta.helperBuys %}{{ helper_name }}助手自动购买：{{ delta.helperBuys|join("、") }}{% else %}{{ helper_name }}助手待机中{% endif %}
@@ -85,8 +85,8 @@
 
 <div class="helper-bar">
   <span class="helper-identity"><img class="helper-art" src="{{ fatfish_image() }}" alt="大肥鱼矿工助手">{{ helper_name }}助手：{% if state.helperEnabled %}<span class="helper-on">自动购买开启，每天0点自动帮你花完钱。</span>{% else %}<span class="helper-off">已关闭</span>{% endif %}</span>
-  <span class="helper-core"><img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""> {{ state.cores }} 核心</span>
+  {% if state.completedPlanets > 0 %}<span class="helper-core"><img class="s2-inline" src="{{ s2_image('icon_core') }}" alt=""> {{ s2_num(state.cores) }} 核心</span>{% endif %}
 </div>
-<div class="mode-hint">发送【挖矿】查看收益 · 【挖矿商店】浏览升级 · 【下一个星球】启程</div>
+{% if state.planetComplete %}<div class="mode-hint">你已经挖穿星球，输入【下一个星球】开始新游戏</div>{% endif %}
 {% endif %}
 {% endblock %}

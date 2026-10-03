@@ -743,7 +743,10 @@ async def switch_mode(user_id: str, target: str) -> tuple[bool, str, dict[str, A
             state["real_last_helper_date"] = _asia_date_str(now)
             # engine 的 minute 从 0 开始，已通过 _ensure_engine_snapshot 初始化
             await save_s2_state(user_id, state)
-            return True, "已切换至【挖矿】模式，星穹矿脉已启动，自动挖矿进行中。发送【挖矿】查看矿场。", state
+            persisted = await get_s2_state(user_id)
+            if persisted.get("mode") != "mining":
+                return False, "挖矿模式保存失败，请稍后重试。", persisted
+            return True, "已切换至【挖矿】模式，星穹矿脉已启动，自动挖矿进行中。发送【挖矿】查看矿场。", persisted
         else:
             # 恢复：先结算一次现实时间，避免丢失
             state["real_last_tick"] = _asia_now_ts()
@@ -754,7 +757,10 @@ async def switch_mode(user_id: str, target: str) -> tuple[bool, str, dict[str, A
                 await ensure_mining_tick(user_id, state)
             except Exception:
                 pass
-            return True, "已切换至【挖矿】模式，矿场已恢复自动作业。", state
+            persisted = await get_s2_state(user_id)
+            if persisted.get("mode") != "mining" or persisted.get("stopMining"):
+                return False, "挖矿模式保存失败，请稍后重试。", persisted
+            return True, "已切换至【挖矿】模式，矿场已恢复自动作业。", persisted
     else:
         state["mode"] = "fishing"
         state["stopMining"] = True

@@ -119,10 +119,16 @@ async def _(event: Event, matcher: Matcher):
             return
         state, delta = await get_mining_status(user_id)
         switch_notice = "已切换至【挖矿】模式，自动挖矿已开始。"
+    elif state.get("stopMining"):
+        ok, msg, state = await switch_mode(user_id, "挖矿")
+        if not ok:
+            await _send_text(matcher, msg, user_id)
+            return
+        state, delta = await get_mining_status(user_id)
     else:
         state, delta = await get_mining_status(user_id)
     if state.get("stopMining"):
-        await _send_text(matcher, "挖矿已暂停，发送【切换模式 挖矿】恢复。", user_id)
+        await _send_text(matcher, "挖矿模式未能恢复，请稍后重试。", user_id)
         return
     # 首次进入的 delta 含 first 标记，渲染会显示引导
     image = await render_mining_main(state, delta, S2_HELPER_NAME)
@@ -141,9 +147,11 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not state.get("s2_unlocked"):
         await _send_text(matcher, "🔒 尚未解锁星穹矿脉。", user_id)
         return
-    if state.get("mode") != "mining":
-        await _send_text(matcher, "请先【切换模式 挖矿】后再查看商店。", user_id)
-        return
+    if state.get("mode") != "mining" or state.get("stopMining"):
+        ok, msg, state = await switch_mode(user_id, "挖矿")
+        if not ok:
+            await _send_text(matcher, msg, user_id)
+            return
     page = 1
     if group and group[0] and str(group[0]).strip().isdigit():
         page = int(str(group[0]).strip())
@@ -170,9 +178,11 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
     if not state.get("s2_unlocked"):
         await _send_text(matcher, "🔒 尚未解锁星穹矿脉。", user_id)
         return
-    if state.get("mode") != "mining":
-        await _send_text(matcher, "请先【切换模式 挖矿】后再购买。", user_id)
-        return
+    if state.get("mode") != "mining" or state.get("stopMining"):
+        ok, msg, state = await switch_mode(user_id, "挖矿")
+        if not ok:
+            await _send_text(matcher, msg, user_id)
+            return
     ident = ""
     count = 1
     if group:
