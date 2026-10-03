@@ -597,6 +597,11 @@ async def use_time_potion_in_s2(user_id: str, count: int = 1) -> tuple[bool, str
     state = await get_s2_state(user_id)
     if state.get("mode") != "mining" or state.get("stopMining"):
         return False, "当前不在挖矿模式，无法在 S2 中使用时光药水。请先【切换模式 挖矿】。"
+    # 先结算截至当前现实时间的矿场进度，保持现实挖矿与药水模拟的时间顺序。
+    # 药水本身不推进 real_last_tick，因此不能让这段现实时间被重复或延后结算。
+    state, _ = await ensure_mining_tick(user_id, state)
+    if state.get("planetComplete") or state["engine_snapshot"]["state"].get("planetComplete"):
+        return False, "当前星球已经挖穿，请先发送【下一个星球】。"
     # 检查库存：time_potion 在 items 中
     potion_item = await FishingUser.get_item(user_id, "time_potion", "potion")
     have = potion_item["count"] if potion_item else 0
