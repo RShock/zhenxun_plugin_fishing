@@ -23,7 +23,7 @@
 <div class="status-sub">第 {{ state.planet }} 颗星球 · 已有科技总等级 {{ state.totalBuilt }}级</div>
 <div class="status-summary">
   <div class="status-stat"><span>矿币</span><b>{{ state.credits|int }}</b></div>
-  <div class="status-stat"><span>深度</span><b>{{ (state.depth/state.targetDepth*100)|round(1) }}%</b></div>
+  <div class="status-stat"><span>深度</span><b>{{ progress_pct|round(2) }}%</b></div>
 </div>
 <div class="tech-grid">
   {% for r in rows %}

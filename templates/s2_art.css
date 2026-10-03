@@ -28,7 +28,7 @@ body { box-sizing:border-box; width:720px; min-width:720px; padding:20px; }
 .next-card { padding:16px; }
 .report-box { font-size:17px; }
 .helper-bar { font-size:16px; padding:10px; }
-.helper-art { width:48px; height:48px; }
+.helper-art { width:32px; height:32px; }
 .mode-hint { font-size:14px; line-height:1.8; }
 .shop-title { font-size:26px; }
 .shop-page,.shop-stats { font-size:16px; }

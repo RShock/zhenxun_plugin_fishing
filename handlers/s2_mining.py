@@ -111,13 +111,14 @@ async def _(event: Event, matcher: Matcher):
     if not state.get("s2_unlocked"):
         await _send_text(matcher, "🔒 尚未解锁星穹矿脉：需在钓鱼主游戏集齐 1-10 图并获得【大肥鱼】后解锁。", user_id)
         return
+    switch_notice = ""
     if state.get("mode") != "mining":
         ok, msg, state = await switch_mode(user_id, "挖矿")
         if not ok:
             await _send_text(matcher, msg, user_id)
             return
         state, delta = await get_mining_status(user_id)
-        await _send_text(matcher, "已切换至【挖矿】模式，之后发送【挖矿】即可查看矿场。", user_id)
+        switch_notice = "已切换至【挖矿】模式，自动挖矿已开始。"
     else:
         state, delta = await get_mining_status(user_id)
     if state.get("stopMining"):
@@ -126,7 +127,7 @@ async def _(event: Event, matcher: Matcher):
     # 首次进入的 delta 含 first 标记，渲染会显示引导
     image = await render_mining_main(state, delta, S2_HELPER_NAME)
     # 附加文字提示（距上次收益已在图中，这里仅作额外）
-    await _send_image(matcher, image, user_id=user_id)
+    await _send_image(matcher, image, text=switch_notice, user_id=user_id)
 
 
 @s2_shop_matcher.handle()

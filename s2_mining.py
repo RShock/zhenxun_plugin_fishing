@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -109,6 +110,15 @@ def _asia_date_str(ts: float | None = None) -> str:
 def _asia_now_ts() -> float:
     # 保留秒级小数，懒结算不因整分钟取整而丢失后期快速航程的进度。
     return time.time()
+
+
+def s2_progress_percent(state: dict[str, Any]) -> float:
+    """对数深度进度，避免超大目标在早期长期显示 0.0%。"""
+    depth = max(0.0, float(state.get("depth", 0.0)))
+    target = max(depth, float(state.get("targetDepth", 0.0)))
+    if target <= 0:
+        return 0.0
+    return min(100.0, math.log10(depth + 1.0) / math.log10(target + 1.0) * 100.0)
 
 
 def is_whitelisted_id(user_id: str) -> bool:
