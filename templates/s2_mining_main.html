@@ -45,7 +45,7 @@
 </div>
 <div class="stats-grid">
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_credits') }}" alt=""><div><div class="stat-label">矿币</div><div class="stat-value">{{ state.credits|int }} </div><div class="stat-sub">+{{ income_rate|round(1) }}/分</div></div></div>
-  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_depth') }}" alt=""><div><div class="stat-label">深度</div><div class="stat-value">{{ (state.depth/1000)|round(1) }}km / {{ (state.targetDepth/1000)|round(1) }}km</div><div class="stat-sub">{{ progress_pct|round(2) }}%</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_depth') }}" alt=""><div><div class="stat-label">当前深度</div><div class="stat-value">{{ state.depth|round(0) }}m</div><div class="stat-sub">{{ progress_pct|round(2) }}%</div></div></div>
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_era') }}" alt=""><div><div class="stat-label">时代</div><div class="stat-value">{{ era_name }}</div><div class="stat-sub">{{ completed_eras }}/5 已解锁</div></div></div>
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_built') }}" alt=""><div><div class="stat-label">已有科技总等级</div><div class="stat-value">{{ state.totalBuilt }}级</div></div></div>
 </div>
