@@ -184,22 +184,32 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
             await _send_text(matcher, msg, user_id)
             return
     ident = ""
-    count = 1
+    count = 100  # 省略数量时，一次尽可能购买（引擎上限100级）
     if group:
         if len(group) >= 1 and group[0]:
             ident = str(group[0]).strip()
-        if len(group) >= 2 and group[1] and str(group[1]).isdigit():
-            count = int(str(group[1]))
+        if len(group) >= 2 and group[1]:
+            tail = str(group[1]).strip()
+            if tail.isdigit():
+                count = int(tail)
+            elif tail.lower() not in ("满", "全部", "最大", "max"):
+                await _send_text(matcher, "数量必须是整数；省略数量表示尽可能购买。用法：挖矿购买 编号 [数量]", user_id)
+                return
     # 兼容 “挖矿购买 分岔矿道 2” 这种空格分隔但 ident 含空格的情况：从原文截取
     if not ident:
         raw = event.get_plaintext() if hasattr(event, "get_plaintext") else ""
-        m = re.search(r"挖矿购买\s+(\S+)(?:\s+(\d+))?", raw)
+        m = re.search(r"挖矿购买\s+(\S+)(?:\s+(.+))?", raw)
         if m:
             ident = m.group(1) or ""
             if m.group(2):
-                count = int(m.group(2))
+                tail = m.group(2).strip()
+                if tail.isdigit():
+                    count = int(tail)
+                elif tail.lower() not in ("满", "全部", "最大", "max"):
+                    await _send_text(matcher, "数量必须是整数；省略数量表示尽可能购买。用法：挖矿购买 编号 [数量]", user_id)
+                    return
     if not ident:
-        await _send_text(matcher, "用法：挖矿购买 编号/名称 [数量]，例：挖矿购买 2 或 挖矿购买 分岔矿道", user_id)
+        await _send_text(matcher, "用法：挖矿购买 编号/名称 [数量]；省略数量表示尽可能购买，例：挖矿购买 2", user_id)
         return
     ok, msg = await purchase_upgrade(user_id, ident, count)
     # 购买结果用文字 + 刷新后的主界面（便于立即看到等级变化）

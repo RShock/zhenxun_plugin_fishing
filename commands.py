@@ -61,7 +61,7 @@ COMMAND_DEFS: tuple[CommandDef, ...] = (
     # ── S2 星穹矿脉 ──
     CommandDef(r"切换模式\s*(挖矿|钓鱼)", "切换模式", "switch_mode_matcher", ("切换模式",)),
     CommandDef(r"挖矿商店(?:\s*(\d+))?", "挖矿商店", "s2_shop_matcher", ("挖矿商店",)),
-    CommandDef(r"挖矿购买\s*(\S+)(?:\s+(\d+))?", "挖矿购买", "s2_buy_matcher", ("挖矿购买",)),
+    CommandDef(r"挖矿购买\s*(\S+)(?:\s+(.+))?", "挖矿购买", "s2_buy_matcher", ("挖矿购买",)),
     CommandDef(r"下一个星球", "下一个星球", "s2_next_matcher", ("下一个星球",)),
     CommandDef(r"停止挖矿", "停止挖矿", "s2_stop_matcher", ("停止挖矿",)),
     CommandDef(r"大肥鱼(?:助手)?(?:\s*(开启|关闭))?", "大肥鱼助手", "s2_helper_matcher", ("大肥鱼助手", "大肥鱼")),

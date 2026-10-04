@@ -868,7 +868,7 @@ async def get_shop_page(user_id: str, page: int = 1, page_size: int = 6) -> tupl
     return state, slice_entries, pages
 
 
-async def purchase_upgrade(user_id: str, ident: str, count: int = 1) -> tuple[bool, str]:
+async def purchase_upgrade(user_id: str, ident: str, count: int = 100) -> tuple[bool, str]:
     state = await get_s2_state(user_id)
     # 白名单由 handler 层已检查
     # 先结算现实时间
@@ -919,6 +919,8 @@ async def purchase_upgrade(user_id: str, ident: str, count: int = 1) -> tuple[bo
         if bought < count:
             # 部分成功
             lvl = state["levels"][key]
+            if count >= 100:
+                return True, f"已连续购买 {bought} 级，{spec['name']} → Lv{lvl}，剩余 {s2_format_number(state['credits'])} 矿币。"
             return True, f"已购买 {bought} 级（请求 {count} 级），{spec['name']} → Lv{lvl}，剩余 {s2_format_number(state['credits'])} 矿币。"
         lvl = state["levels"][key]
         extra = ""
