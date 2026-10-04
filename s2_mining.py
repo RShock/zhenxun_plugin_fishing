@@ -592,7 +592,7 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
     if not state.get("started") or state.get("mode") != "mining" or state.get("stopMining"):
         return state, {"credits": 0, "depth": 0, "helperBuys": [], "minutes": 0, "realMinutes": 0}
     now = _asia_now_ts()
-    last = int(state.get("real_last_tick", 0) or state.get("startTime", 0) or now)
+    last = float(state.get("real_last_tick", 0) or state.get("startTime", 0) or now)
     if last == 0:
         state["real_last_tick"] = now
         state["real_last_helper_date"] = _asia_date_str(now)
@@ -602,11 +602,21 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
     if real_elapsed_seconds < 1.0:
         return state, {"credits": 0, "depth": 0, "helperBuys": [], "minutes": 0, "realMinutes": 0}
     real_elapsed = real_elapsed_seconds / 60.0
+    # engine.mineBlock 在前三次自动化前只接受 settlementMinutes 的整数倍。
+    # 现实时间可能带小数分钟，先结算完整步长，剩余秒数留在 real_last_tick 之后，
+    # 下一次消息继续累计，避免桥接报错或丢失未满一个步长的时间。
+    try:
+        settlement_step = int(_load_game_data()["rules"].get("settlementMinutes", 1))
+    except (KeyError, TypeError, ValueError):
+        settlement_step = 1
+    settled_minutes = int(real_elapsed // settlement_step) * settlement_step
+    if settled_minutes <= 0:
+        return state, {"credits": 0, "depth": 0, "helperBuys": [], "minutes": 0, "realMinutes": 0, "realSeconds": real_elapsed_seconds}
     # 不再限制 1440，允许任意离线时长；但为避免一次性过大导致超时，分批处理
     # 对于 resets>=3 的批量航程，engine 会自动批量，此处直接整段 mine
     # 对于 <3，mineBlock 按 settlementMinutes 步进，也支持大段
     # 为安全，超过 10080 分钟（7 天）则分批
-    total_real = real_elapsed
+    total_real = float(settled_minutes)
     # 先处理现实零点助手跨日（在模拟推进前还是后？按顺序：采矿结算、日期同步、通关、自动采购、午夜助手、可选换星
     # 所以先推进模拟，再检查助手
     # 但此处助手是现实零点，应与模拟分离，故先推进模拟，再单独处理助手
@@ -615,7 +625,7 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
     before_depth = state["engine_snapshot"]["state"]["depth"]
     before_planets = state["engine_snapshot"]["state"]["completedPlanets"]
     # 分批 mine，避免单次超时
-    remaining = real_elapsed
+    remaining = settled_minutes
     batch = 1440 * 7  # 7 天一批
     all_events = []
     while remaining > 0:
@@ -629,7 +639,7 @@ async def ensure_mining_tick(user_id: str, state: dict[str, Any] | None = None) 
     # 处理现实零点助手
     helper_buys = await _handle_real_helper_if_needed(state)
     # 更新 real_last_tick
-    state["real_last_tick"] = now
+    state["real_last_tick"] = last + settled_minutes * 60.0
     # 若 helper 触发了购买，需保存
     after_credits = state["engine_snapshot"]["state"]["credits"]
     after_depth = state["engine_snapshot"]["state"]["depth"]
