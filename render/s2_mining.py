@@ -19,7 +19,7 @@ _PIXEL_DIGITS = {
 }
 
 
-def pixel_level_src(level: int) -> str:
+def pixel_level_src(level: int, complete: bool = False) -> str:
     """生成每个数字 3x5 像素的等级徽标。"""
     import base64
 
@@ -31,9 +31,10 @@ def pixel_level_src(level: int) -> str:
             for x, bit in enumerate(row):
                 if bit == "1":
                     rects.append(f"<rect x='{offset * 4 + x}' y='{y}' width='1' height='1'/>")
+    color = "%2358a85c" if complete else "%231c1c1c"
     svg = (
         f"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='5' "
-        f"viewBox='0 0 {width} 5'><g fill='%23fff8d6'>{''.join(rects)}</g></svg>"
+        f"viewBox='0 0 {width} 5'><g fill='{color}'>{''.join(rects)}</g></svg>"
     )
     return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
 
@@ -146,12 +147,21 @@ async def render_mining_status(state: dict, delta: dict) -> bytes:
         level = int(levels.get(spec["key"], 0))
         if level <= 0:
             continue
+        era = str(spec.get("era", "foundation"))
+        hue_by_era = {
+            "foundation": 0,
+            "industrial": 42,
+            "electrical": 92,
+            "modern": 142,
+            "future": 194,
+            "planetary": 244,
+        }
         rows.append({
-            "name": spec.get("name", spec["key"]),
             "level": level,
             "max": int(spec.get("maxLevel", level)),
             "icon": get_s2_icon_src(spec["key"]),
-            "pixel_level": pixel_level_src(level),
+            "pixel_level": pixel_level_src(level, level >= int(spec.get("maxLevel", level))),
+            "hue": hue_by_era.get(era, 0),
         })
     html = render_template(
         "s2_mining_status.html",
