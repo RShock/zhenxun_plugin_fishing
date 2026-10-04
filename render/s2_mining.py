@@ -31,7 +31,7 @@ def pixel_level_src(level: int, complete: bool = False) -> str:
             for x, bit in enumerate(row):
                 if bit == "1":
                     rects.append(f"<rect x='{offset * 4 + x}' y='{y}' width='1' height='1'/>")
-    color = "%2358a85c" if complete else "%231c1c1c"
+    color = "#58a85c" if complete else "#1c1c1c"
     svg = (
         f"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='5' "
         f"viewBox='0 0 {width} 5'><g fill='{color}'>{''.join(rects)}</g></svg>"
