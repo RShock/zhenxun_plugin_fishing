@@ -820,6 +820,18 @@ export class S2Engine {
   mineBlock(minutes = Number(this.rules.settlementMinutes), deterministic = false) {
     const step = Number(this.rules.settlementMinutes);
     const endMinute = this.state.minute + minutes;
+    // 现实 QQ 懒结算按秒触发，前三次自动化仍保留 10 分钟事件步长；
+    // 小于一个完整步长的部分立即结算资源，不等待下一条消息。
+    if (this.state.resets < 3 && Number.isFinite(minutes) && !Number.isSafeInteger(minutes)) {
+      if (minutes <= 0) throw new Error("mineBlock minutes must be positive");
+      const whole = Math.floor(minutes / step) * step;
+      const partial = minutes - whole;
+      this.lastBlockEvents = [];
+      this.lastBatchSummary = { planets: 0, compiled: 0, events: 0 };
+      const bought = whole > 0 ? this.mineBlock(whole, deterministic) : [];
+      if (partial > 1e-12) this.minePartial(partial, deterministic);
+      return bought;
+    }
     if (!Number.isFinite(minutes) || minutes <= 0 || endMinute > Number.MAX_SAFE_INTEGER
       || endMinute <= this.state.minute
       || (this.state.resets < 3 && (!Number.isSafeInteger(minutes) || minutes % step
@@ -858,6 +870,26 @@ export class S2Engine {
       if (this.state.planetComplete && this.autoDepartReady() && !this.galaxyComplete()) this.departPlanet();
     }
     return bought;
+  }
+  minePartial(minutes, deterministic = false) {
+    if (!Number.isFinite(minutes) || minutes <= 0) return [];
+    if (this.state.planetComplete) return [];
+    const step = Number(this.rules.settlementMinutes);
+    const noise = deterministic ? 1 : clamp(this.rng.gauss(1, Number(this.rules.randomSigma)), 0.85, 1.15);
+    const depthRate = Number(this.rules.baseDepthPerMinute) * this.depthMultiplier() * noise;
+    const miningMinutes = this.data.prestige
+      ? Math.max(0, Math.min(minutes, (this.state.targetDepth - this.state.depth) / depthRate))
+      : minutes;
+    this.state.credits += Number(this.rules.baseCreditsPerMinute) * this.incomeMultiplier() * miningMinutes * noise;
+    this.state.depth += depthRate * miningMinutes;
+    if (this.data.prestige && this.state.depth >= this.state.targetDepth) {
+      this.state.depth = this.state.targetDepth;
+      if (this.finishPlanet()) {
+        this.autoPurchaseCore();
+        if (this.state.planetComplete && this.autoDepartReady() && !this.galaxyComplete()) this.departPlanet();
+      }
+    }
+    return [];
   }
   startNewDay() {
     const day = Math.floor(this.state.minute / 1440) + 1;
