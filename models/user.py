@@ -1099,6 +1099,10 @@ class FishingUser(Model):
             "item_id": item_id,
             "item_type": entry.get("item_type", item_type),
             "count": entry.get("count", 0),
+            # 状态型物品（S2、猫猫乐园等）把完整存档放在 data/extra；
+            # 不能在通用查询层丢弃，否则读回时会被误判为新存档。
+            "data": entry.get("data"),
+            "extra": entry.get("extra"),
         }
 
     @classmethod
