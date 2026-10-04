@@ -118,7 +118,9 @@ def s2_progress_percent(state: dict[str, Any]) -> float:
     target = max(depth, float(state.get("targetDepth", 0.0)))
     if target <= 0:
         return 0.0
-    return min(100.0, math.log10(depth + 1.0) / math.log10(target + 1.0) * 100.0)
+    logarithmic = math.log10(depth + 1.0) / math.log10(target + 1.0)
+    # 对数比例本身早期仍偏快；平方缓冲早期进度，保留后期逐渐拉满的曲线。
+    return min(100.0, logarithmic * logarithmic * 100.0)
 
 
 def s2_format_number(value: Any) -> str:
