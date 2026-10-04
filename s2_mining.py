@@ -145,6 +145,11 @@ def s2_format_number(value: Any) -> str:
     return f"{sign}{number:.2f}".rstrip("0").rstrip(".")
 
 
+def s2_format_depth(value: Any) -> str:
+    """深度展示使用中文量级与逗号小数，并由调用方补全“米”单位。"""
+    return s2_format_number(value).replace(".", ",")
+
+
 def is_whitelisted_id(user_id: str) -> bool:
     return str(user_id) in S2_WHITELIST
 

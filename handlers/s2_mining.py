@@ -19,14 +19,13 @@ from ..matchers import (
     s2_stop_matcher,
     switch_mode_matcher,
 )
-from ..render.s2_mining import render_mining_help, render_mining_main, render_mining_status, render_shop_with_total
+from ..render.s2_mining import render_mining_help, render_mining_main, render_mining_status
 from ..s2_mining import (
     S2_HELPER_NAME,
     S2_MANUAL_DEPARTURES,
     S2_WHITELIST,
     get_mining_status,
     get_s2_state,
-    get_shop_page,
     is_s2_whitelisted_event,
     next_planet,
     purchase_upgrade,
@@ -152,18 +151,8 @@ async def _(event: Event, matcher: Matcher, group: tuple = RegexGroup()):
         if not ok:
             await _send_text(matcher, msg, user_id)
             return
-    page = 1
-    if group and group[0] and str(group[0]).strip().isdigit():
-        page = int(str(group[0]).strip())
-    # 同步结算一次
-    from ..s2_mining import ensure_mining_tick
-    state, _ = await ensure_mining_tick(user_id, state)
-    # 获取分页
-    _, rows, pages = await get_shop_page(user_id, page, page_size=6)
-    # 为 total 提供正确值
-    from ..s2_mining import _shop_entries
-    total = len(_shop_entries(state))
-    image = await render_shop_with_total(state, rows, page, pages, total)
+    state, delta = await get_mining_status(user_id)
+    image = await render_mining_main(state, delta, S2_HELPER_NAME)
     await _send_image(matcher, image, user_id=user_id)
 
 

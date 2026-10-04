@@ -104,7 +104,7 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
 
     # 速率
     try:
-        from ..s2_mining import _income_rate, _depth_rate, s2_format_number, s2_progress_percent
+        from ..s2_mining import _income_rate, _depth_rate, s2_format_depth, s2_format_number, s2_progress_percent
         income_rate = _income_rate(state)
         depth_rate = _depth_rate(state)
         progress_pct = s2_progress_percent(state)
@@ -113,6 +113,8 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         depth_rate = 25
         progress_pct = 0
         s2_format_number = lambda value: str(value)
+        s2_format_depth = s2_format_number
+    upgrade_rows = _main_upgrade_rows(state, entries if "entries" in locals() else [], income_rate, depth_rate, s2_format_number)
     planet_minutes = round((state.get("real_last_tick", 0) - state.get("startTime", 0)) / 60, 1) if state.get("startTime") else 0
     html = render_template(
         "s2_mining_main.html",
@@ -134,8 +136,64 @@ async def render_mining_main(state: dict, delta: dict, helper_name: str = "大�
         planet_minutes=planet_minutes,
         progress_pct=progress_pct,
         s2_num=s2_format_number,
+        s2_depth=s2_format_depth,
+        upgrade_rows=upgrade_rows,
     )
     return await render_html(html, 720)
+
+
+def _eta_text(minutes: float) -> str:
+    if minutes <= 0:
+        return "可用"
+    if minutes < 1:
+        return "约1分钟"
+    if minutes < 60:
+        return f"约{max(1, round(minutes))}分钟"
+    hours = minutes / 60
+    if hours < 24:
+        return f"约{max(1, round(hours, 1))}小时"
+    return f"约{max(1, round(hours / 24, 1))}天"
+
+
+def _main_upgrade_rows(state: dict, entries: list[dict], income_rate: float, depth_rate: float, s2_num) -> list[dict]:
+    """把商店压缩成主图内的双列清单，给出可购买或预计等待时间。"""
+    from ..s2_mining import _load_game_data
+
+    specs = {spec["key"]: spec for spec in _load_game_data().get("upgrades", [])}
+    depth = float(state.get("depth", 0))
+    credits = float(state.get("credits", 0))
+    rows = []
+    for entry in entries:
+        spec = specs.get(entry["key"], {})
+        level = int(entry.get("lv", 0))
+        maximum = int(entry.get("max", level))
+        status = "已满级"
+        status_class = "done"
+        if level < maximum:
+            if entry.get("can"):
+                status = "可用"
+                status_class = "ready"
+            else:
+                unlock_depth = float(spec.get("unlockDepth", 0))
+                if depth < unlock_depth and depth_rate > 0:
+                    status = _eta_text((unlock_depth - depth) / depth_rate)
+                elif entry.get("reason", "").startswith("需前置"):
+                    status = "需前置"
+                elif credits < float(entry.get("cost", 0)) and income_rate > 0:
+                    status = _eta_text((float(entry["cost"]) - credits) / income_rate)
+                else:
+                    status = "暂不可用"
+                status_class = "wait"
+        rows.append({
+            "idx": entry.get("idx", 0),
+            "name": entry.get("name", entry["key"]),
+            "level": level,
+            "max": maximum,
+            "status": status,
+            "status_class": status_class,
+            "icon": get_s2_icon_src(entry["key"]),
+        })
+    return rows
 
 
 async def render_mining_status(state: dict, delta: dict) -> bytes:

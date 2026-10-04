@@ -29,6 +29,15 @@
 .breakthrough b { color:#fff; }
 .depart-btn { background:#26a269; color:#fff; border:0; border-radius:10px; padding:10px 20px; font-weight:800; margin-top:8px; }
 .mode-hint { text-align:center; font-size:11px; color:#9a7b5a; margin-top:6px; }
+.upgrade-list { display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; margin:0 0 10px; }
+.upgrade-row { min-width:0; display:grid; grid-template-columns:30px 1fr auto; align-items:center; gap:5px; padding:4px 2px; border-bottom:1px solid #ead8bd; }
+.upgrade-row img { width:28px; height:28px; object-fit:contain; image-rendering:pixelated; }
+.upgrade-name { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#3b2f2f; font-size:11px; }
+.upgrade-level { color:#9a7b5a; font-size:9px; }
+.upgrade-state { font-size:10px; white-space:nowrap; }
+.upgrade-state.ready { color:#2e7d32; font-weight:800; }
+.upgrade-state.done { color:#58a85c; }
+.upgrade-state.wait { color:#9a7b5a; }
 {% include "s2_art.css" %}
 {% endblock %}
 {% block content %}
@@ -45,7 +54,7 @@
 </div>
 <div class="stats-grid">
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_credits') }}" alt=""><div><div class="stat-label">矿币</div><div class="stat-value">{{ s2_num(state.credits) }}</div><div class="stat-sub">+{{ s2_num(income_rate) }}/分</div></div></div>
-  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_depth') }}" alt=""><div><div class="stat-label">当前深度</div><div class="stat-value">{{ s2_num(state.depth) }}m</div><div class="stat-sub">{{ progress_pct|round(2) }}%</div></div></div>
+  <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_depth') }}" alt=""><div><div class="stat-label">当前深度</div><div class="stat-value">{{ s2_depth(state.depth) }}米</div><div class="stat-sub">{{ progress_pct|round(2) }}%</div></div></div>
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_era') }}" alt=""><div><div class="stat-label">时代</div><div class="stat-value">{{ era_name }}</div><div class="stat-sub">{{ completed_eras }}/5 已解锁</div></div></div>
   <div class="stat-card"><img class="stat-art" src="{{ s2_image('icon_built') }}" alt=""><div><div class="stat-label">已有科技总等级</div><div class="stat-value">{{ state.totalBuilt }}级</div></div></div>
 </div>
@@ -72,6 +81,13 @@
   <div class="next-btn">+1 级</div>
 </div>
 {% endif %}
+
+<div class="report-box"><b>建设清单</b> · 可用或预计等待时间</div>
+<div class="upgrade-list">
+{% for r in upgrade_rows %}
+  <div class="upgrade-row"><img src="{{ r.icon }}" alt=""><div><div class="upgrade-name">{{ r.idx }}. {{ r.name }}</div><div class="upgrade-level">Lv{{ r.level }}/{{ r.max }}</div></div><span class="upgrade-state {{ r.status_class }}">{{ r.status }}</span></div>
+{% endfor %}
+</div>
 
 {% if delta %}
 <div class="report-box">
