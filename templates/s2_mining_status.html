@@ -34,7 +34,7 @@
 <div class="tech-grid">
   {% for r in rows %}
   <div class="tech-cell">
-    <img class="tech-icon" src="{{ r.icon }}" alt="" style="filter:hue-rotate({{ r.hue }}deg);">
+    <img class="tech-icon" src="{{ r.icon }}" alt="" style="filter:hue-rotate({{ r.hue }}deg) saturate(1.15);">
     <img class="level-badge" src="{{ r.pixel_level }}" alt="Lv{{ r.level }}">
   </div>
   {% else %}

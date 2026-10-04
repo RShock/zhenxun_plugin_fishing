@@ -85,7 +85,7 @@
 <div class="report-box"><b>建设清单</b> · 可用或预计等待时间</div>
 <div class="upgrade-list">
 {% for r in upgrade_rows %}
-  <div class="upgrade-row"><img src="{{ r.icon }}" alt=""><div><div class="upgrade-name">{{ r.idx }}. {{ r.name }}</div><div class="upgrade-level">Lv{{ r.level }}/{{ r.max }}</div></div><span class="upgrade-state {{ r.status_class }}">{{ r.status }}</span></div>
+  <div class="upgrade-row"><img src="{{ r.icon }}" alt="" style="filter:hue-rotate({{ r.hue }}deg) saturate(1.15);"><div><div class="upgrade-name">{{ r.idx }}. {{ r.name }}</div><div class="upgrade-level">Lv{{ r.level }}/{{ r.max }}</div></div><span class="upgrade-state {{ r.status_class }}">{{ r.status }}</span></div>
 {% endfor %}
 </div>
 

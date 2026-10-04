@@ -18,6 +18,15 @@ _PIXEL_DIGITS = {
     "9": ("111", "101", "111", "001", "111"),
 }
 
+_ERA_HUES = {
+    "foundation": 0,
+    "industrial": 60,
+    "electrical": 120,
+    "modern": 180,
+    "future": 240,
+    "planetary": 300,
+}
+
 
 def pixel_level_src(level: int, complete: bool = False) -> str:
     """生成每个数字 3x5 像素的等级徽标。"""
@@ -162,8 +171,11 @@ def _main_upgrade_rows(state: dict, entries: list[dict], income_rate: float, dep
     specs = {spec["key"]: spec for spec in _load_game_data().get("upgrades", [])}
     depth = float(state.get("depth", 0))
     credits = float(state.get("credits", 0))
+    auto_keys = set(state.get("autoUnlocked", []))
+    candidates = [entry for entry in entries if entry["key"] not in auto_keys and int(entry.get("lv", 0)) < int(entry.get("max", 0))]
+    candidates.sort(key=lambda entry: (float(entry.get("cost", 0)), int(entry.get("idx", 0))))
     rows = []
-    for entry in entries:
+    for entry in candidates[:3]:
         spec = specs.get(entry["key"], {})
         level = int(entry.get("lv", 0))
         maximum = int(entry.get("max", level))
@@ -192,6 +204,7 @@ def _main_upgrade_rows(state: dict, entries: list[dict], income_rate: float, dep
             "status": status,
             "status_class": status_class,
             "icon": get_s2_icon_src(entry["key"]),
+            "hue": _ERA_HUES.get(str(spec.get("era", "foundation")), 0),
         })
     return rows
 
@@ -236,20 +249,12 @@ async def render_mining_status(state: dict, delta: dict) -> bytes:
         if level <= 0:
             continue
         era = str(spec.get("era", "foundation"))
-        hue_by_era = {
-            "foundation": 0,
-            "industrial": 42,
-            "electrical": 92,
-            "modern": 142,
-            "future": 194,
-            "planetary": 244,
-        }
         rows.append({
             "level": level,
             "max": int(spec.get("maxLevel", level)),
             "icon": get_s2_icon_src(spec["key"]),
             "pixel_level": pixel_level_src(level, level >= int(spec.get("maxLevel", level))),
-            "hue": hue_by_era.get(era, 0),
+            "hue": _ERA_HUES.get(era, 0),
         })
     html = render_template(
         "s2_mining_status.html",
