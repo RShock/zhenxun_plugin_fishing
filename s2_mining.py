@@ -146,8 +146,8 @@ def s2_format_number(value: Any) -> str:
 
 
 def s2_format_depth(value: Any) -> str:
-    """深度展示使用中文量级与逗号小数，并由调用方补全“米”单位。"""
-    return s2_format_number(value).replace(".", ",")
+    """深度展示使用中文量级与小数点，并由调用方补全“米”单位。"""
+    return s2_format_number(value)
 
 
 def is_whitelisted_id(user_id: str) -> bool:
