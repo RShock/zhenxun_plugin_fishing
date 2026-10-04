@@ -197,7 +197,37 @@ def _main_upgrade_rows(state: dict, entries: list[dict], income_rate: float, dep
 
 
 async def render_mining_status(state: dict, delta: dict) -> bytes:
-    from ..s2_mining import _load_game_data, s2_format_number, s2_progress_percent
+    from ..s2_mining import _call_bridge, _load_game_data, s2_format_number, s2_progress_percent
+
+    game_data = _load_game_data()
+    try:
+        status_result = await _call_bridge("status", {"snapshot": state["engine_snapshot"]})
+    except Exception:
+        status_result = {}
+    rules = game_data.get("rules", {})
+    income_mul = float(status_result.get("incomeMul", 1) or 1)
+    depth_mul = float(status_result.get("depthMul", 1) or 1)
+    income_rate = float(rules.get("baseCreditsPerMinute", 0)) * income_mul
+    depth_rate = float(rules.get("baseDepthPerMinute", 0)) * depth_mul
+    def _multiplier_text(value: float) -> str:
+        text = f"{value:.2f}".rstrip("0").rstrip(".")
+        return f"×{text}"
+    labels = {item["key"]: item.get("name", item["key"]) for item in game_data.get("multiplierRegions", [])}
+    labels.update({
+        "critical": "暴击期望",
+        "prestige": "永久科技倍率",
+        "stellar_relay": "联合勘探",
+        "opening_burst": "新星首秒大爆发",
+        "completion_depth": "全科技满级深度",
+    })
+    bonuses = []
+    for key, raw_value in (status_result.get("breakdown") or {}).items():
+        value = float(raw_value)
+        if value > 1.000001:
+            bonuses.append({"label": labels.get(key, key), "value": _multiplier_text(value)})
+    local_discount = float(status_result.get("localDiscount", 0) or 0)
+    if local_discount > 0.000001:
+        bonuses.append({"label": "本地设备成本", "value": f"{_multiplier_text(1 / (1 + local_discount))} 原价"})
 
     levels = state.get("levels", {})
     rows = []
@@ -228,6 +258,11 @@ async def render_mining_status(state: dict, delta: dict) -> bytes:
         state=state,
         delta=delta,
         rows=rows,
+        income_rate=income_rate,
+        depth_rate=depth_rate,
+        income_multiplier=_multiplier_text(income_mul),
+        depth_multiplier=_multiplier_text(depth_mul),
+        bonuses=bonuses,
         s2_image=get_s2_image_src,
         fatfish_image=get_fatfish_image_src,
         progress_pct=s2_progress_percent(state),

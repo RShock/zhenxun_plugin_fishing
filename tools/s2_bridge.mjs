@@ -189,7 +189,7 @@ async function handle(op, payload) {
     }
     case "status": {
       const eng = makeEngine(payload.snapshot);
-      return { ok: true, state: eng.state, snapshot: eng.snapshot(), era: eng.currentEra(), incomeMul: eng.incomeMultiplier(), depthMul: eng.depthMultiplier(), breakdown: eng.multiplierBreakdown() };
+      return { ok: true, state: eng.state, snapshot: eng.snapshot(), era: eng.currentEra(), incomeMul: eng.incomeMultiplier(), depthMul: eng.depthMultiplier(), breakdown: eng.multiplierBreakdown(), localDiscount: eng.coreEffect("local_discount") };
     }
     default:
       return { ok: false, error: `unknown op ${op}` };
