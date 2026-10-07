@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>map3 · 猫鼠远洋 —— 战斗模拟器</title>
+<style>
+  /* 像素字体：取自基底仓库 resources/fonts，按本页用字子集化（assets/） */
+  @font-face{
+    font-family:"HYPixel";
+    src:url("assets/HYPixel-subset.woff2") format("woff2"),
+        url("assets/HYPixel-subset.ttf") format("truetype");
+    font-display:swap;
+  }
+  /* ============ 像素风基础 ============ */
+  :root{
+    --bg:#0b1220; --bg2:#0f1a2e; --panel:#121f38; --panel2:#16253f;
+    --line:#264064; --ink:#dbe7f5; --dim:#8aa2c0; --dim2:#5f7796;
+    --cat:#5fd3c4; --rat:#e0567a; --gold:#f2c14e; --good:#6ee7a8; --mid:#f2c14e; --bad:#ef6b7f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:18px 18px 40px; background:
+      linear-gradient(180deg,#07101d,#0b1220 40%,#0b1220);
+    color:var(--ink);
+    font-family:"HYPixel",ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
+    font-size:13px; line-height:1.55; letter-spacing:.2px;
+  }
+  h1,h2,h3{margin:0; font-weight:700}
+  .wrap{max-width:1280px;margin:0 auto}
+  header{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;
+    border-bottom:2px solid var(--line);padding-bottom:10px}
+  header h1{font-size:20px;letter-spacing:2px}
+  header .tag{font-size:11px;color:#08131f;background:var(--cat);padding:2px 7px;font-weight:700}
+  header .sub{color:var(--dim);font-size:11.5px}
+  .grid{display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(320px,1fr);gap:14px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:2px solid var(--line);box-shadow:0 0 0 2px #0a1425 inset}
+  .panel > h2{font-size:12.5px;letter-spacing:1.5px;padding:8px 10px;background:var(--panel2);
+    border-bottom:2px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .panel .body{padding:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  .row:last-child{margin-bottom:0}
+  label.ctl{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);
+    background:#0d1728;border:2px solid var(--line);padding:4px 8px}
+  label.ctl b{color:var(--gold);min-width:20px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:110px;height:8px;background:#22314c;
+    border:1px solid var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:16px;background:var(--cat);border:0;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:10px;height:16px;background:var(--cat);border:0;cursor:pointer}
+  button{
+    font:inherit;font-size:12px;color:var(--ink);background:#1b2b47;cursor:pointer;
+    border:2px solid var(--line);padding:6px 11px;transition:.08s;letter-spacing:.5px;
+  }
+  button:hover{background:#24385c;border-color:#3a5c8c}
+  button:active{transform:translate(1px,1px)}
+  button.primary{background:var(--cat);color:#07131d;border-color:#7fe3d6;font-weight:700}
+  button.primary:hover{background:#7fe3d6}
+  button.ghost{background:#16233a}
+  button.mini{padding:2px 7px;font-size:11px}
+  button.spd.on{background:var(--gold);color:#231a05;border-color:#f7d888;font-weight:700}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ============ 角色卡 ============ */
+  .team{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
+  .card{background:var(--bg2);border:2px solid var(--line);border-left:4px solid var(--c);padding:7px 8px}
+  .card.rat{border-left-color:var(--c)}
+  .chead{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+  .glyph{width:24px;height:24px;display:grid;place-items:center;background:var(--c);color:#08131f;
+    font-weight:700;font-size:13px;flex:0 0 auto}
+  .chead b{display:block;font-size:12.5px;line-height:1.25}
+  .chead i{font-style:normal;color:var(--dim);font-size:10.5px}
+  .stats{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+  .sb{background:#0c1727;border:1px solid var(--line);padding:1px 5px;font-size:10.5px;display:flex;gap:4px}
+  .sb i{font-style:normal;color:var(--dim2)}
+  .sb b{color:var(--ink)}
+  .slots{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+  .slot{display:flex;gap:5px;align-items:baseline;font-size:10.5px;background:#0d1a2c;border:1px solid #1d3050;padding:2px 5px}
+  .slot .k{color:#08131f;background:var(--dim);padding:0 4px;font-size:9.5px;flex:0 0 auto}
+  .slot.ult .k{background:var(--gold)}
+  .slot .n{flex:1;color:#c8d8ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .slot .lv{color:var(--dim2);font-size:9.5px;flex:0 0 auto}
+  .slot.locked{opacity:.45}
+  .slot.locked .n{text-decoration:line-through}
+
+  /* ============ 战场 ============ */
+  .arena{display:grid;grid-template-columns:1fr 74px 1fr;gap:10px;margin-top:14px}
+  @media (max-width:760px){.arena{grid-template-columns:1fr;}.vs{order:2}}
+  .side{background:#0c1626;border:2px solid var(--line);padding:8px;min-height:120px}
+  .side.cats{border-top:3px solid var(--cat)}
+  .side.rats{border-top:3px solid var(--rat)}
+  .side h3{font-size:11px;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px}
+  .vs{display:grid;place-items:center;color:var(--dim2);font-weight:700;font-size:13px;text-align:center}
+  .unit{position:relative;background:#101d33;border:2px solid #1d3050;padding:5px 6px;margin-bottom:6px;border-left:4px solid var(--c)}
+  .unit.acting{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 12px -2px var(--gold)}
+  .unit.dead{opacity:.34;filter:grayscale(.8)}
+  .unit.dead .hpfill{width:0!important}
+  .uhead{display:flex;align-items:center;gap:6px;font-size:11.5px}
+  .uhead .glyph{width:18px;height:18px;font-size:11px}
+  .uhead i{color:var(--dim);font-style:normal;font-size:10px}
+  .hpbar{position:relative;height:13px;background:#0a1220;border:1px solid var(--line);margin:4px 0 3px;overflow:hidden}
+  .hpfill{height:100%;background:linear-gradient(180deg,#6ee7a8,#37b07a);transition:width .18s linear;
+    background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 2px,transparent 2px 6px)}
+  .hpfill.low{background:linear-gradient(180deg,#ef6b7f,#b8425a)}
+  .hptxt{position:absolute;inset:0;text-align:center;font-size:10px;line-height:13px;color:#eaf3ff;text-shadow:0 1px 0 #000}
+  .enbar{height:4px;background:#0a1220;border:1px solid #1c2b45}
+  .enbar i{display:block;height:100%;background:var(--gold);transition:width .18s linear}
+  .chips{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;min-height:12px}
+  .chip{font-size:9.5px;background:#20304d;border:1px solid #33496e;color:#bcd0ea;padding:0 4px}
+  .pop{position:absolute;inset:0;pointer-events:none;overflow:visible}
+  .popup{position:absolute;top:14%;font-size:13px;font-weight:700;animation:fly .9s ease-out forwards;text-shadow:0 1px 0 #000}
+  .popup.dmg{color:#ffb4b4}.popup.crit{color:#ffd76a;font-size:16px}.popup.heal{color:#8ef0b6}.popup.dot{color:#d7a2ff}
+  @keyframes fly{0%{transform:translateY(6px);opacity:0}20%{opacity:1}100%{transform:translateY(-26px);opacity:0}}
+  .unit.shake{animation:shk .26s steps(2)}
+  @keyframes shk{0%{transform:translateX(0)}25%{transform:translateX(-3px)}50%{transform:translateX(3px)}75%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+
+  /* ============ 日志 ============ */
+  .logpanel{margin-top:14px}
+  .log{height:250px;overflow:auto;padding:8px 10px;background:#0a1322;font-size:11.5px}
+  .line{padding:1px 0;border-bottom:1px dashed #16243c;color:#b9cbe4}
+  .line.sys{color:#8fb4e8}
+  .line.end{border-top:2px solid var(--line);margin-top:5px;padding-top:5px;font-size:12.5px}
+  .line.death{color:#f0a0b0}
+  .line .sk{color:var(--gold)}
+  .line .cost{color:var(--dim2)}
+  .line .st{color:#9fe8d8}
+  .crit{color:#ffd76a;font-weight:700}
+  .win{color:var(--good);font-weight:700}
+  .lose{color:var(--bad);font-weight:700}
+  .forecast{margin-top:6px;font-size:11.5px;color:var(--dim);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .forecast b.good{color:var(--good)}.forecast b.mid{color:var(--mid)}.forecast b.bad{color:var(--bad)}
+  .forecast i{font-style:normal;color:var(--dim2);font-size:10.5px}
+  footer{margin-top:14px;color:var(--dim2);font-size:11px;border-top:2px solid var(--line);padding-top:8px}
+  kbd{background:#1b2b47;border:1px solid var(--line);padding:0 4px;font-size:10.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>猫鼠远洋</h1>
+    <span class="tag">map3 BATTLE SIM</span>
+    <span class="sub">像素回合制 · 乘法公式 · 4 猫 vs 3~5 鼠 · 全自动战斗回放</span>
+  </header>
+
+  <div class="grid">
+    <!-- 我方编队 -->
+    <section class="panel">
+      <h2>我方舰队 <span class="sub" id="catHint">势均力敌 4 人</span></h2>
+      <div class="body">
+        <div class="row">
+          <label class="ctl">我方等级 <input type="range" id="catLv" min="1" max="20" value="10"><b id="catLvV">10</b></label>
+          <button id="btnRoll" class="ghost">🎲 重掷我方</button>
+        </div>
+        <div id="catTeam" class="team"></div>
+        <div class="forecast" id="forecast">预计胜率 —</div>
+      </div>
+    </section>
+
+    <!-- 敌方编队 -->
+    <section class="panel">
+      <h2>敌方小队 <button id="btnReroll" class="mini ghost">🎲 重掷敌人</button></h2>
+      <div class="body">
+        <div class="row">
+          <label class="ctl">敌方等级 <input type="range" id="ratLv" min="1" max="20" value="10"><b id="ratLvV">10</b></label>
+          <label class="ctl">敌人数量 <input type="range" id="ratN" min="3" max="5" value="4"><b id="ratNV">4</b></label>
+        </div>
+        <div id="ratTeam" class="team"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 操作条 -->
+  <section class="panel" style="margin-top:14px">
+    <div class="body">
+      <div class="row">
+        <button id="btnFight" class="primary">⚔ 出击</button>
+        <button id="btnAuto" class="ghost">🔁 随机编队并出击</button>
+        <button id="btnSkip" class="ghost">⏩ 直接结算</button>
+        <button id="btnBatch" class="ghost">📊 批量模拟 200 场</button>
+        <span style="flex:1"></span>
+        <span class="sub" style="color:var(--dim2)">回放速度</span>
+        <button id="spd1" class="spd">1×</button>
+        <button id="spd2" class="spd">2×</button>
+        <button id="spd4" class="spd">4×</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 战场 -->
+  <section class="arena">
+    <div class="side cats"><h3>我方舰队</h3><div id="sideCats"></div></div>
+    <div class="vs">VS<div id="clock" style="font-size:10.5px;color:var(--dim2);margin-top:4px">预备</div></div>
+    <div class="side rats"><h3>鼠群编队</h3><div id="sideRats"></div></div>
+  </section>
+
+  <!-- 战报 -->
+  <section class="panel logpanel">
+    <h2>战斗日志 <span id="result" class="sub"></span></h2>
+    <div id="log" class="log"></div>
+  </section>
+
+  <footer>
+    快捷键：<kbd>空格</kbd> 出击 · <kbd>B</kbd> 批量模拟　|　
+    数据来源：<code>src/data.js</code>（10 猫 / 10 鼠）· <code>src/engine.js</code>（战斗与 AI）　|　
+    同级基准胜率 ≥95%（敌方系数 0.92）
+  </footer>
+</div>
+
+<script src="src/data.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/ui.js"></script>
+<!-- build:inline -->
+</body>
+</html>
