@@ -9,18 +9,8 @@
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
 
-  /* 技能解锁节奏：10 级全解锁（被动1 → 大招1 → 被动2 → 大招2） */
-  var UNLOCK = { p1: 1, u1: 5, p2: 10, u2: 15 };
-  function skillSlots(def) {
-    var out = [];
-    (def.passives || []).forEach(function (p, i) {
-      out.push({ key: 'p' + (i + 1), kind: 'passive', name: p.name, desc: p.desc, lv: UNLOCK['p' + (i + 1)] });
-    });
-    (def.ults || []).forEach(function (u, i) {
-      out.push({ key: 'u' + (i + 1), kind: 'ult', name: u.name, desc: u.desc, cost: u.cost, lv: UNLOCK['u' + (i + 1)] });
-    });
-    return out.sort(function (a, b) { return a.lv - b.lv; });
-  }
+  /* 技能槽与解锁等级统一由 data.js 提供（L1/L5/L10/L15），数值随等级解析 */
+  function skillSlots(def) { return M3.slotsOf(def); }
 
   /* -------------------------------- 状态 -------------------------------- */
   var state = {
@@ -34,19 +24,20 @@
   /* ------------------------------ 编队卡片 ------------------------------ */
   function catCard(def, lv, compact) {
     var st = M3.statAt(def.base, lv);
-    var slots = skillSlots(def).map(function (s) {
-      var locked = lv < s.lv;
-      return '<li class="slot ' + s.kind + (locked ? ' locked' : '') + '" title="' + esc(s.desc) + '">' +
-        '<span class="k">' + (s.kind === 'ult' ? '必杀' : '被动') + '</span>' +
-        '<span class="n">' + esc(s.name) + '</span>' +
-        '<span class="lv">' + (locked ? '🔒 Lv' + s.lv : (s.cost ? s.cost + 'EN' : '常驻')) + '</span>' +
+    var slots = skillSlots(def).map(function (sl) {
+      var locked = lv < sl.unlock;
+      var desc = M3.descOf(sl.skill, lv).replace(/<[^>]+>/g, '');
+      return '<li class="slot ' + sl.kind + (locked ? ' locked' : '') + '" title="' + esc(desc) + '">' +
+        '<span class="k">' + (sl.kind === 'ult' ? '必杀' : '被动') + '</span>' +
+        '<span class="n">' + esc(sl.skill.name) + '</span>' +
+        '<span class="lv">' + (locked ? '🔒 Lv' + sl.unlock : (sl.skill.cost ? sl.skill.cost + 'EN' : '常驻')) + '</span>' +
         '</li>';
     }).join('');
     return '<div class="card" style="--c:' + def.color + '" data-id="' + def.id + '">' +
       '<div class="chead"><span class="glyph">' + esc(def.title.slice(0, 1)) + '</span>' +
       '<div><b>' + esc(def.title) + '</b><i>' + esc(def.role) + ' · Lv' + lv + '</i></div></div>' +
       '<div class="stats">' +
-      sbox('HP', st.hp) + sbox('ATK', st.atk) + sbox('DEF', st.def) + sbox('SPD', st.spd) + sbox('CRIT', (st.crit * 100).toFixed(0) + '%') +
+      sbox('HP', st.hp) + sbox('ATK', st.atk) + sbox('DEF', st.def) + sbox('SPD', st.spd) + sbox('CRIT', st.crit + '%') +
       '</div>' +
       (compact ? '' : '<ul class="slots">' + slots + '</ul>') +
       '</div>';
@@ -55,9 +46,12 @@
 
   function ratCard(def, lv, compact) {
     var st = M3.statAt(def.base, lv);
-    var slots = skillSlots(def).map(function (s) {
-      return '<li class="slot ' + s.kind + '" title="' + esc(s.desc) + '"><span class="k">' +
-        (s.kind === 'ult' ? '必杀' : '被动') + '</span><span class="n">' + esc(s.name) + '</span></li>';
+    var slots = skillSlots(def).map(function (sl) {
+      var locked = lv < sl.unlock;
+      var desc = M3.descOf(sl.skill, lv).replace(/<[^>]+>/g, '');
+      return '<li class="slot ' + sl.kind + (locked ? ' locked' : '') + '" title="' + esc(desc) + '"><span class="k">' +
+        (sl.kind === 'ult' ? '必杀' : '被动') + '</span><span class="n">' + esc(sl.skill.name) + '</span>' +
+        '<span class="lv">' + (locked ? '🔒 Lv' + sl.unlock : (sl.skill.cost ? sl.skill.cost + 'EN' : '常驻')) + '</span></li>';
     }).join('');
     return '<div class="card rat" style="--c:' + def.color + '" data-id="' + def.id + '">' +
       '<div class="chead"><span class="glyph">' + esc(def.name.slice(0, 1)) + '</span>' +

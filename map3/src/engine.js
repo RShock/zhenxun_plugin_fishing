@@ -1,9 +1,9 @@
 /* ==========================================================================
- * map3 · 猫鼠远洋 —— 自动战斗引擎
+ * map3 · 猫鼠远洋 —— 自动战斗引擎（整数数值版）
  * --------------------------------------------------------------------------
  * · 行动条（速度累积）决定出手顺序，速度直接换算出手频率
- * · 乘法伤害：DMG = ATK × 倍率 × 50/(50+DEF) × 增伤 × 暴击 × 浮动
- * · 能量：普攻 +20，受击 +8，大招消耗 50 / 80
+ * · 乘法伤害：DMG = ATK × 倍率% × 50/(50+防御×(1-穿甲%)) × 增伤 × 暴击 × 浮动
+ * · 所有技能数值以「整数百分点」存储，运行时按等级解析：值(L) = 基础 + 每级增量×(L-1)
  * · 全自动：每名单位按技能 ai 优先级与条件自行决策
  * ========================================================================== */
 (function (root) {
@@ -30,24 +30,53 @@
   var NEGATIVE = { atkDown: 1, defDown: 1, spdDown: 1, vuln: 1, stun: 1, burn: 1, poison: 1 };
   M3.STATUS_LABEL = STATUS_LABEL;
 
-  var DEF_K = 50;          // 防御换算常数
-  var CRIT_DMG_BASE = 1.5;
+  var DEF_K = 50;
+  var CRIT_DMG_BASE = 150;   /* 整数百分点：150 = 1.5 倍 */
   var EN_MAX = 100, EN_BASIC = 20, EN_HIT = 8;
-  /* 全局平衡旋钮：enemyStatScale 同时充当后续“要塞难度”的调节阀 */
-  M3.tuning = { enemyStatScale: 0.92 };
   var MAX_TICKS = 700;
+  M3.tuning = { enemyStatScale: 1.0 };  /* 要塞难度旋钮；杂兵强度已写入基础值 */
+
+  /* ---------------------------- 数值解析（整数 → 系数） ---------------------------- */
+  /* spec 支持：数字 | {b,i,cap} | '%键名'（指向技能 vals，技能对象通过参数传入） | '-%键名' */
+  function specRaw(spec, u, skill) {
+    var neg = false, s = spec;
+    if (typeof s === 'string') {
+      if (s.charAt(0) === '-') { neg = true; s = s.slice(1); }
+      if (s.charAt(0) === '%') {
+        var key = s.slice(1);
+        var v = skill && skill.vals ? skill.vals[key] : undefined;
+        var out = M3.resolve(v, u ? u.level : 1);
+        return neg ? -out : out;
+      }
+      var num = Number(s);
+      return neg ? -num : num;
+    }
+    var r = M3.resolve(s, u ? u.level : 1);
+    return neg ? -r : r;
+  }
+  var N = specRaw;                                   /* 计数 / 原始整数 */
+  function F(spec, u, skill) { return specRaw(spec, u, skill) / 100; }  /* 百分点 → 系数 */
+  M3.N = N; M3.F = F;
 
   /* ---------------------------- 单位实例化 ---------------------------- */
-  function collectMod(def) {
+  function collectMod(def, lv) {
     var mod = {
       atkPct: 0, defPct: 0, spdPct: 0, hpPct: 0, critAdd: 0, critDmgAdd: 0,
       dmgTaken: 0, defPen: 0, dodge: 0, lifesteal: 0, healUp: 0, dotTaken: 0, rampAtk: null
     };
+    var fake = { level: lv };
     (def.passives || []).forEach(function (p) {
       if (!p.stat) return;
       Object.keys(p.stat).forEach(function (k) {
-        if (k === 'rampAtk') mod.rampAtk = p.stat[k];
-        else if (k in mod) mod[k] += p.stat[k];
+        var raw = F(p.stat[k], fake, p);          /* 百分点 → 系数 */
+        if (k === 'rampAtk') {
+          var arr = p.stat.rampAtk;
+          mod.rampAtk = [F(arr[0], fake, p), F(arr[1], fake, p)];
+        } else if (k === 'critAdd' || k === 'critDmgAdd') {
+          mod[k] += F(p.stat[k], fake, p);        /* 暴击点数是百分点 */
+        } else if (k in mod) {
+          mod[k] += raw;
+        }
       });
     });
     return mod;
@@ -57,18 +86,20 @@
     var s = M3.statAt(def.base, level);
     if (side === 'rat') {
       var k = (M3.tuning && M3.tuning.enemyStatScale) || 1;
-      s.hp = Math.round(s.hp * k);
-      s.atk = Math.round(s.atk * k * 10) / 10;
-      s.def = Math.round(s.def * k * 10) / 10;
+      if (k !== 1) {
+        s.hp = Math.round(s.hp * k);
+        s.atk = Math.round(s.atk * k);
+        s.def = Math.round(s.def * k);
+      }
     }
-    var mod = collectMod(def);
+    var mod = collectMod(def, level);
     var maxHp = Math.round(s.hp * (1 + mod.hpPct));
     return {
       uid: side + ':' + def.id, def: def, side: side,
       name: def.name, title: def.title || def.name, role: def.role, color: def.color,
       level: level, base: s, mod: mod,
       maxHp: maxHp, hp: maxHp,
-      critDmg: CRIT_DMG_BASE + mod.critDmgAdd,
+      critDmg: CRIT_DMG_BASE / 100 + mod.critDmgAdd,
       en: 0, enMax: EN_MAX, gauge: 0, haste: 0, dead: false,
       statuses: [], usedOnce: {},
       stats: { dealt: 0, taken: 0, healed: 0, kills: 0, crits: 0 }
@@ -89,7 +120,7 @@
     var v = u.base.atk * (1 + u.mod.atkPct + statusSum(u, 'atkUp') - statusSum(u, 'atkDown'));
     if (u.mod.rampAtk) {
       var lost = 1 - u.hp / u.maxHp;
-      v *= 1 + Math.min(u.mod.rampAtk[1], lost * u.mod.rampAtk[0]);
+      v *= 1 + Math.min(u.mod.rampAtk[1], lost * u.mod.rampAtk[0] * 10);  /* 每损失 10% 生效一次 */
     }
     return Math.max(1, v);
   }
@@ -100,7 +131,7 @@
     return Math.max(1, u.base.spd * (1 + u.mod.spdPct + statusSum(u, 'spdUp') - statusSum(u, 'spdDown')));
   }
   function effCrit(u) {
-    return Math.max(0, Math.min(0.95, u.base.crit + u.mod.critAdd + statusSum(u, 'critUp')));
+    return Math.max(0, Math.min(0.95, u.base.crit / 100 + u.mod.critAdd + statusSum(u, 'critUp')));
   }
   function effDodge(u) {
     return Math.max(0, Math.min(0.6, u.mod.dodge + statusSum(u, 'dodge')));
@@ -123,41 +154,33 @@
   }
   function enemiesOf(ctx, u) { return u.side === 'cat' ? ctx.rats : ctx.cats; }
   function alliesOf(ctx, u) { return u.side === 'cat' ? ctx.cats : ctx.rats; }
-
   function push(ctx, e) { if (ctx.log) ctx.ev.push(e); }
+  function hpPct(u) { return u.hp / u.maxHp; }
 
   /* -------------------------------- 条件 -------------------------------- */
-  function hpPct(u) { return u.hp / u.maxHp; }
-  function checkCond(cond, u, ctx, tgt) {
+  function checkCond(cond, u, ctx, tgt, skill) {
     if (!cond) return true;
-    var v = cond.v;
+    var v = F(cond.v, u, skill);
     switch (cond.c) {
       case 'always': return true;
       case 'selfHpBelow': return hpPct(u) < v;
       case 'selfHpAbove': return hpPct(u) > v;
-      case 'allyHpBelow': {
-        return alive(alliesOf(ctx, u)).some(function (a) { return hpPct(a) < v; });
-      }
+      case 'allyHpBelow': return alive(alliesOf(ctx, u)).some(function (a) { return hpPct(a) < v; });
       case 'targetHpBelow': {
         var t = tgt || ctx.lastTarget;
         return !!t && !t.dead && hpPct(t) < v;
       }
       case 'enemyCountGE': return alive(enemiesOf(ctx, u)).length >= v;
-      case 'enemiesWithDot': {
+      case 'enemiesWithDot':
         return alive(enemiesOf(ctx, u)).some(function (e) {
           return e.statuses.some(function (s) { return s.dot; });
         });
-      }
       case 'turnLE': return ctx.turnNo <= v;
       default: return true;
     }
   }
 
   /* ------------------------------ 目标选择 ------------------------------ */
-  function pickTauntTargets(ctx, u) {
-    var es = alive(enemiesOf(ctx, u)).filter(function (e) { return hasStatus(e, 'taunt'); });
-    return es;
-  }
   function lowestHp(list) {
     var best = null;
     for (var i = 0; i < list.length; i++) {
@@ -185,13 +208,12 @@
   function pickTargets(sel, u, ctx) {
     var foes = alive(enemiesOf(ctx, u));
     var mates = alive(alliesOf(ctx, u));
-    var taunts = (sel === 'one' || sel === 'oneHighestAtk') ? pickTauntTargets(ctx, u) : [];
+    var taunts = (sel === 'one' || sel === 'oneHighestAtk')
+      ? foes.filter(function (e) { return hasStatus(e, 'taunt'); }) : [];
     switch (sel) {
       case 'all': return foes;
       case 'random': return foes.length ? [foes[Math.floor(ctx.rnd() * foes.length)]] : [];
-      case 'oneHighestAtk':
-        if (taunts.length) return [lowestHp(taunts)];
-        return highestAtk(foes) ? [highestAtk(foes)] : [];
+      case 'oneHighestAtk': return taunts.length ? [lowestHp(taunts)] : (highestAtk(foes) ? [highestAtk(foes)] : []);
       case 'self': return [u];
       case 'allAllies': return mates;
       case 'lowestAlly': return lowestHp(mates) ? [lowestHp(mates)] : [];
@@ -200,9 +222,7 @@
       case 'lastHit': return ctx.lastTarget && !ctx.lastTarget.dead ? [ctx.lastTarget] : (foes.length ? [foes[0]] : []);
       case 'randomEnemy': return foes.length ? [foes[Math.floor(ctx.rnd() * foes.length)]] : [];
       case 'one':
-      default:
-        if (taunts.length) return [lowestHp(taunts)];
-        return lowestHp(foes) ? [lowestHp(foes)] : [];
+      default: return taunts.length ? [lowestHp(taunts)] : (lowestHp(foes) ? [lowestHp(foes)] : []);
     }
   }
 
@@ -212,8 +232,8 @@
     (src.def.passives || []).forEach(function (p) {
       (p.triggers || []).forEach(function (tr) {
         if (tr.on !== 'onBeforeDamage') return;
-        if (!checkCond(tr.cond, src, ctx, tgt)) return;
-        if (tr.effect.kind === 'damageMod') mult *= tr.effect.value;
+        if (!checkCond(tr.cond, src, ctx, tgt, p)) return;
+        if (tr.effect.kind === 'damageMod') mult *= 1 + F(tr.effect.value, src, p);
       });
     });
     return mult;
@@ -224,32 +244,35 @@
     var ev = { t: 'damage', src: src.uid, tid: tgt.uid, crit: false, dodged: false };
     if (!src || !tgt || tgt.dead || src.dead) return 0;
 
-    /* 闪避（固定伤害与灼烧/中毒不吃闪避） */
     if (!opts.trueDamage && !opts.noDodge && effDodge(tgt) > 0 && ctx.rnd() < effDodge(tgt)) {
       ev.dodged = true; push(ctx, ev);
-      if (ctx.log) ctx.ev.push({ t: 'miss', tid: tgt.uid });
+      push(ctx, { t: 'miss', tid: tgt.uid });
       return 0;
     }
 
     var atk = effAtk(src);
     var def = effDef(tgt) * (1 - Math.max(0, Math.min(0.8, src.mod.defPen)));
     var mit = DEF_K / (DEF_K + def);
-    var dmg = atk * step.mul * mit;
+    var dmg = atk * F(step.mul, src, opts.skill) * mit;
 
     dmg *= damageModFromTriggers(src, tgt, ctx);
-    if (step.execute && hpPct(tgt) < step.execute.below) dmg *= step.execute.mul;
-    if (step.bonusVsStunned && hasStatus(tgt, 'stun')) dmg *= 1 + step.bonusVsStunned;
+    if (step.execute) {
+      var below = F(step.execute.below, src, opts.skill);
+      var bonus = F(step.execute.bonus, src, opts.skill);
+      if (hpPct(tgt) < below) dmg *= 1 + bonus;
+    }
+    if (step.bonusVsStunned && hasStatus(tgt, 'stun')) dmg *= 1 + F(step.bonusVsStunned, src, opts.skill);
     dmg *= 1 + statusSum(tgt, 'vuln');
     dmg *= 1 + tgt.mod.dmgTaken;
 
     var crit = ctx.rnd() < effCrit(src);
     if (crit) { dmg *= src.critDmg; src.stats.crits++; }
+    if (crit && !src.dead) runTriggers(src, 'onCrit', ctx);   /* 暴击触发（元素充能等） */
     dmg *= 0.94 + ctx.rnd() * 0.12;
 
     dmg = Math.max(1, Math.round(dmg));
-    if (opts.trueDamage) { ev.crit = false; } else { ev.crit = crit; }
+    ev.crit = opts.trueDamage ? false : crit;
 
-    /* 护盾吸收 */
     var absorbed = 0;
     for (var i = 0; i < tgt.statuses.length && dmg > 0; i++) {
       var s = tgt.statuses[i];
@@ -269,37 +292,32 @@
     ctx.lastTarget = tgt;
     ctx.attacker = src;
 
-    /* 吸血 */
-    var ls = src.mod.lifesteal + (step.lifesteal || 0);
+    var ls = src.mod.lifesteal + (step.lifesteal ? F(step.lifesteal, src, opts.skill) : 0);
     if (ls > 0 && dmg > 0) healUnit(src, src, Math.round(dmg * ls), ctx, '吸血');
 
-    /* 反击（仅单体攻击触发） */
     if (!opts.trueDamage && !opts.noCounter && alive(enemiesOf(ctx, tgt)).indexOf(src) >= 0) {
       var cval = statusSum(tgt, 'counter');
       if (cval > 0 && !src.dead && !tgt.dead) {
         push(ctx, { t: 'counter', uid: tgt.uid });
-        dealDamage(tgt, src, { mul: cval }, ctx, { noCounter: true });
+        dealDamage(tgt, src, { mul: cval * 100 }, ctx, { noCounter: true, skill: opts.skill });
       }
     }
 
-    /* 受击触发 */
     if (!src.dead && !tgt.dead) runTriggers(tgt, 'onTakeDamage', ctx, { attacker: src, lastTarget: tgt });
     return dmg;
   }
 
   function damageAfterDeath(ctx) {
-    /* 死亡结算 + 击杀归属 */
     ctx.units.forEach(function (u) {
       if (!u.dead && u.hp <= 0) {
         u.hp = 0; u.dead = true; u.statuses = [];
         push(ctx, { t: 'death', uid: u.uid });
         var a = ctx.attacker;
-        if (a && !a.dead && a.side !== u.side) a.stats.kills++;
+        if (a && a.side !== u.side) a.stats.kills++;
       }
     });
   }
 
-  /* 治疗加成：施术者自身 + 该方全体“治疗光环”被动（米娅 / 扳手鼠） */
   function healBonus(src, tgt, ctx) {
     var bonus = src.mod.healUp;
     alliesOf(ctx, tgt).forEach(function (a) { if (a !== src && !a.dead) bonus += a.mod.healUp; });
@@ -321,7 +339,8 @@
   function applyStatus(u, spec, ctx, srcUnit) {
     if (u.dead) return;
     var st = { id: spec.status, value: spec.value || 0, turns: spec.turns || 2, src: srcUnit ? srcUnit.uid : null };
-    if (spec.status === 'shield') { st.absorb = spec.absorb || 0; }
+    if (spec.status === 'shield') st.absorb = spec.absorb || 0;
+    if (spec.dot) st.dot = spec.dot;
     if (spec.stackMax) {
       var same = u.statuses.filter(function (s) { return s.id === spec.status && s.src === st.src; }).length;
       if (same >= spec.stackMax) return;
@@ -333,53 +352,59 @@
     });
   }
 
-  function applyDot(tgt, id, mul, turns, src) {
-    return { status: id, value: Math.round(effAtk(src) * mul), turns: turns };
-  }
-
   /* ------------------------------- 步骤执行 ------------------------------- */
-  function executeStep(step, u, ctx) {
+  function executeStep(step, u, ctx, skill) {
+    var sk = skill || step;
     switch (step.kind) {
       case 'damage': {
-        var hits = step.hits || 1;
+        var hits = N(step.hits, u, sk) || 1;
         var total = 0;
         for (var h = 0; h < hits; h++) {
           var tgts = pickTargets(step.target || 'one', u, ctx);
           if (!tgts.length) break;
           for (var i = 0; i < tgts.length; i++) {
             if (tgts[i].dead) continue;
-            total += dealDamage(u, tgts[i], step, ctx);
+            total += dealDamage(u, tgts[i], step, ctx, { skill: sk });
           }
         }
         return total;
       }
       case 'heal': {
         var hs = pickTargets(step.target || 'self', u, ctx);
-        for (var j = 0; j < hs.length; j++) healUnit(u, hs[j], effAtk(u) * step.mul, ctx);
+        for (var j = 0; j < hs.length; j++) healUnit(u, hs[j], effAtk(u) * F(step.mul, u, sk), ctx);
         return hs.length;
       }
       case 'shield': {
         var ss = pickTargets(step.target || 'self', u, ctx);
         for (var k = 0; k < ss.length; k++) {
-          applyStatus(ss[k], { status: 'shield', absorb: Math.round(effAtk(u) * step.mul), turns: step.turns || 2 }, ctx, u);
+          applyStatus(ss[k], {
+            status: 'shield', absorb: Math.round(effAtk(u) * F(step.mul, u, sk)),
+            turns: N(step.turns, u, sk) || 2
+          }, ctx, u);
         }
         return ss.length;
       }
       case 'status': {
         var ts = pickTargets(step.target || 'one', u, ctx);
         for (var m = 0; m < ts.length; m++) {
-          if (step.chance !== undefined && ctx.rnd() > step.chance) {
+          if (step.chance !== undefined && ctx.rnd() > F(step.chance, u, sk)) {
             push(ctx, { t: 'resist', tid: ts[m].uid, label: STATUS_LABEL[step.status] || step.status });
             continue;
           }
-          applyStatus(ts[m], { status: step.status, value: step.value, turns: step.turns, stackMax: step.stackMax }, ctx, u);
+          applyStatus(ts[m], {
+            status: step.status, value: F(step.value, u, sk),
+            turns: N(step.turns, u, sk), stackMax: step.stackMax
+          }, ctx, u);
         }
         return ts.length;
       }
       case 'dot': {
         var ds = pickTargets(step.target || 'one', u, ctx);
         for (var n = 0; n < ds.length; n++) {
-          applyStatus(ds[n], applyDot(ds[n], step.id, step.mul, step.turns || 2, u), ctx, u);
+          applyStatus(ds[n], {
+            status: step.id, value: Math.round(effAtk(u) * F(step.mul, u, sk)),
+            turns: N(step.turns, u, sk) || 2, dot: step.id
+          }, ctx, u);
         }
         return ds.length;
       }
@@ -388,11 +413,11 @@
         var count = 0;
         xs.forEach(function (x) {
           var stacks = x.statuses.filter(function (s) { return s.dot === step.dotId; }).slice(0, step.maxStacks || 3);
-          stacks.forEach(function (s) {
-            var dmg = Math.round(effAtk(u) * step.mul);
+          stacks.forEach(function () {
+            var dmg = Math.max(1, Math.round(effAtk(u) * F(step.mul, u, sk)));
             push(ctx, { t: 'detonate', tid: x.uid, value: dmg });
             x.hp -= dmg; u.stats.dealt += dmg; x.stats.taken += dmg;
-            if (x.hp <= 0) { damageAfterDeath(ctx); }
+            if (x.hp <= 0) damageAfterDeath(ctx);
             count++;
           });
           x.statuses = x.statuses.filter(function (s) { return s.dot !== step.dotId; });
@@ -403,7 +428,7 @@
         var cs = pickTargets(step.target || 'self', u, ctx);
         var removed = 0;
         cs.forEach(function (c) {
-          for (var i2 = 0; i2 < c.statuses.length && removed < (step.count || 1); i2++) {
+          for (var i2 = 0; i2 < c.statuses.length && removed < (N(step.count, u, sk) || 1); i2++) {
             if (NEGATIVE[c.statuses[i2].id]) { c.statuses.splice(i2, 1); i2--; removed++; }
           }
         });
@@ -412,8 +437,9 @@
       }
       case 'energy': {
         var es = pickTargets(step.target || 'self', u, ctx);
-        es.forEach(function (e) { e.en = Math.min(e.enMax, e.en + step.amount); });
-        push(ctx, { t: 'energy', tid: es.length ? es[0].uid : null, value: step.amount });
+        var amt = N(step.amount, u, sk);
+        es.forEach(function (e) { e.en = Math.min(e.enMax, e.en + amt); });
+        push(ctx, { t: 'energy', tid: es.length ? es[0].uid : null, value: amt });
         return es.length;
       }
       case 'haste': {
@@ -423,14 +449,14 @@
         return 1;
       }
       case 'selfHpCost': {
-        var cost = Math.round(u.maxHp * step.v);
+        var cost = Math.round(u.maxHp * F(step.v, u, sk));
         u.hp = Math.max(1, u.hp - cost);
         u.stats.taken += cost;
         push(ctx, { t: 'selfcost', uid: u.uid, value: cost });
         return cost;
       }
       case 'damageMod':
-        return 0; /* 由 dealDamage 内部读取 */
+        return 0;
       default: return 0;
     }
   }
@@ -440,14 +466,16 @@
     var old = {};
     if (extra) Object.keys(extra).forEach(function (k) { old[k] = ctx[k]; ctx[k] = extra[k]; });
     (u.def.passives || []).forEach(function (p) {
+      /* 等级不足未解锁的被动不生效 */
+      if ((p.unlock || 1) > u.level) return;
       (p.triggers || []).forEach(function (tr, idx) {
         if (tr.on !== hook) return;
         var key = p.id + ':' + hook + ':' + idx;
         if (tr.once && u.usedOnce[key]) return;
-        if (tr.chance !== undefined && ctx.rnd() > tr.chance) return;
-        if (!checkCond(tr.cond, u, ctx, extra && extra.lastTarget)) return;
+        if (tr.chanceVal !== undefined && ctx.rnd() > F(tr.chanceVal, u, p)) return;
+        if (!checkCond(tr.cond, u, ctx, extra && extra.lastTarget, p)) return;
         if (tr.once) u.usedOnce[key] = 1;
-        executeStep(tr.effect, u, ctx);
+        executeStep(tr.effect, u, ctx, p);
       });
     });
     if (extra) Object.keys(extra).forEach(function (k) { ctx[k] = old[k]; });
@@ -456,41 +484,40 @@
   /* ------------------------------- 技能决策 ------------------------------- */
   function chooseSkill(u, ctx) {
     var best = null;
-    function consider(skill, prio) {
-      if (!best || prio > best.prio + 1e-9) best = { skill: skill, prio: prio };
-    }
-    consider(null, 0); /* 普攻，优先级 0 */
+    function consider(skill, prio) { if (!best || prio > best.prio + 1e-9) best = { skill: skill, prio: prio }; }
+    consider(null, 0);
     (u.def.ults || []).forEach(function (ult) {
+      if ((ult.unlock || 1) > u.level) return;      /* 未解锁 */
       if (u.en < ult.cost) return;
-      var prio = 0;
-      if (ult.ai && ult.ai.prio) prio = ult.ai.prio;
-      if (ult.ai && ult.ai.cond && !checkCond(ult.ai.cond, u, ctx)) prio = Math.min(prio, 0.5);
+      var prio = (ult.ai && ult.ai.prio) || 0;
+      if (ult.ai && ult.ai.cond && !checkCond(ult.ai.cond, u, ctx, null, ult)) prio = Math.min(prio, 0.5);
       consider(ult, prio);
     });
     return best.skill;
   }
 
   /* -------------------------------- 行动 -------------------------------- */
-  function tickStatuses(u, ctx, phase) {
+  function tickStatuses(u, ctx) {
     for (var i = 0; i < u.statuses.length; i++) {
       var s = u.statuses[i];
-      if (phase === 'start') {
-        if (s.dot === 'burn' || s.dot === 'poison') {
-          var dmg = Math.max(1, Math.round(s.value * (1 + u.mod.dotTaken)));
-          u.hp -= dmg; u.stats.taken += dmg;
-          push(ctx, { t: 'dot', tid: u.uid, status: s.dot, label: STATUS_LABEL[s.dot], value: dmg });
-          if (s.src) { var src = ctx.units.filter(function (x) { return x.uid === s.src; })[0]; if (src) src.stats.dealt += dmg; }
-        } else if (s.id === 'regen') {
-          var before = u.hp;
-          u.hp = Math.min(u.maxHp, u.hp + s.value);
-          if (u.hp > before) push(ctx, { t: 'heal', tid: u.uid, value: u.hp - before, label: '回春' });
+      if (s.dot === 'burn' || s.dot === 'poison') {
+        var dmg = Math.max(1, Math.round(s.value * (1 + u.mod.dotTaken)));
+        u.hp -= dmg; u.stats.taken += dmg;
+        push(ctx, { t: 'dot', tid: u.uid, status: s.dot, label: STATUS_LABEL[s.dot], value: dmg });
+        if (s.src) {
+          var src = ctx.units.filter(function (x) { return x.uid === s.src; })[0];
+          if (src) src.stats.dealt += dmg;
         }
+      } else if (s.id === 'regen') {
+        var before = u.hp;
+        u.hp = Math.min(u.maxHp, u.hp + s.value);
+        if (u.hp > before) push(ctx, { t: 'heal', tid: u.uid, value: u.hp - before, label: '回春' });
       }
     }
     damageAfterDeath(ctx);
   }
 
-  function expireStatuses(u, ctx) {
+  function expireStatuses(u) {
     for (var i = u.statuses.length - 1; i >= 0; i--) {
       var s = u.statuses[i];
       if (s.turns === 99) continue;
@@ -500,19 +527,19 @@
   }
 
   function runBasicAttack(u, ctx) {
-    var special = null;
-    (u.def.passives || []).forEach(function (p) { if (p.triggerSpecial) special = p.triggerSpecial; });
-    var steps;
-    if (special && special.kind === 'spread' && ctx.rnd() < special.chance) {
-      steps = [{ kind: 'damage', mul: special.mul, target: 'all' }];
+    var special = null, spSkill = null;
+    (u.def.passives || []).forEach(function (p) {
+      if (p.triggerSpecial && (p.unlock || 1) <= u.level) { special = p.triggerSpecial; spSkill = p; }
+    });
+    if (special && special.kind === 'spread' && ctx.rnd() < F(special.chanceVal, u, spSkill)) {
       push(ctx, { t: 'special', uid: u.uid, label: '散弹装填' });
-    } else {
-      steps = [{ kind: 'damage', mul: 1.0, target: 'one' }];
+      executeStep({ kind: 'damage', mul: special.mulVal, target: 'all' }, u, ctx, null);
+      return;
     }
-    steps.forEach(function (s) { executeStep(s, u, ctx); });
-    if (special && special.kind === 'pursuit' && ctx.rnd() < special.chance) {
+    executeStep({ kind: 'damage', mul: 100, target: 'one' }, u, ctx, null);
+    if (special && special.kind === 'pursuit' && ctx.rnd() < F(special.chanceVal, u, spSkill)) {
       push(ctx, { t: 'special', uid: u.uid, label: '追击' });
-      executeStep({ kind: 'damage', mul: special.mul || 0.5, target: 'one' }, u, ctx);
+      executeStep({ kind: 'damage', mul: special.mulVal, target: 'one' }, u, ctx, null);
     }
   }
 
@@ -520,16 +547,13 @@
     ctx.turnNo++;
     push(ctx, { t: 'turn', uid: u.uid });
 
-    /* 1. 回合开始：持续伤害 / 回春 */
-    tickStatuses(u, ctx, 'start');
+    tickStatuses(u, ctx);
     if (u.dead) return;
 
-    /* 2. 回合开始触发（被动） */
     runTriggers(u, 'onTurnStart', ctx);
     damageAfterDeath(ctx);
     if (u.dead) return;
 
-    /* 3. 晕眩跳过 */
     if (hasStatus(u, 'stun')) {
       push(ctx, { t: 'skip', uid: u.uid, label: '晕眩' });
     } else {
@@ -537,7 +561,7 @@
       if (skill) {
         u.en -= skill.cost;
         push(ctx, { t: 'skill', uid: u.uid, skill: skill.id, name: skill.name, cost: skill.cost });
-        skill.steps.forEach(function (s) { if (!u.dead) executeStep(s, u, ctx); });
+        skill.steps.forEach(function (s) { if (!u.dead) executeStep(s, u, ctx, skill); });
       } else {
         push(ctx, { t: 'skill', uid: u.uid, skill: 'basic', name: '普通攻击', cost: 0 });
         runBasicAttack(u, ctx);
@@ -548,11 +572,13 @@
     damageAfterDeath(ctx);
     if (u.dead) return;
 
-    /* 4. 回合结束触发 + 状态计时 */
     runTriggers(u, 'onTurnEnd', ctx);
     damageAfterDeath(ctx);
-    expireStatuses(u, ctx);
+    expireStatuses(u);
   }
+
+  /* 暴击回能等：由 dealDamage 内部触发 */
+  function hookCrit(u, ctx) { runTriggers(u, 'onCrit', ctx); }
 
   /* -------------------------------- 主循环 -------------------------------- */
   M3.simulate = function (cats, rats, seed, logging) {
@@ -570,12 +596,10 @@
         });
         var u2 = ready[0];
         u2.gauge -= 100;
-        /* 受击/行动的能量条不变 */
         act(u2, ctx);
         if (u2.haste > 0) { u2.haste--; u2.gauge = 100; }
         continue;
       }
-      /* 行动条推进 */
       ctx.units.forEach(function (u) { if (!u.dead) u.gauge += effSpd(u); });
       ctx.tickCount++;
       if (ctx.tickCount > MAX_TICKS) break;
@@ -586,7 +610,6 @@
     if (ratsAlive === 0 && catsAlive > 0) win = true;
     else if (catsAlive === 0) win = false;
     else {
-      /* 超时：按剩余生命百分比之和判定，平局算我方失利（攻坚失败） */
       var ch = ctx.cats.reduce(function (s, u) { return s + hpPct(u); }, 0);
       var rh = ctx.rats.reduce(function (s, u) { return s + hpPct(u); }, 0);
       win = ch > rh * 1.15;
@@ -596,7 +619,9 @@
       win: win, ticks: ctx.tickCount, turns: ctx.turnNo, events: ctx.ev,
       catsAlive: catsAlive, ratsAlive: ratsAlive,
       catHpPct: ctx.cats.reduce(function (s, u) { return s + hpPct(u); }, 0) / ctx.cats.length,
-      stats: ctx.cats.map(function (u) { return { uid: u.uid, name: u.title, dealt: u.stats.dealt, healed: u.stats.healed, taken: u.stats.taken, kills: u.stats.kills, crits: u.stats.crits, alive: !u.dead }; })
+      stats: ctx.cats.map(function (u) {
+        return { uid: u.uid, name: u.title, dealt: u.stats.dealt, healed: u.stats.healed, taken: u.stats.taken, kills: u.stats.kills, crits: u.stats.crits, alive: !u.dead };
+      })
     };
   };
 
@@ -607,10 +632,6 @@
   }
   M3.unitPower = unitPower;
 
-  /* 从池中挑 4 名“势均力敌”的角色：
-     · 先随机抽大量候选编队，保留个体战力离散度达标（cv 小）的
-     · 再在候选中偏向职业多样性，最后等概率随机取一支
-     —— 既保证队内强度接近，又不会每次都是同一批角色 */
   M3.pickBalancedTeam = function (pool, n, rnd, opts) {
     n = n || 4;
     opts = opts || {};
@@ -620,7 +641,7 @@
     var powers = pool.map(function (d) { return unitPower(M3.makeUnit(d, lv, 'cat')); });
     var cands = [];
     for (var iter = 0; iter < 500; iter++) {
-      var idx = [], used = {}, ok = true;
+      var idx = [], used = {};
       while (idx.length < n) {
         var i = Math.floor(r() * powers.length);
         if (used[i]) continue;
@@ -652,7 +673,7 @@
 
   M3.buildUnits = function (teamSpecs, side) {
     return teamSpecs.map(function (t) {
-      if (t.uid) return t;                       /* 已是实例 */
+      if (t.uid) return t;
       return M3.makeUnit(t.def || t, t.level || 10, side);
     });
   };

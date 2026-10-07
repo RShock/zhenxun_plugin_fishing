@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>map3 · 角色图鉴 —— 猫鼠远洋</title>
+<style>
+  @font-face{
+    font-family:"HYPixel";
+    src:url("assets/HYPixel-subset.woff2") format("woff2"),
+        url("assets/HYPixel-subset.ttf") format("truetype");
+    font-display:swap;
+  }
+  :root{
+    --bg:#0b1220; --bg2:#0f1a2e; --panel:#121f38; --panel2:#16253f;
+    --line:#264064; --ink:#dbe7f5; --dim:#8aa2c0; --dim2:#5f7796;
+    --cat:#5fd3c4; --rat:#e0567a; --gold:#f2c14e; --good:#6ee7a8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:16px 16px 36px;color:var(--ink);
+    background:linear-gradient(180deg,#07101d,#0b1220 40%,#0b1220);
+    font-family:"HYPixel",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13px;line-height:1.55;letter-spacing:.2px;
+  }
+  .wrap{max-width:1320px;margin:0 auto}
+  header{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+    border-bottom:2px solid var(--line);padding-bottom:9px;margin-bottom:12px}
+  h1{margin:0;font-size:19px;letter-spacing:2px}
+  .badge{font-size:11px;background:var(--cat);color:#08131f;padding:2px 7px;font-weight:700}
+  .sub{color:var(--dim);font-size:11.5px}
+  .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .tab{font:inherit;font-size:12.5px;cursor:pointer;padding:6px 14px;letter-spacing:1px;
+    background:#16233a;color:var(--ink);border:2px solid var(--line)}
+  .tab.on{background:var(--cat);color:#07131d;border-color:#7fe3d6;font-weight:700}
+  .tab.rat.on{background:var(--rat);border-color:#f08ba5;color:#22060e}
+  .layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:2px solid var(--line)}
+  .panel>h2{margin:0;font-size:12px;letter-spacing:1.5px;padding:7px 10px;
+    background:var(--panel2);border-bottom:2px solid var(--line)}
+  .body{padding:9px}
+  /* 列表 */
+  #roster{display:flex;flex-direction:column;gap:6px;max-height:76vh;overflow:auto}
+  .item{display:flex;align-items:center;gap:8px;text-align:left;width:100%;cursor:pointer;font:inherit;
+    background:#101d33;border:2px solid #1d3050;border-left:4px solid var(--c);color:var(--ink);padding:5px 7px}
+  .item:hover{background:#16263f}
+  .item.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .glyph{width:22px;height:22px;display:grid;place-items:center;background:var(--c);
+    color:#08131f;font-weight:700;font-size:12px;flex:0 0 auto}
+  .item .meta{flex:1;display:flex;flex-direction:column;line-height:1.2}
+  .item .meta b{font-size:12px}
+  .item .meta i{font-style:normal;color:var(--dim);font-size:10.5px}
+  .item .mini{font-size:10px;color:var(--dim2);white-space:nowrap}
+  /* 详情 */
+  .dhead{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:2px solid var(--line);
+    background:linear-gradient(90deg,var(--c) 0 4px,#0f1a2e 4px)}
+  .dbig{width:38px;height:38px;display:grid;place-items:center;background:var(--c);color:#08131f;font-size:20px;font-weight:700}
+  .dname{display:flex;flex-direction:column;line-height:1.25}
+  .dname b{font-size:17px}
+  .dname i{font-style:normal;color:var(--dim);font-size:11.5px}
+  .lvbox{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .lvbox input[type=range]{-webkit-appearance:none;appearance:none;width:150px;height:9px;background:#22314c;border:1px solid var(--line)}
+  .lvbox input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:17px;background:var(--gold);border:0;cursor:pointer}
+  .lvbox input[type=range]::-moz-range-thumb{width:10px;height:17px;background:var(--gold);border:0;cursor:pointer}
+  .jump{font:inherit;font-size:11px;cursor:pointer;background:#1b2b47;color:var(--ink);border:2px solid var(--line);padding:2px 7px}
+  .jump:hover{background:#24385c}
+  .lvnow{font-size:14px;color:var(--gold);min-width:56px;text-align:right}
+  .stats{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0}
+  .stat{background:#0c1727;border:2px solid var(--line);padding:5px 9px;min-width:104px}
+  .stat .k{display:block;font-size:10.5px;color:var(--dim2)}
+  .stat .v{display:block;font-size:19px;color:var(--ink);line-height:1.15}
+  .stat .r{display:block;font-size:9.5px;color:var(--dim2)}
+  /* 表格 */
+  .tablewrap{max-height:230px;overflow:auto;border:2px solid var(--line)}
+  table.grid{border-collapse:collapse;width:100%;font-size:11.5px}
+  table.grid th,table.grid td{padding:2px 6px;text-align:right;border-bottom:1px solid #16243c}
+  table.grid th{background:var(--panel2);color:var(--dim);position:sticky;top:0}
+  table.grid tr.on td{background:#1d3153;color:var(--gold)}
+  /* 技能卡 */
+  .skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:9px;margin-top:9px}
+  .skill{position:relative;background:#0f1c31;border:2px solid var(--line);padding:8px 9px}
+  .skill.ult{border-left:4px solid var(--gold)}
+  .skill:not(.ult){border-left:4px solid #4d7fb8}
+  .skill.locked{opacity:.62}
+  .shead{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .shead .tag{font-size:10px;background:#4d7fb8;color:#06121f;padding:1px 5px;font-weight:700}
+  .skill.ult .shead .tag{background:var(--gold)}
+  .shead b{font-size:13px}
+  .shead .lvtag{font-size:10px;color:var(--dim);border:1px solid var(--line);padding:0 4px}
+  .shead .cost{margin-left:auto;font-size:10.5px;color:var(--gold)}
+  .desc{margin:0 0 6px;font-size:11.8px;color:#c8d8ee}
+  .desc b{color:var(--gold)}
+  .growth{display:flex;flex-direction:column;gap:3px}
+  .g{font-size:10.5px;color:var(--dim);background:#0b1729;border:1px solid #1d3050;padding:2px 5px}
+  .g i{font-style:normal;color:var(--dim2);margin-right:5px}
+  .g b{color:var(--good)}
+  .g .per{color:var(--dim2)}
+  .lockmask{position:absolute;right:8px;bottom:6px;font-size:10px;color:#f0a0b0}
+  footer{margin-top:14px;border-top:2px solid var(--line);padding-top:8px;color:var(--dim2);font-size:11px}
+  .note{color:var(--dim);font-size:11px;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>角色图鉴</h1>
+    <span class="badge">map3 HEROES</span>
+    <span class="sub">10 名我方猫猫 · 10 名敌方老鼠杂兵 · 技能随等级成长 · 全数值整数</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-side="cat">我方猫猫（10）</button>
+    <button class="tab rat" data-side="rat">敌方老鼠（10）</button>
+  </div>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>名单</h2>
+      <div class="body"><div id="roster"></div></div>
+    </section>
+
+    <section class="panel">
+      <div class="dhead" id="dCard">
+        <span class="dbig" id="dGlyph">塔</span>
+        <span class="dname"><b id="dName">塔菲</b><i id="dRole">守护</i></span>
+        <span class="lvbox">
+          <span class="sub">等级</span>
+          <input type="range" id="lv" min="1" max="20" value="10" />
+          <b class="lvnow">Lv<span id="dLv">10</span></b>
+          <button class="jump" data-lv="1">1</button>
+          <button class="jump" data-lv="5">5</button>
+          <button class="jump" data-lv="10">10</button>
+          <button class="jump" data-lv="15">15</button>
+          <button class="jump" data-lv="20">20</button>
+        </span>
+      </div>
+      <div class="body">
+        <div id="dStats"></div>
+        <h2 style="margin:2px 0 6px;font-size:11.5px;color:var(--dim);letter-spacing:1px">属性成长（1~20 级，逐级四舍五入取整）</h2>
+        <div id="dGrowth"></div>
+        <h2 style="margin:12px 0 0;font-size:11.5px;color:var(--dim);letter-spacing:1px">技能（按当前等级解析数值）</h2>
+        <div class="skills" id="dSkills"></div>
+        <p class="note" id="dNote"></p>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    数值规则：属性 = round(基础值 × (1 + 成长率 × (等级-1)))；技能 = 基础百分点 + 每级增量 × (等级-1)，可设上限。
+    角色数据不含小数；技能槽在 Lv1 / Lv5 / Lv10 / Lv15 依次解锁，解锁后每级持续增强。
+  </footer>
+</div>
+
+<script src="src/data.js"></script>
+<script src="src/gallery.js"></script>
+</body>
+</html>
